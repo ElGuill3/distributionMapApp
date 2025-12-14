@@ -1,0 +1,26 @@
+declare const L: any;
+declare const DEFAULT_CENTER: [number, number];
+declare const DEFAULT_ZOOM = 8;
+declare const MAX_SPAN_DEG = 8;
+declare const map: any;
+declare const osmBase: any;
+declare const drawnItems: any;
+declare const drawControl: any;
+declare let currentBbox: [number, number, number, number] | null;
+declare let ndviOverlay: any | null;
+declare const startInput: HTMLInputElement | null;
+declare const endInput: HTMLInputElement | null;
+declare const generateGifButton: HTMLButtonElement | null;
+declare const singleDateInput: HTMLInputElement | null;
+declare const generatePngButton: HTMLButtonElement | null;
+declare const gifModal: HTMLDivElement | null;
+declare const gifImage: HTMLImageElement | null;
+declare const gifModalClose: HTMLButtonElement | null;
+declare const gifModalTitle: HTMLHeadingElement | null;
+declare function openGifModal(url: string, title: string): void;
+declare function closeGifModal(): void;
+declare const collapseButton: HTMLButtonElement | null;
+declare const restoreButton: HTMLButtonElement | null;
+declare const body: HTMLElement;
+declare const ndviColorbar: any;
+//# sourceMappingURL=main.d.ts.map

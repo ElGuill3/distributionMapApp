@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NDVI GIF/PNG por bbox (EPSG:4326)</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+  />
+
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <button
+    id="sidebarRestore"
+    type="button"
+    aria-controls="control-sidebar"
+    aria-expanded="false"
+  >
+    <svg
+      class="icon-menu"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="4" y1="7" x2="20" y2="7"></line>
+      <line x1="4" y1="12" x2="20" y2="12"></line>
+      <line x1="4" y1="17" x2="20" y2="17"></line>
+    </svg>
+    <span class="sr-only">Mostrar panel lateral</span>
+  </button>
+
+  <div class="layout">
+    <aside
+      id="control-sidebar"
+      class="sidebar"
+      aria-label="Barra lateral de controles"
+    >
+      <header class="sidebar-header">
+        <h1>NDVI por bbox (4326)</h1>
+        <button
+          id="sidebarToggle"
+          type="button"
+          aria-controls="control-sidebar"
+          aria-expanded="true"
+        >
+          <svg
+            class="icon-close"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+          </svg>
+          <span class="sr-only">Ocultar panel lateral</span>
+        </button>
+      </header>
+
+      <section>
+        <h2>Animación NDVI (GIF en ventana)</h2>
+
+        <p class="hint">
+          1) Dibuja un rectángulo en el mapa.<br />
+          2) Elige fechas de inicio y fin.<br />
+          3) Pulsa “Generar GIF NDVI”.<br />
+          4) Verás la animación en una ventana emergente.
+        </p>
+
+        <label for="startDate">Fecha inicio</label>
+        <input id="startDate" type="date" />
+
+        <label for="endDate">Fecha fin</label>
+        <input id="endDate" type="date" />
+
+        <button id="generateNdviGifBBox" class="primary-action">
+          Generar GIF NDVI
+        </button>
+      </section>
+
+      <hr />
+
+      <section>
+        <h2>NDVI estático (PNG, 1 fecha)</h2>
+
+        <p class="hint">
+          1) Dibuja un rectángulo en el mapa.<br />
+          2) Elige una fecha.<br />
+          3) Pulsa “Generar PNG NDVI”.
+        </p>
+
+        <label for="singleDate">Fecha única</label>
+        <input id="singleDate" type="date" />
+
+        <button id="generateNdviPngBBox" class="primary-action">
+          Generar PNG NDVI
+        </button>
+      </section>
+    </aside>
+
+    <div id="map" role="region" aria-label="Mapa Leaflet"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <script src="/static/main.js" defer></script>
+</body>
+</html>
+ 
