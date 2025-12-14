@@ -1,0 +1,18 @@
+{
+  "name": "distributionmapapp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build:ts": "tsc",
+    "watch:ts": "tsc --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/leaflet": "^1.9.21",
+    "typescript": "^5.9.3"
+  }
+}
