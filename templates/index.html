@@ -11,7 +11,6 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
-
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
@@ -81,7 +80,7 @@
           1) Dibuja un rectángulo en el mapa.<br />
           2) Elige fechas de inicio y fin.<br />
           3) Pulsa “Generar GIF NDVI”.<br />
-          4) Verás la animación en una ventana emergente.
+          4) Verás la animación y la gráfica NDVI.
         </p>
 
         <label for="startDate">Fecha inicio</label>
@@ -115,17 +114,27 @@
       </section>
     </aside>
 
-    <div id="map" role="region" aria-label="Mapa Leaflet"></div>
+    <!-- Contenedor vertical: mapa arriba, gráfica abajo -->
+    <div id="map-and-chart">
+      <div id="map" role="region" aria-label="Mapa Leaflet"></div>
+
+      <!-- Oculto por defecto; se mostrará solo cuando haya GIF/serie NDVI -->
+      <div id="ndvi-chart-container" class="hidden">
+        <div id="ndvi-chart"></div>
+      </div>
+    </div>
+  </div>
 
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <!-- Plotly para la gráfica interactiva -->
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 
   <script src="/static/main.js" defer></script>
 </body>
 </html>
- 
