@@ -57,7 +57,7 @@ body.sidebar-collapsed .sidebar {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .sidebar h1 {
@@ -101,8 +101,18 @@ body.sidebar-collapsed .sidebar {
   gap: 0.5rem;
 }
 
-.sidebar input[type="checkbox"] {
-  accent-color: var(--accent);
+.sidebar select,
+.sidebar input[type="date"] {
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.35rem;
+  border: 1px solid #dce1e7;
+  font-size: 0.9rem;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0;
 }
 
 .primary-action {
@@ -172,17 +182,17 @@ body.sidebar-collapsed #sidebarRestore {
   position: relative;
 }
 
-/* Contenedor de la gráfica: solo ocupa la segunda columna */
+/* Contenedor de la gráfica: segunda fila */
 #ndvi-chart-container {
   flex: 3;
   width: 100%;
-  min-width: 0;      /* evita que rompa el grid */
-  min-height: 200px;
+  min-width: 0;
+  min-height: 250px;
   border-top: 1px solid #dce1e7;
   background: #ffffff;
 }
 
-/* Ocultar contenedor de gráfica hasta que haya GIF/serie */
+/* Ocultar contenedor de gráfica hasta que haya datos */
 .hidden {
   display: none;
 }
@@ -213,7 +223,7 @@ body.sidebar-collapsed .leaflet-left {
   }
 }
 
-/* Barra de colores NDVI tipo Matplotlib (si la sigues usando) */
+/* Barra de colores NDVI tipo Matplotlib */
 .ndvi-colorbar {
   display: flex;
   align-items: stretch;
@@ -241,6 +251,45 @@ body.sidebar-collapsed .leaflet-left {
 }
 
 .ndvi-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Barra de colores Temperatura ERA5 */
+.temp-colorbar {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px;
+  border-radius: 4px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.temp-colorbar-scale {
+  width: 14px;
+  height: 160px;
+  border: 1px solid #999;
+  background: linear-gradient(
+    to top,
+    #000080 0%,
+    #0000d9 10%,
+    #4000ff 20%,
+    #0080ff 30%,
+    #00ffff 40%,
+    #00ff80 50%,
+    #80ff00 60%,
+    #daff00 70%,
+    #ffff00 80%,
+    #ffb000 90%,
+    #ff0000 100%
+  );
+  margin-right: 6px;
+}
+
+.temp-colorbar-labels {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
