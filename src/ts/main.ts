@@ -6,6 +6,10 @@ const DEFAULT_CENTER: [number, number] = [17.8409, -92.6189];
 const DEFAULT_ZOOM = 8;
 const MAX_SPAN_DEG = 8.0;
 
+type VariableKey = 'ndvi' | 'temp';
+
+let currentVariable: VariableKey = 'ndvi';
+
 const map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
 const osmBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -15,16 +19,16 @@ const osmBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 });
 osmBase.addTo(map);
 
-// Referencias gráfica NDVI
+// Referencias gráfica
 const ndviChartContainer = document.getElementById('ndvi-chart-container') as HTMLDivElement | null;
 const ndviChartDiv = document.getElementById('ndvi-chart') as HTMLDivElement | null;
 
-function showNdviChartContainer(): void {
+function showChartContainer(): void {
   if (!ndviChartContainer) return;
   ndviChartContainer.classList.remove('hidden');
 }
 
-function hideNdviChartContainer(): void {
+function hideChartContainer(): void {
   if (!ndviChartContainer) return;
   ndviChartContainer.classList.add('hidden');
 }
@@ -57,8 +61,8 @@ map.addControl(drawControl);
 
 let currentBbox: [number, number, number, number] | null = null;
 
-// overlay NDVI (GIF o PNG)
-let ndviOverlay: any | null = null;
+// overlay de la variable activa (GIF)
+let activeOverlay: any | null = null;
 
 map.on(L.Draw.Event.CREATED, (e: any) => {
   const layer = e.layer;
@@ -101,57 +105,63 @@ map.on(L.Draw.Event.CREATED, (e: any) => {
 
   currentBbox = [squareWest, squareSouth, squareEast, squareNorth];
 
-  if (ndviOverlay) {
-    map.removeLayer(ndviOverlay);
-    ndviOverlay = null;
+  if (activeOverlay) {
+    map.removeLayer(activeOverlay);
+    activeOverlay = null;
     map.removeControl(ndviColorbar);
+    map.removeControl(tempColorbar);
   }
 
-  hideNdviChartContainer();
+  hideChartContainer();
   if (ndviChartDiv) {
     Plotly.purge(ndviChartDiv);
   }
 });
 
-// ========== Inputs y botones ==========
+// ========== Inputs y selector de variable ==========
+// NDVI controls
 const startInput = document.getElementById('startDate') as HTMLInputElement | null;
 const endInput = document.getElementById('endDate') as HTMLInputElement | null;
 const generateGifButton = document.getElementById('generateNdviGifBBox') as HTMLButtonElement | null;
 
-const singleDateInput = document.getElementById('singleDate') as HTMLInputElement | null;
-const generatePngButton = document.getElementById('generateNdviPngBBox') as HTMLButtonElement | null;
+// ERA5 temp controls
+const tempStartInput = document.getElementById('tempStartDate') as HTMLInputElement | null;
+const tempEndInput = document.getElementById('tempEndDate') as HTMLInputElement | null;
+const generateTempGifButton = document.getElementById('generateTempGifBBox') as HTMLButtonElement | null;
 
-// ========== Modal (no usado para NDVI, pero lo dejamos) ==========
-const gifModal = document.getElementById('gifModal') as HTMLDivElement | null;
-const gifImage = document.getElementById('gifImage') as HTMLImageElement | null;
-const gifModalClose = document.getElementById('gifModalClose') as HTMLButtonElement | null;
-const gifModalTitle = document.getElementById('gifModalTitle') as HTMLHeadingElement | null;
+// Selector de variable y bloques
+const variableSelect = document.getElementById('variableSelect') as HTMLSelectElement | null;
+const ndviControls = document.getElementById('ndvi-controls') as HTMLElement | null;
+const tempControls = document.getElementById('temp-controls') as HTMLElement | null;
 
-function openGifModal(url: string, title: string): void {
-  if (!gifModal || !gifImage || !gifModalTitle) return;
-  gifModalTitle.textContent = title;
-  gifImage.src = url;
-  gifModal.classList.add('active');
-  gifModal.setAttribute('aria-hidden', 'false');
-}
+if (variableSelect && ndviControls && tempControls) {
+  variableSelect.addEventListener('change', () => {
+    const value = variableSelect.value as VariableKey;
+    currentVariable = value;
 
-function closeGifModal(): void {
-  if (!gifModal || !gifImage) return;
-  gifModal.classList.remove('active');
-  gifModal.setAttribute('aria-hidden', 'true');
-  gifImage.src = '';
-}
+    if (value === 'ndvi') {
+      ndviControls.classList.remove('hidden');
+      tempControls.classList.add('hidden');
+    } else {
+      ndviControls.classList.add('hidden');
+      tempControls.classList.remove('hidden');
+    }
 
-if (gifModalClose && gifModal) {
-  gifModalClose.addEventListener('click', closeGifModal);
-  gifModal.addEventListener('click', (e: MouseEvent) => {
-    if (e.target === gifModal) {
-      closeGifModal();
+    if (activeOverlay) {
+      map.removeLayer(activeOverlay);
+      activeOverlay = null;
+      map.removeControl(ndviColorbar);
+      map.removeControl(tempColorbar);
+    }
+    hideChartContainer();
+    if (ndviChartDiv) {
+      Plotly.purge(ndviChartDiv);
     }
   });
 }
 
-// ========== Barra de colores NDVI (solo se añade cuando hay GIF) ==========
+// ========== Barras de colores ==========
+// NDVI
 const ndviColorbar = L.control({ position: 'topright' });
 
 ndviColorbar.onAdd = function () {
@@ -160,11 +170,11 @@ ndviColorbar.onAdd = function () {
   div.innerHTML = `
     <div class="ndvi-colorbar-scale"></div>
     <div class="ndvi-colorbar-labels">
-      <span class="ndvi-max">0.5-0.8 Suelo desnudo, roca, nieve, agua.</span>
-      <span class="ndvi-max">0.3-0.5 Poca vegetación, zonas áridas.</span>
+      <span class="ndvi-max">0.5-0.8 Vegetación densa, salud vegetal alta.</span>
+      <span class="ndvi-max">0.3-0.5 Vegetación moderada, agricultura.</span>
       <span class="ndvi-max">0.2-0.3 Vegetación escasa, pastos secos.</span>
-      <span class="ndvi-mid">0.1-0.2 Vegetación moderada, agricultura.</span>
-      <span class="ndvi-min">0.0-0.1 Vegetación densa, salud vegetal alta.</span>
+      <span class="ndvi-mid">0.1-0.2 Poca vegetación, zonas áridas.</span>
+      <span class="ndvi-min">0.0-0.1 Suelo desnudo, roca, nieve, agua.</span>
     </div>
   `;
   return div;
@@ -181,30 +191,72 @@ function updateNdviColorbar(vmin: number, vmax: number): void {
   ndviMidLabel.textContent = `${((vmin + vmax) / 2).toFixed(2)} NDVI medio`;
 }
 
-function plotNdviTimeseries(dates: string[], ndvi: number[]): void {
+// Temperatura ERA5
+const tempColorbar = L.control({ position: 'topright' });
+
+tempColorbar.onAdd = function () {
+  const div = L.DomUtil.create('div', 'temp-colorbar');
+
+  div.innerHTML = `
+    <div class="temp-colorbar-scale"></div>
+    <div class="temp-colorbar-labels">
+      <span>≥ 35 °C</span>
+      <span>30–35 °C</span>
+      <span>25–30 °C</span>
+      <span>20–25 °C</span>
+      <span>15–20 °C</span>
+      <span>10–15 °C</span>
+      <span>5–10 °C</span>
+      <span>0–5 °C</span>
+    </div>
+  `;
+  return div;
+};
+
+// ========== Gráfica genérica ==========
+function plotTimeseries(
+  variable: VariableKey,
+  dates: string[],
+  values: number[]
+): void {
   if (!ndviChartDiv) return;
 
-  // Asegurar que el contenedor está visible antes de medir
-  showNdviChartContainer();
+  showChartContainer();
 
-  // Esperar al layout real del div
   requestAnimationFrame(() => {
     const width = ndviChartDiv.clientWidth || 600;
     const height = ndviChartDiv.clientHeight || 280;
 
+    let yTitle = '';
+    let yRange: [number, number] | null = null;
+    let lineColor = '';
+    let hoverLabel = '';
+
+    if (variable === 'ndvi') {
+      yTitle = 'NDVI promedio';
+      yRange = [0, 0.8];
+      lineColor = '#006837';
+      hoverLabel = 'NDVI';
+    } else {
+      yTitle = 'Temperatura media 2m (°C)';
+      yRange = [0, 35];
+      lineColor = '#ff4f00';
+      hoverLabel = 'Temp';
+    }
+
     const trace = {
       x: dates,
-      y: ndvi,
+      y: values,
       type: 'scatter',
       mode: 'lines',
       line: {
-        color: '#006837',
+        color: lineColor,
         width: 2
       },
-      hovertemplate: 'Fecha: %{x}<br>NDVI: %{y:.3f}<extra></extra>'
+      hovertemplate: `Fecha: %{x}<br>${hoverLabel}: %{y:.2f}<extra></extra>`
     };
 
-    const layout = {
+    const layout: any = {
       margin: { l: 60, r: 20, t: 30, b: 50 },
       width,
       height,
@@ -213,11 +265,14 @@ function plotNdviTimeseries(dates: string[], ndvi: number[]): void {
         type: 'date'
       },
       yaxis: {
-        title: 'NDVI promedio',
-        range: [0, 0.8]
+        title: yTitle
       },
       showlegend: false
     };
+
+    if (yRange) {
+      layout.yaxis.range = yRange;
+    }
 
     const config = {
       responsive: true,
@@ -225,7 +280,6 @@ function plotNdviTimeseries(dates: string[], ndvi: number[]): void {
       modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines']
     };
 
-    // Si ya hay gráfica, actualizar; si no, crear
     if ((ndviChartDiv as any)._fullLayout) {
       Plotly.react(ndviChartDiv, [trace], layout, config);
     } else {
@@ -234,9 +288,103 @@ function plotNdviTimeseries(dates: string[], ndvi: number[]): void {
   });
 }
 
-// ========== Petición de GIF NDVI como overlay ==========
+// ========== Petición genérica GIF + serie ==========
+async function requestGifAndSeries(
+  variable: VariableKey,
+  start: string,
+  end: string,
+  bbox: [number, number, number, number]
+): Promise<void> {
+  const bboxJson = JSON.stringify(bbox);
+
+  const gifEndpoint =
+    variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/era5-temp-gif-bbox';
+  const tsEndpoint =
+    variable === 'ndvi'
+      ? '/api/ndvi-timeseries-bbox'
+      : '/api/era5-temp-timeseries-bbox';
+
+  const gifUrlWithParams =
+    `${gifEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(
+      end
+    )}&bbox=${encodeURIComponent(bboxJson)}`;
+  const tsUrlWithParams =
+    `${tsEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(
+      end
+    )}&bbox=${encodeURIComponent(bboxJson)}`;
+
+  try {
+    const [gifResp, tsResp] = await Promise.all([
+      fetch(gifUrlWithParams),
+      fetch(tsUrlWithParams)
+    ]);
+
+    const gifData = await gifResp.json();
+    const tsData = await tsResp.json();
+
+    if (!gifResp.ok) {
+      alert(gifData.error || 'Error generando animación.');
+      return;
+    }
+
+    if (!tsResp.ok) {
+      // eslint-disable-next-line no-console
+      console.warn('Error en serie temporal:', tsData.error || tsData);
+    }
+
+    const gifUrl: string = gifData.gifUrl;
+    const bboxResp: [number, number, number, number] = gifData.bbox;
+    const [minLon, minLat, maxLon, maxLat] = bboxResp;
+
+    if (activeOverlay) {
+      map.removeLayer(activeOverlay);
+      activeOverlay = null;
+    }
+
+    const overlayBounds = L.latLngBounds(
+      L.latLng(minLat, minLon),
+      L.latLng(maxLat, maxLon)
+    );
+
+    activeOverlay = L.imageOverlay(gifUrl, overlayBounds, {
+      opacity: 0.8
+    }).addTo(map);
+
+    if (variable === 'ndvi') {
+      ndviColorbar.addTo(map);
+      map.removeControl(tempColorbar);
+    } else {
+      tempColorbar.addTo(map);
+      map.removeControl(ndviColorbar);
+    }
+
+    map.fitBounds(overlayBounds);
+
+    if (tsResp.ok) {
+      const dates = tsData.dates as string[];
+      const values =
+        variable === 'ndvi'
+          ? (tsData.ndvi as number[])
+          : (tsData.temp as number[]);
+      plotTimeseries(variable, dates, values);
+    } else {
+      hideChartContainer();
+      if (ndviChartDiv) {
+        Plotly.purge(ndviChartDiv);
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err);
+    alert('Error de red al generar animación / serie temporal.');
+  }
+}
+
+// ========== Listeners específicos ==========
+
+// NDVI
 if (startInput && endInput && generateGifButton) {
-  generateGifButton.addEventListener('click', async () => {
+  generateGifButton.addEventListener('click', () => {
     const start = startInput.value;
     const end = endInput.value;
 
@@ -249,80 +397,20 @@ if (startInput && endInput && generateGifButton) {
       return;
     }
 
-    const bboxJson = JSON.stringify(currentBbox);
-
-    try {
-      const gifPromise = fetch(
-        `/api/ndvi-gif-bbox?start=${encodeURIComponent(start)}&end=${encodeURIComponent(
-          end
-        )}&bbox=${encodeURIComponent(bboxJson)}`
-      );
-
-      const tsPromise = fetch(
-        `/api/ndvi-timeseries-bbox?start=${encodeURIComponent(start)}&end=${encodeURIComponent(
-          end
-        )}&bbox=${encodeURIComponent(bboxJson)}`
-      );
-
-      const [gifResp, tsResp] = await Promise.all([gifPromise, tsPromise]);
-
-      const gifData = await gifResp.json();
-      const tsData = await tsResp.json();
-
-      if (!gifResp.ok) {
-        alert(gifData.error || 'Error generando GIF NDVI.');
-        return;
-      }
-
-      if (!tsResp.ok) {
-        // eslint-disable-next-line no-console
-        console.warn('Error en serie temporal NDVI:', tsData.error || tsData);
-      }
-
-      const gifUrl: string = gifData.gifUrl;
-      const bbox: [number, number, number, number] = gifData.bbox;
-      const [minLon, minLat, maxLon, maxLat] = bbox;
-
-      if (ndviOverlay) {
-        map.removeLayer(ndviOverlay);
-        ndviOverlay = null;
-      }
-
-      const overlayBounds = L.latLngBounds(
-        L.latLng(minLat, minLon),
-        L.latLng(maxLat, maxLon)
-      );
-
-      ndviOverlay = L.imageOverlay(gifUrl, overlayBounds, {
-        opacity: 0.8
-      }).addTo(map);
-
-      ndviColorbar.addTo(map);
-      map.fitBounds(overlayBounds);
-
-      if (tsResp.ok && Array.isArray(tsData.dates) && Array.isArray(tsData.ndvi)) {
-        plotNdviTimeseries(tsData.dates as string[], tsData.ndvi as number[]);
-      } else {
-        hideNdviChartContainer();
-        if (ndviChartDiv) {
-          Plotly.purge(ndviChartDiv);
-        }
-      }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(err);
-      alert('Error de red al generar GIF/serie NDVI.');
-    }
+    currentVariable = 'ndvi';
+    if (variableSelect) variableSelect.value = 'ndvi';
+    requestGifAndSeries('ndvi', start, end, currentBbox);
   });
 }
 
-// ========== Petición de PNG NDVI (1 fecha) como overlay ==========
-if (singleDateInput && generatePngButton) {
-  generatePngButton.addEventListener('click', async () => {
-    const date = singleDateInput.value;
+// Temperatura ERA5
+if (tempStartInput && tempEndInput && generateTempGifButton) {
+  generateTempGifButton.addEventListener('click', () => {
+    const start = tempStartInput.value;
+    const end = tempEndInput.value;
 
-    if (!date) {
-      alert('Selecciona una fecha.');
+    if (!start || !end) {
+      alert('Selecciona fecha inicio y fecha fin.');
       return;
     }
     if (!currentBbox) {
@@ -330,49 +418,9 @@ if (singleDateInput && generatePngButton) {
       return;
     }
 
-    hideNdviChartContainer();
-    if (ndviChartDiv) {
-      Plotly.purge(ndviChartDiv);
-    }
-
-    const bboxJson = JSON.stringify(currentBbox);
-
-    const resp = await fetch(
-      `/api/ndvi-png-bbox?date=${encodeURIComponent(date)}&bbox=${encodeURIComponent(
-        bboxJson
-      )}`
-    );
-    const data = await resp.json();
-
-    if (!resp.ok) {
-      alert(data.error || 'Error generando PNG NDVI.');
-      return;
-    }
-
-    const pngUrl: string = data.pngUrl;
-    const bbox: [number, number, number, number] = data.bbox;
-    const [minLon, minLat, maxLon, maxLat] = bbox;
-
-    const ndviMin: number = data.ndviMin;
-    const ndviMax: number = data.ndviMax;
-    updateNdviColorbar(ndviMin, ndviMax);
-
-    if (ndviOverlay) {
-      map.removeLayer(ndviOverlay);
-      ndviOverlay = null;
-      map.removeControl(ndviColorbar);
-    }
-
-    const overlayBounds = L.latLngBounds(
-      L.latLng(minLat, minLon),
-      L.latLng(maxLat, maxLon)
-    );
-
-    ndviOverlay = L.imageOverlay(pngUrl, overlayBounds, {
-      opacity: 0.8
-    }).addTo(map);
-
-    map.fitBounds(overlayBounds);
+    currentVariable = 'temp';
+    if (variableSelect) variableSelect.value = 'temp';
+    requestGifAndSeries('temp', start, end, currentBbox);
   });
 }
 
