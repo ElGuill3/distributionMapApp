@@ -81,7 +81,7 @@ map.on(L.Draw.Event.CREATED, (e: any) => {
   }
 
   const centerLat = (southWest.lat + northEast.lat) / 2;
-  const centerLng = (southWest.lng + northEast.lng) / 2;
+  const centerLng = (southWest.lng + southWest.lng) / 2;
 
   const side = Math.min(widthDeg, heightDeg);
   const halfSide = side / 2;
@@ -124,7 +124,7 @@ const startInput = document.getElementById('startDate') as HTMLInputElement | nu
 const endInput = document.getElementById('endDate') as HTMLInputElement | null;
 const generateGifButton = document.getElementById('generateNdviGifBBox') as HTMLButtonElement | null;
 
-// ERA5 temp controls
+// MERRA-2 temp controls
 const tempStartInput = document.getElementById('tempStartDate') as HTMLInputElement | null;
 const tempEndInput = document.getElementById('tempEndDate') as HTMLInputElement | null;
 const generateTempGifButton = document.getElementById('generateTempGifBBox') as HTMLButtonElement | null;
@@ -191,7 +191,7 @@ function updateNdviColorbar(vmin: number, vmax: number): void {
   ndviMidLabel.textContent = `${((vmin + vmax) / 2).toFixed(2)} NDVI medio`;
 }
 
-// Temperatura ERA5
+// Temperatura MERRA-2
 const tempColorbar = L.control({ position: 'topright' });
 
 tempColorbar.onAdd = function () {
@@ -298,11 +298,11 @@ async function requestGifAndSeries(
   const bboxJson = JSON.stringify(bbox);
 
   const gifEndpoint =
-    variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/era5-temp-gif-bbox';
+    variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/merra2-temp-gif-bbox';
   const tsEndpoint =
     variable === 'ndvi'
       ? '/api/ndvi-timeseries-bbox'
-      : '/api/era5-temp-timeseries-bbox';
+      : '/api/merra2-temp-timeseries-bbox';
 
   const gifUrlWithParams =
     `${gifEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(
@@ -328,7 +328,6 @@ async function requestGifAndSeries(
     }
 
     if (!tsResp.ok) {
-      // eslint-disable-next-line no-console
       console.warn('Error en serie temporal:', tsData.error || tsData);
     }
 
@@ -374,7 +373,6 @@ async function requestGifAndSeries(
       }
     }
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error(err);
     alert('Error de red al generar animación / serie temporal.');
   }
@@ -403,7 +401,7 @@ if (startInput && endInput && generateGifButton) {
   });
 }
 
-// Temperatura ERA5
+// Temperatura MERRA-2
 if (tempStartInput && tempEndInput && generateTempGifButton) {
   generateTempGifButton.addEventListener('click', () => {
     const start = tempStartInput.value;
