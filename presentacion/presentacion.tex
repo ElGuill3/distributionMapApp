@@ -1,0 +1,476 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+% Tema y colores
+\usetheme{Madrid}
+\usecolortheme{default}
+
+% Personalización de colores
+\definecolor{primaryblue}{RGB}{0,102,204}
+\definecolor{secondarygreen}{RGB}{0,153,51}
+\definecolor{accentorange}{RGB}{255,120,0}
+
+\setbeamercolor{structure}{fg=primaryblue}
+\setbeamercolor{frametitle}{bg=primaryblue,fg=white}
+\setbeamercolor{title}{fg=primaryblue}
+
+% Paquetes
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{fontawesome5}
+
+% Configuración de imágenes
+\graphicspath{{imagenes/}}
+
+% Información del documento
+\title{Aplicación Web para Visualización de Datos\\Meteorológicos y de Vegetación}
+\subtitle{Integración de Google Earth Engine con Flask y Leaflet}
+\author{Tu Nombre}
+\institute{Institución}
+\date{\today}
+
+% Eliminar navegación por defecto
+\setbeamertemplate{navigation symbols}{}
+
+% Configuración de bullets
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{enumerate items}[default]
+
+\begin{document}
+
+% Portada
+\begin{frame}
+\titlepage
+\end{frame}
+
+% Índice
+\begin{frame}{Contenido}
+\tableofcontents
+\end{frame}
+
+% ============================================
+% SECCIÓN 1: INTRODUCCIÓN
+% ============================================
+\section{Introducción}
+
+\begin{frame}{¿Qué es el proyecto?}
+\begin{center}
+% IMAGEN: Captura de pantalla completa de la aplicación funcionando
+% Mostrar la interfaz con el mapa, sidebar y controles visibles
+\includegraphics[width=0.85\textwidth]{01-aplicacion-completa.png}
+\end{center}
+\vspace{0.3cm}
+\begin{itemize}
+\item Aplicación web interactiva para visualización geoespacial
+\item Análisis de variables meteorológicas y de vegetación
+\item Generación de animaciones temporales
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Objetivo Principal}
+\begin{center}
+% IMAGEN: Diagrama conceptual simple mostrando: Usuario -> Aplicación Web -> Google Earth Engine -> Visualización
+% Puede ser un diagrama de flujo simple con flechas
+\includegraphics[width=0.7\textwidth]{02-diagrama-flujo.png}
+\end{center}
+\vspace{0.3cm}
+\begin{block}{Objetivo}
+Desarrollar una plataforma web que permita visualizar y analizar datos meteorológicos y de vegetación mediante la integración de tecnologías de procesamiento geoespacial en la nube.
+\end{block}
+\end{frame}
+
+% ============================================
+% SECCIÓN 2: PROBLEMÁTICA
+% ============================================
+\section{Problemática}
+
+\begin{frame}{Necesidad Identificada}
+\begin{columns}
+\column{0.5\textwidth}
+% IMAGEN: Comparación lado a lado: herramientas tradicionales vs. nuestra solución
+% Mostrar limitaciones de herramientas existentes
+\includegraphics[width=\textwidth]{03-problema.png}
+\column{0.5\textwidth}
+\begin{itemize}
+\item Acceso limitado a datos geoespaciales
+\item Procesamiento complejo y costoso
+\item Falta de herramientas integradas
+\item Visualización estática
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SECCIÓN 3: TECNOLOGÍAS
+% ============================================
+\section{Tecnologías Utilizadas}
+
+\begin{frame}{Stack Tecnológico}
+\begin{center}
+% IMAGEN: Logo collage o diagrama con los logos de:
+% - Python/Flask
+% - Google Earth Engine
+% - Leaflet
+% - TypeScript
+% - HTML5/CSS3
+\includegraphics[width=0.9\textwidth]{04-stack-tecnologico.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Backend: Flask}
+\begin{columns}
+\column{0.4\textwidth}
+% IMAGEN: Logo de Flask o código Python mostrando estructura básica
+\includegraphics[width=\textwidth]{05-flask.png}
+\column{0.6\textwidth}
+\begin{itemize}
+\item Framework web minimalista
+\item API REST para comunicación
+\item Integración con Earth Engine
+\item Procesamiento de datos geoespaciales
+\end{itemize}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Procesamiento: Google Earth Engine}
+\begin{center}
+% IMAGEN: Logo de Google Earth Engine o captura de la plataforma
+% Mostrar el poder de procesamiento en la nube
+\includegraphics[width=0.75\textwidth]{06-earth-engine.png}
+\end{center}
+\vspace{0.3cm}
+\begin{itemize}
+\item Procesamiento en la nube
+\item Acceso a petabytes de datos satelitales
+\item Generación de animaciones GIF
+\item Cálculo de series temporales
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Frontend: Leaflet + TypeScript}
+\begin{columns}
+\column{0.5\textwidth}
+% IMAGEN: Captura del mapa interactivo con controles de dibujo visibles
+\includegraphics[width=\textwidth]{07-mapa-leaflet.png}
+\column{0.5\textwidth}
+\begin{itemize}
+\item Mapas interactivos
+\item Selección de áreas (bounding boxes)
+\item Visualización de overlays
+\item Gráficas con Plotly.js
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SECCIÓN 4: FUNCIONALIDADES
+% ============================================
+\section{Funcionalidades}
+
+\begin{frame}{Variables Disponibles}
+\begin{center}
+% IMAGEN: Dos paneles lado a lado mostrando:
+% Izquierda: Ejemplo de visualización NDVI con colores verdes/marrones
+% Derecha: Ejemplo de visualización de temperatura con colores azul/rojo
+\includegraphics[width=0.9\textwidth]{08-variables.png}
+\end{center}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{block}{NDVI}
+Índice de vegetación normalizado
+\end{block}
+\column{0.5\textwidth}
+\begin{block}{Temperatura 2m}
+Datos ERA5 reanálisis
+\end{block}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Flujo de Uso}
+\begin{center}
+% IMAGEN: Secuencia de capturas mostrando el proceso:
+% 1. Mapa inicial
+% 2. Dibujar rectángulo
+% 3. Seleccionar fechas
+% 4. Generar visualización
+% 5. Ver resultado (GIF + gráfica)
+\includegraphics[width=0.85\textwidth]{09-flujo-uso.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Selección de Área}
+\begin{center}
+% IMAGEN: Captura del mapa mostrando un rectángulo dibujado
+% Mostrar claramente el área seleccionada con el control de dibujo activo
+\includegraphics[width=0.8\textwidth]{10-seleccion-area.png}
+\end{center}
+\vspace{0.3cm}
+\begin{itemize}
+\item Herramienta de dibujo integrada
+\item Validación de tamaño máximo (8° por lado)
+\item Conversión automática a cuadrado
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Generación de Animaciones}
+\begin{center}
+% IMAGEN: Captura mostrando un GIF animado de NDVI superpuesto en el mapa
+% Mostrar la animación temporal con la barra de colores visible
+\includegraphics[width=0.85\textwidth]{11-animacion-ndvi.png}
+\end{center}
+\vspace{0.2cm}
+\begin{itemize}
+\item Animaciones GIF temporales
+\item Paletas de colores personalizadas
+\item Control de resolución automático
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Series Temporales}
+\begin{center}
+% IMAGEN: Captura de la gráfica interactiva de Plotly mostrando una serie temporal
+% Mostrar la gráfica con datos de NDVI o temperatura a lo largo del tiempo
+\includegraphics[width=0.85\textwidth]{12-serie-temporal.png}
+\end{center}
+\vspace{0.2cm}
+\begin{itemize}
+\item Gráficas interactivas
+\item Zoom y pan
+\item Hover con información detallada
+\end{itemize}
+\end{frame}
+
+% ============================================
+% SECCIÓN 5: ARQUITECTURA
+% ============================================
+\section{Arquitectura}
+
+\begin{frame}{Arquitectura del Sistema}
+\begin{center}
+% IMAGEN: Diagrama de arquitectura mostrando:
+% Cliente (Navegador) <-> Flask (Backend) <-> Google Earth Engine
+% Con flechas indicando el flujo de datos
+\includegraphics[width=0.9\textwidth]{13-arquitectura.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Flujo de Datos}
+\begin{center}
+% IMAGEN: Diagrama de secuencia o flujo detallado:
+% 1. Usuario selecciona área y fechas
+% 2. Frontend envía petición a Flask
+% 3. Flask consulta Earth Engine
+% 4. Earth Engine procesa y genera GIF
+% 5. Respuesta con URL del GIF
+% 6. Frontend muestra resultado
+\includegraphics[width=0.85\textwidth]{14-flujo-datos.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Endpoints API}
+\begin{center}
+% IMAGEN: Diagrama o tabla mostrando los endpoints disponibles:
+% /api/ndvi-gif-bbox
+% /api/ndvi-timeseries-bbox
+% /api/era5-temp-gif-bbox
+% /api/era5-temp-timeseries-bbox
+% Con sus parámetros
+\includegraphics[width=0.8\textwidth]{15-endpoints.png}
+\end{center}
+\end{frame}
+
+% ============================================
+% SECCIÓN 6: FUENTES DE DATOS
+% ============================================
+\section{Fuentes de Datos}
+
+\begin{frame}{Datos Satelitales}
+\begin{center}
+% IMAGEN: Collage o diagrama mostrando las fuentes de datos:
+% - MODIS (NDVI)
+% - ERA5 (Temperatura)
+% Con logos o representaciones visuales
+\includegraphics[width=0.85\textwidth]{16-fuentes-datos.png}
+\end{center}
+\vspace{0.2cm}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{itemize}
+\item MODIS MOD13Q1
+\item Resolución: 250m
+\item Frecuencia: 16 días
+\end{itemize}
+\column{0.5\textwidth}
+\begin{itemize}
+\item ERA5 Daily
+\item Resolución: ~28 km
+\item Frecuencia: Diaria
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SECCIÓN 7: INTERFAZ DE USUARIO
+% ============================================
+\section{Interfaz de Usuario}
+
+\begin{frame}{Diseño de la Interfaz}
+\begin{center}
+% IMAGEN: Captura completa de la interfaz mostrando:
+% - Sidebar con controles
+% - Mapa principal
+% - Área de gráficas (si está visible)
+\includegraphics[width=0.9\textwidth]{17-interfaz-completa.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Características de la UI}
+\begin{columns}
+\column{0.5\textwidth}
+% IMAGEN: Detalle del sidebar mostrando los controles de fecha y botones
+\includegraphics[width=\textwidth]{18-sidebar-detalle.png}
+\column{0.5\textwidth}
+\begin{itemize}
+\item Sidebar colapsable
+\item Selector de variables
+\item Controles de fecha
+\item Botones de acción claros
+\item Barras de colores informativas
+\end{itemize}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Responsive Design}
+\begin{center}
+% IMAGEN: Comparación mostrando la aplicación en diferentes tamaños de pantalla
+% O capturas de la aplicación en móvil/tablet/desktop
+\includegraphics[width=0.85\textwidth]{19-responsive.png}
+\end{center}
+\end{frame}
+
+% ============================================
+% SECCIÓN 8: RESULTADOS
+% ============================================
+\section{Resultados}
+
+\begin{frame}{Ejemplo: Análisis NDVI}
+\begin{center}
+% IMAGEN: Captura mostrando un análisis completo:
+% - GIF de NDVI animado
+% - Gráfica de serie temporal
+% - Barra de colores visible
+\includegraphics[width=0.85\textwidth]{20-ejemplo-ndvi.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Ejemplo: Análisis de Temperatura}
+\begin{center}
+% IMAGEN: Captura mostrando análisis de temperatura:
+% - GIF de temperatura
+% - Gráfica de serie temporal de temperatura
+% - Barra de colores de temperatura
+\includegraphics[width=0.85\textwidth]{21-ejemplo-temperatura.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Casos de Uso Potenciales}
+\begin{center}
+% IMAGEN: Collage o diagrama mostrando aplicaciones:
+% - Agricultura
+% - Gestión ambiental
+% - Investigación climática
+% - Planificación urbana
+\includegraphics[width=0.85\textwidth]{22-casos-uso.png}
+\end{center}
+\end{frame}
+
+% ============================================
+% SECCIÓN 9: DESAFÍOS Y SOLUCIONES
+% ============================================
+\section{Desafíos y Soluciones}
+
+\begin{frame}{Desafíos Enfrentados}
+\begin{center}
+% IMAGEN: Diagrama o lista visual de los principales desafíos
+\includegraphics[width=0.7\textwidth]{23-desafios.png}
+\end{center}
+\vspace{0.3cm}
+\begin{itemize}
+\item Límites de procesamiento de Earth Engine
+\item Optimización de resolución de imágenes
+\item Manejo de grandes volúmenes de datos
+\item Validación de entrada del usuario
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Soluciones Implementadas}
+\begin{center}
+% IMAGEN: Diagrama mostrando las soluciones técnicas implementadas
+\includegraphics[width=0.75\textwidth]{24-soluciones.png}
+\end{center}
+\vspace{0.2cm}
+\begin{itemize}
+\item Cálculo dinámico de dimensiones
+\item Validación de bounding boxes
+\item Procesamiento asíncrono
+\item Manejo de errores robusto
+\end{itemize}
+\end{frame}
+
+% ============================================
+% SECCIÓN 10: TRABAJO FUTURO
+% ============================================
+\section{Trabajo Futuro}
+
+\begin{frame}{Mejoras Planificadas}
+\begin{center}
+% IMAGEN: Roadmap visual o diagrama de mejoras futuras
+\includegraphics[width=0.8\textwidth]{25-mejoras-futuras.png}
+\end{center}
+\vspace{0.2cm}
+\begin{itemize}
+\item Más variables meteorológicas
+\item Exportación de datos
+\item Comparación de períodos
+\item Análisis estadísticos avanzados
+\end{itemize}
+\end{frame}
+
+% ============================================
+% CONCLUSIÓN
+% ============================================
+\section{Conclusión}
+
+\begin{frame}{Logros Alcanzados}
+\begin{center}
+% IMAGEN: Resumen visual de los logros principales
+\includegraphics[width=0.75\textwidth]{26-logros.png}
+\end{center}
+\vspace{0.3cm}
+\begin{itemize}
+\item Plataforma web funcional
+\item Integración exitosa de tecnologías
+\item Visualización interactiva de datos
+\item Interfaz intuitiva y accesible
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Impacto y Aplicaciones}
+\begin{center}
+% IMAGEN: Diagrama mostrando el impacto potencial en diferentes sectores
+\includegraphics[width=0.85\textwidth]{27-impacto.png}
+\end{center}
+\end{frame}
+
+% Preguntas
+\begin{frame}
+\begin{center}
+\Huge ¿Preguntas?
+\vspace{1cm}
+% IMAGEN: Imagen de cierre o logo del proyecto
+\includegraphics[width=0.5\textwidth]{28-cierre.png}
+\end{center}
+\end{frame}
+
+\end{document}

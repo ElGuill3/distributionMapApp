@@ -61,7 +61,7 @@ map.on(L.Draw.Event.CREATED, (e) => {
         return;
     }
     const centerLat = (southWest.lat + northEast.lat) / 2;
-    const centerLng = (southWest.lng + northEast.lng) / 2;
+    const centerLng = (southWest.lng + southWest.lng) / 2;
     const side = Math.min(widthDeg, heightDeg);
     const halfSide = side / 2;
     const squareSouth = centerLat - halfSide;
@@ -91,7 +91,7 @@ map.on(L.Draw.Event.CREATED, (e) => {
 const startInput = document.getElementById('startDate');
 const endInput = document.getElementById('endDate');
 const generateGifButton = document.getElementById('generateNdviGifBBox');
-// ERA5 temp controls
+// MERRA-2 temp controls
 const tempStartInput = document.getElementById('tempStartDate');
 const tempEndInput = document.getElementById('tempEndDate');
 const generateTempGifButton = document.getElementById('generateTempGifBBox');
@@ -150,7 +150,7 @@ function updateNdviColorbar(vmin, vmax) {
     ndviMinLabel.textContent = `${vmin.toFixed(2)} mín NDVI`;
     ndviMidLabel.textContent = `${((vmin + vmax) / 2).toFixed(2)} NDVI medio`;
 }
-// Temperatura ERA5
+// Temperatura MERRA-2
 const tempColorbar = L.control({ position: 'topright' });
 tempColorbar.onAdd = function () {
     const div = L.DomUtil.create('div', 'temp-colorbar');
@@ -236,10 +236,10 @@ function plotTimeseries(variable, dates, values) {
 // ========== Petición genérica GIF + serie ==========
 async function requestGifAndSeries(variable, start, end, bbox) {
     const bboxJson = JSON.stringify(bbox);
-    const gifEndpoint = variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/era5-temp-gif-bbox';
+    const gifEndpoint = variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/merra2-temp-gif-bbox';
     const tsEndpoint = variable === 'ndvi'
         ? '/api/ndvi-timeseries-bbox'
-        : '/api/era5-temp-timeseries-bbox';
+        : '/api/merra2-temp-timeseries-bbox';
     const gifUrlWithParams = `${gifEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&bbox=${encodeURIComponent(bboxJson)}`;
     const tsUrlWithParams = `${tsEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&bbox=${encodeURIComponent(bboxJson)}`;
     try {
@@ -254,7 +254,6 @@ async function requestGifAndSeries(variable, start, end, bbox) {
             return;
         }
         if (!tsResp.ok) {
-            // eslint-disable-next-line no-console
             console.warn('Error en serie temporal:', tsData.error || tsData);
         }
         const gifUrl = gifData.gifUrl;
@@ -292,7 +291,6 @@ async function requestGifAndSeries(variable, start, end, bbox) {
         }
     }
     catch (err) {
-        // eslint-disable-next-line no-console
         console.error(err);
         alert('Error de red al generar animación / serie temporal.');
     }
@@ -317,7 +315,7 @@ if (startInput && endInput && generateGifButton) {
         requestGifAndSeries('ndvi', start, end, currentBbox);
     });
 }
-// Temperatura ERA5
+// Temperatura MERRA-2
 if (tempStartInput && tempEndInput && generateTempGifButton) {
     generateTempGifButton.addEventListener('click', () => {
         const start = tempStartInput.value;

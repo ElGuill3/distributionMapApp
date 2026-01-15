@@ -1,0 +1,12 @@
+\babel@toc {spanish}{}\relax 
+\beamer@sectionintoc {1}{Introducción}{3}{0}{1}
+\beamer@sectionintoc {2}{Problemática}{5}{0}{2}
+\beamer@sectionintoc {3}{Tecnologías Utilizadas}{6}{0}{3}
+\beamer@sectionintoc {4}{Funcionalidades}{10}{0}{4}
+\beamer@sectionintoc {5}{Arquitectura}{15}{0}{5}
+\beamer@sectionintoc {6}{Fuentes de Datos}{18}{0}{6}
+\beamer@sectionintoc {7}{Interfaz de Usuario}{19}{0}{7}
+\beamer@sectionintoc {8}{Resultados}{22}{0}{8}
+\beamer@sectionintoc {9}{Desafíos y Soluciones}{25}{0}{9}
+\beamer@sectionintoc {10}{Trabajo Futuro}{27}{0}{10}
+\beamer@sectionintoc {11}{Conclusión}{28}{0}{11}

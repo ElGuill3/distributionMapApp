@@ -4,6 +4,8 @@ import os
 import json
 from typing import Optional
 import math
+import pandas as pd
+from datetime import datetime
 
 ee.Initialize(project='inundaciones-proyecto')
 
@@ -23,11 +25,6 @@ def build_ndvi_gif_bbox(
     bbox: list[float],
     ratio: Optional[float] = None
 ):
-    """
-    Genera un GIF NDVI (MODIS 061) recortado al bbox.
-    Ajusta automáticamente las dimensiones para respetar
-    el límite de píxeles totales de Earth Engine.
-    """
     min_lon, min_lat, max_lon, max_lat = bbox
 
     max_span_deg = 8.0
@@ -62,7 +59,6 @@ def build_ndvi_gif_bbox(
         'palette': ['A50026', 'D73027', 'FFFFBF', 'A6D96A', '006837']
     }
 
-    # Control de píxeles totales
     max_total_pixels = 26_000_000
     base_max_pixels_per_frame = 768 * 768
 
@@ -102,10 +98,6 @@ def build_ndvi_timeseries_bbox(
     end: str,
     bbox: list[float]
 ):
-    """
-    Devuelve serie temporal NDVI promedio MODIS 061 en bbox.
-    Salida: (dates, ndvi) donde dates = [YYYY-MM-DD], ndvi = [float].
-    """
     min_lon, min_lat, max_lon, max_lat = bbox
 
     max_span_deg = 8.0
@@ -164,19 +156,23 @@ def build_ndvi_timeseries_bbox(
     return out_dates, out_ndvi
 
 
-# ===============================
-# ERA5 Temperatura - GIF + Serie
-# ===============================
+# ====================================
+# Temperatura MERRA-2 - GIF + Serie
+# ====================================
 
-def build_era5_temp_gif_bbox(
+MERRA2_COLLECTION = 'NASA/GSFC/MERRA/slv/2'  # colección superficie / T2M en GEE
+
+
+def build_merra2_temp_gif_bbox(
     start: str,
     end: str,
     bbox: list[float],
     ratio: Optional[float] = None
 ):
     """
-    Genera un GIF de temperatura media 2m ERA5 DAILY recortado al bbox.
-    Temperatura en °C.
+    Genera un GIF de temperatura media 2m MERRA-2 (T2M) promediada por año
+    recortado al bbox, en °C. Esto reduce mucho el número de frames y evita
+    errores de 'User memory limit exceeded'.
     """
     min_lon, min_lat, max_lon, max_lat = bbox
 
@@ -188,30 +184,58 @@ def build_era5_temp_gif_bbox(
     end_date = ee.Date(end)
     region = ee.Geometry.Rectangle(bbox)
 
-    col = (ee.ImageCollection('ECMWF/ERA5/DAILY')
-           .select(['mean_2m_air_temperature'])
+    # Colección horaria MERRA-2 T2M en °C
+    col = (ee.ImageCollection(MERRA2_COLLECTION)
+           .select(['T2M'])
            .filterDate(start_date, end_date)
            .filterBounds(region)
            .sort('system:time_start'))
 
+    # Si no hay imágenes, salir
     size = col.size()
-    n_frames = int(size.getInfo())
-    if n_frames == 0:
+    if size.eq(0).getInfo():
         return None
 
-    def to_celsius_and_mask(img):
-        # ERA5 está en Kelvin; convertir a °C
+    def to_celsius(img):
         temp_c = img.subtract(273.15)
-        # rango razonable para México, recorte de seguridad
         mask = temp_c.gte(-20).And(temp_c.lte(50))
         return temp_c.updateMask(mask).copyProperties(img, ['system:time_start'])
 
-    col_c = col.map(to_celsius_and_mask)
+    col_c = col.map(to_celsius)
 
-    # Paleta típica de temperatura
+    # === Agregación anual ===
+    # Creamos una lista de años desde start hasta end
+    start_year = start_date.get('year')
+    end_year = end_date.get('year')
+    years = ee.List.sequence(start_year, end_year)
+
+    def yearly_mean(year):
+        year = ee.Number(year)
+        year_start = ee.Date.fromYMD(year, 1, 1)
+        year_end = year_start.advance(1, 'year')
+
+        year_col = col_c.filterDate(year_start, year_end)
+        # Si ese año no tiene imágenes, saltar
+        return ee.Algorithms.If(
+            year_col.size().gt(0),
+            year_col.mean().set('year', year),
+            None
+        )
+
+    # Aplicar sobre todos los años y filtrar los None
+    yearly_images = years.map(yearly_mean)
+    yearly_images = ee.ImageCollection.fromImages(
+        yearly_images.filter(ee.Filter.notNull(['year']))
+    )
+
+    # Si después de agrupar no queda nada, salir
+    if yearly_images.size().eq(0).getInfo():
+        return None
+
+    # Paleta de temperatura
     vis_params = {
-        'min': 0.0,   # °C
-        'max': 35.0,  # °C
+        'min': 0.0,
+        'max': 35.0,
         'palette': [
             '000080', '0000d9', '4000ff', '0080ff', '00ffff',
             '00ff80', '80ff00', 'daff00', 'ffff00',
@@ -219,8 +243,11 @@ def build_era5_temp_gif_bbox(
         ]
     }
 
+    # Mucho menos frames ahora: n_frames ≈ número de años
+    n_frames = int(yearly_images.size().getInfo())
+
     max_total_pixels = 26_000_000
-    base_max_pixels_per_frame = 768 * 768
+    base_max_pixels_per_frame = 1024 * 1024  # podemos permitir algo más grande
 
     pixels_per_frame = min(
         base_max_pixels_per_frame,
@@ -240,12 +267,12 @@ def build_era5_temp_gif_bbox(
 
     dims = f'{width_px}x{height_px}'
 
-    gif_url = col_c.getVideoThumbURL({
+    gif_url = yearly_images.getVideoThumbURL({
         'region': region,
         'dimensions': dims,
-        'framesPerSecond': 2,
+        'framesPerSecond': 1,  # 1 frame por año → ritmo más lento
         'format': 'gif',
-        'bands': ['mean_2m_air_temperature'],
+        'bands': ['T2M'],
         'crs': 'EPSG:3857',
         **vis_params
     })
@@ -253,14 +280,15 @@ def build_era5_temp_gif_bbox(
     return gif_url
 
 
-def build_era5_temp_timeseries_bbox(
+def build_merra2_temp_hourly_bbox(
     start: str,
     end: str,
     bbox: list[float]
 ):
     """
-    Devuelve serie temporal de temperatura media 2m ERA5 DAILY en °C.
-    Salida: (dates, temps) donde temps = [°C].
+    Devuelve serie horaria T2M promedio en bbox (°C).
+    Salida: listas (timestamps_iso, temp_c).
+    GEE solo reduce espacialmente; agregación diaria se hace en Python.
     """
     min_lon, min_lat, max_lon, max_lat = bbox
 
@@ -273,8 +301,8 @@ def build_era5_temp_timeseries_bbox(
     start_date = ee.Date(start)
     end_date = ee.Date(end)
 
-    col = (ee.ImageCollection('ECMWF/ERA5/DAILY')
-           .select(['mean_2m_air_temperature'])
+    col = (ee.ImageCollection(MERRA2_COLLECTION)
+           .select(['T2M'])
            .filterDate(start_date, end_date)
            .filterBounds(region)
            .sort('system:time_start'))
@@ -283,7 +311,7 @@ def build_era5_temp_timeseries_bbox(
     if size.eq(0).getInfo():
         return [], []
 
-    def to_celsius_and_mean(img):
+    def hourly_mean_feature(img):
         temp_c = img.subtract(273.15)
         mask = temp_c.gte(-20).And(temp_c.lte(50))
         temp_c = temp_c.updateMask(mask)
@@ -291,34 +319,56 @@ def build_era5_temp_timeseries_bbox(
         mean_dict = temp_c.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=region,
-            scale=27_800,  # resolución ERA5 DAILY ~28 km
+            scale=50_000,  # ~0.5°; suficiente para promediar en bbox regional
             maxPixels=1e7
         )
 
-        mean_val = ee.Number(mean_dict.get('mean_2m_air_temperature'))
-        # recorte de seguridad
+        mean_val = ee.Number(mean_dict.get('T2M'))
         mean_val = mean_val.max(-20).min(50)
 
-        date_str = ee.Date(img.get('system:time_start')).format('YYYY-MM-dd')
+        # timestamp completo en ISO (hora incluida)
+        date_iso = ee.Date(img.get('system:time_start')).format("YYYY-MM-dd'T'HH:mm:ss")
 
         return ee.Feature(None, {
-            'date': date_str,
+            'datetime': date_iso,
             'temp_c': mean_val
         })
 
-    fc = col.map(to_celsius_and_mean)
+    fc = col.map(hourly_mean_feature)
 
-    dates = fc.aggregate_array('date').getInfo()
+    datetimes = fc.aggregate_array('datetime').getInfo()
     temps = fc.aggregate_array('temp_c').getInfo()
 
-    out_dates: list[str] = []
-    out_temps: list[float] = []
-    for d, v in zip(dates, temps):
+    out_dt: list[str] = []
+    out_temp: list[float] = []
+    for d, v in zip(datetimes, temps):
         if d is not None and v is not None:
-            out_dates.append(d)
-            out_temps.append(float(v))
+            out_dt.append(str(d))
+            out_temp.append(float(v))
 
-    return out_dates, out_temps
+    return out_dt, out_temp
+
+
+def merra2_hourly_to_daily(datetimes: list[str], temps: list[float]):
+    """
+    Convierte serie horaria (datetime ISO, temp °C) a promedio diario.
+    Devuelve (dates_YYYY_MM_DD, daily_mean_temp).
+    """
+    if not datetimes or not temps:
+        return [], []
+
+    df = pd.DataFrame({
+        'datetime': pd.to_datetime(datetimes),
+        'temp_c': temps
+    })
+    df = df.set_index('datetime').sort_index()
+
+    daily = df.resample('D').mean().dropna()
+
+    out_dates = daily.index.strftime('%Y-%m-%d').tolist()
+    out_temp = daily['temp_c'].astype(float).round(3).tolist()
+
+    return out_dates, out_temp
 
 
 # =====================
@@ -392,11 +442,28 @@ def ndvi_timeseries_bbox():
 
 
 # =====================
-# Endpoints ERA5 Temp
+# Endpoints MERRA-2 Temp
 # =====================
 
-@app.get('/api/era5-temp-gif-bbox')
-def era5_temp_gif_bbox():
+def check_max_10_years(start: str, end: str) -> Optional[str]:
+    try:
+        d_start = datetime.strptime(start, '%Y-%m-%d')
+        d_end = datetime.strptime(end, '%Y-%m-%d')
+    except ValueError:
+        return 'Formato de fecha inválido. Usa YYYY-MM-DD.'
+
+    if d_end <= d_start:
+        return 'La fecha fin debe ser posterior a la fecha inicio.'
+
+    years_span = (d_end - d_start).days / 365.25
+    if years_span > 10.0:
+        return 'El rango de fechas excede el límite de 10 años. Reduce el intervalo.'
+
+    return None
+
+
+@app.get('/api/merra2-temp-gif-bbox')
+def merra2_temp_gif_bbox():
     start = request.args.get('start')
     end = request.args.get('end')
     bbox_str = request.args.get('bbox')
@@ -404,6 +471,10 @@ def era5_temp_gif_bbox():
 
     if not start or not end or not bbox_str:
         return jsonify({'error': 'Parámetros start, end y bbox son requeridos.'}), 400
+
+    err = check_max_10_years(start, end)
+    if err:
+        return jsonify({'error': err}), 400
 
     try:
         bbox = json.loads(bbox_str)
@@ -419,24 +490,28 @@ def era5_temp_gif_bbox():
         ratio = None
 
     try:
-        gif_url = build_era5_temp_gif_bbox(start, end, bbox, ratio)
+        gif_url = build_merra2_temp_gif_bbox(start, end, bbox, ratio)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
 
     if not gif_url:
-        return jsonify({'error': 'No hay datos de temperatura ERA5 para ese rango / región.'}), 400
+        return jsonify({'error': 'No hay datos de temperatura MERRA-2 para ese rango / región.'}), 400
 
     return jsonify({'gifUrl': gif_url, 'bbox': bbox})
 
 
-@app.get('/api/era5-temp-timeseries-bbox')
-def era5_temp_timeseries_bbox():
+@app.get('/api/merra2-temp-timeseries-bbox')
+def merra2_temp_timeseries_bbox():
     start = request.args.get('start')
     end = request.args.get('end')
     bbox_str = request.args.get('bbox')
 
     if not start or not end or not bbox_str:
         return jsonify({'error': 'Parámetros start, end y bbox son requeridos.'}), 400
+
+    err = check_max_10_years(start, end)
+    if err:
+        return jsonify({'error': err}), 400
 
     try:
         bbox = json.loads(bbox_str)
@@ -447,16 +522,21 @@ def era5_temp_timeseries_bbox():
         return jsonify({'error': 'bbox debe ser un JSON [minLon,minLat,maxLon,maxLat].'}), 400
 
     try:
-        dates, temps = build_era5_temp_timeseries_bbox(start, end, bbox)
+        hourly_dates, hourly_temp = build_merra2_temp_hourly_bbox(start, end, bbox)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
 
-    if not dates:
-        return jsonify({'error': 'No hay datos de temperatura ERA5 para ese rango / región.'}), 400
+    if not hourly_dates:
+        return jsonify({'error': 'No hay datos de temperatura MERRA-2 para ese rango / región.'}), 400
+
+    daily_dates, daily_temp = merra2_hourly_to_daily(hourly_dates, hourly_temp)
+
+    if not daily_dates:
+        return jsonify({'error': 'No fue posible construir la serie diaria de temperatura.'}), 400
 
     return jsonify({
-        'dates': dates,
-        'temp': temps,
+        'dates': daily_dates,
+        'temp': daily_temp,
         'bbox': bbox
     })
 
