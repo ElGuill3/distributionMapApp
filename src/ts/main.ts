@@ -297,12 +297,12 @@ async function requestGifAndSeries(
 ): Promise<void> {
   const bboxJson = JSON.stringify(bbox);
 
-  const gifEndpoint =
-    variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/merra2-temp-gif-bbox';
-  const tsEndpoint =
-    variable === 'ndvi'
-      ? '/api/ndvi-timeseries-bbox'
-      : '/api/merra2-temp-timeseries-bbox';
+const gifEndpoint =
+  variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/era5-temp-gif-bbox';
+const tsEndpoint =
+  variable === 'ndvi'
+    ? '/api/ndvi-timeseries-bbox'
+    : '/api/era5-temp-timeseries-bbox';
 
   const gifUrlWithParams =
     `${gifEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(
