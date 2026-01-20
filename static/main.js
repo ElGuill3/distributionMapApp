@@ -80,6 +80,7 @@ map.on(L.Draw.Event.CREATED, (e) => {
         activeOverlay = null;
         map.removeControl(ndviColorbar);
         map.removeControl(tempColorbar);
+        map.removeControl(soilColorbar);
     }
     hideChartContainer();
     if (ndviChartDiv) {
@@ -91,31 +92,44 @@ map.on(L.Draw.Event.CREATED, (e) => {
 const startInput = document.getElementById('startDate');
 const endInput = document.getElementById('endDate');
 const generateGifButton = document.getElementById('generateNdviGifBBox');
-// MERRA-2 temp controls
+// Temperatura ERA5 controls
 const tempStartInput = document.getElementById('tempStartDate');
 const tempEndInput = document.getElementById('tempEndDate');
 const generateTempGifButton = document.getElementById('generateTempGifBBox');
+// Humedad del suelo ERA5 controls
+const soilStartInput = document.getElementById('soilStartDate');
+const soilEndInput = document.getElementById('soilEndDate');
+const generateSoilGifButton = document.getElementById('generateSoilGifBBox');
 // Selector de variable y bloques
 const variableSelect = document.getElementById('variableSelect');
 const ndviControls = document.getElementById('ndvi-controls');
 const tempControls = document.getElementById('temp-controls');
-if (variableSelect && ndviControls && tempControls) {
+const soilControls = document.getElementById('soil-controls');
+if (variableSelect && ndviControls && tempControls && soilControls) {
     variableSelect.addEventListener('change', () => {
         const value = variableSelect.value;
         currentVariable = value;
         if (value === 'ndvi') {
             ndviControls.classList.remove('hidden');
             tempControls.classList.add('hidden');
+            soilControls.classList.add('hidden');
+        }
+        else if (value === 'temp') {
+            ndviControls.classList.add('hidden');
+            tempControls.classList.remove('hidden');
+            soilControls.classList.add('hidden');
         }
         else {
             ndviControls.classList.add('hidden');
-            tempControls.classList.remove('hidden');
+            tempControls.classList.add('hidden');
+            soilControls.classList.remove('hidden');
         }
         if (activeOverlay) {
             map.removeLayer(activeOverlay);
             activeOverlay = null;
             map.removeControl(ndviColorbar);
             map.removeControl(tempColorbar);
+            map.removeControl(soilColorbar);
         }
         hideChartContainer();
         if (ndviChartDiv) {
@@ -140,16 +154,6 @@ ndviColorbar.onAdd = function () {
   `;
     return div;
 };
-const ndviMaxLabel = document.querySelector('.ndvi-colorbar-labels .ndvi-max');
-const ndviMidLabel = document.querySelector('.ndvi-colorbar-labels .ndvi-mid');
-const ndviMinLabel = document.querySelector('.ndvi-colorbar-labels .ndvi-min');
-function updateNdviColorbar(vmin, vmax) {
-    if (!ndviMaxLabel || !ndviMidLabel || !ndviMinLabel)
-        return;
-    ndviMaxLabel.textContent = `${vmax.toFixed(2)} máx NDVI`;
-    ndviMinLabel.textContent = `${vmin.toFixed(2)} mín NDVI`;
-    ndviMidLabel.textContent = `${((vmin + vmax) / 2).toFixed(2)} NDVI medio`;
-}
 // Temperatura MERRA-2
 const tempColorbar = L.control({ position: 'topright' });
 tempColorbar.onAdd = function () {
@@ -165,6 +169,24 @@ tempColorbar.onAdd = function () {
       <span>10–15 °C</span>
       <span>5–10 °C</span>
       <span>0–5 °C</span>
+    </div>
+  `;
+    return div;
+};
+// Humedad del suelo
+const soilColorbar = L.control({ position: 'topright' });
+soilColorbar.onAdd = function () {
+    const div = L.DomUtil.create('div', 'soil-colorbar');
+    div.innerHTML = `
+    <div class="soil-colorbar-scale"></div>
+    <div class="soil-colorbar-labels">
+      <span>≥ 60 %</span>
+      <span>50–60 %</span>
+      <span>40–50 %</span>
+      <span>30–40 %</span>
+      <span>20–30 %</span>
+      <span>10–20 %</span>
+      <span>0–10 %</span>
     </div>
   `;
     return div;
@@ -187,11 +209,17 @@ function plotTimeseries(variable, dates, values) {
             lineColor = '#006837';
             hoverLabel = 'NDVI';
         }
-        else {
+        else if (variable === 'temp') {
             yTitle = 'Temperatura media 2m (°C)';
             yRange = [0, 35];
             lineColor = '#ff4f00';
             hoverLabel = 'Temp';
+        }
+        else {
+            yTitle = 'Humedad del suelo (%)';
+            yRange = [0, 100];
+            lineColor = '#2b6cb0';
+            hoverLabel = 'Humedad';
         }
         const trace = {
             x: dates,
@@ -236,10 +264,16 @@ function plotTimeseries(variable, dates, values) {
 // ========== Petición genérica GIF + serie ==========
 async function requestGifAndSeries(variable, start, end, bbox) {
     const bboxJson = JSON.stringify(bbox);
-    const gifEndpoint = variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/era5-temp-gif-bbox';
+    const gifEndpoint = variable === 'ndvi'
+        ? '/api/ndvi-gif-bbox'
+        : variable === 'temp'
+            ? '/api/era5-temp-gif-bbox'
+            : '/api/era5-soil-gif-bbox';
     const tsEndpoint = variable === 'ndvi'
         ? '/api/ndvi-timeseries-bbox'
-        : '/api/era5-temp-timeseries-bbox';
+        : variable === 'temp'
+            ? '/api/era5-temp-timeseries-bbox'
+            : '/api/era5-soil-timeseries-bbox';
     const gifUrlWithParams = `${gifEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&bbox=${encodeURIComponent(bboxJson)}`;
     const tsUrlWithParams = `${tsEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&bbox=${encodeURIComponent(bboxJson)}`;
     try {
@@ -270,17 +304,26 @@ async function requestGifAndSeries(variable, start, end, bbox) {
         if (variable === 'ndvi') {
             ndviColorbar.addTo(map);
             map.removeControl(tempColorbar);
+            map.removeControl(soilColorbar);
         }
-        else {
+        else if (variable === 'temp') {
             tempColorbar.addTo(map);
             map.removeControl(ndviColorbar);
+            map.removeControl(soilColorbar);
+        }
+        else {
+            soilColorbar.addTo(map);
+            map.removeControl(ndviColorbar);
+            map.removeControl(tempColorbar);
         }
         map.fitBounds(overlayBounds);
         if (tsResp.ok) {
             const dates = tsData.dates;
             const values = variable === 'ndvi'
                 ? tsData.ndvi
-                : tsData.temp;
+                : variable === 'temp'
+                    ? tsData.temp
+                    : tsData.soil_pct;
             plotTimeseries(variable, dates, values);
         }
         else {
@@ -315,7 +358,7 @@ if (startInput && endInput && generateGifButton) {
         requestGifAndSeries('ndvi', start, end, currentBbox);
     });
 }
-// Temperatura MERRA-2
+// Temperatura ERA5
 if (tempStartInput && tempEndInput && generateTempGifButton) {
     generateTempGifButton.addEventListener('click', () => {
         const start = tempStartInput.value;
@@ -332,6 +375,25 @@ if (tempStartInput && tempEndInput && generateTempGifButton) {
         if (variableSelect)
             variableSelect.value = 'temp';
         requestGifAndSeries('temp', start, end, currentBbox);
+    });
+}
+// Humedad del suelo ERA5
+if (soilStartInput && soilEndInput && generateSoilGifButton) {
+    generateSoilGifButton.addEventListener('click', () => {
+        const start = soilStartInput.value;
+        const end = soilEndInput.value;
+        if (!start || !end) {
+            alert('Selecciona fecha inicio y fecha fin.');
+            return;
+        }
+        if (!currentBbox) {
+            alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
+            return;
+        }
+        currentVariable = 'soil';
+        if (variableSelect)
+            variableSelect.value = 'soil';
+        requestGifAndSeries('soil', start, end, currentBbox);
     });
 }
 // ========== Sidebar ==========

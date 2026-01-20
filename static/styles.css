@@ -294,3 +294,40 @@ body.sidebar-collapsed .leaflet-left {
   flex-direction: column;
   justify-content: space-between;
 }
+
+/* Barra de colores Humedad del suelo */
+.soil-colorbar {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px;
+  border-radius: 4px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.soil-colorbar-scale {
+  width: 14px;
+  height: 140px;
+  border: 1px solid #999;
+  background: linear-gradient(
+    to top,
+    #552200 0%,
+    #8c510a 12.5%,
+    #bf812d 25%,
+    #dfc27d 37.5%,
+    #f6e8c3 50%,
+    #c7eae5 62.5%,
+    #80cdc1 75%,
+    #35978f 87.5%,
+    #01665e 100%
+  );
+  margin-right: 6px;
+}
+
+.soil-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
