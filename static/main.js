@@ -236,10 +236,10 @@ function plotTimeseries(variable, dates, values) {
 // ========== Petición genérica GIF + serie ==========
 async function requestGifAndSeries(variable, start, end, bbox) {
     const bboxJson = JSON.stringify(bbox);
-    const gifEndpoint = variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/merra2-temp-gif-bbox';
+    const gifEndpoint = variable === 'ndvi' ? '/api/ndvi-gif-bbox' : '/api/era5-temp-gif-bbox';
     const tsEndpoint = variable === 'ndvi'
         ? '/api/ndvi-timeseries-bbox'
-        : '/api/merra2-temp-timeseries-bbox';
+        : '/api/era5-temp-timeseries-bbox';
     const gifUrlWithParams = `${gifEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&bbox=${encodeURIComponent(bboxJson)}`;
     const tsUrlWithParams = `${tsEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&bbox=${encodeURIComponent(bboxJson)}`;
     try {
