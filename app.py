@@ -13,7 +13,6 @@ STATIC_FOLDER = os.path.join(BASE_DIR, 'static')
 
 app = Flask(__name__, static_folder=STATIC_FOLDER, template_folder='templates')
 
-
 # =========================
 # NDVI (MODIS) - GIF + Serie
 # =========================
@@ -91,7 +90,6 @@ def build_ndvi_gif_bbox(
 
     return gif_url
 
-
 def build_ndvi_timeseries_bbox(
     start: str,
     end: str,
@@ -154,13 +152,12 @@ def build_ndvi_timeseries_bbox(
 
     return out_dates, out_ndvi
 
-
 # ===============================
 # ERA5-Land Temperatura - GIF + Serie
 # ===============================
 
-ERA5_LAND_DAILY = 'ECMWF/ERA5_LAND/DAILY_AGGR' # media diaria 2 m en K[web:17]
-SOIL_BAND = 'volumetric_soil_water_layer_1'  # capa 0–7 cm
+ERA5_LAND_DAILY = 'ECMWF/ERA5_LAND/DAILY_AGGR'
+SOIL_BAND = 'volumetric_soil_water_layer_1'
 
 def build_era5_temp_gif_bbox(
     start: str,
@@ -239,7 +236,6 @@ def build_era5_temp_gif_bbox(
 
     return gif_url
 
-
 def build_era5_temp_timeseries_bbox(
     start: str,
     end: str,
@@ -302,6 +298,9 @@ def build_era5_temp_timeseries_bbox(
 
     return out_dates, out_temps
 
+# ===============================
+# ERA5-Land Humedad del suelo - GIF + Serie
+# ===============================
 
 def build_era5_soil_gif_bbox(
     start: str,
@@ -342,7 +341,7 @@ def build_era5_soil_gif_bbox(
 
     vis_params = {
         'min': 0.0,
-        'max': 60.0,  # puedes ajustar según región
+        'max': 60.0,
         'palette': [
             '552200', '8c510a', 'bf812d', 'dfc27d',
             'f6e8c3', 'c7eae5', '80cdc1', '35978f', '01665e'
@@ -381,7 +380,6 @@ def build_era5_soil_gif_bbox(
     })
 
     return gif_url
-
 
 def build_era5_soil_timeseries_bbox(
     start: str,
@@ -444,7 +442,6 @@ def build_era5_soil_timeseries_bbox(
 
     return out_dates, out_vals
 
-
 # =====================
 # Endpoints NDVI
 # =====================
@@ -482,7 +479,6 @@ def ndvi_gif_bbox():
 
     return jsonify({'gifUrl': gif_url, 'bbox': bbox})
 
-
 @app.get('/api/ndvi-timeseries-bbox')
 def ndvi_timeseries_bbox():
     start = request.args.get('start')
@@ -514,9 +510,8 @@ def ndvi_timeseries_bbox():
         'bbox': bbox
     })
 
-
 # =====================
-# Endpoints ERA5-Land Temp
+# Endpoints ERA5-Land Temperatura
 # =====================
 
 def check_max_10_years(start: str, end: str) -> Optional[str]:
@@ -533,7 +528,6 @@ def check_max_10_years(start: str, end: str) -> Optional[str]:
     if years_span > 10.0:
         return 'El rango de fechas excede el límite de 10 años. Reduce el intervalo.'
     return None
-
 
 @app.get('/api/era5-temp-gif-bbox')
 def era5_temp_gif_bbox():
@@ -572,7 +566,6 @@ def era5_temp_gif_bbox():
 
     return jsonify({'gifUrl': gif_url, 'bbox': bbox})
 
-
 @app.get('/api/era5-temp-timeseries-bbox')
 def era5_temp_timeseries_bbox():
     start = request.args.get('start')
@@ -609,7 +602,7 @@ def era5_temp_timeseries_bbox():
     })
 
 # =====================
-# Endpoints ERA5-Land Soil Moisture
+# Endpoints ERA5-Land Humedad del suelo
 # =====================
 
 @app.get('/api/era5-soil-gif-bbox')
@@ -648,7 +641,6 @@ def era5_soil_gif_bbox():
         return jsonify({'error': 'No hay datos de humedad del suelo ERA5-Land para ese rango / región.'}), 400
 
     return jsonify({'gifUrl': gif_url, 'bbox': bbox})
-
 
 @app.get('/api/era5-soil-timeseries-bbox')
 def era5_soil_timeseries_bbox():
@@ -693,11 +685,9 @@ def era5_soil_timeseries_bbox():
 def index():
     return render_template('index.html')
 
-
 @app.route('/static/<path:filename>')
 def static_files(filename):
     return send_from_directory(STATIC_FOLDER, filename)
-
 
 if __name__ == '__main__':
     app.run(debug=True)

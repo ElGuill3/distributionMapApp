@@ -79,6 +79,7 @@
         <select id="variableSelect">
           <option value="ndvi">NDVI</option>
           <option value="temp">Temperatura 2m</option>
+          <option value="soil">Humedad suelo (0–7 cm)</option>
         </select>
       </section>
 
@@ -90,7 +91,7 @@
         <p class="hint">
           1) Dibuja un rectángulo en el mapa.<br />
           2) Elige fechas de inicio y fin.<br />
-          3) Pulsa “Generar GIF NDVI”.<br />
+          3) Pulsa "Generar GIF NDVI".<br />
           4) Verás la animación y la gráfica NDVI.
         </p>
 
@@ -111,7 +112,7 @@
         <p class="hint">
           1) Dibuja un rectángulo en el mapa.<br />
           2) Elige fechas de inicio y fin.<br />
-          3) Pulsa “Generar GIF Temperatura”.<br />
+          3) Pulsa "Generar GIF Temperatura".<br />
           4) Verás la animación y la serie de temperatura.
         </p>
 
@@ -123,6 +124,27 @@
 
         <button id="generateTempGifBBox" class="primary-action">
           Generar GIF Temperatura
+        </button>
+      </section>
+
+      <!-- Controles Humedad del suelo -->
+      <section id="soil-controls" class="hidden">
+        <h2>Humedad del suelo (0–7 cm)</h2>
+        <p class="hint">
+          1) Dibuja un rectángulo en el mapa.<br />
+          2) Elige fechas de inicio y fin.<br />
+          3) Pulsa "Generar GIF Humedad".<br />
+          4) Verás la animación y la serie de humedad.
+        </p>
+
+        <label for="soilStartDate">Fecha inicio</label>
+        <input id="soilStartDate" type="date" />
+
+        <label for="soilEndDate">Fecha fin</label>
+        <input id="soilEndDate" type="date" />
+
+        <button id="generateSoilGifBBox" class="primary-action">
+          Generar GIF Humedad
         </button>
       </section>
     </aside>
