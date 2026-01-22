@@ -61,7 +61,7 @@ map.on(L.Draw.Event.CREATED, (e) => {
         return;
     }
     const centerLat = (southWest.lat + northEast.lat) / 2;
-    const centerLng = (southWest.lng + southWest.lng) / 2;
+    const centerLng = (southWest.lng + northEast.lng) / 2;
     const side = Math.min(widthDeg, heightDeg);
     const halfSide = side / 2;
     const squareSouth = centerLat - halfSide;
@@ -81,6 +81,8 @@ map.on(L.Draw.Event.CREATED, (e) => {
         map.removeControl(ndviColorbar);
         map.removeControl(tempColorbar);
         map.removeControl(soilColorbar);
+        map.removeControl(precipColorbar);
+        map.removeControl(waterColorbar);
     }
     hideChartContainer();
     if (ndviChartDiv) {
@@ -100,43 +102,14 @@ const generateTempGifButton = document.getElementById('generateTempGifBBox');
 const soilStartInput = document.getElementById('soilStartDate');
 const soilEndInput = document.getElementById('soilEndDate');
 const generateSoilGifButton = document.getElementById('generateSoilGifBBox');
-// Selector de variable y bloques
-const variableSelect = document.getElementById('variableSelect');
-const ndviControls = document.getElementById('ndvi-controls');
-const tempControls = document.getElementById('temp-controls');
-const soilControls = document.getElementById('soil-controls');
-if (variableSelect && ndviControls && tempControls && soilControls) {
-    variableSelect.addEventListener('change', () => {
-        const value = variableSelect.value;
-        currentVariable = value;
-        if (value === 'ndvi') {
-            ndviControls.classList.remove('hidden');
-            tempControls.classList.add('hidden');
-            soilControls.classList.add('hidden');
-        }
-        else if (value === 'temp') {
-            ndviControls.classList.add('hidden');
-            tempControls.classList.remove('hidden');
-            soilControls.classList.add('hidden');
-        }
-        else {
-            ndviControls.classList.add('hidden');
-            tempControls.classList.add('hidden');
-            soilControls.classList.remove('hidden');
-        }
-        if (activeOverlay) {
-            map.removeLayer(activeOverlay);
-            activeOverlay = null;
-            map.removeControl(ndviColorbar);
-            map.removeControl(tempColorbar);
-            map.removeControl(soilColorbar);
-        }
-        hideChartContainer();
-        if (ndviChartDiv) {
-            Plotly.purge(ndviChartDiv);
-        }
-    });
-}
+// Precipitación CHIRPS controls
+const precipStartInput = document.getElementById('precipStartDate');
+const precipEndInput = document.getElementById('precipEndDate');
+const generatePrecipGifButton = document.getElementById('generatePrecipGifBBox');
+// Agua (Sentinel-2) controls
+const waterStartInput = document.getElementById('waterStartDate');
+const waterEndInput = document.getElementById('waterEndDate');
+const generateWaterGifButton = document.getElementById('generateWaterGifBBox');
 // ========== Barras de colores ==========
 // NDVI
 const ndviColorbar = L.control({ position: 'topright' });
@@ -154,7 +127,7 @@ ndviColorbar.onAdd = function () {
   `;
     return div;
 };
-// Temperatura MERRA-2
+// Temperatura ERA5
 const tempColorbar = L.control({ position: 'topright' });
 tempColorbar.onAdd = function () {
     const div = L.DomUtil.create('div', 'temp-colorbar');
@@ -191,9 +164,43 @@ soilColorbar.onAdd = function () {
   `;
     return div;
 };
+// Precipitación diaria CHIRPS
+const precipColorbar = L.control({ position: 'topright' });
+precipColorbar.onAdd = function () {
+    const div = L.DomUtil.create('div', 'precip-colorbar');
+    div.innerHTML = `
+    <div class="precip-colorbar-scale"></div>
+    <div class="precip-colorbar-labels">
+      <span>≥ 80 mm/día</span>
+      <span>60–80 mm/día</span>
+      <span>40–60 mm/día</span>
+      <span>20–40 mm/día</span>
+      <span>10–20 mm/día</span>
+      <span>1–10 mm/día</span>
+      <span>0–1 mm/día</span>
+    </div>
+  `;
+    return div;
+};
+// Agua (NDWI Sentinel-2)
+const waterColorbar = L.control({ position: 'topright' });
+waterColorbar.onAdd = function () {
+    const div = L.DomUtil.create('div', 'precip-colorbar');
+    div.innerHTML = `
+    <div class="precip-colorbar-scale" style="background: linear-gradient(to top, #00000000 0%, #0000ff 100%);"></div>
+    <div class="precip-colorbar-labels">
+      <span>100 % agua</span>
+      <span>50 % agua</span>
+      <span>0 % agua</span>
+    </div>
+  `;
+    return div;
+};
 // ========== Gráfica genérica ==========
 function plotTimeseries(variable, dates, values) {
     if (!ndviChartDiv)
+        return;
+    if (!values || values.length === 0)
         return;
     showChartContainer();
     requestAnimationFrame(() => {
@@ -203,23 +210,39 @@ function plotTimeseries(variable, dates, values) {
         let yRange = null;
         let lineColor = '';
         let hoverLabel = '';
+        const dataMin = Math.min(...values);
+        const dataMax = Math.max(...values);
+        const span = dataMax - dataMin || 1;
+        const padding = span * 0.1;
         if (variable === 'ndvi') {
             yTitle = 'NDVI promedio';
-            yRange = [0, 0.8];
+            yRange = [Math.max(0, dataMin - padding), Math.min(1, dataMax + padding)];
             lineColor = '#006837';
             hoverLabel = 'NDVI';
         }
         else if (variable === 'temp') {
             yTitle = 'Temperatura media 2m (°C)';
-            yRange = [0, 35];
+            yRange = [dataMin - padding, dataMax + padding];
             lineColor = '#ff4f00';
             hoverLabel = 'Temp';
         }
-        else {
+        else if (variable === 'soil') {
             yTitle = 'Humedad del suelo (%)';
             yRange = [0, 100];
             lineColor = '#2b6cb0';
             hoverLabel = 'Humedad';
+        }
+        else if (variable === 'precip') {
+            yTitle = 'Precipitación diaria (mm/día)';
+            yRange = [Math.max(0, dataMin - padding), dataMax + padding];
+            lineColor = '#0044aa';
+            hoverLabel = 'Pr';
+        }
+        else {
+            yTitle = 'Hectáreas con agua en el bbox';
+            yRange = [0, dataMax + padding];
+            lineColor = '#0000ff';
+            hoverLabel = 'ha agua';
         }
         const trace = {
             x: dates,
@@ -241,13 +264,11 @@ function plotTimeseries(variable, dates, values) {
                 type: 'date'
             },
             yaxis: {
-                title: yTitle
+                title: yTitle,
+                range: yRange !== null && yRange !== void 0 ? yRange : undefined
             },
             showlegend: false
         };
-        if (yRange) {
-            layout.yaxis.range = yRange;
-        }
         const config = {
             responsive: true,
             displaylogo: false,
@@ -268,12 +289,20 @@ async function requestGifAndSeries(variable, start, end, bbox) {
         ? '/api/ndvi-gif-bbox'
         : variable === 'temp'
             ? '/api/era5-temp-gif-bbox'
-            : '/api/era5-soil-gif-bbox';
+            : variable === 'soil'
+                ? '/api/era5-soil-gif-bbox'
+                : variable === 'precip'
+                    ? '/api/imerg-precip-gif-bbox'
+                    : '/api/water-gif-bbox';
     const tsEndpoint = variable === 'ndvi'
         ? '/api/ndvi-timeseries-bbox'
         : variable === 'temp'
             ? '/api/era5-temp-timeseries-bbox'
-            : '/api/era5-soil-timeseries-bbox';
+            : variable === 'soil'
+                ? '/api/era5-soil-timeseries-bbox'
+                : variable === 'precip'
+                    ? '/api/imerg-precip-timeseries-bbox'
+                    : '/api/water-timeseries-bbox';
     const gifUrlWithParams = `${gifEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&bbox=${encodeURIComponent(bboxJson)}`;
     const tsUrlWithParams = `${tsEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&bbox=${encodeURIComponent(bboxJson)}`;
     try {
@@ -305,16 +334,36 @@ async function requestGifAndSeries(variable, start, end, bbox) {
             ndviColorbar.addTo(map);
             map.removeControl(tempColorbar);
             map.removeControl(soilColorbar);
+            map.removeControl(precipColorbar);
+            map.removeControl(waterColorbar);
         }
         else if (variable === 'temp') {
             tempColorbar.addTo(map);
             map.removeControl(ndviColorbar);
             map.removeControl(soilColorbar);
+            map.removeControl(precipColorbar);
+            map.removeControl(waterColorbar);
         }
-        else {
+        else if (variable === 'soil') {
             soilColorbar.addTo(map);
             map.removeControl(ndviColorbar);
             map.removeControl(tempColorbar);
+            map.removeControl(precipColorbar);
+            map.removeControl(waterColorbar);
+        }
+        else if (variable === 'precip') {
+            precipColorbar.addTo(map);
+            map.removeControl(ndviColorbar);
+            map.removeControl(tempColorbar);
+            map.removeControl(soilColorbar);
+            map.removeControl(waterColorbar);
+        }
+        else {
+            waterColorbar.addTo(map);
+            map.removeControl(ndviColorbar);
+            map.removeControl(tempColorbar);
+            map.removeControl(soilColorbar);
+            map.removeControl(precipColorbar);
         }
         map.fitBounds(overlayBounds);
         if (tsResp.ok) {
@@ -323,7 +372,11 @@ async function requestGifAndSeries(variable, start, end, bbox) {
                 ? tsData.ndvi
                 : variable === 'temp'
                     ? tsData.temp
-                    : tsData.soil_pct;
+                    : variable === 'soil'
+                        ? tsData.soil_pct
+                        : variable === 'precip'
+                            ? tsData.precip_mm
+                            : tsData.water_ha;
             plotTimeseries(variable, dates, values);
         }
         else {
@@ -353,12 +406,10 @@ if (startInput && endInput && generateGifButton) {
             return;
         }
         currentVariable = 'ndvi';
-        if (variableSelect)
-            variableSelect.value = 'ndvi';
         requestGifAndSeries('ndvi', start, end, currentBbox);
     });
 }
-// Temperatura ERA5
+// Temperatura
 if (tempStartInput && tempEndInput && generateTempGifButton) {
     generateTempGifButton.addEventListener('click', () => {
         const start = tempStartInput.value;
@@ -372,12 +423,10 @@ if (tempStartInput && tempEndInput && generateTempGifButton) {
             return;
         }
         currentVariable = 'temp';
-        if (variableSelect)
-            variableSelect.value = 'temp';
         requestGifAndSeries('temp', start, end, currentBbox);
     });
 }
-// Humedad del suelo ERA5
+// Humedad del suelo
 if (soilStartInput && soilEndInput && generateSoilGifButton) {
     generateSoilGifButton.addEventListener('click', () => {
         const start = soilStartInput.value;
@@ -391,9 +440,41 @@ if (soilStartInput && soilEndInput && generateSoilGifButton) {
             return;
         }
         currentVariable = 'soil';
-        if (variableSelect)
-            variableSelect.value = 'soil';
         requestGifAndSeries('soil', start, end, currentBbox);
+    });
+}
+// Precipitación
+if (precipStartInput && precipEndInput && generatePrecipGifButton) {
+    generatePrecipGifButton.addEventListener('click', () => {
+        const start = precipStartInput.value;
+        const end = precipEndInput.value;
+        if (!start || !end) {
+            alert('Selecciona fecha inicio y fecha fin.');
+            return;
+        }
+        if (!currentBbox) {
+            alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
+            return;
+        }
+        currentVariable = 'precip';
+        requestGifAndSeries('precip', start, end, currentBbox);
+    });
+}
+// Agua
+if (waterStartInput && waterEndInput && generateWaterGifButton) {
+    generateWaterGifButton.addEventListener('click', () => {
+        const start = waterStartInput.value;
+        const end = waterEndInput.value;
+        if (!start || !end) {
+            alert('Selecciona fecha inicio y fecha fin.');
+            return;
+        }
+        if (!currentBbox) {
+            alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
+            return;
+        }
+        currentVariable = 'water';
+        requestGifAndSeries('water', start, end, currentBbox);
     });
 }
 // ========== Sidebar ==========

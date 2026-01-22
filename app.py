@@ -157,7 +157,6 @@ def build_ndvi_timeseries_bbox(
 # ===============================
 
 ERA5_LAND_DAILY = 'ECMWF/ERA5_LAND/DAILY_AGGR'
-SOIL_BAND = 'volumetric_soil_water_layer_1'
 
 def build_era5_temp_gif_bbox(
     start: str,
@@ -302,6 +301,8 @@ def build_era5_temp_timeseries_bbox(
 # ERA5-Land Humedad del suelo - GIF + Serie
 # ===============================
 
+SOIL_BAND = 'volumetric_soil_water_layer_1'
+
 def build_era5_soil_gif_bbox(
     start: str,
     end: str,
@@ -432,6 +433,289 @@ def build_era5_soil_timeseries_bbox(
     fc = col.map(daily_mean_feature)
     dates = fc.aggregate_array('date').getInfo()
     vals = fc.aggregate_array('soil_pct').getInfo()
+
+    out_dates: list[str] = []
+    out_vals: list[float] = []
+    for d, v in zip(dates, vals):
+        if d is not None and v is not None:
+            out_dates.append(d)
+            out_vals.append(float(v))
+
+    return out_dates, out_vals
+
+CHIRPS_DAILY = 'UCSB-CHG/CHIRPS/DAILY'
+
+def build_chirps_precip_gif_bbox(start: str, end: str, bbox: list[float], ratio: Optional[float] = None):
+    min_lon, min_lat, max_lon, max_lat = bbox
+    max_span_deg = 8.0
+    if (max_lon - min_lon) > max_span_deg or (max_lat - min_lat) > max_span_deg:
+        raise ValueError("El bounding box es demasiado grande. Reduce el área seleccionada.")
+
+    region = ee.Geometry.Rectangle(bbox)
+    start_date = ee.Date(start)
+    end_date = ee.Date(end)
+
+    col = (ee.ImageCollection(CHIRPS_DAILY)
+           .select(['precipitation'])
+           .filterDate(start_date, end_date)
+           .filterBounds(region)
+           .sort('system:time_start'))
+
+    size = col.size()
+    n_frames = int(size.getInfo())
+    if n_frames == 0:
+        return None
+
+    vis_params = {
+        'min': 0.0,
+        'max': 80.0,
+        'palette': ['ffffff', 'cce7ff', '99ccff', '66b2ff', '3389ff', '0055ff', '002b7f']
+    }
+
+    max_total_pixels = 26_000_000
+    base_max_pixels_per_frame = 768 * 768
+    pixels_per_frame = min(
+        base_max_pixels_per_frame,
+        max_total_pixels // max(n_frames, 1)
+    )
+
+    if ratio is not None and ratio > 0:
+        safe_ratio = max(ratio, 1e-6)
+        width_px = int(math.sqrt(pixels_per_frame * safe_ratio))
+        height_px = int(width_px / safe_ratio)
+    else:
+        width_px = int(math.sqrt(pixels_per_frame))
+        height_px = width_px
+
+    width_px = max(256, width_px)
+    height_px = max(256, height_px)
+    dims = f'{width_px}x{height_px}'
+
+    gif_url = col.getVideoThumbURL({
+        'region': region,
+        'dimensions': dims,
+        'framesPerSecond': 5,
+        'format': 'gif',
+        'bands': ['precipitation'],
+        'crs': 'EPSG:3857',
+        **vis_params
+    })
+    return gif_url
+
+
+def build_chirps_precip_timeseries_bbox(start: str, end: str, bbox: list[float]):
+    min_lon, min_lat, max_lon, max_lat = bbox
+    max_span_deg = 8.0
+    if (max_lon - min_lon) > max_span_deg or (max_lat - min_lat) > max_span_deg:
+        raise ValueError("El bounding box es demasiado grande. Reduce el área seleccionada.")
+
+    region = ee.Geometry.Rectangle(bbox)
+    start_date = ee.Date(start)
+    end_date = ee.Date(end)
+
+    col = (ee.ImageCollection(CHIRPS_DAILY)
+           .select(['precipitation'])
+           .filterDate(start_date, end_date)
+           .filterBounds(region)
+           .sort('system:time_start'))
+
+    size = col.size()
+    if size.eq(0).getInfo():
+        return [], []
+
+    def daily_mean_feature(img):
+        mean_dict = img.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=region,
+            scale=5000,
+            maxPixels=1e7
+        )
+        mean_val = ee.Number(mean_dict.get('precipitation')).max(0)
+
+        date_str = ee.Date(img.get('system:time_start')).format('YYYY-MM-dd')
+        return ee.Feature(None, {
+            'date': date_str,
+            'precip_mm': mean_val
+        })
+
+    fc = col.map(daily_mean_feature)
+    dates = fc.aggregate_array('date').getInfo()
+    vals = fc.aggregate_array('precip_mm').getInfo()
+
+    out_dates: list[str] = []
+    out_vals: list[float] = []
+    for d, v in zip(dates, vals):
+        if d is not None and v is not None:
+            out_dates.append(d)
+            out_vals.append(float(v))
+
+    return out_dates, out_vals
+
+# ===============================
+# COPERNICUS Agua (Sentinel-2 + NDWI)
+# ===============================
+
+S2_SR = 'COPERNICUS/S2_SR_HARMONIZED'
+
+def build_water_gif_bbox(
+    start: str,
+    end: str,
+    bbox: list[float],
+    ratio: Optional[float] = None
+):
+    """
+    GIF de cuerpos de agua (NDWI > 0.3) usando Sentinel-2 SR,
+    con suavizado espacial y eliminación de parches pequeños.
+    """
+    min_lon, min_lat, max_lon, max_lat = bbox
+    max_span_deg = 4.0
+    if (max_lon - min_lon) > max_span_deg or (max_lat - min_lat) > max_span_deg:
+        raise ValueError("El bounding box es demasiado grande para Sentinel-2. Reduce el área.")
+
+    start_date = ee.Date(start)
+    end_date = ee.Date(end)
+    region = ee.Geometry.Rectangle(bbox)
+
+    col = (ee.ImageCollection(S2_SR)
+           .filterDate(start_date, end_date)
+           .filterBounds(region)
+           .filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 60))
+           .select(['B3', 'B8', 'QA60']))
+
+    def apply_cloud_mask(img):
+        qa = img.select('QA60')
+        cloud_bit = 1 << 10
+        cirrus_bit = 1 << 11
+        cloud_mask = qa.bitwiseAnd(cloud_bit).eq(0).And(
+                     qa.bitwiseAnd(cirrus_bit).eq(0))
+        return img.updateMask(cloud_mask)
+
+    col = col.map(apply_cloud_mask)
+
+    def ndwi_water(img):
+        green = img.select('B3').multiply(0.0001)
+        nir = img.select('B8').multiply(0.0001)
+        ndwi = green.subtract(nir).divide(green.add(nir)).rename('NDWI')
+
+        # 1) Umbral estricto
+        water = ndwi.gt(0.15)
+
+        # 2) Suavizado espacial: rellena huecos de 1 píxel
+        water = water.focal_mode(radius=1, units='pixels')
+
+        # 3) Eliminar parches muy pequeños (por ejemplo < 9 píxeles)
+        water = water.selfMask()
+        connected = water.connectedPixelCount(maxSize=100, eightConnected=True)
+        water = water.updateMask(connected.gte(9)).rename('water')
+
+        return water.copyProperties(img, ['system:time_start'])
+
+    col_water = col.map(ndwi_water)
+
+    size = col_water.size()
+    n_frames = int(size.getInfo())
+    if n_frames == 0:
+        return None
+
+    vis_params = {
+        'min': 0,
+        'max': 1,
+        'palette': ['00000000', '0000ff']
+    }
+
+    max_total_pixels = 26_000_000
+    base_max_pixels_per_frame = 512 * 512
+    pixels_per_frame = min(
+        base_max_pixels_per_frame,
+        max_total_pixels // max(n_frames, 1)
+    )
+
+    if ratio is not None and ratio > 0:
+        safe_ratio = max(ratio, 1e-6)
+        width_px = int(math.sqrt(pixels_per_frame * safe_ratio))
+        height_px = int(width_px / safe_ratio)
+    else:
+        width_px = int(math.sqrt(pixels_per_frame))
+        height_px = width_px
+
+    width_px = max(256, width_px)
+    height_px = max(256, height_px)
+    dims = f'{width_px}x{height_px}'
+
+    gif_url = col_water.getVideoThumbURL({
+        'region': region,
+        'dimensions': dims,
+        'framesPerSecond': 2,
+        'format': 'gif',
+        'bands': ['water'],
+        'crs': 'EPSG:3857',
+        **vis_params
+    })
+    return gif_url
+
+def build_water_timeseries_bbox(
+    start: str,
+    end: str,
+    bbox: list[float]
+):
+    min_lon, min_lat, max_lon, max_lat = bbox
+    max_span_deg = 4.0
+    if (max_lon - min_lon) > max_span_deg or (max_lat - min_lat) > max_span_deg:
+        raise ValueError("El bounding box es demasiado grande para Sentinel-2. Reduce el área.")
+
+    start_date = ee.Date(start)
+    end_date = ee.Date(end)
+    region = ee.Geometry.Rectangle(bbox)
+
+    col = (ee.ImageCollection(S2_SR)
+           .filterDate(start_date, end_date)
+           .filterBounds(region)
+           .filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 60))
+           .select(['B3', 'B8', 'QA60']))
+
+    def apply_cloud_mask(img):
+        qa = img.select('QA60')
+        cloud_bit = 1 << 10
+        cirrus_bit = 1 << 11
+        cloud_mask = qa.bitwiseAnd(cloud_bit).eq(0).And(
+                     qa.bitwiseAnd(cirrus_bit).eq(0))
+        return img.updateMask(cloud_mask)
+
+    col = col.map(apply_cloud_mask)
+
+    size = col.size()
+    if size.eq(0).getInfo():
+        return [], []
+
+    def water_fraction(img):
+        green = img.select('B3').multiply(0.0001)
+        nir = img.select('B8').multiply(0.0001)
+        ndwi = green.subtract(nir).divide(green.add(nir)).rename('NDWI')
+        water = ndwi.gt(0.2).rename('water')
+
+        area_img = ee.Image.pixelArea().multiply(water.unmask(0)).rename('area')
+        stats = area_img.reduceRegion(
+            reducer=ee.Reducer.sum(),
+            geometry=region,
+            scale=60,
+            maxPixels=5e7,
+            bestEffort=True
+        )
+
+        area_m2 = ee.Number(stats.get('area'))
+        area_ha = area_m2.divide(10000)
+
+        date_str = ee.Date(img.get('system:time_start')).format('YYYY-MM-dd')
+
+        return ee.Feature(None, {
+            'date': date_str,
+            'water_ha': area_ha
+        })
+
+    fc = col.map(water_fraction)
+
+    dates = fc.aggregate_array('date').getInfo()
+    vals = fc.aggregate_array('water_ha').getInfo()
 
     out_dates: list[str] = []
     out_vals: list[float] = []
@@ -674,6 +958,160 @@ def era5_soil_timeseries_bbox():
     return jsonify({
         'dates': dates,
         'soil_pct': vals,
+        'bbox': bbox
+    })
+
+# =====================
+# Endpoints CHIRPS Precipitación diaria
+# =====================
+
+@app.get('/api/imerg-precip-gif-bbox')
+def imerg_precip_gif_bbox():
+    start = request.args.get('start')
+    end = request.args.get('end')
+    bbox_str = request.args.get('bbox')
+    ratio_str = request.args.get('ratio')
+
+    if not start or not end or not bbox_str:
+        return jsonify({'error': 'Parámetros start, end y bbox son requeridos.'}), 400
+
+    err = check_max_10_years(start, end)
+    if err:
+        return jsonify({'error': err}), 400
+
+    try:
+        bbox = json.loads(bbox_str)
+        if not (isinstance(bbox, list) and len(bbox) == 4):
+            raise ValueError
+        bbox = [float(v) for v in bbox]
+    except Exception:
+        return jsonify({'error': 'bbox debe ser un JSON [minLon,minLat,maxLon,maxLat].'}), 400
+
+    try:
+        ratio = float(ratio_str) if ratio_str is not None else None
+    except Exception:
+        ratio = None
+
+    try:
+        gif_url = build_chirps_precip_gif_bbox(start, end, bbox, ratio)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    if not gif_url:
+        return jsonify({'error': 'No hay datos de precipitación CHIRPS para ese rango / región.'}), 400
+
+    return jsonify({'gifUrl': gif_url, 'bbox': bbox})
+
+
+@app.get('/api/imerg-precip-timeseries-bbox')
+def imerg_precip_timeseries_bbox():
+    start = request.args.get('start')
+    end = request.args.get('end')
+    bbox_str = request.args.get('bbox')
+
+    if not start or not end or not bbox_str:
+        return jsonify({'error': 'Parámetros start, end y bbox son requeridos.'}), 400
+
+    err = check_max_10_years(start, end)
+    if err:
+        return jsonify({'error': err}), 400
+
+    try:
+        bbox = json.loads(bbox_str)
+        if not (isinstance(bbox, list) and len(bbox) == 4):
+            raise ValueError
+        bbox = [float(v) for v in bbox]
+    except Exception:
+        return jsonify({'error': 'bbox debe ser un JSON [minLon,minLat,maxLon,maxLat].'}), 400
+
+    try:
+        dates, vals = build_chirps_precip_timeseries_bbox(start, end, bbox)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    if not dates:
+        return jsonify({'error': 'No hay datos de precipitación CHIRPS para ese rango / región.'}), 400
+
+    return jsonify({
+        'dates': dates,
+        'precip_mm': vals,
+        'bbox': bbox
+    })
+
+# =====================
+# Endpoints Agua (Sentinel-2 + NDWI, hectáreas)
+# =====================
+
+@app.get('/api/water-gif-bbox')
+def water_gif_bbox():
+    start = request.args.get('start')
+    end = request.args.get('end')
+    bbox_str = request.args.get('bbox')
+    ratio_str = request.args.get('ratio')
+
+    if not start or not end or not bbox_str:
+        return jsonify({'error': 'Parámetros start, end y bbox son requeridos.'}), 400
+
+    err = check_max_10_years(start, end)
+    if err:
+        return jsonify({'error': err}), 400
+
+    try:
+        bbox = json.loads(bbox_str)
+        if not (isinstance(bbox, list) and len(bbox) == 4):
+            raise ValueError
+        bbox = [float(v) for v in bbox]
+    except Exception:
+        return jsonify({'error': 'bbox debe ser un JSON [minLon,minLat,maxLon,maxLat].'}), 400
+
+    try:
+        ratio = float(ratio_str) if ratio_str is not None else None
+    except Exception:
+        ratio = None
+
+    try:
+        gif_url = build_water_gif_bbox(start, end, bbox, ratio)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    if not gif_url:
+        return jsonify({'error': 'No hay observaciones de agua (Sentinel-2) para ese rango / región.'}), 400
+
+    return jsonify({'gifUrl': gif_url, 'bbox': bbox})
+
+
+@app.get('/api/water-timeseries-bbox')
+def water_timeseries_bbox():
+    start = request.args.get('start')
+    end = request.args.get('end')
+    bbox_str = request.args.get('bbox')
+
+    if not start or not end or not bbox_str:
+        return jsonify({'error': 'Parámetros start, end y bbox son requeridos.'}), 400
+
+    err = check_max_10_years(start, end)
+    if err:
+        return jsonify({'error': err}), 400
+
+    try:
+        bbox = json.loads(bbox_str)
+        if not (isinstance(bbox, list) and len(bbox) == 4):
+            raise ValueError
+        bbox = [float(v) for v in bbox]
+    except Exception:
+        return jsonify({'error': 'bbox debe ser un JSON [minLon,minLat,maxLon,maxLat].'}), 400
+
+    try:
+        dates, vals = build_water_timeseries_bbox(start, end, bbox)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    if not dates:
+        return jsonify({'error': 'No hay observaciones de agua (Sentinel-2) para ese rango / región.'}), 400
+
+    return jsonify({
+        'dates': dates,
+        'water_ha': vals,
         'bbox': bbox
     })
 

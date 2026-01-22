@@ -73,21 +73,9 @@
         </button>
       </header>
 
-      <!-- Selector de variable -->
-      <section>
-        <label for="variableSelect">Variable</label>
-        <select id="variableSelect">
-          <option value="ndvi">NDVI</option>
-          <option value="temp">Temperatura 2m</option>
-          <option value="soil">Humedad suelo (0–7 cm)</option>
-        </select>
-      </section>
-
-      <hr />
-
-      <!-- Controles NDVI -->
-      <section id="ndvi-controls">
-        <h2>NDVI</h2>
+      <!-- NDVI -->
+      <details id="ndvi-controls" open>
+        <summary>NDVI</summary>
         <p class="hint">
           1) Dibuja un rectángulo en el mapa.<br />
           2) Elige fechas de inicio y fin.<br />
@@ -104,11 +92,11 @@
         <button id="generateNdviGifBBox" class="primary-action">
           Generar GIF NDVI
         </button>
-      </section>
+      </details>
 
-      <!-- Controles Temperatura ERA5 -->
-      <section id="temp-controls" class="hidden">
-        <h2>Temperatura 2m</h2>
+      <!-- Temperatura ERA5 -->
+      <details id="temp-controls">
+        <summary>Temperatura 2m</summary>
         <p class="hint">
           1) Dibuja un rectángulo en el mapa.<br />
           2) Elige fechas de inicio y fin.<br />
@@ -125,11 +113,11 @@
         <button id="generateTempGifBBox" class="primary-action">
           Generar GIF Temperatura
         </button>
-      </section>
+      </details>
 
-      <!-- Controles Humedad del suelo -->
-      <section id="soil-controls" class="hidden">
-        <h2>Humedad del suelo (0–7 cm)</h2>
+      <!-- Humedad del suelo -->
+      <details id="soil-controls">
+        <summary>Humedad del suelo (0–7 cm)</summary>
         <p class="hint">
           1) Dibuja un rectángulo en el mapa.<br />
           2) Elige fechas de inicio y fin.<br />
@@ -146,14 +134,56 @@
         <button id="generateSoilGifBBox" class="primary-action">
           Generar GIF Humedad
         </button>
-      </section>
+      </details>
+
+      <!-- Precipitación diaria -->
+      <details id="precip-controls">
+        <summary>Precipitación diaria (IMERG)</summary>
+        <p class="hint">
+          1) Dibuja un rectángulo en el mapa.<br />
+          2) Elige fechas de inicio y fin.<br />
+          3) Pulsa "Generar GIF Precipitación".<br />
+          4) Verás la animación y la serie de precipitación.
+        </p>
+
+        <label for="precipStartDate">Fecha inicio</label>
+        <input id="precipStartDate" type="date" />
+
+        <label for="precipEndDate">Fecha fin</label>
+        <input id="precipEndDate" type="date" />
+
+        <button id="generatePrecipGifBBox" class="primary-action">
+          Generar GIF Precipitación
+        </button>
+      </details>
+
+      <!-- Cuerpos de agua -->
+      <details id="water-controls">
+        <summary>Cuerpos de agua (Sentinel‑2)</summary>
+        <p class="hint">
+          1) Dibuja un rectángulo en el mapa.<br />
+          2) Elige fechas de inicio y fin.<br />
+          3) Pulsa "Generar GIF Agua".<br />
+          4) Verás la animación y las hectáreas con agua.
+        </p>
+
+        <label for="waterStartDate">Fecha inicio</label>
+        <input id="waterStartDate" type="date" />
+
+        <label for="waterEndDate">Fecha fin</label>
+        <input id="waterEndDate" type="date" />
+
+        <button id="generateWaterGifBBox" class="primary-action">
+          Generar GIF Agua
+        </button>
+      </details>
+
     </aside>
 
     <!-- Contenedor vertical: mapa arriba, gráfica abajo -->
     <div id="map-and-chart">
       <div id="map" role="region" aria-label="Mapa Leaflet"></div>
 
-      <!-- Oculto por defecto; se mostrará solo cuando haya GIF/serie -->
       <div id="ndvi-chart-container" class="hidden">
         <div id="ndvi-chart"></div>
       </div>
@@ -167,7 +197,6 @@
   ></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
-  <!-- Plotly para la gráfica interactiva -->
   <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 
   <script src="/static/main.js" defer></script>
