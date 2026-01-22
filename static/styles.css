@@ -331,3 +331,38 @@ body.sidebar-collapsed .leaflet-left {
   flex-direction: column;
   justify-content: space-between;
 }
+
+/* Barra de colores Precipitación IMERG */
+.precip-colorbar {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px;
+  border-radius: 4px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.precip-colorbar-scale {
+  width: 14px;
+  height: 160px;
+  border: 1px solid #999;
+  background: linear-gradient(
+    to top,
+    #ffffff 0%,
+    #b3d9ff 20%,
+    #4da6ff 40%,
+    #0066ff 55%,
+    #0044aa 70%,
+    #880000 85%,
+    #ff0000 100%
+  );
+  margin-right: 6px;
+}
+
+.precip-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
