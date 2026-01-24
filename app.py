@@ -443,6 +443,10 @@ def build_era5_soil_timeseries_bbox(
 
     return out_dates, out_vals
 
+# ===============================
+# CHIRPS Precipitación - GIF + Serie
+# ===============================
+
 CHIRPS_DAILY = 'UCSB-CHG/CHIRPS/DAILY'
 
 def build_chirps_precip_gif_bbox(start: str, end: str, bbox: list[float], ratio: Optional[float] = None):
