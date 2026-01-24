@@ -1,4 +1,5 @@
 # Guion Detallado para la Presentación
+
 ## Aplicación Web para Visualización de Datos Meteorológicos y de Vegetación
 
 ---
@@ -99,17 +100,37 @@
 
 ## SECCIÓN 4: FUNCIONALIDADES
 
-### Diapositiva 10: Variables Disponibles
+### Diapositiva 10: Variable: NDVI
+
+**Tiempo estimado: 1 minuto**
+
+"Esta diapositiva se centra en el **Índice de Vegetación de Diferencia Normalizada (NDVI)**, que obtenemos de los datos MODIS MOD13Q1. El NDVI es crucial para evaluar la salud y densidad de la vegetación. Su resolución espacial es de 250 metros y se actualiza cada 16 días, lo que permite un seguimiento detallado de la dinámica de la vegetación. Explicaré cómo los valores de NDVI nos indican si una zona tiene vegetación densa y saludable o si es suelo desnudo o agua."
+
+### Diapositiva 11: Variable: Temperatura 2m
+
+**Tiempo estimado: 1 minuto**
+
+"Aquí abordamos la **Temperatura del Aire a 2 metros**, utilizando datos del reanálisis ERA5-Land Daily. Estos datos son de gran importancia para estudios climáticos y planificación agrícola. Tienen una resolución de aproximadamente 11 kilómetros y están disponibles diariamente, lo que nos permite observar variaciones a corto y largo plazo. Además, los datos, originalmente en Kelvin, son convertidos a grados Celsius para una interpretación más intuitiva."
+
+### Diapositiva 12: Variable: Humedad del Suelo
+
+**Tiempo estimado: 1 minuto**
+
+"La **Humedad del Suelo** es otra variable vital que obtenemos de ERA5-Land, enfocándonos en la capa superficial de 0-7 cm. Esta variable, expresada en porcentaje volumétrico, es esencial para la gestión del agua en la agricultura y el monitoreo ambiental. Con una resolución de aproximadamente 11 kilómetros y disponibilidad diaria, podemos detectar rápidamente condiciones de sequía o exceso de humedad, informando decisiones críticas."
+
+### Diapositiva 13: Variable: Precipitación Diaria
+
+**Tiempo estimado: 1 minuto**
+
+"Para la **Precipitación Diaria**, integramos el conjunto de datos CHIRPS Daily. Este producto combina información satelital y de estaciones terrestres para ofrecer estimaciones globales de precipitación. Su resolución de aproximadamente 5.5 kilómetros y la actualización diaria lo hacen indispensable para monitorear eventos de lluvia, predecir inundaciones o gestionar la sequía, y comprender el ciclo hidrológico de una región."
+
+### Diapositiva 14: Variable: Agua Superficial
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
-"La aplicación actualmente soporta dos variables principales: NDVI y Temperatura a 2 metros."
+"Finalmente, presentamos el análisis de **Agua Superficial**, utilizando datos de Copernicus Sentinel-2 y el Índice de Diferencia Normalizada del Agua (NDWI). Gracias a su alta resolución de 10 metros y una frecuencia de revisita de aproximadamente 5 días, Sentinel-2 nos permite mapear con gran detalle los cuerpos de agua y las zonas inundadas. Detallaré cómo el procesamiento del NDWI, junto con técnicas de suavizado espacial y eliminación de pequeños parches, nos permite identificar de manera precisa la presencia de agua, siendo una herramienta invaluable para la gestión de recursos hídricos y la respuesta a desastres naturales."
 
-"NDVI, o Índice de Vegetación Normalizado, es una medida que indica la salud y densidad de la vegetación. Los valores van de -1 a 1, donde valores cercanos a 1 indican vegetación densa y saludable, y valores cercanos a 0 o negativos indican suelo desnudo, agua o áreas sin vegetación. Utilizamos datos del sensor MODIS con resolución de 250 metros y frecuencia de 16 días."
-
-"Para temperatura, utilizamos datos del reanálisis ERA5, que proporciona temperatura del aire a 2 metros sobre el suelo. Estos datos tienen una resolución de aproximadamente 28 kilómetros y están disponibles diariamente. Los datos vienen en Kelvin, pero los convertimos automáticamente a grados Celsius para facilitar la interpretación."
-
-### Diapositiva 11: Flujo de Uso
+### Diapositiva 15: Flujo de Uso
 
 **Tiempo estimado: 2 minutos**
 
@@ -125,7 +146,7 @@
 
 "Quinto, los resultados se muestran simultáneamente: el GIF animado se superpone en el mapa y la gráfica de serie temporal aparece debajo del mapa, permitiendo al usuario ver tanto la evolución espacial como temporal de la variable seleccionada."
 
-### Diapositiva 12: Selección de Área
+### Diapositiva 16: Selección de Área
 
 **Tiempo estimado: 1 minuto**
 
@@ -135,7 +156,7 @@
 
 "Una vez dibujado el rectángulo, el usuario puede editarlo o eliminarlo antes de generar la visualización, lo que proporciona flexibilidad en la selección del área de interés."
 
-### Diapositiva 13: Generación de Animaciones
+### Diapositiva 17: Generación de Animaciones
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
@@ -145,7 +166,7 @@
 
 "El resultado es una animación que muestra la evolución temporal de la variable seleccionada en el área de interés, superpuesta directamente en el mapa base."
 
-### Diapositiva 14: Series Temporales
+### Diapositiva 18: Series Temporales
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
@@ -159,7 +180,7 @@
 
 ## SECCIÓN 5: ARQUITECTURA
 
-### Diapositiva 15: Arquitectura del Sistema
+### Diapositiva 19: Arquitectura del Sistema
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
@@ -173,7 +194,7 @@
 
 "Esta arquitectura separa claramente las responsabilidades: el frontend maneja la presentación, el backend maneja la lógica de negocio, y Earth Engine maneja el procesamiento pesado de datos."
 
-### Diapositiva 16: Flujo de Datos
+### Diapositiva 20: Flujo de Datos
 
 **Tiempo estimado: 2 minutos**
 
@@ -187,17 +208,23 @@
 
 "Finalmente, el frontend recibe la respuesta, extrae la URL del GIF y los datos de la serie temporal, y actualiza la interfaz: muestra el GIF superpuesto en el mapa y genera la gráfica interactiva."
 
-### Diapositiva 17: Endpoints API
+### Diapositiva 21: Endpoints API
 
 **Tiempo estimado: 1 minuto**
 
-"La API REST implementada en Flask expone cuatro endpoints principales."
+"La API REST implementada en Flask expone cinco grupos de endpoints principales, uno por cada variable."
 
-"Para NDVI, tenemos dos endpoints: '/api/ndvi-gif-bbox' que genera el GIF animado, y '/api/ndvi-timeseries-bbox' que calcula la serie temporal. Ambos reciben los mismos parámetros: start (fecha inicio), end (fecha fin), y bbox (bounding box como JSON array)."
+"Para **NDVI**, tenemos dos endpoints: '/api/ndvi-gif-bbox' que genera el GIF animado, y '/api/ndvi-timeseries-bbox' que calcula la serie temporal. Ambos reciben los mismos parámetros: `start` (fecha inicio), `end` (fecha fin), y `bbox` (bounding box como JSON array [minLon,minLat,maxLon,maxLat])."
 
-"Para temperatura, tenemos endpoints equivalentes: '/api/era5-temp-gif-bbox' y '/api/era5-temp-timeseries-bbox' con los mismos parámetros."
+"Para **Temperatura a 2 metros**, tenemos '/api/era5-temp-gif-bbox' y '/api/era5-temp-timeseries-bbox'."
 
-"Todos los endpoints devuelven respuestas en formato JSON. Los endpoints de GIF devuelven la URL del GIF generado y el bounding box utilizado. Los endpoints de series temporales devuelven arrays de fechas y valores correspondientes."
+"Para **Humedad del Suelo**, los endpoints son '/api/era5-soil-gif-bbox' y '/api/era5-soil-timeseries-bbox'."
+
+"Para **Precipitación Diaria**, usamos '/api/imerg-precip-gif-bbox' y '/api/imerg-precip-timeseries-bbox'."
+
+"Y para **Agua Superficial**, son '/api/water-gif-bbox' y '/api/water-timeseries-bbox'."
+
+"Todos los endpoints devuelven respuestas en formato JSON. Los endpoints de GIF devuelven la URL del GIF generado y el bounding box utilizado. Los endpoints de series temporales devuelven arrays de fechas y valores correspondientes. Cada grupo de endpoints asegura la consistencia en el manejo de parámetros y la estructura de las respuestas."
 
 "Esta estructura de API permite fácil extensión para agregar más variables en el futuro."
 
@@ -205,23 +232,27 @@
 
 ## SECCIÓN 6: FUENTES DE DATOS
 
-### Diapositiva 18: Datos Satelitales
+### Diapositiva 22: Datos Satelitales
 
-**Tiempo estimado: 1 minuto 30 segundos**
+**Tiempo estimado: 2 minutos**
 
-"La aplicación utiliza dos fuentes principales de datos satelitales."
+"La aplicación utiliza ahora cinco fuentes principales de datos satelitales y de reanálisis, cubriendo una gama más amplia de variables ambientales."
 
-"Para NDVI, utilizamos el producto MODIS MOD13Q1, que es parte del sistema de sensores MODIS a bordo de los satélites Terra y Aqua de la NASA. Este producto proporciona datos de NDVI con resolución espacial de 250 metros y frecuencia temporal de 16 días. Los datos están disponibles desde el año 2000 hasta la actualidad, lo que permite análisis de largo plazo."
+"Para **NDVI**, seguimos utilizando el producto MODIS MOD13Q1, que es parte del sistema de sensores MODIS a bordo de los satélites Terra y Aqua de la NASA. Este producto proporciona datos de NDVI con resolución espacial de 250 metros y frecuencia temporal de 16 días. Los datos están disponibles desde el año 2000 hasta la actualidad, lo que permite análisis de largo plazo."
 
-"Para temperatura, utilizamos el reanálisis ERA5 del Centro Europeo de Pronósticos Meteorológicos de Medio Alcance. ERA5 es considerado uno de los reanálisis climáticos más precisos disponibles, con resolución espacial de aproximadamente 28 kilómetros y frecuencia diaria. Los datos están disponibles desde 1940, proporcionando una serie histórica muy extensa."
+"Para **Temperatura a 2 metros y Humedad del Suelo**, utilizamos el reanálisis ERA5-Land del Centro Europeo de Pronósticos Meteorológicos de Medio Alcance (ECMWF). ERA5-Land es una mejora de ERA5, ofreciendo una resolución espacial más fina de aproximadamente 11 kilómetros y datos diarios. Es considerado uno de los reanálisis climáticos más precisos disponibles, con datos que se remontan a 1940, proporcionando una serie histórica muy extensa."
 
-"Ambas fuentes de datos son accesibles gratuitamente a través de Google Earth Engine, lo que elimina la necesidad de descargar y almacenar terabytes de datos localmente."
+"Para **Precipitación Diaria**, integramos el conjunto de datos CHIRPS (Climate Hazards Group InfraRed Precipitation with Station data). CHIRPS combina datos de satélite y estaciones terrestres para ofrecer estimaciones globales de precipitación con una resolución de aproximadamente 5.5 kilómetros y disponibles diariamente, siendo una herramienta crucial para el monitoreo de sequías e inundaciones."
+
+"Finalmente, para **Agua Superficial**, aprovechamos los datos del satélite Copernicus Sentinel-2. Estos datos ofrecen una resolución espacial de 10 metros, permitiendo un mapeo detallado de cuerpos de agua. La frecuencia de revisita es de aproximadamente 5 días, lo que facilita el monitoreo de cambios dinámicos. Procesamos estos datos utilizando el índice NDWI para identificar la presencia de agua."
+
+"Todas estas fuentes de datos son accesibles gratuitamente a través de Google Earth Engine, lo que elimina la necesidad de descargar y almacenar terabytes de datos localmente y nos permite trabajar con datos de alta calidad y resolución."
 
 ---
 
 ## SECCIÓN 7: INTERFAZ DE USUARIO
 
-### Diapositiva 19: Diseño de la Interfaz
+### Diapositiva 23: Diseño de la Interfaz
 
 **Tiempo estimado: 1 minuto**
 
@@ -231,19 +262,19 @@
 
 "El mapa ocupa la mayor parte del espacio visual, ya que es el componente principal de la aplicación. Las gráficas aparecen debajo del mapa solo cuando hay datos disponibles, manteniendo la interfaz limpia cuando no se ha realizado ningún análisis."
 
-### Diapositiva 20: Características de la UI
+### Diapositiva 24: Características de la UI
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
 "Las características de la interfaz incluyen varios elementos de diseño cuidadosamente implementados."
 
-"El sidebar es completamente colapsable mediante un botón, lo que mejora la experiencia en pantallas pequeñas. El selector de variables permite cambiar fácilmente entre NDVI y temperatura, mostrando u ocultando los controles específicos de cada variable."
+"El sidebar es completamente colapsable mediante un botón, lo que mejora la experiencia en pantallas pequeñas. El selector de variables permite cambiar fácilmente entre las diferentes variables (NDVI, Temperatura, Humedad del Suelo, Precipitación, Agua Superficial), mostrando u ocultando los controles específicos de cada variable."
 
 "Los controles de fecha utilizan el input type='date' nativo del navegador, que proporciona un calendario visual para seleccionar fechas fácilmente. Los botones de acción tienen un estilo destacado que los hace fácilmente identificables."
 
-"Las barras de colores son controles personalizados que aparecen en el mapa cuando hay una visualización activa. Proporcionan información sobre la escala de colores y los rangos de valores, ayudando a los usuarios a interpretar los datos correctamente."
+"Las barras de colores son controles personalizados que aparecen en el mapa cuando hay una visualización activa. Proporcionan información sobre la escala de colores y los rangos de valores, ayudando a los usuarios a interpretar los datos correctamente. Cada variable tiene su propia barra de colores adaptada a su rango de valores y significado físico."
 
-### Diapositiva 21: Responsive Design
+### Diapositiva 25: Responsive Design
 
 **Tiempo estimado: 1 minuto**
 
@@ -257,7 +288,7 @@
 
 ## SECCIÓN 8: RESULTADOS
 
-### Diapositiva 22: Ejemplo - Análisis NDVI
+### Diapositiva 26: Ejemplo - Análisis NDVI
 
 **Tiempo estimado: 2 minutos**
 
@@ -265,11 +296,11 @@
 
 "El GIF animado muestra la evolución del NDVI a lo largo de varios meses. Los colores verdes oscuros indican áreas con vegetación densa y saludable, mientras que los tonos marrones y rojos indican áreas con menos vegetación o suelo desnudo. La animación permite identificar claramente los cambios estacionales y áreas que mantienen vegetación constante versus áreas que experimentan cambios significativos."
 
-"La gráfica de serie temporal muestra el valor promedio de NDVI en el área seleccionada a lo largo del tiempo. Podemos observar la tendencia general, identificar períodos de crecimiento y declive de la vegetación, y detectar eventos anómalos como sequías o cambios abruptos."
+"La gráfica de serie temporal muestra el valor promedio del índice en el área seleccionada a lo largo del tiempo. Podemos observar la tendencia general, identificar períodos de crecimiento y declive de la vegetación, y detectar eventos anómalos como sequías o cambios abruptos."
 
 "Este tipo de análisis es valioso para aplicaciones agrícolas, monitoreo de ecosistemas, y gestión de recursos naturales."
 
-### Diapositiva 23: Ejemplo - Análisis de Temperatura
+### Diapositiva 27: Ejemplo - Análisis de Temperatura
 
 **Tiempo estimado: 2 minutos**
 
@@ -281,7 +312,31 @@
 
 "Este análisis es útil para estudios climáticos, planificación agrícola basada en condiciones térmicas, y análisis de impacto del cambio climático."
 
-### Diapositiva 24: Casos de Uso Potenciales
+### Diapositiva 28: Ejemplo - Análisis de Humedad del Suelo
+
+**Tiempo estimado: 2 minutos**
+
+"Pasando a la **Humedad del Suelo**, esta diapositiva muestra un ejemplo de su análisis. La animación GIF ilustra cómo los niveles de humedad en la capa superficial del suelo (0-7 cm) varían a lo largo del tiempo en la región seleccionada. Podremos observar áreas más húmedas (tonos azules/verdes) y más secas (tonos marrones), lo cual es crucial para comprender la disponibilidad de agua para la vegetación."
+
+"La gráfica de serie temporal, por su parte, presenta el porcentaje volumétrico promedio de humedad del suelo diariamente. Esto nos permite identificar periodos de sequía o excesiva humedad, analizar el impacto de las precipitaciones en la saturación del suelo y monitorear la salud hídrica de los ecosistemas o cultivos. Este análisis es fundamental para la gestión de recursos hídricos y la agricultura de precisión."
+
+### Diapositiva 29: Ejemplo - Análisis de Precipitación
+
+**Tiempo estimado: 2 minutos**
+
+"En esta diapositiva, observamos un ejemplo de análisis de **Precipitación Diaria** utilizando los datos CHIRPS. El GIF animado nos muestra la distribución espacial de las lluvias, permitiendo identificar patrones de frentes de tormenta o periodos de sequía. Los colores más claros representan menor precipitación, mientras que los tonos más oscuros y azules indican eventos de lluvia más intensos."
+
+"La gráfica de serie temporal detalla la cantidad de precipitación acumulada diariamente en milímetros. Con ella, podemos detectar eventos de lluvia extrema, analizar la estacionalidad de las precipitaciones y evaluar el impacto de fenómenos meteorológicos en la región. Esta información es vital para la prevención de inundaciones, la gestión de cultivos y el estudio del ciclo hidrológico."
+
+### Diapositiva 30: Ejemplo - Análisis de Agua Superficial
+
+**Tiempo estimado: 2 minutos**
+
+"Finalmente, esta diapositiva presenta un análisis de **Agua Superficial** utilizando datos de Sentinel-2 y el índice NDWI. El GIF animado nos permite visualizar la presencia y evolución de cuerpos de agua como ríos, lagos o áreas inundadas. Los píxeles azules representan la presencia de agua, y su dinámica a lo largo del tiempo puede indicar crecidas, sequías o cambios en los patrones de uso del suelo."
+
+"La gráfica de serie temporal muestra las hectáreas cubiertas por agua dentro del área seleccionada. Este dato es extremadamente útil para monitorear la disponibilidad de agua en reservorios, identificar zonas de inundación y gestionar ecosistemas acuáticos. La alta resolución de Sentinel-2 nos permite un detalle sin precedentes en este tipo de análisis, siendo crucial para la gestión ambiental y la respuesta a desastres naturales."
+
+### Diapositiva 31: Casos de Uso Potenciales
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
@@ -299,7 +354,7 @@
 
 ## SECCIÓN 9: DESAFÍOS Y SOLUCIONES
 
-### Diapositiva 25: Desafíos Enfrentados
+### Diapositiva 32: Desafíos Enfrentados
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
@@ -313,7 +368,7 @@
 
 "Finalmente, la validación de entrada del usuario fue crucial para prevenir errores y proporcionar retroalimentación clara cuando los parámetros no eran válidos."
 
-### Diapositiva 26: Soluciones Implementadas
+### Diapositiva 33: Soluciones Implementadas
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
@@ -331,7 +386,7 @@
 
 ## SECCIÓN 10: TRABAJO FUTURO
 
-### Diapositiva 27: Mejoras Planificadas
+### Diapositiva 34: Mejoras Planificadas
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
@@ -351,7 +406,7 @@
 
 ## CONCLUSIÓN
 
-### Diapositiva 28: Logros Alcanzados
+### Diapositiva 35: Logros Alcanzados
 
 **Tiempo estimado: 1 minuto 30 segundos**
 
@@ -365,7 +420,7 @@
 
 "El proyecto demuestra cómo las tecnologías web modernas pueden ser utilizadas para crear herramientas poderosas de análisis científico que son accesibles y fáciles de usar."
 
-### Diapositiva 29: Impacto y Aplicaciones
+### Diapositiva 36: Impacto y Aplicaciones
 
 **Tiempo estimado: 1 minuto**
 
@@ -379,7 +434,7 @@
 
 ---
 
-## PREGUNTAS (Diapositiva 30)
+## PREGUNTAS (Diapositiva 37)
 
 **Tiempo estimado: Variable**
 
