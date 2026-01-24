@@ -1,8 +1,0 @@
-\babel@toc {spanish}{}\relax 
-\beamer@sectionintoc {1}{Introducción}{2}{0}{1}
-\beamer@sectionintoc {2}{Tecnologías Utilizadas}{5}{0}{2}
-\beamer@sectionintoc {3}{Funcionalidades}{9}{0}{3}
-\beamer@sectionintoc {4}{Arquitectura}{18}{0}{4}
-\beamer@sectionintoc {5}{Fuentes de Datos}{19}{0}{5}
-\beamer@sectionintoc {6}{Resultados}{19}{0}{6}
-\beamer@sectionintoc {7}{Trabajo Futuro}{24}{0}{7}
