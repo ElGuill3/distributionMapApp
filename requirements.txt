@@ -1,0 +1,8 @@
+Flask
+earthengine-api
+pandas
+numpy
+rasterio
+matplotlib
+Pillow
+requests

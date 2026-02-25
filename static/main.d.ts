@@ -1,43 +1,7 @@
-declare const L: any;
-declare const Plotly: any;
-declare const DEFAULT_CENTER: [number, number];
-declare const DEFAULT_ZOOM = 8;
-declare const MAX_SPAN_DEG = 8;
-type VariableKey = 'ndvi' | 'temp' | 'soil' | 'precip' | 'water';
-declare let currentVariable: VariableKey;
-declare const map: any;
-declare const osmBase: any;
-declare const ndviChartContainer: HTMLDivElement | null;
-declare const ndviChartDiv: HTMLDivElement | null;
-declare function showChartContainer(): void;
-declare function hideChartContainer(): void;
-declare const drawnItems: any;
-declare const drawControl: any;
-declare let currentBbox: [number, number, number, number] | null;
-declare let activeOverlay: any | null;
-declare const startInput: HTMLInputElement | null;
-declare const endInput: HTMLInputElement | null;
-declare const generateGifButton: HTMLButtonElement | null;
-declare const tempStartInput: HTMLInputElement | null;
-declare const tempEndInput: HTMLInputElement | null;
-declare const generateTempGifButton: HTMLButtonElement | null;
-declare const soilStartInput: HTMLInputElement | null;
-declare const soilEndInput: HTMLInputElement | null;
-declare const generateSoilGifButton: HTMLButtonElement | null;
-declare const precipStartInput: HTMLInputElement | null;
-declare const precipEndInput: HTMLInputElement | null;
-declare const generatePrecipGifButton: HTMLButtonElement | null;
-declare const waterStartInput: HTMLInputElement | null;
-declare const waterEndInput: HTMLInputElement | null;
-declare const generateWaterGifButton: HTMLButtonElement | null;
-declare const ndviColorbar: any;
-declare const tempColorbar: any;
-declare const soilColorbar: any;
-declare const precipColorbar: any;
-declare const waterColorbar: any;
-declare function plotTimeseries(variable: VariableKey, dates: string[], values: number[]): void;
-declare function requestGifAndSeries(variable: VariableKey, start: string, end: string, bbox: [number, number, number, number]): Promise<void>;
-declare const collapseButton: HTMLButtonElement | null;
-declare const restoreButton: HTMLButtonElement | null;
-declare const body: HTMLElement;
+/**
+ * Punto de entrada del frontend — distributionMapApp.
+ *
+ * Conecta todos los módulos: mapa, API, UI y listeners.
+ */
+export {};
 //# sourceMappingURL=main.d.ts.map

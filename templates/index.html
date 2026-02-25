@@ -92,8 +92,7 @@
         <button id="generateNdviGifBBox" class="primary-action">
           Generar GIF NDVI
         </button>
-      </details>
-
+        
       <!-- Temperatura ERA5 -->
       <details id="temp-controls">
         <summary>Temperatura 2m</summary>
@@ -178,13 +177,77 @@
         </button>
       </details>
 
+      <!-- Mapa de riesgo de inundación -->
+      <details id="flood-risk-controls">
+        <summary>Mapa de riesgo de inundación</summary>
+        <p class="hint">
+          Activa los municipios para mostrar su mapa de riesgo de inundación.
+        </p>
+        <div class="municipios-grid">
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="balancan"> Balancán</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="cardenas"> Cárdenas</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="centla"> Centla</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="centro"> Centro</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="comalcalco"> Comalcalco</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="cunduacan"> Cunduacán</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="emiliano_zapata"> Emiliano Zapata</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="huimanguillo"> Huimanguillo</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="jalapa"> Jalapa</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="jalpa_de_mendez"> Jalpa de Méndez</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="jonuta"> Jonuta</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="macuspana"> Macuspana</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="nacajuca"> Nacajuca</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="paraiso"> Paraíso</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="tacotalpa"> Tacotalpa</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="tenosique"> Tenosique</label>
+        </div>
+      </details>
+
+      <!-- Estaciones locales -->
+      <section>
+        <h2>Estaciones locales (nivel)</h2>
+
+        <details open>
+          <summary>San Pedro (SPTTB)</summary>
+
+          <label>Fecha inicio
+            <input type="date" id="spStartDate">
+          </label>
+          <label>Fecha fin
+            <input type="date" id="spEndDate">
+          </label>
+
+          <button id="btnLocalSpLevel" class="primary-action">
+            Cargar serie de nivel
+          </button>
+
+          <p class="hint">Se combinará con las otras series en la gráfica.</p>
+        </details>
+          <details>
+          <summary>Boca del Cerro (BDCTB)</summary>
+
+          <label>Fecha inicio
+            <input type="date" id="bdStartDate">
+          </label>
+          <label>Fecha fin
+            <input type="date" id="bdEndDate">
+          </label>
+
+          <button id="btnLocalBdLevel" class="primary-action">
+            Cargar serie de nivel
+          </button>
+
+          <p class="hint">Se combinará con las otras series en la gráfica.</p>
+        </details>
+      </section>
     </aside>
 
     <!-- Contenedor vertical: mapa arriba, gráfica abajo -->
     <div id="map-and-chart">
       <div id="map" role="region" aria-label="Mapa Leaflet"></div>
 
-      <div id="ndvi-chart-container" class="hidden">
+      <div id="ndvi-chart-container">
+
         <div id="ndvi-chart"></div>
       </div>
     </div>
@@ -199,6 +262,6 @@
 
   <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 
-  <script src="/static/main.js" defer></script>
+  <script type="module" src="/static/main.js"></script>
 </body>
 </html>

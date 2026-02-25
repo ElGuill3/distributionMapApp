@@ -1,609 +1,398 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-declare const L: any;
-declare const Plotly: any;
+/**
+ * Punto de entrada del frontend — distributionMapApp.
+ *
+ * Conecta todos los módulos: mapa, API, UI y listeners.
+ */
 
-const DEFAULT_CENTER: [number, number] = [17.8409, -92.6189];
-const DEFAULT_ZOOM = 8;
-const MAX_SPAN_DEG = 8.0;
+import type {
+  BBox,
+  VariableKey,
+  GifResponse,
+  TimeseriesResponse,
+  StationResponse,
+  FloodRiskResponse,
+  SeriesData,
+} from './types.js';
+import { VARIABLE_DATA_KEY } from './types.js';
+import { DEFAULT_CENTER, DEFAULT_ZOOM, MAX_SPAN_DEG, GIF_ENDPOINT, TS_ENDPOINT } from './config.js';
+import {
+  buildColorbars,
+  switchColorbar,
+  removeActiveOverlay,
+  setActiveOverlay,
+  municipalFloodOverlays,
+} from './map/overlays.js';
+import {
+  createProgressIndicator,
+  updateProgressIndicator,
+  removeProgressIndicator,
+} from './ui/progress.js';
+import { plotAllSelectedSeries } from './ui/chart.js';
+import { registerVariableListener } from './listeners/variableListeners.js';
 
-type VariableKey = 'ndvi' | 'temp' | 'soil' | 'precip' | 'water';
-let currentVariable: VariableKey = 'ndvi';
+// ---------------------------------------------------------------------------
+// Mapa Leaflet
+// ---------------------------------------------------------------------------
 
 const map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
-const osmBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-});
-osmBase.addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom:     19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+}).addTo(map);
 
-// Referencias gráfica
-const ndviChartContainer = document.getElementById('ndvi-chart-container') as HTMLDivElement | null;
-const ndviChartDiv = document.getElementById('ndvi-chart') as HTMLDivElement | null;
+buildColorbars();
 
-function showChartContainer(): void {
-  if (!ndviChartContainer) return;
-  ndviChartContainer.classList.remove('hidden');
-}
+// ---------------------------------------------------------------------------
+// Herramienta de dibujo (Leaflet.draw)
+// ---------------------------------------------------------------------------
 
-function hideChartContainer(): void {
-  if (!ndviChartContainer) return;
-  ndviChartContainer.classList.add('hidden');
-}
-
-// ========== Leaflet.draw: selección de bbox ==========
 const drawnItems = new L.FeatureGroup();
 map.addLayer(drawnItems);
 
 const drawControl = new L.Control.Draw({
   draw: {
-    marker: false,
-    circle: false,
-    polyline: false,
-    polygon: false,
+    marker:       false,
+    circle:       false,
+    polyline:     false,
+    polygon:      false,
     circlemarker: false,
-    rectangle: {
-      shapeOptions: {
-        color: '#ff7800',
-        weight: 2
-      }
-    }
+    rectangle:    { shapeOptions: { color: '#ff7800', weight: 2 } },
   },
   edit: {
-    featureGroup: drawnItems,
-    edit: true,
-    remove: true
-  }
+    featureGroup: drawnItems as L.FeatureGroup,
+    edit:         true,
+    remove:       true,
+  },
 });
 map.addControl(drawControl);
 
-let currentBbox: [number, number, number, number] | null = null;
+let currentBbox: BBox | null = null;
 
-// overlay de la variable activa (GIF)
-let activeOverlay: any | null = null;
-
-map.on(L.Draw.Event.CREATED, (e: any) => {
-  const layer = e.layer;
+map.on(L.Draw.Event.CREATED, (e) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const layer = ((e as unknown) as { layer: L.Rectangle }).layer;
   const bounds = layer.getBounds();
-  const southWest = bounds.getSouthWest();
-  const northEast = bounds.getNorthEast();
+  const sw     = bounds.getSouthWest();
+  const ne     = bounds.getNorthEast();
 
-  const widthDeg = Math.abs(northEast.lng - southWest.lng);
-  const heightDeg = Math.abs(northEast.lat - southWest.lat);
+  const widthDeg  = Math.abs(ne.lng - sw.lng);
+  const heightDeg = Math.abs(ne.lat - sw.lat);
 
   if (widthDeg > MAX_SPAN_DEG || heightDeg > MAX_SPAN_DEG) {
-    alert(
-      'El bounding box es demasiado grande (máx. ~8° por lado). Dibuja una región más pequeña.'
-    );
+    alert('El bounding box es demasiado grande (máx. ~8° por lado). Dibuja una región más pequeña.');
     return;
   }
 
-  const centerLat = (southWest.lat + northEast.lat) / 2;
-  const centerLng = (southWest.lng + northEast.lng) / 2;
-
-  const side = Math.min(widthDeg, heightDeg);
-  const halfSide = side / 2;
+  const centerLat = (sw.lat + ne.lat) / 2;
+  const centerLng = (sw.lng + ne.lng) / 2;
+  const halfSide  = Math.min(widthDeg, heightDeg) / 2;
 
   const squareSouth = centerLat - halfSide;
   const squareNorth = centerLat + halfSide;
-  const squareWest = centerLng - halfSide;
-  const squareEast = centerLng + halfSide;
+  const squareWest  = centerLng - halfSide;
+  const squareEast  = centerLng + halfSide;
 
   const squareBounds = L.latLngBounds(
     L.latLng(squareSouth, squareWest),
-    L.latLng(squareNorth, squareEast)
+    L.latLng(squareNorth, squareEast),
   );
 
-  if (layer.setBounds) {
-    layer.setBounds(squareBounds);
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((layer as any).setBounds) (layer as any).setBounds(squareBounds);
 
   drawnItems.clearLayers();
   drawnItems.addLayer(layer);
 
   currentBbox = [squareWest, squareSouth, squareEast, squareNorth];
 
-  if (activeOverlay) {
-    map.removeLayer(activeOverlay);
-    activeOverlay = null;
-    map.removeControl(ndviColorbar);
-    map.removeControl(tempColorbar);
-    map.removeControl(soilColorbar);
-    map.removeControl(precipColorbar);
-    map.removeControl(waterColorbar);
-  }
-
+  removeActiveOverlay(map);
+  switchColorbar(map, null);
   hideChartContainer();
-  if (ndviChartDiv) {
-    Plotly.purge(ndviChartDiv);
-  }
+  if (ndviChartDiv) Plotly.purge(ndviChartDiv);
+
+  // Limpiar series almacenadas
+  (Object.keys(allSeriesData) as VariableKey[]).forEach(k => delete allSeriesData[k]);
 });
 
-// ========== Inputs y selector de variable ==========
-// NDVI controls
-const startInput = document.getElementById('startDate') as HTMLInputElement | null;
-const endInput = document.getElementById('endDate') as HTMLInputElement | null;
-const generateGifButton = document.getElementById('generateNdviGifBBox') as HTMLButtonElement | null;
+// ---------------------------------------------------------------------------
+// Gráfica Plotly
+// ---------------------------------------------------------------------------
 
-// Temperatura ERA5 controls
-const tempStartInput = document.getElementById('tempStartDate') as HTMLInputElement | null;
-const tempEndInput = document.getElementById('tempEndDate') as HTMLInputElement | null;
-const generateTempGifButton = document.getElementById('generateTempGifBBox') as HTMLButtonElement | null;
+const ndviChartContainer = document.getElementById('ndvi-chart-container') as HTMLDivElement | null;
+const ndviChartDiv       = document.getElementById('ndvi-chart')           as HTMLDivElement | null;
 
-// Humedad del suelo ERA5 controls
-const soilStartInput = document.getElementById('soilStartDate') as HTMLInputElement | null;
-const soilEndInput = document.getElementById('soilEndDate') as HTMLInputElement | null;
-const generateSoilGifButton = document.getElementById('generateSoilGifBBox') as HTMLButtonElement | null;
+const allSeriesData: Partial<Record<VariableKey, SeriesData | undefined>> = {};
 
-// Precipitación CHIRPS controls
-const precipStartInput = document.getElementById('precipStartDate') as HTMLInputElement | null;
-const precipEndInput = document.getElementById('precipEndDate') as HTMLInputElement | null;
-const generatePrecipGifButton = document.getElementById('generatePrecipGifBBox') as HTMLButtonElement | null;
-
-// Agua (Sentinel-2) controls
-const waterStartInput = document.getElementById('waterStartDate') as HTMLInputElement | null;
-const waterEndInput = document.getElementById('waterEndDate') as HTMLInputElement | null;
-const generateWaterGifButton = document.getElementById('generateWaterGifBBox') as HTMLButtonElement | null;
-
-// ========== Barras de colores ==========
-// NDVI
-const ndviColorbar = L.control({ position: 'topright' });
-
-ndviColorbar.onAdd = function () {
-  const div = L.DomUtil.create('div', 'ndvi-colorbar');
-
-  div.innerHTML = `
-    <div class="ndvi-colorbar-scale"></div>
-    <div class="ndvi-colorbar-labels">
-      <span class="ndvi-max">0.5-0.8 Vegetación densa, salud vegetal alta.</span>
-      <span class="ndvi-max">0.3-0.5 Vegetación moderada, agricultura.</span>
-      <span class="ndvi-max">0.2-0.3 Vegetación escasa, pastos secos.</span>
-      <span class="ndvi-mid">0.1-0.2 Poca vegetación, zonas áridas.</span>
-      <span class="ndvi-min">0.0-0.1 Suelo desnudo, roca, nieve, agua.</span>
-    </div>
-  `;
-  return div;
-};
-
-// Temperatura ERA5
-const tempColorbar = L.control({ position: 'topright' });
-
-tempColorbar.onAdd = function () {
-  const div = L.DomUtil.create('div', 'temp-colorbar');
-
-  div.innerHTML = `
-    <div class="temp-colorbar-scale"></div>
-    <div class="temp-colorbar-labels">
-      <span>≥ 35 °C</span>
-      <span>30–35 °C</span>
-      <span>25–30 °C</span>
-      <span>20–25 °C</span>
-      <span>15–20 °C</span>
-      <span>10–15 °C</span>
-      <span>5–10 °C</span>
-      <span>0–5 °C</span>
-    </div>
-  `;
-  return div;
-};
-
-// Humedad del suelo
-const soilColorbar = L.control({ position: 'topright' });
-
-soilColorbar.onAdd = function () {
-  const div = L.DomUtil.create('div', 'soil-colorbar');
-
-  div.innerHTML = `
-    <div class="soil-colorbar-scale"></div>
-    <div class="soil-colorbar-labels">
-      <span>≥ 60 %</span>
-      <span>50–60 %</span>
-      <span>40–50 %</span>
-      <span>30–40 %</span>
-      <span>20–30 %</span>
-      <span>10–20 %</span>
-      <span>0–10 %</span>
-    </div>
-  `;
-  return div;
-};
-
-// Precipitación diaria CHIRPS
-const precipColorbar = L.control({ position: 'topright' });
-
-precipColorbar.onAdd = function () {
-  const div = L.DomUtil.create('div', 'precip-colorbar');
-
-  div.innerHTML = `
-    <div class="precip-colorbar-scale"></div>
-    <div class="precip-colorbar-labels">
-      <span>≥ 80 mm/día</span>
-      <span>60–80 mm/día</span>
-      <span>40–60 mm/día</span>
-      <span>20–40 mm/día</span>
-      <span>10–20 mm/día</span>
-      <span>1–10 mm/día</span>
-      <span>0–1 mm/día</span>
-    </div>
-  `;
-  return div;
-};
-
-// Agua (NDWI Sentinel-2)
-const waterColorbar = L.control({ position: 'topright' });
-
-waterColorbar.onAdd = function () {
-  const div = L.DomUtil.create('div', 'precip-colorbar');
-  div.innerHTML = `
-    <div class="precip-colorbar-scale" style="background: linear-gradient(to top, #00000000 0%, #0000ff 100%);"></div>
-    <div class="precip-colorbar-labels">
-      <span>100 % agua</span>
-      <span>50 % agua</span>
-      <span>0 % agua</span>
-    </div>
-  `;
-  return div;
-};
-
-// ========== Gráfica genérica ==========
-function plotTimeseries(
-  variable: VariableKey,
-  dates: string[],
-  values: number[]
-): void {
-  if (!ndviChartDiv) return;
-  if (!values || values.length === 0) return;
-
-  showChartContainer();
-
-  requestAnimationFrame(() => {
-    const width = ndviChartDiv.clientWidth || 600;
-    const height = ndviChartDiv.clientHeight || 280;
-
-    let yTitle = '';
-    let yRange: [number, number] | null = null;
-    let lineColor = '';
-    let hoverLabel = '';
-
-    const dataMin = Math.min(...values);
-    const dataMax = Math.max(...values);
-    const span = dataMax - dataMin || 1;
-    const padding = span * 0.1;
-
-    if (variable === 'ndvi') {
-      yTitle = 'NDVI promedio';
-      yRange = [Math.max(0, dataMin - padding), Math.min(1, dataMax + padding)];
-      lineColor = '#006837';
-      hoverLabel = 'NDVI';
-    } else if (variable === 'temp') {
-      yTitle = 'Temperatura media 2m (°C)';
-      yRange = [dataMin - padding, dataMax + padding];
-      lineColor = '#ff4f00';
-      hoverLabel = 'Temp';
-    } else if (variable === 'soil') {
-      yTitle = 'Humedad del suelo (%)';
-      yRange = [0, 100];
-      lineColor = '#2b6cb0';
-      hoverLabel = 'Humedad';
-    } else if (variable === 'precip') {
-      yTitle = 'Precipitación diaria (mm/día)';
-      yRange = [Math.max(0, dataMin - padding), dataMax + padding];
-      lineColor = '#0044aa';
-      hoverLabel = 'Pr';
-    } else {
-      yTitle = 'Hectáreas con agua en el bbox';
-      yRange = [0, dataMax + padding];
-      lineColor = '#0000ff';
-      hoverLabel = 'ha agua';
-    }
-
-    const trace = {
-      x: dates,
-      y: values,
-      type: 'scatter',
-      mode: 'lines',
-      line: {
-        color: lineColor,
-        width: 2
-      },
-      hovertemplate: `Fecha: %{x}<br>${hoverLabel}: %{y:.2f}<extra></extra>`
-    };
-
-    const layout: any = {
-      margin: { l: 60, r: 20, t: 30, b: 50 },
-      width,
-      height,
-      xaxis: {
-        title: 'Fecha',
-        type: 'date'
-      },
-      yaxis: {
-        title: yTitle,
-        range: yRange ?? undefined
-      },
-      showlegend: false
-    };
-
-    const config = {
-      responsive: true,
-      displaylogo: false,
-      modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines']
-    };
-
-    if ((ndviChartDiv as any)._fullLayout) {
-      Plotly.react(ndviChartDiv, [trace], layout, config);
-    } else {
-      Plotly.newPlot(ndviChartDiv, [trace], layout, config);
-    }
-  });
+function showChartContainer(): void {
+  ndviChartContainer?.classList.remove('hidden');
+}
+function hideChartContainer(): void {
+  ndviChartContainer?.classList.add('hidden');
 }
 
-// ========== Petición genérica GIF + serie ==========
+function renderChart(): void {
+  if (!ndviChartDiv) return;
+  plotAllSelectedSeries(ndviChartDiv, allSeriesData, showChartContainer, hideChartContainer);
+}
+
+// ---------------------------------------------------------------------------
+// Estado de variable activa
+// ---------------------------------------------------------------------------
+
+let currentVariable: VariableKey = 'ndvi';
+
+// ---------------------------------------------------------------------------
+// SSE + petición GIF + serie temporal
+// ---------------------------------------------------------------------------
+
 async function requestGifAndSeries(
-  variable: VariableKey,
+  variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
   start: string,
   end: string,
-  bbox: [number, number, number, number]
+  bbox: BBox,
 ): Promise<void> {
-  const bboxJson = JSON.stringify(bbox);
+  currentVariable = variable;
 
-  const gifEndpoint =
-    variable === 'ndvi'
-      ? '/api/ndvi-gif-bbox'
-      : variable === 'temp'
-        ? '/api/era5-temp-gif-bbox'
-        : variable === 'soil'
-          ? '/api/era5-soil-gif-bbox'
-          : variable === 'precip'
-            ? '/api/imerg-precip-gif-bbox'
-            : '/api/water-gif-bbox';
+  const bboxJson  = JSON.stringify(bbox);
+  const taskId    = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-  const tsEndpoint =
-    variable === 'ndvi'
-      ? '/api/ndvi-timeseries-bbox'
-      : variable === 'temp'
-        ? '/api/era5-temp-timeseries-bbox'
-        : variable === 'soil'
-          ? '/api/era5-soil-timeseries-bbox'
-          : variable === 'precip'
-            ? '/api/imerg-precip-timeseries-bbox'
-            : '/api/water-timeseries-bbox';
+  const gifUrl = `${GIF_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
+    + `&end=${encodeURIComponent(end)}`
+    + `&bbox=${encodeURIComponent(bboxJson)}`
+    + `&task_id=${encodeURIComponent(taskId)}`;
 
-  const gifUrlWithParams =
-    `${gifEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(
-      end
-    )}&bbox=${encodeURIComponent(bboxJson)}`;
-  const tsUrlWithParams =
-    `${tsEndpoint}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(
-      end
-    )}&bbox=${encodeURIComponent(bboxJson)}`;
+  const tsUrl  = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
+    + `&end=${encodeURIComponent(end)}`
+    + `&bbox=${encodeURIComponent(bboxJson)}`;
+
+  createProgressIndicator();
+
+  const eventSource = new EventSource(`/api/gif-progress/${taskId}`);
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data) as { progress: number; message: string };
+      updateProgressIndicator(data.progress, data.message);
+      if (data.progress === 100 || data.progress === -1) {
+        eventSource.close();
+        if (data.progress === 100) removeProgressIndicator(1000);
+      }
+    } catch {
+      // silently ignore malformed SSE messages
+    }
+  };
+  eventSource.onerror = () => eventSource.close();
 
   try {
-    const [gifResp, tsResp] = await Promise.all([
-      fetch(gifUrlWithParams),
-      fetch(tsUrlWithParams)
-    ]);
-
-    const gifData = await gifResp.json();
-    const tsData = await tsResp.json();
+    const [gifResp, tsResp] = await Promise.all([fetch(gifUrl), fetch(tsUrl)]);
+    const gifData = await gifResp.json() as GifResponse & { error?: string };
+    const tsData  = await tsResp.json()  as TimeseriesResponse & { error?: string };
 
     if (!gifResp.ok) {
-      alert(gifData.error || 'Error generando animación.');
+      alert(gifData.error ?? 'Error generando animación.');
       return;
     }
 
-    if (!tsResp.ok) {
-      console.warn('Error en serie temporal:', tsData.error || tsData);
-    }
-
-    const gifUrl: string = gifData.gifUrl;
-    const bboxResp: [number, number, number, number] = gifData.bbox;
-    const [minLon, minLat, maxLon, maxLat] = bboxResp;
-
-    if (activeOverlay) {
-      map.removeLayer(activeOverlay);
-      activeOverlay = null;
-    }
-
-    const overlayBounds = L.latLngBounds(
-      L.latLng(minLat, minLon),
-      L.latLng(maxLat, maxLon)
-    );
-
-    activeOverlay = L.imageOverlay(gifUrl, overlayBounds, {
-      opacity: 0.8
-    }).addTo(map);
-
-    if (variable === 'ndvi') {
-      ndviColorbar.addTo(map);
-      map.removeControl(tempColorbar);
-      map.removeControl(soilColorbar);
-      map.removeControl(precipColorbar);
-      map.removeControl(waterColorbar);
-    } else if (variable === 'temp') {
-      tempColorbar.addTo(map);
-      map.removeControl(ndviColorbar);
-      map.removeControl(soilColorbar);
-      map.removeControl(precipColorbar);
-      map.removeControl(waterColorbar);
-    } else if (variable === 'soil') {
-      soilColorbar.addTo(map);
-      map.removeControl(ndviColorbar);
-      map.removeControl(tempColorbar);
-      map.removeControl(precipColorbar);
-      map.removeControl(waterColorbar);
-    } else if (variable === 'precip') {
-      precipColorbar.addTo(map);
-      map.removeControl(ndviColorbar);
-      map.removeControl(tempColorbar);
-      map.removeControl(soilColorbar);
-      map.removeControl(waterColorbar);
-    } else {
-      waterColorbar.addTo(map);
-      map.removeControl(ndviColorbar);
-      map.removeControl(tempColorbar);
-      map.removeControl(soilColorbar);
-      map.removeControl(precipColorbar);
-    }
-
+    // Mostrar overlay del GIF
+    removeActiveOverlay(map);
+    const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
+    const overlayBounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
+    const overlay       = L.imageOverlay(gifData.gifUrl, overlayBounds, { opacity: 0.8 }).addTo(map);
+    setActiveOverlay(overlay);
+    switchColorbar(map, variable);
     map.fitBounds(overlayBounds);
 
+    // Serie temporal
     if (tsResp.ok) {
-      const dates = tsData.dates as string[];
-      const values =
-        variable === 'ndvi'
-          ? (tsData.ndvi as number[])
-          : variable === 'temp'
-            ? (tsData.temp as number[])
-            : variable === 'soil'
-              ? (tsData.soil_pct as number[])
-              : variable === 'precip'
-                ? (tsData.precip_mm as number[])
-                : (tsData.water_ha as number[]);
-      plotTimeseries(variable, dates, values);
-    } else {
-      hideChartContainer();
-      if (ndviChartDiv) {
-        Plotly.purge(ndviChartDiv);
+      const dataKey = VARIABLE_DATA_KEY[variable] as keyof TimeseriesResponse;
+      const values  = tsData[dataKey] as number[] | undefined;
+      if (tsData.dates && values) {
+        allSeriesData[variable] = { dates: tsData.dates, values };
+        renderChart();
       }
+    } else {
+      console.warn('Error en serie temporal:', tsData.error);
     }
+
   } catch (err) {
     console.error(err);
     alert('Error de red al generar animación / serie temporal.');
+    updateProgressIndicator(-1, 'Error de red');
+    removeProgressIndicator(3000);
+  } finally {
+    eventSource.close();
   }
 }
 
-// ========== Listeners específicos ==========
+// ---------------------------------------------------------------------------
+// Riesgo de inundación por municipio
+// ---------------------------------------------------------------------------
 
-// NDVI
-if (startInput && endInput && generateGifButton) {
-  generateGifButton.addEventListener('click', () => {
-    const start = startInput.value;
-    const end = endInput.value;
+async function toggleMunicipalFloodRisk(muni: string, checked: boolean): Promise<void> {
+  if (!checked) {
+    const existing = municipalFloodOverlays[muni];
+    if (existing) {
+      map.removeLayer(existing);
+      delete municipalFloodOverlays[muni];
+    }
+    return;
+  }
 
-    if (!start || !end) {
-      alert('Selecciona fecha inicio y fecha fin.');
+  if (municipalFloodOverlays[muni]) {
+    municipalFloodOverlays[muni]?.addTo(map);
+    return;
+  }
+
+  try {
+    const resp = await fetch(`/api/flood-risk-municipio?muni=${encodeURIComponent(muni)}`);
+    const data = await resp.json() as FloodRiskResponse & { error?: string };
+
+    if (!resp.ok) {
+      alert(data.error ?? 'Error generando mapa de riesgo por municipio.');
       return;
     }
-    if (!currentBbox) {
-      alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
-      return;
-    }
 
-    currentVariable = 'ndvi';
-    requestGifAndSeries('ndvi', start, end, currentBbox);
-  });
+    const [minLon, minLat, maxLon, maxLat] = data.bbox;
+    const bounds  = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
+    const overlay = L.imageOverlay(data.mapUrl, bounds, { opacity: 0.8 }).addTo(map);
+    municipalFloodOverlays[muni] = overlay;
+    switchColorbar(map, 'flood');
+  } catch (err) {
+    console.error(err);
+    alert('Error de red al generar mapa de riesgo por municipio.');
+  }
 }
 
-// Temperatura
-if (tempStartInput && tempEndInput && generateTempGifButton) {
-  generateTempGifButton.addEventListener('click', () => {
-    const start = tempStartInput.value;
-    const end = tempEndInput.value;
+// ---------------------------------------------------------------------------
+// Estaciones locales
+// ---------------------------------------------------------------------------
 
-    if (!start || !end) {
-      alert('Selecciona fecha inicio y fecha fin.');
+async function requestLocalStationLevel(
+  stationId: 'SPTTB' | 'BDCTB',
+  start: string,
+  end: string,
+): Promise<void> {
+  const url = `/api/local-station-level-range?station=${encodeURIComponent(stationId)}`
+    + `&start=${encodeURIComponent(start)}`
+    + `&end=${encodeURIComponent(end)}`;
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json() as StationResponse & { error?: string };
+
+    if (!resp.ok) {
+      alert(data.error ?? 'Error cargando serie de nivel de estación local.');
       return;
     }
-    if (!currentBbox) {
-      alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
-      return;
-    }
 
-    currentVariable = 'temp';
-    requestGifAndSeries('temp', start, end, currentBbox);
-  });
+    const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
+    allSeriesData[key] = { dates: data.dates, values: data.level_m };
+    renderChart();
+  } catch (err) {
+    console.error(err);
+    alert('Error de red al cargar serie de estación local.');
+  }
 }
 
-// Humedad del suelo
-if (soilStartInput && soilEndInput && generateSoilGifButton) {
-  generateSoilGifButton.addEventListener('click', () => {
-    const start = soilStartInput.value;
-    const end = soilEndInput.value;
+// ---------------------------------------------------------------------------
+// Inputs del DOM
+// ---------------------------------------------------------------------------
 
-    if (!start || !end) {
-      alert('Selecciona fecha inicio y fecha fin.');
-      return;
-    }
-    if (!currentBbox) {
-      alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
-      return;
-    }
+const startInput           = document.getElementById('startDate')          as HTMLInputElement | null;
+const endInput             = document.getElementById('endDate')            as HTMLInputElement | null;
+const generateGifButton    = document.getElementById('generateNdviGifBBox') as HTMLButtonElement | null;
 
-    currentVariable = 'soil';
-    requestGifAndSeries('soil', start, end, currentBbox);
+const tempStartInput       = document.getElementById('tempStartDate')      as HTMLInputElement | null;
+const tempEndInput         = document.getElementById('tempEndDate')        as HTMLInputElement | null;
+const generateTempGifButton = document.getElementById('generateTempGifBBox') as HTMLButtonElement | null;
+
+const soilStartInput       = document.getElementById('soilStartDate')      as HTMLInputElement | null;
+const soilEndInput         = document.getElementById('soilEndDate')        as HTMLInputElement | null;
+const generateSoilGifButton = document.getElementById('generateSoilGifBBox') as HTMLButtonElement | null;
+
+const precipStartInput     = document.getElementById('precipStartDate')    as HTMLInputElement | null;
+const precipEndInput       = document.getElementById('precipEndDate')      as HTMLInputElement | null;
+const generatePrecipGifButton = document.getElementById('generatePrecipGifBBox') as HTMLButtonElement | null;
+
+const waterStartInput      = document.getElementById('waterStartDate')     as HTMLInputElement | null;
+const waterEndInput        = document.getElementById('waterEndDate')       as HTMLInputElement | null;
+const generateWaterGifButton = document.getElementById('generateWaterGifBBox') as HTMLButtonElement | null;
+
+const spStartInput  = document.getElementById('spStartDate') as HTMLInputElement | null;
+const spEndInput    = document.getElementById('spEndDate')   as HTMLInputElement | null;
+const bdStartInput  = document.getElementById('bdStartDate') as HTMLInputElement | null;
+const bdEndInput    = document.getElementById('bdEndDate')   as HTMLInputElement | null;
+const btnLocalSpLevel = document.getElementById('btnLocalSpLevel') as HTMLButtonElement | null;
+const btnLocalBdLevel = document.getElementById('btnLocalBdLevel') as HTMLButtonElement | null;
+
+// ---------------------------------------------------------------------------
+// R8: Registro de listeners usando la factory
+// ---------------------------------------------------------------------------
+
+const getBbox = () => currentBbox;
+
+const variableConfigs: Parameters<typeof registerVariableListener>[0][] = [
+  { variable: 'ndvi',   startInput,       endInput,       button: generateGifButton,        getBbox, onRequest: requestGifAndSeries },
+  { variable: 'temp',   startInput: tempStartInput,   endInput: tempEndInput,   button: generateTempGifButton,   getBbox, onRequest: requestGifAndSeries },
+  { variable: 'soil',   startInput: soilStartInput,   endInput: soilEndInput,   button: generateSoilGifButton,   getBbox, onRequest: requestGifAndSeries },
+  { variable: 'precip', startInput: precipStartInput, endInput: precipEndInput, button: generatePrecipGifButton, getBbox, onRequest: requestGifAndSeries },
+  { variable: 'water',  startInput: waterStartInput,  endInput: waterEndInput,  button: generateWaterGifButton,  getBbox, onRequest: requestGifAndSeries },
+];
+
+variableConfigs.forEach(cfg => registerVariableListener(cfg));
+
+// ---------------------------------------------------------------------------
+// Listeners de municipios (riesgo de inundación)
+// ---------------------------------------------------------------------------
+
+document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => {
+  chk.addEventListener('change', () => {
+    const muni = chk.dataset['muni'];
+    if (!muni) return;
+    void toggleMunicipalFloodRisk(muni, chk.checked);
   });
-}
+});
 
-// Precipitación
-if (precipStartInput && precipEndInput && generatePrecipGifButton) {
-  generatePrecipGifButton.addEventListener('click', () => {
-    const start = precipStartInput.value;
-    const end = precipEndInput.value;
+// ---------------------------------------------------------------------------
+// Listeners de estaciones locales
+// ---------------------------------------------------------------------------
 
-    if (!start || !end) {
-      alert('Selecciona fecha inicio y fecha fin.');
-      return;
-    }
-    if (!currentBbox) {
-      alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
-      return;
-    }
+btnLocalSpLevel?.addEventListener('click', () => {
+  const start = spStartInput?.value;
+  const end   = spEndInput?.value;
+  if (!start || !end) { alert('Selecciona fecha inicio y fecha fin para San Pedro.'); return; }
+  void requestLocalStationLevel('SPTTB', start, end);
+});
 
-    currentVariable = 'precip';
-    requestGifAndSeries('precip', start, end, currentBbox);
-  });
-}
+btnLocalBdLevel?.addEventListener('click', () => {
+  const start = bdStartInput?.value;
+  const end   = bdEndInput?.value;
+  if (!start || !end) { alert('Selecciona fecha inicio y fecha fin para Boca del Cerro.'); return; }
+  void requestLocalStationLevel('BDCTB', start, end);
+});
 
-// Agua
-if (waterStartInput && waterEndInput && generateWaterGifButton) {
-  generateWaterGifButton.addEventListener('click', () => {
-    const start = waterStartInput.value;
-    const end = waterEndInput.value;
+// ---------------------------------------------------------------------------
+// Sidebar colapsar/restaurar
+// ---------------------------------------------------------------------------
 
-    if (!start || !end) {
-      alert('Selecciona fecha inicio y fecha fin.');
-      return;
-    }
-    if (!currentBbox) {
-      alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
-      return;
-    }
-
-    currentVariable = 'water';
-    requestGifAndSeries('water', start, end, currentBbox);
-  });
-}
-
-// ========== Sidebar ==========
-const collapseButton = document.getElementById('sidebarToggle') as HTMLButtonElement | null;
-const restoreButton = document.getElementById('sidebarRestore') as HTMLButtonElement | null;
-const body = document.body;
+const collapseButton = document.getElementById('sidebarToggle')  as HTMLButtonElement | null;
+const restoreButton  = document.getElementById('sidebarRestore') as HTMLButtonElement | null;
+const body           = document.body;
 
 if (collapseButton && restoreButton) {
   const collapseSr = collapseButton.querySelector('.sr-only') as HTMLElement | null;
-  const restoreSr = restoreButton.querySelector('.sr-only') as HTMLElement | null;
+  const restoreSr  = restoreButton.querySelector('.sr-only')  as HTMLElement | null;
 
-  const syncState = (): void => {
+  const syncState = () => {
     const isHidden = body.classList.contains('sidebar-collapsed');
     collapseButton.setAttribute('aria-expanded', String(!isHidden));
-    restoreButton.setAttribute('aria-expanded', String(isHidden));
-
+    restoreButton.setAttribute('aria-expanded',  String(isHidden));
     const label = isHidden ? 'Mostrar panel lateral' : 'Ocultar panel lateral';
     if (collapseSr) collapseSr.textContent = label;
-    if (restoreSr) restoreSr.textContent = label;
+    if (restoreSr)  restoreSr.textContent  = label;
   };
 
   syncState();
-
-  collapseButton.addEventListener('click', () => {
-    body.classList.add('sidebar-collapsed');
-    syncState();
-  });
-
-  restoreButton.addEventListener('click', () => {
-    body.classList.remove('sidebar-collapsed');
-    syncState();
-  });
+  collapseButton.addEventListener('click', () => { body.classList.add('sidebar-collapsed');    syncState(); });
+  restoreButton.addEventListener('click',  () => { body.classList.remove('sidebar-collapsed'); syncState(); });
 }
