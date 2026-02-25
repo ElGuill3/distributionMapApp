@@ -366,3 +366,47 @@ body.sidebar-collapsed .leaflet-left {
   flex-direction: column;
   justify-content: space-between;
 }
+/* Barra de colores Riesgo de inundación */
+.flood-risk-colorbar {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px;
+  border-radius: 4px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.flood-risk-colorbar-scale {
+  width: 14px;
+  height: 140px;
+  border: 1px solid #999;
+  background: linear-gradient(
+    to top,
+    #2ecc71 0%,    /* Verde - Muy bajo (0-20) */
+    #a5d66d 20%,   /* Verde claro - Bajo (20-40) */
+    #ffeb3b 40%,   /* Amarillo - Moderado (40-60) */
+    #ff9800 60%,   /* Naranja - Alto (60-80) */
+    #f44336 80%,   /* Rojo - Muy alto (80-100) */
+    #b71c1c 100%   /* Rojo oscuro - Crítico (>100) */
+  );
+  margin-right: 6px;
+}
+
+.flood-risk-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.municipios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.3rem 0.5rem;
+  font-size: 0.9rem;
+}
+.municipios-grid label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
