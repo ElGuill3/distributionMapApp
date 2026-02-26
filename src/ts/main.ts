@@ -29,9 +29,10 @@ import {
 } from './ui/progress.js';
 import { plotAllSelectedSeries } from './ui/chart.js';
 import { registerVariableListener } from './listeners/variableListeners.js';
+import { GifPlayer, SyncPlayer } from './ui/gifPlayer.js';
 
 // ---------------------------------------------------------------------------
-// Mapa Leaflet
+// Mapa principal (A)
 // ---------------------------------------------------------------------------
 
 const map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
@@ -111,12 +112,18 @@ map.on(L.Draw.Event.CREATED, (e) => {
   hideChartContainer();
   if (ndviChartDiv) Plotly.purge(ndviChartDiv);
 
-  // Limpiar series almacenadas
-  (Object.keys(allSeriesData) as VariableKey[]).forEach(k => delete allSeriesData[k]);
+  // Limpiar series y estado de comparativa al dibujar un bbox nuevo
+  (Object.keys(allSeriesData)  as VariableKey[]).forEach(k => delete allSeriesData[k]);
+  (Object.keys(allSeriesDataB) as VariableKey[]).forEach(k => delete allSeriesDataB[k]);
+  destroySyncPlayer();
+  hidePlayerControls();
+  hideChartBContainer();
+  if (chartBDiv) Plotly.purge(chartBDiv);
+  clearMapBOverlay();
 });
 
 // ---------------------------------------------------------------------------
-// Gráfica Plotly
+// Gráfica Plotly — Panel A
 // ---------------------------------------------------------------------------
 
 const ndviChartContainer = document.getElementById('ndvi-chart-container') as HTMLDivElement | null;
@@ -137,10 +144,189 @@ function renderChart(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Gráfica Plotly — Panel B
+// ---------------------------------------------------------------------------
+
+const chartBContainer = document.getElementById('chart-b-container') as HTMLDivElement | null;
+const chartBDiv       = document.getElementById('chart-b')           as HTMLDivElement | null;
+
+const allSeriesDataB: Partial<Record<VariableKey, SeriesData | undefined>> = {};
+
+function showChartBContainer(): void {
+  chartBContainer?.classList.remove('hidden');
+}
+function hideChartBContainer(): void {
+  chartBContainer?.classList.add('hidden');
+}
+
+function renderChartB(): void {
+  if (!chartBDiv) return;
+  plotAllSelectedSeries(chartBDiv, allSeriesDataB, showChartBContainer, hideChartBContainer);
+}
+
+// ---------------------------------------------------------------------------
 // Estado de variable activa
 // ---------------------------------------------------------------------------
 
 let currentVariable: VariableKey = 'ndvi';
+
+// ---------------------------------------------------------------------------
+// Modo comparativa
+// ---------------------------------------------------------------------------
+
+let compareModeActive = false;
+let mapB: L.Map | null = null;
+let mapBSyncLock = false; // Evita bucle infinito al sincronizar vistas
+
+/** Mapa de overlay activo en panel B. */
+let activeBOverlay: L.ImageOverlay | null = null;
+
+/** Instancia del SyncPlayer activo (puede ser null si no hay GIFs cargados). */
+let syncPlayer: SyncPlayer | null = null;
+
+// DOM: controles del modo comparativa
+const toggleCompareModeButton = document.getElementById('toggleCompareMode') as HTMLButtonElement | null;
+const compareYearBWrapper     = document.getElementById('compareYearBWrapper') as HTMLDivElement | null;
+const compareYearBInput       = document.getElementById('compareYearB')        as HTMLInputElement | null;
+
+// DOM: player controls
+const playerControlsDiv  = document.getElementById('player-controls')  as HTMLDivElement | null;
+const playerPlayPauseBtn = document.getElementById('playerPlayPause')   as HTMLButtonElement | null;
+const playerSlider       = document.getElementById('playerSlider')      as HTMLInputElement | null;
+const playerFrameLabel   = document.getElementById('playerFrameLabel')  as HTMLSpanElement | null;
+const playerPlayIcon     = document.getElementById('playerPlayIcon')    as HTMLSpanElement | null;
+
+/** Inicializa mapB la primera vez que se activa el modo comparativa. */
+function initMapB(): void {
+  if (mapB) return;
+
+  mapB = L.map('map-b', { zoomControl: false }).setView(map.getCenter(), map.getZoom());
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:     19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(mapB);
+
+  // Sincronizar pan/zoom A → B
+  map.on('moveend', () => {
+    if (mapBSyncLock || !mapB) return;
+    mapBSyncLock = true;
+    mapB.setView(map.getCenter(), map.getZoom(), { animate: false });
+    mapBSyncLock = false;
+  });
+
+  // Sincronizar pan/zoom B → A
+  mapB.on('moveend', () => {
+    if (mapBSyncLock) return;
+    mapBSyncLock = true;
+    map.setView(mapB!.getCenter(), mapB!.getZoom(), { animate: false });
+    mapBSyncLock = false;
+  });
+}
+
+function clearMapBOverlay(): void {
+  if (activeBOverlay && mapB) {
+    mapB.removeLayer(activeBOverlay);
+    activeBOverlay = null;
+  }
+}
+
+function destroySyncPlayer(): void {
+  if (syncPlayer) {
+    syncPlayer.destroy();
+    syncPlayer = null;
+  }
+}
+
+function showPlayerControls(): void {
+  playerControlsDiv?.classList.remove('hidden');
+}
+function hidePlayerControls(): void {
+  playerControlsDiv?.classList.add('hidden');
+}
+
+/** Actualiza el slider y el label de frame. */
+function onPlayerFrameChange(current: number, total: number): void {
+  if (playerSlider) {
+    playerSlider.max   = String(total - 1);
+    playerSlider.value = String(current);
+  }
+  if (playerFrameLabel) {
+    playerFrameLabel.textContent = `${current + 1} / ${total}`;
+  }
+}
+
+/** Sincroniza el ícono play/pause con el estado actual. */
+function syncPlayPauseIcon(): void {
+  if (!playerPlayIcon) return;
+  playerPlayIcon.textContent = syncPlayer?.isPlaying ? '⏸' : '▶';
+}
+
+// Listener: toggle modo comparativa
+toggleCompareModeButton?.addEventListener('click', () => {
+  compareModeActive = !compareModeActive;
+  document.body.classList.toggle('compare-mode-active', compareModeActive);
+  toggleCompareModeButton.setAttribute('aria-pressed', String(compareModeActive));
+
+  if (compareModeActive) {
+    compareYearBWrapper?.classList.remove('hidden');
+    initMapB();
+    // Forzar invalidateSize en el mapa A (ahora ocupa la mitad del ancho)
+    setTimeout(() => {
+      map.invalidateSize();
+      mapB?.invalidateSize();
+    }, 350); // Espera la transición CSS
+  } else {
+    compareYearBWrapper?.classList.add('hidden');
+    // Limpiar estado al desactivar
+    (Object.keys(allSeriesDataB) as VariableKey[]).forEach(k => delete allSeriesDataB[k]);
+    destroySyncPlayer();
+    hidePlayerControls();
+    hideChartBContainer();
+    clearMapBOverlay();
+    if (chartBDiv) Plotly.purge(chartBDiv);
+    // Restaurar tamaño del mapa A
+    setTimeout(() => map.invalidateSize(), 350);
+  }
+});
+
+// Listener: play/pause
+playerPlayPauseBtn?.addEventListener('click', () => {
+  if (!syncPlayer) return;
+  if (syncPlayer.isPlaying) {
+    syncPlayer.pause();
+  } else {
+    syncPlayer.play();
+  }
+  syncPlayPauseIcon();
+});
+
+// Listener: slider de frames — goToFrame dispara onFrameChange internamente
+playerSlider?.addEventListener('input', () => {
+  if (!syncPlayer || !playerSlider) return;
+  syncPlayer.goToFrame(Number(playerSlider.value));
+});
+
+// ---------------------------------------------------------------------------
+// Helper: calcular fechas del período B
+// ---------------------------------------------------------------------------
+
+/**
+ * Sustituye el año en una fecha ISO (YYYY-MM-DD) por yearB.
+ * Maneja el 29 de febrero: si el año destino no es bisiesto, devuelve el 28.
+ */
+function replaceDateYear(dateStr: string, yearB: number): string {
+  const [, month, day] = dateStr.split('-');
+  // Validar 29-feb en año no bisiesto
+  if (month === '02' && day === '29' && !isLeapYear(yearB)) {
+    return `${yearB}-02-28`;
+  }
+  return `${yearB}-${month}-${day}`;
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
 
 // ---------------------------------------------------------------------------
 // SSE + petición GIF + serie temporal
@@ -154,17 +340,55 @@ async function requestGifAndSeries(
 ): Promise<void> {
   currentVariable = variable;
 
-  const bboxJson  = JSON.stringify(bbox);
-  const taskId    = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  const bboxJson = JSON.stringify(bbox);
+  const taskId   = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
   const gifUrl = `${GIF_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
     + `&end=${encodeURIComponent(end)}`
     + `&bbox=${encodeURIComponent(bboxJson)}`
     + `&task_id=${encodeURIComponent(taskId)}`;
 
-  const tsUrl  = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
+  const tsUrl = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
     + `&end=${encodeURIComponent(end)}`
     + `&bbox=${encodeURIComponent(bboxJson)}`;
+
+  // ---- Validar año B si está en modo comparativa ----
+  let startB = '';
+  let endB   = '';
+  let gifUrlB = '';
+  let tsUrlB  = '';
+
+  if (compareModeActive) {
+    const yearBRaw = compareYearBInput?.value.trim();
+    if (!yearBRaw) {
+      alert('Modo comparativa activo: introduce el año B antes de generar.');
+      return;
+    }
+    const yearB = Number(yearBRaw);
+    if (!Number.isInteger(yearB) || yearB < 2000 || yearB > 2030) {
+      alert('El año B debe ser un número entero entre 2000 y 2030.');
+      return;
+    }
+    const yearA = Number(start.substring(0, 4));
+    if (yearB === yearA) {
+      alert('El año B debe ser diferente al año del período A.');
+      return;
+    }
+
+    startB = replaceDateYear(start, yearB);
+    endB   = replaceDateYear(end,   yearB);
+
+    const taskIdB = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+    gifUrlB = `${GIF_ENDPOINT[variable]}?start=${encodeURIComponent(startB)}`
+      + `&end=${encodeURIComponent(endB)}`
+      + `&bbox=${encodeURIComponent(bboxJson)}`
+      + `&task_id=${encodeURIComponent(taskIdB)}`;
+
+    tsUrlB = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(startB)}`
+      + `&end=${encodeURIComponent(endB)}`
+      + `&bbox=${encodeURIComponent(bboxJson)}`;
+  }
 
   createProgressIndicator();
 
@@ -184,7 +408,15 @@ async function requestGifAndSeries(
   eventSource.onerror = () => eventSource.close();
 
   try {
-    const [gifResp, tsResp] = await Promise.all([fetch(gifUrl), fetch(tsUrl)]);
+    // Lanzar todas las peticiones en paralelo
+    const fetches: Promise<Response>[] = [fetch(gifUrl), fetch(tsUrl)];
+    if (compareModeActive) {
+      fetches.push(fetch(gifUrlB), fetch(tsUrlB));
+    }
+
+    const responses = await Promise.all(fetches);
+    const [gifResp, tsResp, gifRespB, tsRespB] = responses as [Response, Response, Response | undefined, Response | undefined];
+
     const gifData = await gifResp.json() as GifResponse & { error?: string };
     const tsData  = await tsResp.json()  as TimeseriesResponse & { error?: string };
 
@@ -193,16 +425,85 @@ async function requestGifAndSeries(
       return;
     }
 
-    // Mostrar overlay del GIF
-    removeActiveOverlay(map);
     const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
     const overlayBounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
-    const overlay       = L.imageOverlay(gifData.gifUrl, overlayBounds, { opacity: 0.8 }).addTo(map);
-    setActiveOverlay(overlay);
-    switchColorbar(map, variable);
-    map.fitBounds(overlayBounds);
 
-    // Serie temporal
+    // ---- Modo normal: overlay nativo del browser ----
+    if (!compareModeActive) {
+      removeActiveOverlay(map);
+      const overlay = L.imageOverlay(gifData.gifUrl, overlayBounds, { opacity: 0.8 }).addTo(map);
+      setActiveOverlay(overlay);
+      switchColorbar(map, variable);
+      map.fitBounds(overlayBounds);
+
+    // ---- Modo comparativa: GifPlayer + SyncPlayer ----
+    } else {
+      if (!gifRespB || !tsRespB) return;
+
+      const gifDataB = await gifRespB.json() as GifResponse & { error?: string };
+
+      if (!gifRespB.ok) {
+        alert(gifDataB.error ?? 'Error generando animación del período B.');
+        return;
+      }
+
+      // Destruir reproducción anterior si existía
+      destroySyncPlayer();
+      clearMapBOverlay();
+      removeActiveOverlay(map);
+
+      // Pre-renderizar ambos GIFs (puede tardar unos segundos)
+      const [pA, pB] = await Promise.all([
+        (async () => { const p = new GifPlayer(); await p.load(gifData.gifUrl);  return p; })(),
+        (async () => { const p = new GifPlayer(); await p.load(gifDataB.gifUrl); return p; })(),
+      ]);
+
+      // Crear overlays con el primer frame
+      const overlayA = L.imageOverlay(pA.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(map);
+      setActiveOverlay(overlayA);
+      switchColorbar(map, variable);
+      map.fitBounds(overlayBounds);
+
+      const [minLonB, minLatB, maxLonB, maxLatB] = gifDataB.bbox;
+      const overlayBoundsB = L.latLngBounds(L.latLng(minLatB, minLonB), L.latLng(maxLatB, maxLonB));
+      const overlayB = L.imageOverlay(pB.getFrameUrl(0), overlayBoundsB, { opacity: 0.8 }).addTo(mapB!);
+      activeBOverlay = overlayB;
+      mapB?.fitBounds(overlayBoundsB);
+
+      // Sincronizar zoom/posición de mapB con mapA tras fitBounds
+      setTimeout(() => mapB?.setView(map.getCenter(), map.getZoom(), { animate: false }), 100);
+
+      // Iniciar SyncPlayer
+      syncPlayer = new SyncPlayer();
+      syncPlayer.onFrameChange = (current, total) => {
+        onPlayerFrameChange(current, total);
+        syncPlayPauseIcon();
+      };
+      syncPlayer.start(pA, overlayA, pB, overlayB);
+
+      // Configurar slider
+      if (playerSlider) {
+        playerSlider.max   = String(Math.max(pA.frameCount, pB.frameCount) - 1);
+        playerSlider.value = '0';
+      }
+      showPlayerControls();
+      syncPlayPauseIcon();
+
+      // Serie temporal B
+      const tsDataB = await tsRespB.json() as TimeseriesResponse & { error?: string };
+      if (tsRespB.ok) {
+        const dataKeyB = VARIABLE_DATA_KEY[variable] as keyof TimeseriesResponse;
+        const valuesB  = tsDataB[dataKeyB] as number[] | undefined;
+        if (tsDataB.dates && valuesB) {
+          allSeriesDataB[variable] = { dates: tsDataB.dates, values: valuesB };
+          renderChartB();
+        }
+      } else {
+        console.warn('Error en serie temporal período B:', tsDataB.error);
+      }
+    }
+
+    // ---- Serie temporal A (común a ambos modos) ----
     if (tsResp.ok) {
       const dataKey = VARIABLE_DATA_KEY[variable] as keyof TimeseriesResponse;
       const values  = tsData[dataKey] as number[] | undefined;
@@ -390,6 +691,11 @@ if (collapseButton && restoreButton) {
     const label = isHidden ? 'Mostrar panel lateral' : 'Ocultar panel lateral';
     if (collapseSr) collapseSr.textContent = label;
     if (restoreSr)  restoreSr.textContent  = label;
+    // Invalidar tamaño de mapas tras la transición del sidebar
+    setTimeout(() => {
+      map.invalidateSize();
+      mapB?.invalidateSize();
+    }, 350);
   };
 
   syncState();

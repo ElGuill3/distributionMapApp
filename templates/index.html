@@ -73,6 +73,45 @@
         </button>
       </header>
 
+      <!-- Barra de modo comparativa -->
+      <div class="compare-toolbar">
+        <button
+          id="toggleCompareMode"
+          type="button"
+          class="compare-toggle-btn"
+          aria-pressed="false"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="2" y="3" width="9" height="18" rx="1"></rect>
+            <rect x="13" y="3" width="9" height="18" rx="1"></rect>
+          </svg>
+          <span class="compare-btn-label">Comparar años</span>
+        </button>
+
+        <div id="compareYearBWrapper" class="hidden compare-year-row">
+          <label for="compareYearB" class="compare-year-label">Año B:</label>
+          <input
+            id="compareYearB"
+            type="number"
+            min="2000"
+            max="2030"
+            placeholder="ej. 2022"
+            class="compare-year-input"
+          />
+          <p class="hint compare-year-hint">
+            Mismo rango de fechas, año diferente.
+          </p>
+        </div>
+      </div>
+
       <!-- NDVI -->
       <details id="ndvi-controls" open>
         <summary>NDVI</summary>
@@ -92,7 +131,8 @@
         <button id="generateNdviGifBBox" class="primary-action">
           Generar GIF NDVI
         </button>
-        
+      </details>
+
       <!-- Temperatura ERA5 -->
       <details id="temp-controls">
         <summary>Temperatura 2m</summary>
@@ -223,7 +263,8 @@
 
           <p class="hint">Se combinará con las otras series en la gráfica.</p>
         </details>
-          <details>
+
+        <details>
           <summary>Boca del Cerro (BDCTB)</summary>
 
           <label>Fecha inicio
@@ -242,14 +283,46 @@
       </section>
     </aside>
 
-    <!-- Contenedor vertical: mapa arriba, gráfica abajo -->
+    <!-- Contenedor vertical: mapas + gráficas -->
     <div id="map-and-chart">
-      <div id="map" role="region" aria-label="Mapa Leaflet"></div>
 
-      <div id="ndvi-chart-container">
-
-        <div id="ndvi-chart"></div>
+      <!-- Panel A: siempre visible -->
+      <div class="map-panel" id="map-panel-a">
+        <div class="panel-label" aria-hidden="true">Período A</div>
+        <div id="map" role="region" aria-label="Mapa principal (Período A)"></div>
+        <div id="ndvi-chart-container">
+          <div id="ndvi-chart"></div>
+        </div>
       </div>
+
+      <!-- Panel B: solo visible en modo comparativa -->
+      <div class="map-panel" id="map-panel-b">
+        <div class="panel-label" aria-hidden="true">Período B</div>
+        <div id="map-b" role="region" aria-label="Mapa comparativa (Período B)"></div>
+        <div id="chart-b-container" class="hidden">
+          <div id="chart-b"></div>
+        </div>
+      </div>
+
+      <!-- Controles de reproducción sincronizada (visibles solo en modo comparativa con GIFs cargados) -->
+      <div id="player-controls" class="hidden" role="group" aria-label="Controles de reproducción">
+        <button id="playerPlayPause" type="button" class="player-btn" aria-label="Reproducir animación">
+          <span id="playerPlayIcon" aria-hidden="true">▶</span>
+          <span class="sr-only">Reproducir</span>
+        </button>
+        <input
+          id="playerSlider"
+          type="range"
+          min="0"
+          max="0"
+          value="0"
+          step="1"
+          class="player-slider"
+          aria-label="Posición del frame"
+        />
+        <span id="playerFrameLabel" class="player-frame-label" aria-live="polite">0 / 0</span>
+      </div>
+
     </div>
   </div>
 
@@ -261,6 +334,15 @@
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
   <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+  <!-- Importmap: permite importar gifuct-js como módulo ES desde CDN en el browser -->
+  <script type="importmap">
+  {
+    "imports": {
+      "gifuct-js": "https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm"
+    }
+  }
+  </script>
 
   <script type="module" src="/static/main.js"></script>
 </body>
