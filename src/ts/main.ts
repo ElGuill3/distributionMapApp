@@ -54,6 +54,41 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 buildColorbars();
 
 // ---------------------------------------------------------------------------
+// Marcadores de estaciones locales
+// ---------------------------------------------------------------------------
+
+const STATION_COORDS: Record<'SPTTB' | 'BDCTB', [number, number]> = {
+  SPTTB: [17.791667, -91.158333],
+  BDCTB: [17.433333, -91.483333],
+};
+
+const STATION_LABELS: Record<'SPTTB' | 'BDCTB', string> = {
+  SPTTB: 'San Pedro (SPTTB)',
+  BDCTB: 'Boca del Cerro (BDCTB)',
+};
+
+/** Marcadores de estaciones en mapa principal y mapa B. */
+const stationMarkersMap:  L.Marker[] = [];
+const stationMarkersMapB: L.Marker[] = [];
+
+function _makeStationMarker(id: 'SPTTB' | 'BDCTB', targetMap: L.Map, markerList: L.Marker[]): L.Marker {
+  const [lat, lon] = STATION_COORDS[id];
+  const marker = L.marker(L.latLng(lat, lon))
+    .bindPopup(
+      `<div class="station-popup-content">` +
+      `<b>${STATION_LABELS[id]}</b><br>Estación de nivel local<br>` +
+      `<a href="#" class="station-full-data-link" data-station-id="${id}">` +
+      `Ver datos 2000–2024</a></div>`,
+    )
+    .addTo(targetMap);
+  markerList.push(marker);
+  return marker;
+}
+
+_makeStationMarker('SPTTB', map, stationMarkersMap);
+_makeStationMarker('BDCTB', map, stationMarkersMap);
+
+// ---------------------------------------------------------------------------
 // Herramienta de dibujo (Leaflet.draw)
 // ---------------------------------------------------------------------------
 
@@ -206,9 +241,16 @@ let syncPlayer: SyncPlayer | null = null;
 let soloPlayer: SoloPlayer | null = null;
 
 // DOM: modo comparativa
-const toggleCompareModeButton = document.getElementById('toggleCompareMode') as HTMLButtonElement | null;
-const compareControlsA        = document.getElementById('compare-controls-a') as HTMLDivElement | null;
-const compareModeHint         = document.querySelector('.compare-mode-hint')   as HTMLElement | null;
+const toggleCompareModeButton  = document.getElementById('toggleCompareMode')    as HTMLButtonElement | null;
+const compareControlsA         = document.getElementById('compare-controls-a')   as HTMLDivElement | null;
+const compareModeHint          = document.querySelector('.compare-mode-hint')     as HTMLElement | null;
+
+// DOM: modo riesgo de inundación
+const toggleFloodRiskModeButton = document.getElementById('toggleFloodRiskMode') as HTMLButtonElement | null;
+const floodRiskModeHint         = document.querySelector('.flood-risk-mode-hint') as HTMLElement | null;
+const btnClearNormal            = document.getElementById('btnClearNormal')       as HTMLButtonElement | null;
+
+let floodRiskModeActive = false;
 
 // DOM: selectores de comparativa — panel A
 const compareVarASelect    = document.getElementById('compareVarA')    as HTMLSelectElement | null;
@@ -261,6 +303,10 @@ function initMapB(): void {
     map.setView(mapB!.getCenter(), mapB!.getZoom(), { animate: false });
     mapBSyncLock = false;
   });
+
+  // Añadir marcadores de estaciones al mapa B
+  _makeStationMarker('SPTTB', mapB, stationMarkersMapB);
+  _makeStationMarker('BDCTB', mapB, stationMarkersMapB);
 }
 
 function clearMapBOverlay(): void {
@@ -297,6 +343,7 @@ function _cleanupComparePanels(): void {
   _currentOverlayA = null;
   removeActiveOverlay(map);
   clearMapBOverlay();
+  _updateStationMarkersVisibility();
 }
 
 /** Limpia solo el panel A (animación + gráfica) sin tocar el panel B. */
@@ -314,6 +361,9 @@ function _clearPanelA(): void {
   if (compareYearASelect)   compareYearASelect.value   = '';
   if (compareSeasonASelect) { compareSeasonASelect.value = ''; compareSeasonASelect.disabled = true; }
   if (btnGenerateA)         btnGenerateA.disabled = true;
+  if (chkStationSpA) chkStationSpA.checked = false;
+  if (chkStationBdA) chkStationBdA.checked = false;
+  _updateStationMarkersVisibility();
 }
 
 /** Limpia solo el panel B (animación + gráfica) sin tocar el panel A. */
@@ -330,6 +380,51 @@ function _clearPanelB(): void {
   if (compareYearBSelect)   compareYearBSelect.value   = '';
   if (compareSeasonBSelect) { compareSeasonBSelect.value = ''; compareSeasonBSelect.disabled = true; }
   if (btnGenerateB)         btnGenerateB.disabled = true;
+  if (chkStationSpB) chkStationSpB.checked = false;
+  if (chkStationBdB) chkStationBdB.checked = false;
+  _updateStationMarkersVisibility();
+}
+
+/** Limpia la animación y gráfica en modo normal (panel A). */
+function _clearNormalMode(): void {
+  stopSoloPlayer();
+  gifPlayerA?.dispose();
+  gifPlayerA       = null;
+  _currentOverlayA = null;
+  removeActiveOverlay(map);
+  switchColorbar(map, null);
+  (Object.keys(allSeriesData) as VariableKey[]).forEach(k => delete allSeriesData[k]);
+  if (ndviChartDiv) Plotly.purge(ndviChartDiv);
+  hidePlayerControls();
+  hideChartContainer();
+  _updateStationMarkersVisibility();
+}
+
+// ---------------------------------------------------------------------------
+// Visibilidad de marcadores de estaciones
+// ---------------------------------------------------------------------------
+
+function _setMarkersVisible(markers: L.Marker[], targetMap: L.Map, visible: boolean): void {
+  for (const m of markers) {
+    if (visible && !targetMap.hasLayer(m)) {
+      m.addTo(targetMap);
+    } else if (!visible && targetMap.hasLayer(m)) {
+      targetMap.removeLayer(m);
+    }
+  }
+}
+
+/**
+ * Muestra u oculta los marcadores de estaciones según el estado actual:
+ * - Mapa A: visibles cuando no hay animación activa ni capas flood.
+ * - Mapa B: visibles cuando no hay animación activa en panel B.
+ */
+function _updateStationMarkersVisibility(): void {
+  const showOnMap = !_currentOverlayA && Object.keys(municipalFloodOverlays).length === 0;
+  _setMarkersVisible(stationMarkersMap, map, showOnMap);
+  if (mapB) {
+    _setMarkersVisible(stationMarkersMapB, mapB, !activeBOverlay);
+  }
 }
 
 function showPlayerControls(): void {
@@ -468,12 +563,31 @@ compareVarBSelect?.addEventListener('change', () => {
 // Listener: toggle modo comparativa
 // ---------------------------------------------------------------------------
 
+function _deactivateFloodRiskMode(): void {
+  if (!floodRiskModeActive) return;
+  floodRiskModeActive = false;
+  document.body.classList.remove('flood-risk-mode-active');
+  toggleFloodRiskModeButton?.setAttribute('aria-pressed', 'false');
+  floodRiskModeHint?.classList.add('hidden');
+  // Eliminar todos los overlays de riesgo activos
+  for (const muni of Object.keys(municipalFloodOverlays)) {
+    const ov = municipalFloodOverlays[muni];
+    if (ov) map.removeLayer(ov);
+    delete municipalFloodOverlays[muni];
+  }
+  document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => { chk.checked = false; });
+  switchColorbar(map, null);
+}
+
 toggleCompareModeButton?.addEventListener('click', () => {
   compareModeActive = !compareModeActive;
   document.body.classList.toggle('compare-mode-active', compareModeActive);
   toggleCompareModeButton.setAttribute('aria-pressed', String(compareModeActive));
 
   if (compareModeActive) {
+    // Desactivar flood risk mode si estaba activo
+    _deactivateFloodRiskMode();
+
     // Limpiar estado previo
     _cleanupComparePanels();
     (Object.keys(allSeriesData)  as VariableKey[]).forEach(k => delete allSeriesData[k]);
@@ -519,6 +633,51 @@ toggleCompareModeButton?.addEventListener('click', () => {
     setTimeout(() => map.invalidateSize(), 350);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Listener: toggle modo riesgo de inundación
+// ---------------------------------------------------------------------------
+
+toggleFloodRiskModeButton?.addEventListener('click', () => {
+  floodRiskModeActive = !floodRiskModeActive;
+  document.body.classList.toggle('flood-risk-mode-active', floodRiskModeActive);
+  toggleFloodRiskModeButton.setAttribute('aria-pressed', String(floodRiskModeActive));
+
+  if (floodRiskModeActive) {
+    // Desactivar compare mode si estaba activo
+    if (compareModeActive) {
+      compareModeActive = false;
+      document.body.classList.remove('compare-mode-active');
+      toggleCompareModeButton?.setAttribute('aria-pressed', 'false');
+      _cleanupComparePanels();
+      (Object.keys(allSeriesData)  as VariableKey[]).forEach(k => delete allSeriesData[k]);
+      (Object.keys(allSeriesDataB) as VariableKey[]).forEach(k => delete allSeriesDataB[k]);
+      hidePlayerControls();
+      hideChartBContainer();
+      if (ndviChartDiv) Plotly.purge(ndviChartDiv);
+      if (chartBDiv)    Plotly.purge(chartBDiv);
+      switchColorbar(map, null, mapB ?? undefined);
+      drawnItems.clearLayers();
+      currentBbox = null;
+      compareControlsA?.classList.add('hidden');
+      compareModeHint?.classList.add('hidden');
+      setTimeout(() => map.invalidateSize(), 350);
+    }
+
+    // Limpiar animación normal si existe
+    _clearNormalMode();
+
+    floodRiskModeHint?.classList.remove('hidden');
+  } else {
+    _deactivateFloodRiskMode();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Listener: limpiar modo normal
+// ---------------------------------------------------------------------------
+
+btnClearNormal?.addEventListener('click', () => { _clearNormalMode(); });
 
 // ---------------------------------------------------------------------------
 // Listener: play/pause
@@ -577,11 +736,13 @@ async function requestGifAndSeries(
   const eventSource = new EventSource(`/api/gif-progress/${taskId}`);
   eventSource.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data) as { progress: number; message: string };
-      updateProgressIndicator(data.progress, data.message);
+      const data = JSON.parse(event.data) as { progress?: number; message?: string };
+      if (typeof data.progress !== 'number') return;
+      updateProgressIndicator(data.progress, data.message ?? '');
       if (data.progress === 100 || data.progress === -1) {
         eventSource.close();
         if (data.progress === 100) removeProgressIndicator(1000);
+        else removeProgressIndicator(3000);
       }
     } catch { /* ignore */ }
   };
@@ -618,6 +779,7 @@ async function requestGifAndSeries(
 
     gifPlayerA       = player;
     _currentOverlayA = overlay;
+    _updateStationMarkersVisibility();
 
     soloPlayer = new SoloPlayer();
     soloPlayer.frameIntervalMs = _selectedInterval();
@@ -685,11 +847,13 @@ async function requestGifAndSeriesForPanel(
   const eventSource = new EventSource(`/api/gif-progress/${taskId}`);
   eventSource.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data) as { progress: number; message: string };
-      updateProgressIndicator(data.progress, data.message);
+      const data = JSON.parse(event.data) as { progress?: number; message?: string };
+      if (typeof data.progress !== 'number') return;
+      updateProgressIndicator(data.progress, data.message ?? '');
       if (data.progress === 100 || data.progress === -1) {
         eventSource.close();
         if (data.progress === 100) removeProgressIndicator(1000);
+        else removeProgressIndicator(3000);
       }
     } catch { /* ignore */ }
   };
@@ -732,6 +896,7 @@ async function requestGifAndSeriesForPanel(
 
       gifPlayerA       = player;
       _currentOverlayA = overlay;
+      _updateStationMarkersVisibility();
 
       // Animar panel A de forma independiente hasta que llegue el panel B
       soloPlayer = new SoloPlayer();
@@ -771,6 +936,7 @@ async function requestGifAndSeriesForPanel(
 
       const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(mapB!);
       activeBOverlay = overlay;
+      _updateStationMarkersVisibility();
       // La colorbar siempre en el panel derecho (mapB) en compare mode
       switchColorbar(mapB!, variable, map);
       mapB?.fitBounds(overlayBounds);
@@ -847,11 +1013,17 @@ async function toggleMunicipalFloodRisk(muni: string, checked: boolean): Promise
       map.removeLayer(existing);
       delete municipalFloodOverlays[muni];
     }
+    // Ocultar colorbar si ya no hay ninguna capa de riesgo activa
+    if (Object.keys(municipalFloodOverlays).length === 0) {
+      switchColorbar(map, null);
+    }
+    _updateStationMarkersVisibility();
     return;
   }
 
   if (municipalFloodOverlays[muni]) {
     municipalFloodOverlays[muni]?.addTo(map);
+    _updateStationMarkersVisibility();
     return;
   }
 
@@ -869,6 +1041,7 @@ async function toggleMunicipalFloodRisk(muni: string, checked: boolean): Promise
     const overlay = L.imageOverlay(data.mapUrl, bounds, { opacity: 0.8 }).addTo(map);
     municipalFloodOverlays[muni] = overlay;
     switchColorbar(map, 'flood');
+    _updateStationMarkersVisibility();
   } catch (err) {
     console.error(err);
     alert('Error de red al generar mapa de riesgo por municipio.');
@@ -1005,6 +1178,86 @@ _wireLocalStation(spYearSelect, spSeasonSelect, btnLocalSpLevel, 'SPTTB', 'local
 _wireLocalStation(bdYearSelect, bdSeasonSelect, btnLocalBdLevel, 'BDCTB', 'local_bd');
 
 // ---------------------------------------------------------------------------
+// Checkboxes de estaciones en modo comparativa
+// ---------------------------------------------------------------------------
+
+const chkStationSpA = document.getElementById('chkStationSpA') as HTMLInputElement | null;
+const chkStationBdA = document.getElementById('chkStationBdA') as HTMLInputElement | null;
+const chkStationSpB = document.getElementById('chkStationSpB') as HTMLInputElement | null;
+const chkStationBdB = document.getElementById('chkStationBdB') as HTMLInputElement | null;
+
+async function _loadCompareStation(
+  stationId: 'SPTTB' | 'BDCTB',
+  panel: 'A' | 'B',
+  year: string,
+  season: string,
+): Promise<void> {
+  const { start, end } = seasonToDates(Number(year), season as Season);
+  const url = `/api/local-station-level-range?station=${encodeURIComponent(stationId)}`
+    + `&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json() as StationResponse & { error?: string };
+
+    if (!resp.ok) {
+      alert(data.error ?? 'Error cargando serie de nivel de estación local.');
+      return;
+    }
+
+    const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
+    if (panel === 'A') {
+      allSeriesData[key] = { dates: data.dates, values: data.level_m };
+      renderChart();
+    } else {
+      allSeriesDataB[key] = { dates: data.dates, values: data.level_m };
+      renderChartB();
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error de red al cargar serie de estación local.');
+  }
+}
+
+function _wireCompareStationCheck(
+  chk: HTMLInputElement | null,
+  stationId: 'SPTTB' | 'BDCTB',
+  panel: 'A' | 'B',
+  yearSel: HTMLSelectElement | null,
+  seasonSel: HTMLSelectElement | null,
+): void {
+  if (!chk) return;
+
+  chk.addEventListener('change', () => {
+    const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
+
+    if (chk.checked) {
+      const year   = yearSel?.value   ?? '';
+      const season = seasonSel?.value ?? '';
+      if (!year || !season) {
+        alert('Selecciona año y temporada del panel antes de cargar la estación.');
+        chk.checked = false;
+        return;
+      }
+      void _loadCompareStation(stationId, panel, year, season);
+    } else {
+      if (panel === 'A') {
+        delete allSeriesData[key];
+        renderChart();
+      } else {
+        delete allSeriesDataB[key];
+        renderChartB();
+      }
+    }
+  });
+}
+
+_wireCompareStationCheck(chkStationSpA, 'SPTTB', 'A', compareYearASelect, compareSeasonASelect);
+_wireCompareStationCheck(chkStationBdA, 'BDCTB', 'A', compareYearASelect, compareSeasonASelect);
+_wireCompareStationCheck(chkStationSpB, 'SPTTB', 'B', compareYearBSelect, compareSeasonBSelect);
+_wireCompareStationCheck(chkStationBdB, 'BDCTB', 'B', compareYearBSelect, compareSeasonBSelect);
+
+// ---------------------------------------------------------------------------
 // Listeners de municipios (riesgo de inundación)
 // ---------------------------------------------------------------------------
 
@@ -1035,6 +1288,19 @@ document.querySelectorAll<HTMLDetailsElement>('details[id]').forEach(details => 
     if (!v) return;
     currentVariable = v;
   });
+});
+
+// ---------------------------------------------------------------------------
+// Listener: botón "Ver datos" en popup de estaciones locales
+// ---------------------------------------------------------------------------
+
+document.addEventListener('click', (e) => {
+  const link = (e.target as HTMLElement).closest<HTMLElement>('.station-full-data-link');
+  if (!link) return;
+  e.preventDefault();
+  const stationId = link.dataset['stationId'] as 'SPTTB' | 'BDCTB' | undefined;
+  if (!stationId) return;
+  void requestLocalStationLevel(stationId, '2000-01-01', '2024-12-31');
 });
 
 // ---------------------------------------------------------------------------

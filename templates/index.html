@@ -95,10 +95,55 @@
           </svg>
           <span class="compare-btn-label">Comparar años</span>
         </button>
+
+        <button
+          id="toggleFloodRiskMode"
+          type="button"
+          class="compare-toggle-btn flood-risk-toggle-btn"
+          aria-pressed="false"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 12 Q6 8 9 12 Q12 16 15 12 Q18 8 21 12"></path>
+            <path d="M3 17 Q6 13 9 17 Q12 21 15 17 Q18 13 21 17"></path>
+          </svg>
+          <span class="compare-btn-label">Mapa de riesgo</span>
+        </button>
+
+        <button id="btnClearNormal" type="button" class="normal-clear-btn">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            style="width:14px;height:14px;flex-shrink:0;"
+          >
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-1 14H6L5 6"></path>
+            <path d="M10 11v6"></path><path d="M14 11v6"></path>
+            <path d="M9 6V4h6v2"></path>
+          </svg>
+          Limpiar
+        </button>
+
         <p class="hint compare-mode-hint hidden">
           En modo comparativa los controles de la izquierda están bloqueados.
           Usa los controles de variable, año y temporada que aparecen debajo de
           cada mapa.
+        </p>
+        <p class="hint flood-risk-mode-hint hidden">
+          En modo riesgo los controles de animación están bloqueados.
+          Activa los municipios para visualizar su riesgo de inundación.
         </p>
       </div>
 
@@ -334,6 +379,11 @@
                 Limpiar panel
               </button>
             </div>
+            <div class="compare-station-checks">
+              <span class="compare-station-checks-label">Estaciones:</span>
+              <label><input type="checkbox" id="chkStationSpA"> San Pedro (SPTTB)</label>
+              <label><input type="checkbox" id="chkStationBdA"> Boca del Cerro (BDCTB)</label>
+            </div>
           </div>
           <div id="ndvi-chart"></div>
         </div>
@@ -375,6 +425,11 @@
               <button id="btnClearB" type="button" class="compare-clear-btn">
                 Limpiar panel
               </button>
+            </div>
+            <div class="compare-station-checks">
+              <span class="compare-station-checks-label">Estaciones:</span>
+              <label><input type="checkbox" id="chkStationSpB"> San Pedro (SPTTB)</label>
+              <label><input type="checkbox" id="chkStationBdB"> Boca del Cerro (BDCTB)</label>
             </div>
           </div>
           <div id="chart-b"></div>

@@ -131,6 +131,49 @@ body.compare-mode-active #water-controls {
   user-select: none;
 }
 
+/* ------------------------------------------------------------------ */
+/* Modo riesgo de inundación                                           */
+/* ------------------------------------------------------------------ */
+
+/* Flood risk bloqueado por defecto (se activa solo en su modo) */
+#flood-risk-controls {
+  pointer-events: none;
+  opacity: 0.45;
+  user-select: none;
+}
+
+/* Desbloquear flood risk en su modo dedicado */
+body.flood-risk-mode-active #flood-risk-controls {
+  pointer-events: auto;
+  opacity: 1;
+  user-select: auto;
+}
+
+/* Bloquear variables y estaciones en modo flood risk */
+body.flood-risk-mode-active #ndvi-controls,
+body.flood-risk-mode-active #temp-controls,
+body.flood-risk-mode-active #soil-controls,
+body.flood-risk-mode-active #precip-controls,
+body.flood-risk-mode-active #water-controls,
+body.flood-risk-mode-active .sidebar section {
+  pointer-events: none;
+  opacity: 0.45;
+  user-select: none;
+}
+
+/* Flood risk bloqueado también en modo comparativa */
+body.compare-mode-active #flood-risk-controls {
+  pointer-events: none;
+  opacity: 0.45;
+  user-select: none;
+}
+
+/* Botón limpiar normal: oculto en modos especiales */
+body.compare-mode-active #btnClearNormal,
+body.flood-risk-mode-active #btnClearNormal {
+  display: none;
+}
+
 .hint {
   font-size: 0.8rem;
   color: #6b7280;
@@ -451,6 +494,55 @@ body.compare-mode-active #map-panel-b {
   border-color: #94a3b8;
 }
 
+/* Popup de marcadores de estaciones */
+.station-popup-content {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.station-full-data-link {
+  display: inline-block;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: #0369a1;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.station-full-data-link:hover {
+  color: #075985;
+}
+
+/* Checkboxes de estaciones en controles de comparativa */
+.compare-station-checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 0.1rem;
+}
+
+.compare-station-checks-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0369a1;
+  white-space: nowrap;
+}
+
+#compare-controls-b .compare-station-checks-label {
+  color: #334155;
+}
+
+.compare-station-checks label {
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
 /* Ocultar contenedor de gráfica hasta que haya datos */
 .hidden {
   display: none !important;
@@ -515,7 +607,42 @@ body.compare-mode-active #map-panel-b {
   color: #bae6fd;
 }
 
-.compare-mode-hint {
+/* Flood risk toggle activo — acento teal */
+.flood-risk-toggle-btn[aria-pressed="true"] {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
+.flood-risk-toggle-btn[aria-pressed="true"] svg {
+  color: #99f6e4;
+}
+
+/* Botón limpiar en modo normal */
+.normal-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #fca5a5;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.normal-clear-btn:hover {
+  background: #fecaca;
+  border-color: #ef4444;
+  color: #7f1d1d;
+}
+
+.compare-mode-hint,
+.flood-risk-mode-hint {
   font-size: 0.8rem;
   color: #0369a1;
   margin: 0;
