@@ -2,6 +2,7 @@
 Blueprint 'progress' — endpoint SSE para progreso de generación de GIFs.
 """
 import json
+import time
 
 from flask import Blueprint, Response, stream_with_context
 
@@ -23,9 +24,16 @@ def gif_progress(task_id: str) -> Response:
     La conexión se cierra automáticamente cuando el progreso llega a 100 o –1.
     """
     def _generate():
-        task_queue = progress_queues.get(task_id)
+        # Esperar hasta 2 s a que el endpoint GIF registre su cola de progreso
+        task_queue = None
+        for _ in range(20):
+            task_queue = progress_queues.get(task_id)
+            if task_queue:
+                break
+            time.sleep(0.1)
+
         if not task_queue:
-            yield f"data: {json.dumps({'error': 'Task not found'})}\n\n"
+            yield f"data: {json.dumps({'progress': -1, 'message': 'Tarea no encontrada'})}\n\n"
             return
 
         while True:
