@@ -141,14 +141,14 @@ body.compare-mode-active #water-controls {
   padding: 0.6rem;
   border-radius: 0.5rem;
   border: 1px solid #dce1e7;
-  background: #eef2ff;
+  background: #f0f9ff;
   color: var(--sidebar-text);
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .primary-action:hover {
-  background: #e0e7ff;
+  background: #e0f2fe;
 }
 
 #sidebarRestore {
@@ -210,14 +210,14 @@ body.sidebar-collapsed #sidebarRestore {
 /* Etiqueta de panel (visible solo en compare mode) */
 .panel-label {
   display: none;
-  background: #eef2ff;
-  color: #3730a3;
+  background: #f0f9ff;
+  color: #0369a1;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-align: center;
   padding: 3px 0;
-  border-bottom: 1px solid #c7d2fe;
+  border-bottom: 1px solid #bae6fd;
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -225,7 +225,7 @@ body.sidebar-collapsed #sidebarRestore {
 /* Panel B oculto por defecto */
 #map-panel-b {
   display: none;
-  border-left: 2px solid #c7d2fe;
+  border-left: 2px solid #bae6fd;
 }
 
 /* Modo comparativa: mostrar panel B y etiquetas */
@@ -265,8 +265,8 @@ body.compare-mode-active .panel-label {
   height: 34px;
   border-radius: 50%;
   border: 1px solid #dce1e7;
-  background: #eef2ff;
-  color: #3730a3;
+  background: #f0f9ff;
+  color: #0369a1;
   font-size: 0.85rem;
   cursor: pointer;
   display: inline-flex;
@@ -276,12 +276,12 @@ body.compare-mode-active .panel-label {
 }
 
 .player-btn:hover {
-  background: #e0e7ff;
+  background: #e0f2fe;
 }
 
 .player-slider {
   flex: 1;
-  accent-color: #4f46e5;
+  accent-color: #0369a1;
   height: 4px;
   cursor: pointer;
 }
@@ -292,6 +292,18 @@ body.compare-mode-active .panel-label {
   color: #6b7280;
   min-width: 52px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-speed-select {
+  flex-shrink: 0;
+  padding: 0.15rem 0.3rem;
+  border-radius: 0.35rem;
+  border: 1px solid #dce1e7;
+  background: #f0f9ff;
+  color: var(--sidebar-text);
+  font-size: 0.78rem;
+  cursor: pointer;
   font-variant-numeric: tabular-nums;
 }
 
@@ -330,14 +342,14 @@ body.compare-mode-active #ndvi-chart-container {
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.6rem 0.8rem;
-  background: #f0f4ff;
-  border-bottom: 1px solid #c7d2fe;
+  background: #f0f9ff;
+  border-bottom: 1px solid #bae6fd;
   flex-shrink: 0;
 }
 
 .compare-panel-var-label {
   font-size: 0.8rem;
-  color: #3730a3;
+  color: #0369a1;
 }
 
 .compare-panel-var-label strong {
@@ -361,13 +373,13 @@ body.compare-mode-active #ndvi-chart-container {
 .compare-select-group label {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #3730a3;
+  color: #0369a1;
 }
 
 .compare-select-group select {
   padding: 0.3rem 0.4rem;
   border-radius: 0.35rem;
-  border: 1px solid #a5b4fc;
+  border: 1px solid #7dd3fc;
   font-size: 0.85rem;
   background: #ffffff;
   color: var(--sidebar-text);
@@ -406,11 +418,37 @@ body.compare-mode-active #ndvi-chart-container {
   color: #7f1d1d;
 }
 
-/* Resaltado de panel labels en modo comparativa */
-body.compare-mode-active .panel-label {
-  background: #4f46e5;
+/* Etiqueta panel A en modo comparativa — sky */
+body.compare-mode-active #map-panel-a .panel-label {
+  background: #0369a1;
   color: #ffffff;
-  border-bottom-color: #3730a3;
+  border-bottom-color: #075985;
+}
+
+/* Etiqueta panel B en modo comparativa — slate (contraste) */
+body.compare-mode-active #map-panel-b .panel-label {
+  background: #334155;
+  color: #ffffff;
+  border-bottom-color: #1e293b;
+}
+
+/* Borde separador panel B en modo comparativa */
+body.compare-mode-active #map-panel-b {
+  border-left-color: #334155;
+}
+
+/* Controles panel B — fondo slate muy suave */
+#compare-controls-b {
+  background: #f8fafc;
+  border-bottom-color: #e2e8f0;
+}
+
+#compare-controls-b .compare-select-group label {
+  color: #334155;
+}
+
+#compare-controls-b .compare-select-group select {
+  border-color: #94a3b8;
 }
 
 /* Ocultar contenedor de gráfica hasta que haya datos */
@@ -445,7 +483,7 @@ body.compare-mode-active .panel-label {
   padding: 0.4rem 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid #dce1e7;
-  background: #f8faff;
+  background: #f0f9ff;
   color: var(--sidebar-text);
   font-size: 0.88rem;
   cursor: pointer;
@@ -463,23 +501,23 @@ body.compare-mode-active .panel-label {
 }
 
 .compare-toggle-btn:hover {
-  background: #eef2ff;
-  border-color: #a5b4fc;
+  background: #e0f2fe;
+  border-color: #7dd3fc;
 }
 
 .compare-toggle-btn[aria-pressed="true"] {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background: #0369a1;
+  border-color: #0369a1;
   color: #ffffff;
 }
 
 .compare-toggle-btn[aria-pressed="true"] svg {
-  color: #c7d2fe;
+  color: #bae6fd;
 }
 
 .compare-mode-hint {
   font-size: 0.8rem;
-  color: #4f46e5;
+  color: #0369a1;
   margin: 0;
   animation: fadeIn 0.2s ease;
 }
@@ -727,8 +765,8 @@ body.sidebar-collapsed .leaflet-left {
 }
 
 .colorbar-toggle-btn:hover {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #f0f9ff;
+  color: #0369a1;
 }
 
 /* Oculta el contenido de la colorbar pero mantiene visible el botón */

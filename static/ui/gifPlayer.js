@@ -91,6 +91,8 @@ export class GifPlayer {
  */
 export class SyncPlayer {
     constructor() {
+        /** Duración fija de cada frame en ms (sobreescribe el delay nativo del GIF). */
+        this.frameIntervalMs = 1000;
         this.currentFrame = 0;
         this.totalFrames = 0;
         this._isPlaying = false;
@@ -159,8 +161,7 @@ export class SyncPlayer {
         if (this.lastTime === 0)
             this.lastTime = time;
         const elapsed = time - this.lastTime;
-        const delay = this.playerA.getFrameDelay(this.currentFrame % this.playerA.frameCount);
-        if (elapsed >= delay) {
+        if (elapsed >= this.frameIntervalMs) {
             this.lastTime = time;
             this.currentFrame = (this.currentFrame + 1) % this.totalFrames;
             this.showFrame(this.currentFrame);
@@ -193,6 +194,8 @@ export class SyncPlayer {
  */
 export class SoloPlayer {
     constructor() {
+        /** Duración fija de cada frame en ms (sobreescribe el delay nativo del GIF). */
+        this.frameIntervalMs = 1000;
         this.currentFrame = 0;
         this._isPlaying = false;
         this.lastTime = 0;
@@ -232,8 +235,7 @@ export class SoloPlayer {
         if (this.lastTime === 0)
             this.lastTime = time;
         const elapsed = time - this.lastTime;
-        const delay = this.player.getFrameDelay(this.currentFrame);
-        if (elapsed >= delay) {
+        if (elapsed >= this.frameIntervalMs) {
             this.lastTime = time;
             this.currentFrame = (this.currentFrame + 1) % this.frameCount;
             this.showFrame(this.currentFrame);

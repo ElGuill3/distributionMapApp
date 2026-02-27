@@ -163,6 +163,12 @@ const playerPlayPauseBtn = document.getElementById('playerPlayPause');
 const playerSlider = document.getElementById('playerSlider');
 const playerFrameLabel = document.getElementById('playerFrameLabel');
 const playerPlayIcon = document.getElementById('playerPlayIcon');
+const playerSpeedSelect = document.getElementById('playerSpeed');
+/** Devuelve el intervalo de frame seleccionado actualmente (en ms). */
+function _selectedInterval() {
+    var _a;
+    return Number((_a = playerSpeedSelect === null || playerSpeedSelect === void 0 ? void 0 : playerSpeedSelect.value) !== null && _a !== void 0 ? _a : '1000') || 1000;
+}
 /** Inicializa mapB la primera vez que se activa el modo comparativa. */
 function initMapB() {
     if (mapB)
@@ -297,6 +303,7 @@ function trySyncBothPanels() {
     stopSoloPlayer();
     stopSyncPlayer();
     syncPlayer = new SyncPlayer();
+    syncPlayer.frameIntervalMs = _selectedInterval();
     syncPlayer.onFrameChange = (current, total) => {
         onPlayerFrameChange(current, total);
         syncPlayPauseIcon();
@@ -464,6 +471,13 @@ playerSlider === null || playerSlider === void 0 ? void 0 : playerSlider.addEven
     syncPlayer === null || syncPlayer === void 0 ? void 0 : syncPlayer.goToFrame(frame);
     soloPlayer === null || soloPlayer === void 0 ? void 0 : soloPlayer.goToFrame(frame);
 });
+playerSpeedSelect === null || playerSpeedSelect === void 0 ? void 0 : playerSpeedSelect.addEventListener('change', () => {
+    const ms = _selectedInterval();
+    if (syncPlayer)
+        syncPlayer.frameIntervalMs = ms;
+    if (soloPlayer)
+        soloPlayer.frameIntervalMs = ms;
+});
 // ---------------------------------------------------------------------------
 // SSE + petición GIF + serie temporal — modo NORMAL (panel A)
 // ---------------------------------------------------------------------------
@@ -519,6 +533,7 @@ async function requestGifAndSeries(variable, start, end, bbox) {
         gifPlayerA = player;
         _currentOverlayA = overlay;
         soloPlayer = new SoloPlayer();
+        soloPlayer.frameIntervalMs = _selectedInterval();
         soloPlayer.onFrameChange = (current, total) => {
             onPlayerFrameChange(current, total);
             syncPlayPauseIcon();
@@ -614,6 +629,7 @@ async function requestGifAndSeriesForPanel(panel, variable, start, end, bbox) {
             _currentOverlayA = overlay;
             // Animar panel A de forma independiente hasta que llegue el panel B
             soloPlayer = new SoloPlayer();
+            soloPlayer.frameIntervalMs = _selectedInterval();
             soloPlayer.onFrameChange = (current, total) => {
                 onPlayerFrameChange(current, total);
                 syncPlayPauseIcon();

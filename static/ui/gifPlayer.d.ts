@@ -37,6 +37,8 @@ export declare class GifPlayer {
 export declare class SyncPlayer {
     /** Callback invocado cada vez que avanza el frame (frame actual, total frames). */
     onFrameChange?: (current: number, total: number) => void;
+    /** Duración fija de cada frame en ms (sobreescribe el delay nativo del GIF). */
+    frameIntervalMs: number;
     private playerA;
     private playerB;
     private overlayA;
@@ -80,6 +82,8 @@ export declare class SyncPlayer {
  */
 export declare class SoloPlayer {
     onFrameChange?: (current: number, total: number) => void;
+    /** Duración fija de cada frame en ms (sobreescribe el delay nativo del GIF). */
+    frameIntervalMs: number;
     private player;
     private overlay;
     private currentFrame;

@@ -230,6 +230,12 @@ const playerPlayPauseBtn = document.getElementById('playerPlayPause')   as HTMLB
 const playerSlider       = document.getElementById('playerSlider')      as HTMLInputElement | null;
 const playerFrameLabel   = document.getElementById('playerFrameLabel')  as HTMLSpanElement | null;
 const playerPlayIcon     = document.getElementById('playerPlayIcon')    as HTMLSpanElement | null;
+const playerSpeedSelect  = document.getElementById('playerSpeed')       as HTMLSelectElement | null;
+
+/** Devuelve el intervalo de frame seleccionado actualmente (en ms). */
+function _selectedInterval(): number {
+  return Number(playerSpeedSelect?.value ?? '1000') || 1000;
+}
 
 /** Inicializa mapB la primera vez que se activa el modo comparativa. */
 function initMapB(): void {
@@ -364,6 +370,7 @@ function trySyncBothPanels(): void {
   stopSyncPlayer();
 
   syncPlayer = new SyncPlayer();
+  syncPlayer.frameIntervalMs = _selectedInterval();
   syncPlayer.onFrameChange = (current, total) => {
     onPlayerFrameChange(current, total);
     syncPlayPauseIcon();
@@ -535,6 +542,12 @@ playerSlider?.addEventListener('input', () => {
   soloPlayer?.goToFrame(frame);
 });
 
+playerSpeedSelect?.addEventListener('change', () => {
+  const ms = _selectedInterval();
+  if (syncPlayer) syncPlayer.frameIntervalMs = ms;
+  if (soloPlayer) soloPlayer.frameIntervalMs = ms;
+});
+
 // ---------------------------------------------------------------------------
 // SSE + petición GIF + serie temporal — modo NORMAL (panel A)
 // ---------------------------------------------------------------------------
@@ -607,6 +620,7 @@ async function requestGifAndSeries(
     _currentOverlayA = overlay;
 
     soloPlayer = new SoloPlayer();
+    soloPlayer.frameIntervalMs = _selectedInterval();
     soloPlayer.onFrameChange = (current, total) => {
       onPlayerFrameChange(current, total);
       syncPlayPauseIcon();
@@ -721,6 +735,7 @@ async function requestGifAndSeriesForPanel(
 
       // Animar panel A de forma independiente hasta que llegue el panel B
       soloPlayer = new SoloPlayer();
+      soloPlayer.frameIntervalMs = _selectedInterval();
       soloPlayer.onFrameChange = (current, total) => {
         onPlayerFrameChange(current, total);
         syncPlayPauseIcon();
