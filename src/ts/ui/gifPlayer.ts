@@ -106,6 +106,9 @@ export class SyncPlayer {
   /** Callback invocado cada vez que avanza el frame (frame actual, total frames). */
   onFrameChange?: (current: number, total: number) => void;
 
+  /** Duración fija de cada frame en ms (sobreescribe el delay nativo del GIF). */
+  frameIntervalMs = 1000;
+
   private playerA!: GifPlayer;
   private playerB!: GifPlayer;
   private overlayA!: L.ImageOverlay;
@@ -189,9 +192,8 @@ export class SyncPlayer {
 
     if (this.lastTime === 0) this.lastTime = time;
     const elapsed = time - this.lastTime;
-    const delay   = this.playerA.getFrameDelay(this.currentFrame % this.playerA.frameCount);
 
-    if (elapsed >= delay) {
+    if (elapsed >= this.frameIntervalMs) {
       this.lastTime     = time;
       this.currentFrame = (this.currentFrame + 1) % this.totalFrames;
       this.showFrame(this.currentFrame);
@@ -228,6 +230,9 @@ export class SyncPlayer {
  */
 export class SoloPlayer {
   onFrameChange?: (current: number, total: number) => void;
+
+  /** Duración fija de cada frame en ms (sobreescribe el delay nativo del GIF). */
+  frameIntervalMs = 1000;
 
   private player!: GifPlayer;
   private overlay!: L.ImageOverlay;
@@ -274,8 +279,7 @@ export class SoloPlayer {
     if (!this._isPlaying) return;
     if (this.lastTime === 0) this.lastTime = time;
     const elapsed = time - this.lastTime;
-    const delay   = this.player.getFrameDelay(this.currentFrame);
-    if (elapsed >= delay) {
+    if (elapsed >= this.frameIntervalMs) {
       this.lastTime     = time;
       this.currentFrame = (this.currentFrame + 1) % this.frameCount;
       this.showFrame(this.currentFrame);
