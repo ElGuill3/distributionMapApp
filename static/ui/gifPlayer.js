@@ -135,6 +135,14 @@ export class SyncPlayer {
     get isPlaying() {
         return this._isPlaying;
     }
+    /**
+     * Detiene el bucle de animación sin liberar los GifPlayers.
+     * Usar cuando se quiere parar la sincronización pero conservar los frames
+     * de cada panel para reutilizarlos (p. ej. al regenerar un solo panel).
+     */
+    stop() {
+        this.pause();
+    }
     /** Destruye el bucle y libera recursos de ambos GifPlayer. */
     destroy() {
         var _a, _b;
@@ -170,6 +178,74 @@ export class SyncPlayer {
         if (urlB)
             this.overlayB.setUrl(urlB);
         (_a = this.onFrameChange) === null || _a === void 0 ? void 0 : _a.call(this, n, this.totalFrames);
+    }
+}
+// ---------------------------------------------------------------------------
+// SoloPlayer
+// ---------------------------------------------------------------------------
+/**
+ * Controlador de reproducción para un único panel.
+ *
+ * Anima un GifPlayer sobre un L.imageOverlay usando el mismo bucle
+ * requestAnimationFrame que SyncPlayer, pero sin necesitar el segundo panel.
+ * Comparte la misma interfaz pública (play/pause/stop/goToFrame/isPlaying)
+ * para que los controles de reproducción funcionen con ambos tipos de player.
+ */
+export class SoloPlayer {
+    constructor() {
+        this.currentFrame = 0;
+        this._isPlaying = false;
+        this.lastTime = 0;
+        this.rafId = 0;
+    }
+    get isPlaying() { return this._isPlaying; }
+    get frameCount() { var _a, _b; return (_b = (_a = this.player) === null || _a === void 0 ? void 0 : _a.frameCount) !== null && _b !== void 0 ? _b : 0; }
+    start(player, overlay) {
+        this.player = player;
+        this.overlay = overlay;
+        this.currentFrame = 0;
+        this.lastTime = 0;
+        this.showFrame(0);
+        this.play();
+    }
+    play() {
+        if (this._isPlaying)
+            return;
+        this._isPlaying = true;
+        this.lastTime = 0;
+        this.rafId = requestAnimationFrame(this.tick.bind(this));
+    }
+    pause() {
+        this._isPlaying = false;
+        cancelAnimationFrame(this.rafId);
+    }
+    stop() {
+        this.pause();
+    }
+    goToFrame(n) {
+        this.currentFrame = Math.max(0, Math.min(n, this.frameCount - 1));
+        this.showFrame(this.currentFrame);
+    }
+    tick(time) {
+        if (!this._isPlaying)
+            return;
+        if (this.lastTime === 0)
+            this.lastTime = time;
+        const elapsed = time - this.lastTime;
+        const delay = this.player.getFrameDelay(this.currentFrame);
+        if (elapsed >= delay) {
+            this.lastTime = time;
+            this.currentFrame = (this.currentFrame + 1) % this.frameCount;
+            this.showFrame(this.currentFrame);
+        }
+        this.rafId = requestAnimationFrame(this.tick.bind(this));
+    }
+    showFrame(n) {
+        var _a;
+        const url = this.player.getFrameUrl(n);
+        if (url)
+            this.overlay.setUrl(url);
+        (_a = this.onFrameChange) === null || _a === void 0 ? void 0 : _a.call(this, n, this.frameCount);
     }
 }
 // ---------------------------------------------------------------------------

@@ -23,12 +23,15 @@ export declare let allColorbars: Partial<Record<VariableKey | 'flood', L.Control
  */
 export declare function buildColorbars(): void;
 /**
- * Activa la colorbar de la variable indicada y desactiva todas las demás.
+ * Activa la colorbar de la variable indicada en `targetMap` y desactiva todas
+ * las demás. Si se pasa `removeFromMap`, también se eliminan de ese mapa
+ * (útil al mover la colorbar entre paneles en modo comparativa).
  *
- * @param map      - Mapa donde se muestran los controles.
- * @param variable - Variable activa o 'flood'. null desactiva todas.
+ * @param targetMap    - Mapa donde se mostrará la colorbar activa.
+ * @param variable     - Variable activa o 'flood'. null desactiva todas.
+ * @param removeFromMap - Mapa adicional del que eliminar todos los controles.
  */
-export declare function switchColorbar(map: L.Map, variable: VariableKey | 'flood' | null): void;
+export declare function switchColorbar(targetMap: L.Map, variable: VariableKey | 'flood' | null, removeFromMap?: L.Map): void;
 /**
  * Elimina el overlay GIF activo del mapa.
  */

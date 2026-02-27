@@ -39,20 +39,23 @@ export function buildColorbars() {
     };
 }
 /**
- * Activa la colorbar de la variable indicada y desactiva todas las demás.
+ * Activa la colorbar de la variable indicada en `targetMap` y desactiva todas
+ * las demás. Si se pasa `removeFromMap`, también se eliminan de ese mapa
+ * (útil al mover la colorbar entre paneles en modo comparativa).
  *
- * @param map      - Mapa donde se muestran los controles.
- * @param variable - Variable activa o 'flood'. null desactiva todas.
+ * @param targetMap    - Mapa donde se mostrará la colorbar activa.
+ * @param variable     - Variable activa o 'flood'. null desactiva todas.
+ * @param removeFromMap - Mapa adicional del que eliminar todos los controles.
  */
-export function switchColorbar(map, variable) {
+export function switchColorbar(targetMap, variable, removeFromMap) {
     for (const [key, ctrl] of Object.entries(allColorbars)) {
         if (!ctrl)
             continue;
+        targetMap.removeControl(ctrl);
+        if (removeFromMap)
+            removeFromMap.removeControl(ctrl);
         if (key === variable) {
-            ctrl.addTo(map);
-        }
-        else {
-            map.removeControl(ctrl);
+            ctrl.addTo(targetMap);
         }
     }
 }
@@ -71,9 +74,21 @@ export function removeActiveOverlay(map) {
 function _makeColorbar(cssClass, innerHtml) {
     const ctrl = new L.Control({ position: 'topright' });
     ctrl.onAdd = () => {
-        const div = L.DomUtil.create('div', cssClass);
-        div.innerHTML = innerHtml;
-        return div;
+        const wrapper = L.DomUtil.create('div', 'colorbar-wrapper');
+        L.DomEvent.disableClickPropagation(wrapper);
+        L.DomEvent.disableScrollPropagation(wrapper);
+        const toggleBtn = L.DomUtil.create('button', 'colorbar-toggle-btn', wrapper);
+        toggleBtn.type = 'button';
+        toggleBtn.title = 'Ocultar leyenda';
+        toggleBtn.textContent = '◀';
+        const content = L.DomUtil.create('div', cssClass, wrapper);
+        content.innerHTML = innerHtml;
+        toggleBtn.addEventListener('click', () => {
+            const hidden = content.classList.toggle('colorbar-content-hidden');
+            toggleBtn.textContent = hidden ? '▶' : '◀';
+            toggleBtn.title = hidden ? 'Mostrar leyenda' : 'Ocultar leyenda';
+        });
+        return wrapper;
     };
     return ctrl;
 }

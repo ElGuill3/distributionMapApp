@@ -59,8 +59,40 @@ export declare class SyncPlayer {
     pause(): void;
     /** Indica si la reproducción está activa. */
     get isPlaying(): boolean;
+    /**
+     * Detiene el bucle de animación sin liberar los GifPlayers.
+     * Usar cuando se quiere parar la sincronización pero conservar los frames
+     * de cada panel para reutilizarlos (p. ej. al regenerar un solo panel).
+     */
+    stop(): void;
     /** Destruye el bucle y libera recursos de ambos GifPlayer. */
     destroy(): void;
+    private tick;
+    private showFrame;
+}
+/**
+ * Controlador de reproducción para un único panel.
+ *
+ * Anima un GifPlayer sobre un L.imageOverlay usando el mismo bucle
+ * requestAnimationFrame que SyncPlayer, pero sin necesitar el segundo panel.
+ * Comparte la misma interfaz pública (play/pause/stop/goToFrame/isPlaying)
+ * para que los controles de reproducción funcionen con ambos tipos de player.
+ */
+export declare class SoloPlayer {
+    onFrameChange?: (current: number, total: number) => void;
+    private player;
+    private overlay;
+    private currentFrame;
+    private _isPlaying;
+    private lastTime;
+    private rafId;
+    get isPlaying(): boolean;
+    get frameCount(): number;
+    start(player: GifPlayer, overlay: L.ImageOverlay): void;
+    play(): void;
+    pause(): void;
+    stop(): void;
+    goToFrame(n: number): void;
     private tick;
     private showFrame;
 }

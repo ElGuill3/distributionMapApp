@@ -2,6 +2,30 @@
  * Configuración de la aplicación frontend.
  * Todas las constantes de UI y de llamadas a la API viven aquí.
  */
+// ---------------------------------------------------------------------------
+// Años disponibles por variable
+// ---------------------------------------------------------------------------
+function _yearsRange(from, to) {
+    return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+}
+/** Array de años disponibles para cada variable. */
+export const VARIABLE_YEARS = {
+    ndvi: _yearsRange(2000, 2024),
+    temp: _yearsRange(2000, 2024),
+    soil: _yearsRange(2000, 2024),
+    precip: _yearsRange(2000, 2024),
+    water: _yearsRange(2015, 2024),
+    local_sp: _yearsRange(2000, 2024),
+    local_bd: _yearsRange(2000, 2024),
+};
+/** Opciones de temporada disponibles (misma lógica que backend). */
+export const SEASONS = [
+    { value: 'invierno', label: 'Invierno (dic–feb)' },
+    { value: 'primavera', label: 'Primavera (mar–may)' },
+    { value: 'verano', label: 'Verano (jun–ago)' },
+    { value: 'otono', label: 'Otoño (sep–nov)' },
+    { value: 'anual', label: 'Año completo (ene–dic)' },
+];
 export const DEFAULT_CENTER = [17.8409, -92.6189];
 export const DEFAULT_ZOOM = 8;
 export const MAX_SPAN_DEG = 8.0;

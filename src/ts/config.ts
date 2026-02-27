@@ -3,7 +3,44 @@
  * Todas las constantes de UI y de llamadas a la API viven aquí.
  */
 
-import type { VariableKey } from './types.js';
+import type { VariableKey, Season } from './types.js';
+
+// ---------------------------------------------------------------------------
+// Años disponibles por variable
+// ---------------------------------------------------------------------------
+
+function _yearsRange(from: number, to: number): number[] {
+  return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+}
+
+/** Array de años disponibles para cada variable. */
+export const VARIABLE_YEARS: Record<VariableKey, number[]> = {
+  ndvi:     _yearsRange(2000, 2024),
+  temp:     _yearsRange(2000, 2024),
+  soil:     _yearsRange(2000, 2024),
+  precip:   _yearsRange(2000, 2024),
+  water:    _yearsRange(2015, 2024),
+  local_sp: _yearsRange(2000, 2024),
+  local_bd: _yearsRange(2000, 2024),
+};
+
+// ---------------------------------------------------------------------------
+// Temporadas
+// ---------------------------------------------------------------------------
+
+export interface SeasonOption {
+  value: Season;
+  label: string;
+}
+
+/** Opciones de temporada disponibles (misma lógica que backend). */
+export const SEASONS: SeasonOption[] = [
+  { value: 'invierno',  label: 'Invierno (dic–feb)' },
+  { value: 'primavera', label: 'Primavera (mar–may)' },
+  { value: 'verano',    label: 'Verano (jun–ago)' },
+  { value: 'otono',     label: 'Otoño (sep–nov)' },
+  { value: 'anual',     label: 'Año completo (ene–dic)' },
+];
 
 export const DEFAULT_CENTER: [number, number] = [17.8409, -92.6189];
 export const DEFAULT_ZOOM   = 8;

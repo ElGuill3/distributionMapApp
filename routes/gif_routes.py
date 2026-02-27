@@ -21,7 +21,7 @@ from gee.temperature  import build_era5_temp_gif_bbox, build_era5_temp_timeserie
 from gee.soil         import build_era5_soil_gif_bbox, build_era5_soil_timeseries_bbox
 from gee.precipitation import build_chirps_precip_gif_bbox, build_chirps_precip_timeseries_bbox
 from gee.water        import build_water_gif_bbox, build_water_timeseries_bbox
-from gee.utils        import check_max_10_years
+from gee.utils        import check_max_10_years, season_to_dates
 from services.gif_service import (
     add_dates_to_gif,
     cleanup_pattern_gifs,
@@ -37,12 +37,29 @@ gif_bp = Blueprint('gif', __name__)
 
 def _parse_common_params(
 ) -> tuple[Optional[str], Optional[str], Optional[list[float]], Optional[float], Optional[str]]:
-    """Extrae y valida start, end, bbox, ratio y task_id de la query string."""
-    start    = request.args.get('start')
-    end      = request.args.get('end')
-    bbox_str = request.args.get('bbox')
+    """
+    Extrae start, end, bbox, ratio y task_id de la query string.
+
+    Acepta dos modos:
+    * Fechas directas : ``?start=YYYY-MM-DD&end=YYYY-MM-DD``
+    * Año + temporada : ``?year=YYYY&season=<temporada>``
+      (convertido internamente con :func:`season_to_dates`)
+    """
+    start     = request.args.get('start')
+    end       = request.args.get('end')
+    bbox_str  = request.args.get('bbox')
     ratio_str = request.args.get('ratio')
-    task_id  = request.args.get('task_id')
+    task_id   = request.args.get('task_id')
+
+    if not start or not end:
+        year_str = request.args.get('year')
+        season   = request.args.get('season')
+        if year_str and season:
+            try:
+                start, end = season_to_dates(int(year_str), season)
+            except (ValueError, TypeError):
+                pass  # la validación posterior emitirá el error adecuado
+
     return start, end, bbox_str, ratio_str, task_id
 
 

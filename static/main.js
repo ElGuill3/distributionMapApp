@@ -4,12 +4,12 @@
  * Conecta todos los módulos: mapa, API, UI y listeners.
  */
 import { VARIABLE_DATA_KEY } from './types.js';
-import { DEFAULT_CENTER, DEFAULT_ZOOM, MAX_SPAN_DEG, GIF_ENDPOINT, TS_ENDPOINT } from './config.js';
+import { DEFAULT_CENTER, DEFAULT_ZOOM, MAX_SPAN_DEG, GIF_ENDPOINT, TS_ENDPOINT, VARIABLE_YEARS, SEASONS, } from './config.js';
 import { buildColorbars, switchColorbar, removeActiveOverlay, setActiveOverlay, municipalFloodOverlays, } from './map/overlays.js';
 import { createProgressIndicator, updateProgressIndicator, removeProgressIndicator, } from './ui/progress.js';
 import { plotAllSelectedSeries } from './ui/chart.js';
-import { registerVariableListener } from './listeners/variableListeners.js';
-import { GifPlayer, SyncPlayer } from './ui/gifPlayer.js';
+import { registerVariableListener, seasonToDates } from './listeners/variableListeners.js';
+import { GifPlayer, SyncPlayer, SoloPlayer } from './ui/gifPlayer.js';
 // ---------------------------------------------------------------------------
 // Mapa principal (A)
 // ---------------------------------------------------------------------------
@@ -72,10 +72,9 @@ map.on(L.Draw.Event.CREATED, (e) => {
     hideChartContainer();
     if (ndviChartDiv)
         Plotly.purge(ndviChartDiv);
-    // Limpiar series y estado de comparativa al dibujar un bbox nuevo
     Object.keys(allSeriesData).forEach(k => delete allSeriesData[k]);
     Object.keys(allSeriesDataB).forEach(k => delete allSeriesDataB[k]);
-    destroySyncPlayer();
+    _cleanupComparePanels();
     hidePlayerControls();
     hideChartBContainer();
     if (chartBDiv)
@@ -89,10 +88,15 @@ const ndviChartContainer = document.getElementById('ndvi-chart-container');
 const ndviChartDiv = document.getElementById('ndvi-chart');
 const allSeriesData = {};
 function showChartContainer() {
-    ndviChartContainer === null || ndviChartContainer === void 0 ? void 0 : ndviChartContainer.classList.remove('hidden');
+    // En modo comparativa la visibilidad se controla via CSS; no ocultar
+    if (!compareModeActive) {
+        ndviChartContainer === null || ndviChartContainer === void 0 ? void 0 : ndviChartContainer.classList.remove('hidden');
+    }
 }
 function hideChartContainer() {
-    ndviChartContainer === null || ndviChartContainer === void 0 ? void 0 : ndviChartContainer.classList.add('hidden');
+    if (!compareModeActive) {
+        ndviChartContainer === null || ndviChartContainer === void 0 ? void 0 : ndviChartContainer.classList.add('hidden');
+    }
 }
 function renderChart() {
     if (!ndviChartDiv)
@@ -109,6 +113,8 @@ function showChartBContainer() {
     chartBContainer === null || chartBContainer === void 0 ? void 0 : chartBContainer.classList.remove('hidden');
 }
 function hideChartBContainer() {
+    if (compareModeActive)
+        return; // En compare mode siempre permanece visible
     chartBContainer === null || chartBContainer === void 0 ? void 0 : chartBContainer.classList.add('hidden');
 }
 function renderChartB() {
@@ -125,15 +131,32 @@ let currentVariable = 'ndvi';
 // ---------------------------------------------------------------------------
 let compareModeActive = false;
 let mapB = null;
-let mapBSyncLock = false; // Evita bucle infinito al sincronizar vistas
-/** Mapa de overlay activo en panel B. */
+let mapBSyncLock = false;
+/** Overlay activo en panel B. */
 let activeBOverlay = null;
-/** Instancia del SyncPlayer activo (puede ser null si no hay GIFs cargados). */
+/** GifPlayers independientes por panel (solo en modo comparativa). */
+let gifPlayerA = null;
+let gifPlayerB = null;
+/** Instancia del SyncPlayer activo (ambos paneles sincronizados). */
 let syncPlayer = null;
-// DOM: controles del modo comparativa
+/** Instancia del SoloPlayer activo (un solo panel animándose). */
+let soloPlayer = null;
+// DOM: modo comparativa
 const toggleCompareModeButton = document.getElementById('toggleCompareMode');
-const compareYearBWrapper = document.getElementById('compareYearBWrapper');
-const compareYearBInput = document.getElementById('compareYearB');
+const compareControlsA = document.getElementById('compare-controls-a');
+const compareModeHint = document.querySelector('.compare-mode-hint');
+// DOM: selectores de comparativa — panel A
+const compareVarASelect = document.getElementById('compareVarA');
+const compareYearASelect = document.getElementById('compareYearA');
+const compareSeasonASelect = document.getElementById('compareSeasonA');
+const btnGenerateA = document.getElementById('btnGenerateA');
+const btnClearA = document.getElementById('btnClearA');
+// DOM: selectores de comparativa — panel B
+const compareVarBSelect = document.getElementById('compareVarB');
+const compareYearBSelect = document.getElementById('compareYearB');
+const compareSeasonBSelect = document.getElementById('compareSeasonB');
+const btnGenerateB = document.getElementById('btnGenerateB');
+const btnClearB = document.getElementById('btnClearB');
 // DOM: player controls
 const playerControlsDiv = document.getElementById('player-controls');
 const playerPlayPauseBtn = document.getElementById('playerPlayPause');
@@ -149,7 +172,6 @@ function initMapB() {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(mapB);
-    // Sincronizar pan/zoom A → B
     map.on('moveend', () => {
         if (mapBSyncLock || !mapB)
             return;
@@ -157,7 +179,6 @@ function initMapB() {
         mapB.setView(map.getCenter(), map.getZoom(), { animate: false });
         mapBSyncLock = false;
     });
-    // Sincronizar pan/zoom B → A
     mapB.on('moveend', () => {
         if (mapBSyncLock)
             return;
@@ -172,11 +193,74 @@ function clearMapBOverlay() {
         activeBOverlay = null;
     }
 }
-function destroySyncPlayer() {
+/** Para el SyncPlayer sin liberar los GifPlayers. */
+function stopSyncPlayer() {
     if (syncPlayer) {
-        syncPlayer.destroy();
+        syncPlayer.stop();
         syncPlayer = null;
     }
+}
+/** Para el SoloPlayer. */
+function stopSoloPlayer() {
+    if (soloPlayer) {
+        soloPlayer.stop();
+        soloPlayer = null;
+    }
+}
+/** Limpia todos los players y overlays activos. */
+function _cleanupComparePanels() {
+    stopSoloPlayer();
+    stopSyncPlayer();
+    gifPlayerA === null || gifPlayerA === void 0 ? void 0 : gifPlayerA.dispose();
+    gifPlayerA = null;
+    gifPlayerB === null || gifPlayerB === void 0 ? void 0 : gifPlayerB.dispose();
+    gifPlayerB = null;
+    _currentOverlayA = null;
+    removeActiveOverlay(map);
+    clearMapBOverlay();
+}
+/** Limpia solo el panel A (animación + gráfica) sin tocar el panel B. */
+function _clearPanelA() {
+    stopSyncPlayer();
+    stopSoloPlayer();
+    gifPlayerA === null || gifPlayerA === void 0 ? void 0 : gifPlayerA.dispose();
+    gifPlayerA = null;
+    _currentOverlayA = null;
+    removeActiveOverlay(map);
+    switchColorbar(map, null, mapB !== null && mapB !== void 0 ? mapB : undefined);
+    Object.keys(allSeriesData).forEach(k => delete allSeriesData[k]);
+    if (ndviChartDiv)
+        Plotly.purge(ndviChartDiv);
+    hidePlayerControls();
+    if (compareYearASelect)
+        compareYearASelect.value = '';
+    if (compareSeasonASelect) {
+        compareSeasonASelect.value = '';
+        compareSeasonASelect.disabled = true;
+    }
+    if (btnGenerateA)
+        btnGenerateA.disabled = true;
+}
+/** Limpia solo el panel B (animación + gráfica) sin tocar el panel A. */
+function _clearPanelB() {
+    stopSyncPlayer();
+    stopSoloPlayer();
+    gifPlayerB === null || gifPlayerB === void 0 ? void 0 : gifPlayerB.dispose();
+    gifPlayerB = null;
+    clearMapBOverlay();
+    switchColorbar(map, null, mapB !== null && mapB !== void 0 ? mapB : undefined);
+    Object.keys(allSeriesDataB).forEach(k => delete allSeriesDataB[k]);
+    if (chartBDiv)
+        Plotly.purge(chartBDiv);
+    hidePlayerControls();
+    if (compareYearBSelect)
+        compareYearBSelect.value = '';
+    if (compareSeasonBSelect) {
+        compareSeasonBSelect.value = '';
+        compareSeasonBSelect.disabled = true;
+    }
+    if (btnGenerateB)
+        btnGenerateB.disabled = true;
 }
 function showPlayerControls() {
     playerControlsDiv === null || playerControlsDiv === void 0 ? void 0 : playerControlsDiv.classList.remove('hidden');
@@ -184,7 +268,6 @@ function showPlayerControls() {
 function hidePlayerControls() {
     playerControlsDiv === null || playerControlsDiv === void 0 ? void 0 : playerControlsDiv.classList.add('hidden');
 }
-/** Actualiza el slider y el label de frame. */
 function onPlayerFrameChange(current, total) {
     if (playerSlider) {
         playerSlider.max = String(total - 1);
@@ -194,81 +277,198 @@ function onPlayerFrameChange(current, total) {
         playerFrameLabel.textContent = `${current + 1} / ${total}`;
     }
 }
-/** Sincroniza el ícono play/pause con el estado actual. */
 function syncPlayPauseIcon() {
     if (!playerPlayIcon)
         return;
-    playerPlayIcon.textContent = (syncPlayer === null || syncPlayer === void 0 ? void 0 : syncPlayer.isPlaying) ? '⏸' : '▶';
+    const active = syncPlayer !== null && syncPlayer !== void 0 ? syncPlayer : soloPlayer;
+    playerPlayIcon.textContent = (active === null || active === void 0 ? void 0 : active.isPlaying) ? '⏸' : '▶';
 }
+/**
+ * Crea un SyncPlayer cuando ambos paneles tienen GIF cargado.
+ * Se llama al terminar de generar cualquiera de los dos paneles.
+ */
+function trySyncBothPanels() {
+    if (!gifPlayerA || !gifPlayerB || !activeBOverlay)
+        return;
+    const overlayA = _currentOverlayA;
+    if (!overlayA)
+        return;
+    // Detener el SoloPlayer que animaba cada panel por separado
+    stopSoloPlayer();
+    stopSyncPlayer();
+    syncPlayer = new SyncPlayer();
+    syncPlayer.onFrameChange = (current, total) => {
+        onPlayerFrameChange(current, total);
+        syncPlayPauseIcon();
+    };
+    syncPlayer.start(gifPlayerA, overlayA, gifPlayerB, activeBOverlay);
+    if (playerSlider) {
+        playerSlider.max = String(Math.max(gifPlayerA.frameCount, gifPlayerB.frameCount) - 1);
+        playerSlider.value = '0';
+    }
+    showPlayerControls();
+    syncPlayPauseIcon();
+}
+/** Referencia al overlay GifPlayer activo en map A (solo modo comparativa). */
+let _currentOverlayA = null;
+// ---------------------------------------------------------------------------
+// Población de selectores de comparativa
+// ---------------------------------------------------------------------------
+/** Rellena un selector de años (mantiene solo el placeholder en pos 0). */
+function _populateYearSelect(sel, years) {
+    if (!sel)
+        return;
+    while (sel.options.length > 1)
+        sel.remove(1);
+    for (const year of years) {
+        const opt = document.createElement('option');
+        opt.value = String(year);
+        opt.textContent = String(year);
+        sel.appendChild(opt);
+    }
+}
+/** Rellena las temporadas si todavía solo tiene el placeholder. */
+function _ensureSeasonOptions(sel) {
+    if (!sel || sel.options.length > 1)
+        return;
+    for (const s of SEASONS) {
+        const opt = document.createElement('option');
+        opt.value = s.value;
+        opt.textContent = s.label;
+        sel.appendChild(opt);
+    }
+}
+/** Inicializa los selectores de año/temporada de ambos paneles. */
+function _initCompareSelects() {
+    var _a, _b;
+    const varA = ((_a = compareVarASelect === null || compareVarASelect === void 0 ? void 0 : compareVarASelect.value) !== null && _a !== void 0 ? _a : 'ndvi');
+    const varB = ((_b = compareVarBSelect === null || compareVarBSelect === void 0 ? void 0 : compareVarBSelect.value) !== null && _b !== void 0 ? _b : 'ndvi');
+    _populateYearSelect(compareYearASelect, VARIABLE_YEARS[varA]);
+    _populateYearSelect(compareYearBSelect, VARIABLE_YEARS[varB]);
+    _ensureSeasonOptions(compareSeasonASelect);
+    _ensureSeasonOptions(compareSeasonBSelect);
+}
+/** Registra la lógica reactiva de los selectores de comparativa de un panel. */
+function _wireCompareSelectPair(yearSel, seasonSel, btn) {
+    if (!yearSel || !seasonSel || !btn)
+        return;
+    const sync = () => { btn.disabled = !yearSel.value || !seasonSel.value; };
+    yearSel.addEventListener('change', () => {
+        const hasYear = Boolean(yearSel.value);
+        seasonSel.disabled = !hasYear;
+        if (!hasYear)
+            seasonSel.value = '';
+        sync();
+    });
+    seasonSel.addEventListener('change', sync);
+}
+_wireCompareSelectPair(compareYearASelect, compareSeasonASelect, btnGenerateA);
+_wireCompareSelectPair(compareYearBSelect, compareSeasonBSelect, btnGenerateB);
+// Cuando cambia la variable en un panel, repoblar su selector de años
+compareVarASelect === null || compareVarASelect === void 0 ? void 0 : compareVarASelect.addEventListener('change', () => {
+    var _a;
+    const v = ((_a = compareVarASelect.value) !== null && _a !== void 0 ? _a : 'ndvi');
+    _populateYearSelect(compareYearASelect, VARIABLE_YEARS[v]);
+    if (compareYearASelect)
+        compareYearASelect.value = '';
+    if (compareSeasonASelect) {
+        compareSeasonASelect.value = '';
+        compareSeasonASelect.disabled = true;
+    }
+    if (btnGenerateA)
+        btnGenerateA.disabled = true;
+});
+compareVarBSelect === null || compareVarBSelect === void 0 ? void 0 : compareVarBSelect.addEventListener('change', () => {
+    var _a;
+    const v = ((_a = compareVarBSelect.value) !== null && _a !== void 0 ? _a : 'ndvi');
+    _populateYearSelect(compareYearBSelect, VARIABLE_YEARS[v]);
+    if (compareYearBSelect)
+        compareYearBSelect.value = '';
+    if (compareSeasonBSelect) {
+        compareSeasonBSelect.value = '';
+        compareSeasonBSelect.disabled = true;
+    }
+    if (btnGenerateB)
+        btnGenerateB.disabled = true;
+});
+// ---------------------------------------------------------------------------
 // Listener: toggle modo comparativa
+// ---------------------------------------------------------------------------
 toggleCompareModeButton === null || toggleCompareModeButton === void 0 ? void 0 : toggleCompareModeButton.addEventListener('click', () => {
     compareModeActive = !compareModeActive;
     document.body.classList.toggle('compare-mode-active', compareModeActive);
     toggleCompareModeButton.setAttribute('aria-pressed', String(compareModeActive));
     if (compareModeActive) {
-        compareYearBWrapper === null || compareYearBWrapper === void 0 ? void 0 : compareYearBWrapper.classList.remove('hidden');
+        // Limpiar estado previo
+        _cleanupComparePanels();
+        Object.keys(allSeriesData).forEach(k => delete allSeriesData[k]);
+        Object.keys(allSeriesDataB).forEach(k => delete allSeriesDataB[k]);
+        if (ndviChartDiv)
+            Plotly.purge(ndviChartDiv);
+        if (chartBDiv)
+            Plotly.purge(chartBDiv);
+        hidePlayerControls();
+        // Mostrar controles de comparativa y pistas
+        compareControlsA === null || compareControlsA === void 0 ? void 0 : compareControlsA.classList.remove('hidden');
+        showChartBContainer();
+        compareModeHint === null || compareModeHint === void 0 ? void 0 : compareModeHint.classList.remove('hidden');
+        // Poblar selectores de año/temporada según la variable seleccionada en cada panel
+        _initCompareSelects();
         initMapB();
-        // Forzar invalidateSize en el mapa A (ahora ocupa la mitad del ancho)
         setTimeout(() => {
             map.invalidateSize();
             mapB === null || mapB === void 0 ? void 0 : mapB.invalidateSize();
-        }, 350); // Espera la transición CSS
+        }, 350);
     }
     else {
-        compareYearBWrapper === null || compareYearBWrapper === void 0 ? void 0 : compareYearBWrapper.classList.add('hidden');
-        // Limpiar estado al desactivar
+        // Limpiar y restaurar modo normal
+        _cleanupComparePanels();
+        Object.keys(allSeriesData).forEach(k => delete allSeriesData[k]);
         Object.keys(allSeriesDataB).forEach(k => delete allSeriesDataB[k]);
-        destroySyncPlayer();
         hidePlayerControls();
         hideChartBContainer();
-        clearMapBOverlay();
+        if (ndviChartDiv)
+            Plotly.purge(ndviChartDiv);
         if (chartBDiv)
             Plotly.purge(chartBDiv);
-        // Restaurar tamaño del mapa A
+        hideChartContainer();
+        // Quitar colorbars de ambos mapas al salir de comparativa
+        switchColorbar(map, null, mapB !== null && mapB !== void 0 ? mapB : undefined);
+        // Limpiar bounding box
+        drawnItems.clearLayers();
+        currentBbox = null;
+        compareControlsA === null || compareControlsA === void 0 ? void 0 : compareControlsA.classList.add('hidden');
+        compareModeHint === null || compareModeHint === void 0 ? void 0 : compareModeHint.classList.add('hidden');
         setTimeout(() => map.invalidateSize(), 350);
     }
 });
+// ---------------------------------------------------------------------------
 // Listener: play/pause
+// ---------------------------------------------------------------------------
 playerPlayPauseBtn === null || playerPlayPauseBtn === void 0 ? void 0 : playerPlayPauseBtn.addEventListener('click', () => {
-    if (!syncPlayer)
+    const active = syncPlayer !== null && syncPlayer !== void 0 ? syncPlayer : soloPlayer;
+    if (!active)
         return;
-    if (syncPlayer.isPlaying) {
-        syncPlayer.pause();
+    if (active.isPlaying) {
+        active.pause();
     }
     else {
-        syncPlayer.play();
+        active.play();
     }
     syncPlayPauseIcon();
 });
-// Listener: slider de frames — goToFrame dispara onFrameChange internamente
 playerSlider === null || playerSlider === void 0 ? void 0 : playerSlider.addEventListener('input', () => {
-    if (!syncPlayer || !playerSlider)
+    if (!playerSlider)
         return;
-    syncPlayer.goToFrame(Number(playerSlider.value));
+    const frame = Number(playerSlider.value);
+    syncPlayer === null || syncPlayer === void 0 ? void 0 : syncPlayer.goToFrame(frame);
+    soloPlayer === null || soloPlayer === void 0 ? void 0 : soloPlayer.goToFrame(frame);
 });
 // ---------------------------------------------------------------------------
-// Helper: calcular fechas del período B
-// ---------------------------------------------------------------------------
-/**
- * Sustituye el año en una fecha ISO (YYYY-MM-DD) por yearB.
- * Maneja el 29 de febrero: si el año destino no es bisiesto, devuelve el 28.
- */
-function replaceDateYear(dateStr, yearB) {
-    const [, month, day] = dateStr.split('-');
-    // Validar 29-feb en año no bisiesto
-    if (month === '02' && day === '29' && !isLeapYear(yearB)) {
-        return `${yearB}-02-28`;
-    }
-    return `${yearB}-${month}-${day}`;
-}
-function isLeapYear(year) {
-    return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
-// ---------------------------------------------------------------------------
-// SSE + petición GIF + serie temporal
+// SSE + petición GIF + serie temporal — modo NORMAL (panel A)
 // ---------------------------------------------------------------------------
 async function requestGifAndSeries(variable, start, end, bbox) {
-    var _a, _b;
+    var _a;
     currentVariable = variable;
     const bboxJson = JSON.stringify(bbox);
     const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -279,38 +479,6 @@ async function requestGifAndSeries(variable, start, end, bbox) {
     const tsUrl = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
         + `&end=${encodeURIComponent(end)}`
         + `&bbox=${encodeURIComponent(bboxJson)}`;
-    // ---- Validar año B si está en modo comparativa ----
-    let startB = '';
-    let endB = '';
-    let gifUrlB = '';
-    let tsUrlB = '';
-    if (compareModeActive) {
-        const yearBRaw = compareYearBInput === null || compareYearBInput === void 0 ? void 0 : compareYearBInput.value.trim();
-        if (!yearBRaw) {
-            alert('Modo comparativa activo: introduce el año B antes de generar.');
-            return;
-        }
-        const yearB = Number(yearBRaw);
-        if (!Number.isInteger(yearB) || yearB < 2000 || yearB > 2030) {
-            alert('El año B debe ser un número entero entre 2000 y 2030.');
-            return;
-        }
-        const yearA = Number(start.substring(0, 4));
-        if (yearB === yearA) {
-            alert('El año B debe ser diferente al año del período A.');
-            return;
-        }
-        startB = replaceDateYear(start, yearB);
-        endB = replaceDateYear(end, yearB);
-        const taskIdB = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-        gifUrlB = `${GIF_ENDPOINT[variable]}?start=${encodeURIComponent(startB)}`
-            + `&end=${encodeURIComponent(endB)}`
-            + `&bbox=${encodeURIComponent(bboxJson)}`
-            + `&task_id=${encodeURIComponent(taskIdB)}`;
-        tsUrlB = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(startB)}`
-            + `&end=${encodeURIComponent(endB)}`
-            + `&bbox=${encodeURIComponent(bboxJson)}`;
-    }
     createProgressIndicator();
     const eventSource = new EventSource(`/api/gif-progress/${taskId}`);
     eventSource.onmessage = (event) => {
@@ -323,19 +491,11 @@ async function requestGifAndSeries(variable, start, end, bbox) {
                     removeProgressIndicator(1000);
             }
         }
-        catch {
-            // silently ignore malformed SSE messages
-        }
+        catch { /* ignore */ }
     };
     eventSource.onerror = () => eventSource.close();
     try {
-        // Lanzar todas las peticiones en paralelo
-        const fetches = [fetch(gifUrl), fetch(tsUrl)];
-        if (compareModeActive) {
-            fetches.push(fetch(gifUrlB), fetch(tsUrlB));
-        }
-        const responses = await Promise.all(fetches);
-        const [gifResp, tsResp, gifRespB, tsRespB] = responses;
+        const [gifResp, tsResp] = await Promise.all([fetch(gifUrl), fetch(tsUrl)]);
         const gifData = await gifResp.json();
         const tsData = await tsResp.json();
         if (!gifResp.ok) {
@@ -344,73 +504,32 @@ async function requestGifAndSeries(variable, start, end, bbox) {
         }
         const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
         const overlayBounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
-        // ---- Modo normal: overlay nativo del browser ----
-        if (!compareModeActive) {
-            removeActiveOverlay(map);
-            const overlay = L.imageOverlay(gifData.gifUrl, overlayBounds, { opacity: 0.8 }).addTo(map);
-            setActiveOverlay(overlay);
-            switchColorbar(map, variable);
-            map.fitBounds(overlayBounds);
-            // ---- Modo comparativa: GifPlayer + SyncPlayer ----
-        }
-        else {
-            if (!gifRespB || !tsRespB)
-                return;
-            const gifDataB = await gifRespB.json();
-            if (!gifRespB.ok) {
-                alert((_b = gifDataB.error) !== null && _b !== void 0 ? _b : 'Error generando animación del período B.');
-                return;
-            }
-            // Destruir reproducción anterior si existía
-            destroySyncPlayer();
-            clearMapBOverlay();
-            removeActiveOverlay(map);
-            // Pre-renderizar ambos GIFs (puede tardar unos segundos)
-            const [pA, pB] = await Promise.all([
-                (async () => { const p = new GifPlayer(); await p.load(gifData.gifUrl); return p; })(),
-                (async () => { const p = new GifPlayer(); await p.load(gifDataB.gifUrl); return p; })(),
-            ]);
-            // Crear overlays con el primer frame
-            const overlayA = L.imageOverlay(pA.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(map);
-            setActiveOverlay(overlayA);
-            switchColorbar(map, variable);
-            map.fitBounds(overlayBounds);
-            const [minLonB, minLatB, maxLonB, maxLatB] = gifDataB.bbox;
-            const overlayBoundsB = L.latLngBounds(L.latLng(minLatB, minLonB), L.latLng(maxLatB, maxLonB));
-            const overlayB = L.imageOverlay(pB.getFrameUrl(0), overlayBoundsB, { opacity: 0.8 }).addTo(mapB);
-            activeBOverlay = overlayB;
-            mapB === null || mapB === void 0 ? void 0 : mapB.fitBounds(overlayBoundsB);
-            // Sincronizar zoom/posición de mapB con mapA tras fitBounds
-            setTimeout(() => mapB === null || mapB === void 0 ? void 0 : mapB.setView(map.getCenter(), map.getZoom(), { animate: false }), 100);
-            // Iniciar SyncPlayer
-            syncPlayer = new SyncPlayer();
-            syncPlayer.onFrameChange = (current, total) => {
-                onPlayerFrameChange(current, total);
-                syncPlayPauseIcon();
-            };
-            syncPlayer.start(pA, overlayA, pB, overlayB);
-            // Configurar slider
-            if (playerSlider) {
-                playerSlider.max = String(Math.max(pA.frameCount, pB.frameCount) - 1);
-                playerSlider.value = '0';
-            }
-            showPlayerControls();
+        // Limpiar player anterior antes de crear el nuevo
+        stopSoloPlayer();
+        gifPlayerA === null || gifPlayerA === void 0 ? void 0 : gifPlayerA.dispose();
+        gifPlayerA = null;
+        _currentOverlayA = null;
+        removeActiveOverlay(map);
+        const player = new GifPlayer();
+        await player.load(gifData.gifUrl);
+        const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(map);
+        setActiveOverlay(overlay);
+        switchColorbar(map, variable);
+        map.fitBounds(overlayBounds);
+        gifPlayerA = player;
+        _currentOverlayA = overlay;
+        soloPlayer = new SoloPlayer();
+        soloPlayer.onFrameChange = (current, total) => {
+            onPlayerFrameChange(current, total);
             syncPlayPauseIcon();
-            // Serie temporal B
-            const tsDataB = await tsRespB.json();
-            if (tsRespB.ok) {
-                const dataKeyB = VARIABLE_DATA_KEY[variable];
-                const valuesB = tsDataB[dataKeyB];
-                if (tsDataB.dates && valuesB) {
-                    allSeriesDataB[variable] = { dates: tsDataB.dates, values: valuesB };
-                    renderChartB();
-                }
-            }
-            else {
-                console.warn('Error en serie temporal período B:', tsDataB.error);
-            }
+        };
+        soloPlayer.start(player, overlay);
+        if (playerSlider) {
+            playerSlider.max = String(player.frameCount - 1);
+            playerSlider.value = '0';
         }
-        // ---- Serie temporal A (común a ambos modos) ----
+        showPlayerControls();
+        syncPlayPauseIcon();
         if (tsResp.ok) {
             const dataKey = VARIABLE_DATA_KEY[variable];
             const values = tsData[dataKey];
@@ -433,6 +552,169 @@ async function requestGifAndSeries(variable, start, end, bbox) {
         eventSource.close();
     }
 }
+// ---------------------------------------------------------------------------
+// Petición GIF + serie temporal — modo COMPARATIVA (panel A o B)
+// ---------------------------------------------------------------------------
+async function requestGifAndSeriesForPanel(panel, variable, start, end, bbox) {
+    var _a;
+    currentVariable = variable;
+    const bboxJson = JSON.stringify(bbox);
+    const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    const gifUrl = `${GIF_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
+        + `&end=${encodeURIComponent(end)}`
+        + `&bbox=${encodeURIComponent(bboxJson)}`
+        + `&task_id=${encodeURIComponent(taskId)}`;
+    const tsUrl = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
+        + `&end=${encodeURIComponent(end)}`
+        + `&bbox=${encodeURIComponent(bboxJson)}`;
+    createProgressIndicator();
+    const eventSource = new EventSource(`/api/gif-progress/${taskId}`);
+    eventSource.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            updateProgressIndicator(data.progress, data.message);
+            if (data.progress === 100 || data.progress === -1) {
+                eventSource.close();
+                if (data.progress === 100)
+                    removeProgressIndicator(1000);
+            }
+        }
+        catch { /* ignore */ }
+    };
+    eventSource.onerror = () => eventSource.close();
+    try {
+        const [gifResp, tsResp] = await Promise.all([fetch(gifUrl), fetch(tsUrl)]);
+        const gifData = await gifResp.json();
+        const tsData = await tsResp.json();
+        if (!gifResp.ok) {
+            alert((_a = gifData.error) !== null && _a !== void 0 ? _a : `Error generando animación (panel ${panel}).`);
+            return;
+        }
+        const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
+        const overlayBounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
+        // Parar toda reproducción antes de modificar cualquier panel
+        stopSoloPlayer();
+        stopSyncPlayer();
+        hidePlayerControls();
+        if (panel === 'A') {
+            // Liberar recursos anteriores del panel A
+            gifPlayerA === null || gifPlayerA === void 0 ? void 0 : gifPlayerA.dispose();
+            gifPlayerA = null;
+            _currentOverlayA = null;
+            removeActiveOverlay(map);
+            const player = new GifPlayer();
+            await player.load(gifData.gifUrl);
+            const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(map);
+            setActiveOverlay(overlay);
+            // En compare mode la colorbar va al panel derecho (mapB)
+            if (mapB)
+                switchColorbar(mapB, variable, map);
+            map.fitBounds(overlayBounds);
+            gifPlayerA = player;
+            _currentOverlayA = overlay;
+            // Animar panel A de forma independiente hasta que llegue el panel B
+            soloPlayer = new SoloPlayer();
+            soloPlayer.onFrameChange = (current, total) => {
+                onPlayerFrameChange(current, total);
+                syncPlayPauseIcon();
+            };
+            soloPlayer.start(player, overlay);
+            if (playerSlider) {
+                playerSlider.max = String(player.frameCount - 1);
+                playerSlider.value = '0';
+            }
+            showPlayerControls();
+            syncPlayPauseIcon();
+            if (tsResp.ok) {
+                const dataKey = VARIABLE_DATA_KEY[variable];
+                const values = tsData[dataKey];
+                if (tsData.dates && values) {
+                    allSeriesData[variable] = { dates: tsData.dates, values };
+                    renderChart();
+                }
+            }
+            else {
+                console.warn('Error en serie temporal panel A:', tsData.error);
+            }
+        }
+        else {
+            // Panel B
+            gifPlayerB === null || gifPlayerB === void 0 ? void 0 : gifPlayerB.dispose();
+            gifPlayerB = null;
+            clearMapBOverlay();
+            const player = new GifPlayer();
+            await player.load(gifData.gifUrl);
+            const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(mapB);
+            activeBOverlay = overlay;
+            // La colorbar siempre en el panel derecho (mapB) en compare mode
+            switchColorbar(mapB, variable, map);
+            mapB === null || mapB === void 0 ? void 0 : mapB.fitBounds(overlayBounds);
+            setTimeout(() => mapB === null || mapB === void 0 ? void 0 : mapB.setView(map.getCenter(), map.getZoom(), { animate: false }), 100);
+            gifPlayerB = player;
+            if (tsResp.ok) {
+                const dataKeyB = VARIABLE_DATA_KEY[variable];
+                const valuesB = tsData[dataKeyB];
+                if (tsData.dates && valuesB) {
+                    allSeriesDataB[variable] = { dates: tsData.dates, values: valuesB };
+                    renderChartB();
+                }
+            }
+            else {
+                console.warn('Error en serie temporal panel B:', tsData.error);
+            }
+        }
+        // Si ambos paneles tienen GIF → sincronizar
+        trySyncBothPanels();
+    }
+    catch (err) {
+        console.error(err);
+        alert(`Error de red al generar animación / serie temporal (panel ${panel}).`);
+        updateProgressIndicator(-1, 'Error de red');
+        removeProgressIndicator(3000);
+    }
+    finally {
+        eventSource.close();
+    }
+}
+// ---------------------------------------------------------------------------
+// Listeners: "Generar panel A" y "Generar panel B" (modo comparativa)
+// ---------------------------------------------------------------------------
+btnGenerateA === null || btnGenerateA === void 0 ? void 0 : btnGenerateA.addEventListener('click', () => {
+    var _a;
+    const variable = ((_a = compareVarASelect === null || compareVarASelect === void 0 ? void 0 : compareVarASelect.value) !== null && _a !== void 0 ? _a : 'ndvi');
+    const year = Number(compareYearASelect === null || compareYearASelect === void 0 ? void 0 : compareYearASelect.value);
+    const season = compareSeasonASelect === null || compareSeasonASelect === void 0 ? void 0 : compareSeasonASelect.value;
+    const bbox = currentBbox;
+    if (!year || !season) {
+        alert('Selecciona año y temporada para el panel A.');
+        return;
+    }
+    if (!bbox) {
+        alert('Dibuja primero un rectángulo en el mapa.');
+        return;
+    }
+    const { start, end } = seasonToDates(year, season);
+    void requestGifAndSeriesForPanel('A', variable, start, end, bbox);
+});
+btnGenerateB === null || btnGenerateB === void 0 ? void 0 : btnGenerateB.addEventListener('click', () => {
+    var _a;
+    const variable = ((_a = compareVarBSelect === null || compareVarBSelect === void 0 ? void 0 : compareVarBSelect.value) !== null && _a !== void 0 ? _a : 'ndvi');
+    const year = Number(compareYearBSelect === null || compareYearBSelect === void 0 ? void 0 : compareYearBSelect.value);
+    const season = compareSeasonBSelect === null || compareSeasonBSelect === void 0 ? void 0 : compareSeasonBSelect.value;
+    const bbox = currentBbox;
+    if (!year || !season) {
+        alert('Selecciona año y temporada para el panel B.');
+        return;
+    }
+    if (!bbox) {
+        alert('Dibuja primero un rectángulo en el mapa.');
+        return;
+    }
+    const { start, end } = seasonToDates(year, season);
+    void requestGifAndSeriesForPanel('B', variable, start, end, bbox);
+});
+btnClearA === null || btnClearA === void 0 ? void 0 : btnClearA.addEventListener('click', () => { _clearPanelA(); });
+btnClearB === null || btnClearB === void 0 ? void 0 : btnClearB.addEventListener('click', () => { _clearPanelB(); });
 // ---------------------------------------------------------------------------
 // Riesgo de inundación por municipio
 // ---------------------------------------------------------------------------
@@ -493,41 +775,83 @@ async function requestLocalStationLevel(stationId, start, end) {
     }
 }
 // ---------------------------------------------------------------------------
-// Inputs del DOM
+// Selectores DOM — variables principales
 // ---------------------------------------------------------------------------
-const startInput = document.getElementById('startDate');
-const endInput = document.getElementById('endDate');
+const ndviYearSelect = document.getElementById('ndviYear');
+const ndviSeasonSelect = document.getElementById('ndviSeason');
 const generateGifButton = document.getElementById('generateNdviGifBBox');
-const tempStartInput = document.getElementById('tempStartDate');
-const tempEndInput = document.getElementById('tempEndDate');
+const tempYearSelect = document.getElementById('tempYear');
+const tempSeasonSelect = document.getElementById('tempSeason');
 const generateTempGifButton = document.getElementById('generateTempGifBBox');
-const soilStartInput = document.getElementById('soilStartDate');
-const soilEndInput = document.getElementById('soilEndDate');
+const soilYearSelect = document.getElementById('soilYear');
+const soilSeasonSelect = document.getElementById('soilSeason');
 const generateSoilGifButton = document.getElementById('generateSoilGifBBox');
-const precipStartInput = document.getElementById('precipStartDate');
-const precipEndInput = document.getElementById('precipEndDate');
+const precipYearSelect = document.getElementById('precipYear');
+const precipSeasonSelect = document.getElementById('precipSeason');
 const generatePrecipGifButton = document.getElementById('generatePrecipGifBBox');
-const waterStartInput = document.getElementById('waterStartDate');
-const waterEndInput = document.getElementById('waterEndDate');
+const waterYearSelect = document.getElementById('waterYear');
+const waterSeasonSelect = document.getElementById('waterSeason');
 const generateWaterGifButton = document.getElementById('generateWaterGifBBox');
-const spStartInput = document.getElementById('spStartDate');
-const spEndInput = document.getElementById('spEndDate');
-const bdStartInput = document.getElementById('bdStartDate');
-const bdEndInput = document.getElementById('bdEndDate');
+// Selectores DOM — estaciones locales
+const spYearSelect = document.getElementById('spYear');
+const spSeasonSelect = document.getElementById('spSeason');
 const btnLocalSpLevel = document.getElementById('btnLocalSpLevel');
+const bdYearSelect = document.getElementById('bdYear');
+const bdSeasonSelect = document.getElementById('bdSeason');
 const btnLocalBdLevel = document.getElementById('btnLocalBdLevel');
 // ---------------------------------------------------------------------------
-// R8: Registro de listeners usando la factory
+// Registro de listeners usando la factory
 // ---------------------------------------------------------------------------
 const getBbox = () => currentBbox;
 const variableConfigs = [
-    { variable: 'ndvi', startInput, endInput, button: generateGifButton, getBbox, onRequest: requestGifAndSeries },
-    { variable: 'temp', startInput: tempStartInput, endInput: tempEndInput, button: generateTempGifButton, getBbox, onRequest: requestGifAndSeries },
-    { variable: 'soil', startInput: soilStartInput, endInput: soilEndInput, button: generateSoilGifButton, getBbox, onRequest: requestGifAndSeries },
-    { variable: 'precip', startInput: precipStartInput, endInput: precipEndInput, button: generatePrecipGifButton, getBbox, onRequest: requestGifAndSeries },
-    { variable: 'water', startInput: waterStartInput, endInput: waterEndInput, button: generateWaterGifButton, getBbox, onRequest: requestGifAndSeries },
+    { variable: 'ndvi', yearSelect: ndviYearSelect, seasonSelect: ndviSeasonSelect, button: generateGifButton, getBbox, onRequest: requestGifAndSeries },
+    { variable: 'temp', yearSelect: tempYearSelect, seasonSelect: tempSeasonSelect, button: generateTempGifButton, getBbox, onRequest: requestGifAndSeries },
+    { variable: 'soil', yearSelect: soilYearSelect, seasonSelect: soilSeasonSelect, button: generateSoilGifButton, getBbox, onRequest: requestGifAndSeries },
+    { variable: 'precip', yearSelect: precipYearSelect, seasonSelect: precipSeasonSelect, button: generatePrecipGifButton, getBbox, onRequest: requestGifAndSeries },
+    { variable: 'water', yearSelect: waterYearSelect, seasonSelect: waterSeasonSelect, button: generateWaterGifButton, getBbox, onRequest: requestGifAndSeries },
 ];
 variableConfigs.forEach(cfg => registerVariableListener(cfg));
+// ---------------------------------------------------------------------------
+// Listeners de estaciones locales (año + temporada)
+// ---------------------------------------------------------------------------
+function _wireLocalStation(yearSel, seasonSel, btn, stationId, stationKey) {
+    if (!yearSel || !seasonSel || !btn)
+        return;
+    // Poblar selectores
+    for (const year of VARIABLE_YEARS[stationKey]) {
+        const opt = document.createElement('option');
+        opt.value = String(year);
+        opt.textContent = String(year);
+        yearSel.appendChild(opt);
+    }
+    for (const s of SEASONS) {
+        const opt = document.createElement('option');
+        opt.value = s.value;
+        opt.textContent = s.label;
+        seasonSel.appendChild(opt);
+    }
+    const syncBtn = () => { btn.disabled = !yearSel.value || !seasonSel.value; };
+    yearSel.addEventListener('change', () => {
+        const hasYear = Boolean(yearSel.value);
+        seasonSel.disabled = !hasYear;
+        if (!hasYear)
+            seasonSel.value = '';
+        syncBtn();
+    });
+    seasonSel.addEventListener('change', syncBtn);
+    btn.addEventListener('click', () => {
+        const year = Number(yearSel.value);
+        const season = seasonSel.value;
+        if (!year || !season) {
+            alert('Selecciona año y temporada.');
+            return;
+        }
+        const { start, end } = seasonToDates(year, season);
+        void requestLocalStationLevel(stationId, start, end);
+    });
+}
+_wireLocalStation(spYearSelect, spSeasonSelect, btnLocalSpLevel, 'SPTTB', 'local_sp');
+_wireLocalStation(bdYearSelect, bdSeasonSelect, btnLocalBdLevel, 'BDCTB', 'local_bd');
 // ---------------------------------------------------------------------------
 // Listeners de municipios (riesgo de inundación)
 // ---------------------------------------------------------------------------
@@ -540,25 +864,24 @@ document.querySelectorAll('input.chk-flood-muni').forEach(chk => {
     });
 });
 // ---------------------------------------------------------------------------
-// Listeners de estaciones locales
+// Actualizar currentVariable al abrir un details de variable
 // ---------------------------------------------------------------------------
-btnLocalSpLevel === null || btnLocalSpLevel === void 0 ? void 0 : btnLocalSpLevel.addEventListener('click', () => {
-    const start = spStartInput === null || spStartInput === void 0 ? void 0 : spStartInput.value;
-    const end = spEndInput === null || spEndInput === void 0 ? void 0 : spEndInput.value;
-    if (!start || !end) {
-        alert('Selecciona fecha inicio y fecha fin para San Pedro.');
-        return;
-    }
-    void requestLocalStationLevel('SPTTB', start, end);
-});
-btnLocalBdLevel === null || btnLocalBdLevel === void 0 ? void 0 : btnLocalBdLevel.addEventListener('click', () => {
-    const start = bdStartInput === null || bdStartInput === void 0 ? void 0 : bdStartInput.value;
-    const end = bdEndInput === null || bdEndInput === void 0 ? void 0 : bdEndInput.value;
-    if (!start || !end) {
-        alert('Selecciona fecha inicio y fecha fin para Boca del Cerro.');
-        return;
-    }
-    void requestLocalStationLevel('BDCTB', start, end);
+const variableDetailsMap = {
+    'ndvi-controls': 'ndvi',
+    'temp-controls': 'temp',
+    'soil-controls': 'soil',
+    'precip-controls': 'precip',
+    'water-controls': 'water',
+};
+document.querySelectorAll('details[id]').forEach(details => {
+    details.addEventListener('toggle', () => {
+        if (!details.open || compareModeActive)
+            return;
+        const v = variableDetailsMap[details.id];
+        if (!v)
+            return;
+        currentVariable = v;
+    });
 });
 // ---------------------------------------------------------------------------
 // Sidebar colapsar/restaurar
@@ -578,7 +901,6 @@ if (collapseButton && restoreButton) {
             collapseSr.textContent = label;
         if (restoreSr)
             restoreSr.textContent = label;
-        // Invalidar tamaño de mapas tras la transición del sidebar
         setTimeout(() => {
             map.invalidateSize();
             mapB === null || mapB === void 0 ? void 0 : mapB.invalidateSize();

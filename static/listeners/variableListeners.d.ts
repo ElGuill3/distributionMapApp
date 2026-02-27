@@ -1,30 +1,44 @@
 /**
  * Factory de event listeners para las variables hidrometeorológicas.
  *
- * Reemplaza los 5 bloques if-then casi idénticos del main.ts original por una
- * función genérica `registerVariableListener` que acepta la configuración de
- * cada variable como parámetro.
+ * Reemplaza los inputs de fecha libre por selectores de año + temporada.
+ * Exporta además `seasonToDates` e `isLeapYear` para uso en main.ts.
  */
-import type { VariableKey, BBox } from '../types.js';
+import type { VariableKey, BBox, Season } from '../types.js';
+export declare function isLeapYear(year: number): boolean;
+/**
+ * Convierte año + temporada a un rango de fechas ISO.
+ *
+ * Temporadas:
+ *   invierno  → Y-12-01 .. (Y+1)-02-28/29
+ *   primavera → Y-03-01 .. Y-05-31
+ *   verano    → Y-06-01 .. Y-08-31
+ *   otono     → Y-09-01 .. Y-11-30
+ *   anual     → Y-01-01 .. Y-12-31
+ */
+export declare function seasonToDates(year: number, season: Season): {
+    start: string;
+    end: string;
+};
 export interface VariableListenerConfig {
     /** Clave de la variable (ndvi, temp, soil, precip, water) */
     variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-    /** Input de fecha inicio */
-    startInput: HTMLInputElement | null;
-    /** Input de fecha fin */
-    endInput: HTMLInputElement | null;
+    /** Select de año */
+    yearSelect: HTMLSelectElement | null;
+    /** Select de temporada */
+    seasonSelect: HTMLSelectElement | null;
     /** Botón que dispara la petición */
     button: HTMLButtonElement | null;
-    /** Getter reactivo del bbox actual (puede cambiar entre clics) */
+    /** Getter reactivo del bbox actual */
     getBbox: () => BBox | null;
-    /** Callback que realiza la petición al backend */
+    /** Callback que realiza la petición al backend (misma firma que antes) */
     onRequest: (variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>, start: string, end: string, bbox: BBox) => void;
 }
 /**
- * Registra un event listener en el botón de la variable indicada.
- *
- * Valida fechas y bbox antes de llamar a onRequest. Si alguna validación
- * falla, muestra un alert y no llama al callback.
+ * Registra el comportamiento completo de una variable:
+ *  1. Puebla los selects de año y temporada.
+ *  2. Habilita/deshabilita reactivamente temporada y botón.
+ *  3. Al pulsar el botón convierte año+temporada a fechas ISO y llama a onRequest.
  */
 export declare function registerVariableListener(cfg: VariableListenerConfig): void;
 //# sourceMappingURL=variableListeners.d.ts.map

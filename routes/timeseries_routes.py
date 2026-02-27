@@ -10,7 +10,7 @@ from gee.temperature   import build_era5_temp_timeseries_bbox
 from gee.soil          import build_era5_soil_timeseries_bbox
 from gee.precipitation import build_chirps_precip_timeseries_bbox
 from gee.water         import build_water_timeseries_bbox
-from gee.utils         import check_max_10_years
+from gee.utils         import check_max_10_years, season_to_dates
 
 ts_bp = Blueprint('ts', __name__)
 
@@ -31,6 +31,10 @@ def _timeseries_pipeline(
     """
     Implementación genérica para endpoints de serie temporal.
 
+    Acepta dos modos de especificar el período:
+    * Fechas directas : ``?start=YYYY-MM-DD&end=YYYY-MM-DD``
+    * Año + temporada : ``?year=YYYY&season=<temporada>``
+
     Args:
         build_ts_fn    : función build_*_timeseries_bbox(start, end, bbox).
         ts_key         : clave del array de valores en la respuesta JSON.
@@ -40,6 +44,15 @@ def _timeseries_pipeline(
     start    = request.args.get('start')
     end      = request.args.get('end')
     bbox_str = request.args.get('bbox')
+
+    if not start or not end:
+        year_str = request.args.get('year')
+        season   = request.args.get('season')
+        if year_str and season:
+            try:
+                start, end = season_to_dates(int(year_str), season)
+            except (ValueError, TypeError):
+                pass
 
     if not start or not end or not bbox_str:
         return jsonify({'error': 'Parámetros start, end y bbox son requeridos.'}), 400
