@@ -1,11 +1,13 @@
 """
 Utilidades compartidas para todas las operaciones con Google Earth Engine.
 
-Este módulo provee las tres funciones que se repetían en cada variable:
-  - validate_bbox: valida que el área no supere el límite configurado
-  - compute_gif_dims: calcula dimensiones WxH respetando el presupuesto de píxeles
+Este módulo provee las funciones que se repetían en cada variable:
+  - validate_bbox      : valida que el área no supere el límite configurado
+  - compute_gif_dims   : calcula dimensiones WxH respetando el presupuesto de píxeles
   - build_base_collection: filtra una colección GEE por fecha, región y banda
+  - season_to_dates    : convierte año + temporada a rango YYYY-MM-DD
 """
+import calendar
 import math
 from typing import Optional
 from datetime import datetime
@@ -93,6 +95,64 @@ def build_base_collection(
         .filterBounds(region)
         .sort("system:time_start")
     )
+
+
+# ---------------------------------------------------------------------------
+# Temporadas
+# ---------------------------------------------------------------------------
+
+#: Mapeo de temporada → (mes-día inicio, mes-día fin).
+#: Invierno se trata de forma especial porque cruza el cambio de año.
+SEASON_RANGES: dict[str, tuple[str, str]] = {
+    'invierno':  ('12-01', '02'),   # fin dinámico: 28 o 29 según año bisiesto
+    'primavera': ('03-01', '05-31'),
+    'verano':    ('06-01', '08-31'),
+    'otono':     ('09-01', '11-30'),
+    'anual':     ('01-01', '12-31'),
+}
+
+VALID_SEASONS: frozenset[str] = frozenset(SEASON_RANGES.keys())
+
+
+def season_to_dates(year: int, season: str) -> tuple[str, str]:
+    """
+    Convierte año + temporada a un rango de fechas 'YYYY-MM-DD'.
+
+    Temporadas aceptadas (valor de ``season``):
+      * ``invierno``  → Y-12-01 .. (Y+1)-02-28/29 (año bisiesto)
+      * ``primavera`` → Y-03-01 .. Y-05-31
+      * ``verano``    → Y-06-01 .. Y-08-31
+      * ``otono``     → Y-09-01 .. Y-11-30
+      * ``anual``     → Y-01-01 .. Y-12-31
+
+    Args:
+        year   : año entero (p. ej. 2022).
+        season : clave de temporada (cadena en minúsculas).
+
+    Returns:
+        Tupla ``(start, end)`` como cadenas ``'YYYY-MM-DD'``.
+
+    Raises:
+        ValueError: si la temporada no es válida.
+    """
+    if season not in VALID_SEASONS:
+        raise ValueError(
+            f"Temporada desconocida: '{season}'. "
+            f"Opciones válidas: {sorted(VALID_SEASONS)}"
+        )
+
+    if season == 'invierno':
+        end_year = year + 1
+        end_day  = 29 if calendar.isleap(end_year) else 28
+        return f"{year}-12-01", f"{end_year}-02-{end_day:02d}"
+
+    start_suffix, end_suffix = SEASON_RANGES[season]
+    return f"{year}-{start_suffix}", f"{year}-{end_suffix}"
+
+
+# ---------------------------------------------------------------------------
+# Validación de rangos de fecha
+# ---------------------------------------------------------------------------
 
 
 def check_max_10_years(start: str, end: str) -> Optional[str]:

@@ -107,6 +107,28 @@ body.sidebar-collapsed .sidebar {
   border-radius: 0.35rem;
   border: 1px solid #dce1e7;
   font-size: 0.9rem;
+  width: 100%;
+}
+
+.sidebar select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* En modo comparativa, ocultar los botones de generación del sidebar */
+body.compare-mode-active details .primary-action {
+  display: none;
+}
+
+/* En modo comparativa, bloquear las secciones de variable del sidebar */
+body.compare-mode-active #ndvi-controls,
+body.compare-mode-active #temp-controls,
+body.compare-mode-active #soil-controls,
+body.compare-mode-active #precip-controls,
+body.compare-mode-active #water-controls {
+  pointer-events: none;
+  opacity: 0.45;
+  user-select: none;
 }
 
 .hint {
@@ -290,6 +312,105 @@ body.compare-mode-active .panel-label {
   min-height: 220px;
   border-top: 1px solid #dce1e7;
   background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* En modo comparativa siempre mostramos el chart-container A (para los controles) */
+body.compare-mode-active #ndvi-chart-container {
+  display: flex !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Controles de comparativa en el área de gráficas                     */
+/* ------------------------------------------------------------------ */
+
+.compare-panel-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  background: #f0f4ff;
+  border-bottom: 1px solid #c7d2fe;
+  flex-shrink: 0;
+}
+
+.compare-panel-var-label {
+  font-size: 0.8rem;
+  color: #3730a3;
+}
+
+.compare-panel-var-label strong {
+  font-weight: 700;
+}
+
+.compare-selects-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.compare-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 110px;
+}
+
+.compare-select-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #3730a3;
+}
+
+.compare-select-group select {
+  padding: 0.3rem 0.4rem;
+  border-radius: 0.35rem;
+  border: 1px solid #a5b4fc;
+  font-size: 0.85rem;
+  background: #ffffff;
+  color: var(--sidebar-text);
+  min-width: 110px;
+}
+
+.compare-select-group select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.compare-generate-btn {
+  align-self: flex-end;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Botón "Limpiar panel" — aspecto destructivo/advertencia */
+.compare-clear-btn {
+  align-self: flex-end;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  border-radius: 0.5rem;
+  border: 1px solid #fca5a5;
+  background: #fee2e2;
+  color: #991b1b;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.compare-clear-btn:hover {
+  background: #fecaca;
+  border-color: #ef4444;
+  color: #7f1d1d;
+}
+
+/* Resaltado de panel labels en modo comparativa */
+body.compare-mode-active .panel-label {
+  background: #4f46e5;
+  color: #ffffff;
+  border-bottom-color: #3730a3;
 }
 
 /* Ocultar contenedor de gráfica hasta que haya datos */
@@ -301,7 +422,8 @@ body.compare-mode-active .panel-label {
 #ndvi-chart,
 #chart-b {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -355,31 +477,11 @@ body.compare-mode-active .panel-label {
   color: #c7d2fe;
 }
 
-.compare-year-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  animation: fadeIn 0.2s ease;
-}
-
-.compare-year-label {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: #3730a3;
-}
-
-.compare-year-input {
-  padding: 0.35rem 0.4rem;
-  border-radius: 0.35rem;
-  border: 1px solid #a5b4fc;
-  font-size: 0.9rem;
-  background: #f0f4ff;
-  color: var(--sidebar-text);
-  width: 100%;
-}
-
-.compare-year-hint {
+.compare-mode-hint {
+  font-size: 0.8rem;
+  color: #4f46e5;
   margin: 0;
+  animation: fadeIn 0.2s ease;
 }
 
 @keyframes fadeIn {
@@ -593,4 +695,43 @@ body.sidebar-collapsed .leaflet-left {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Toggle de la barra de colores                                        */
+/* ------------------------------------------------------------------ */
+
+.colorbar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.colorbar-toggle-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.92);
+  color: #374151;
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s ease, color 0.2s ease;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.colorbar-toggle-btn:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+/* Oculta el contenido de la colorbar pero mantiene visible el botón */
+.colorbar-content-hidden {
+  display: none !important;
 }

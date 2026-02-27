@@ -12,6 +12,9 @@
 /** [minLon, minLat, maxLon, maxLat] en grados decimales WGS-84 */
 export type BBox = [number, number, number, number];
 
+/** Temporadas disponibles para los selectores de período */
+export type Season = 'invierno' | 'primavera' | 'verano' | 'otono' | 'anual';
+
 /** Variables hidrometeorológicas soportadas por la aplicación */
 export type VariableKey =
   | 'ndvi'

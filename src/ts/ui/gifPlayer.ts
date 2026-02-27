@@ -164,6 +164,15 @@ export class SyncPlayer {
     return this._isPlaying;
   }
 
+  /**
+   * Detiene el bucle de animación sin liberar los GifPlayers.
+   * Usar cuando se quiere parar la sincronización pero conservar los frames
+   * de cada panel para reutilizarlos (p. ej. al regenerar un solo panel).
+   */
+  stop(): void {
+    this.pause();
+  }
+
   /** Destruye el bucle y libera recursos de ambos GifPlayer. */
   destroy(): void {
     this.pause();
@@ -202,6 +211,82 @@ export class SyncPlayer {
     if (urlB) this.overlayB.setUrl(urlB);
 
     this.onFrameChange?.(n, this.totalFrames);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SoloPlayer
+// ---------------------------------------------------------------------------
+
+/**
+ * Controlador de reproducción para un único panel.
+ *
+ * Anima un GifPlayer sobre un L.imageOverlay usando el mismo bucle
+ * requestAnimationFrame que SyncPlayer, pero sin necesitar el segundo panel.
+ * Comparte la misma interfaz pública (play/pause/stop/goToFrame/isPlaying)
+ * para que los controles de reproducción funcionen con ambos tipos de player.
+ */
+export class SoloPlayer {
+  onFrameChange?: (current: number, total: number) => void;
+
+  private player!: GifPlayer;
+  private overlay!: L.ImageOverlay;
+
+  private currentFrame = 0;
+  private _isPlaying   = false;
+  private lastTime     = 0;
+  private rafId        = 0;
+
+  get isPlaying(): boolean  { return this._isPlaying; }
+  get frameCount(): number  { return this.player?.frameCount ?? 0; }
+
+  start(player: GifPlayer, overlay: L.ImageOverlay): void {
+    this.player       = player;
+    this.overlay      = overlay;
+    this.currentFrame = 0;
+    this.lastTime     = 0;
+    this.showFrame(0);
+    this.play();
+  }
+
+  play(): void {
+    if (this._isPlaying) return;
+    this._isPlaying = true;
+    this.lastTime   = 0;
+    this.rafId = requestAnimationFrame(this.tick.bind(this));
+  }
+
+  pause(): void {
+    this._isPlaying = false;
+    cancelAnimationFrame(this.rafId);
+  }
+
+  stop(): void {
+    this.pause();
+  }
+
+  goToFrame(n: number): void {
+    this.currentFrame = Math.max(0, Math.min(n, this.frameCount - 1));
+    this.showFrame(this.currentFrame);
+  }
+
+  private tick(time: number): void {
+    if (!this._isPlaying) return;
+    if (this.lastTime === 0) this.lastTime = time;
+    const elapsed = time - this.lastTime;
+    const delay   = this.player.getFrameDelay(this.currentFrame);
+    if (elapsed >= delay) {
+      this.lastTime     = time;
+      this.currentFrame = (this.currentFrame + 1) % this.frameCount;
+      this.showFrame(this.currentFrame);
+    }
+    this.rafId = requestAnimationFrame(this.tick.bind(this));
+  }
+
+  private showFrame(n: number): void {
+    const url = this.player.getFrameUrl(n);
+    if (url) this.overlay.setUrl(url);
+    this.onFrameChange?.(n, this.frameCount);
   }
 }
 
