@@ -11,10 +11,13 @@ Cada endpoint:
 """
 import hashlib
 import json
+import logging
 import queue
 from typing import Optional
 
 from flask import Blueprint, Response, jsonify, request
+
+logger = logging.getLogger(__name__)
 
 from gee.ndvi         import build_ndvi_gif_bbox, build_ndvi_timeseries_bbox
 from gee.temperature  import build_era5_temp_gif_bbox, build_era5_temp_timeseries_bbox
@@ -179,7 +182,7 @@ def _gif_pipeline(
         _signal_error(pq, str(e))
         return jsonify({'error': str(e)}), 400
     except Exception as e:
-        print(f"Error en endpoint GIF {variable_prefix}: {e}")
+        logger.exception("Error en endpoint GIF %s: %s", variable_prefix, e)
         _signal_error(pq, f'Error: {str(e)}')
         return jsonify({'error': f'Error interno: {str(e)}'}), 500
 

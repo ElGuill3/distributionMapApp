@@ -1,7 +1,11 @@
 """
 Blueprint 'flood' — endpoint de mapas de riesgo de inundación por municipio.
 """
+import logging
+
 from flask import Blueprint, Response, jsonify, request
+
+logger = logging.getLogger(__name__)
 
 from gee.flood_risk import render_flood_risk_png
 from config import MUNICIPAL_TIFS
@@ -36,7 +40,7 @@ def flood_risk_municipio() -> Response:
     except ValueError as e:
         return jsonify(error=str(e)), 400
     except Exception as e:
-        print(f"Error en flood_risk_municipio: {e}")
+        logger.exception("Error en flood_risk_municipio: %s", e)
         return jsonify(error="Error interno al generar el mapa de riesgo."), 500
 
     return jsonify(mapUrl=map_url, bbox=bbox)

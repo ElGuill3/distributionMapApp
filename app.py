@@ -2,15 +2,28 @@
 Punto de entrada de la aplicación distributionMapApp.
 
 Responsabilidades de este módulo:
+  - Configurar logging estructurado.
   - Inicializar Google Earth Engine.
   - Crear la instancia Flask y registrar todos los Blueprints.
   - Lanzar el hilo daemon de limpieza de GIFs.
   - Exponer la ruta principal (/) y el servidor de archivos estáticos.
 """
+import logging
+import sys
+
 import ee
 from flask import Flask, render_template, send_from_directory
 
-from config import GEE_PROJECT, STATIC_DIR
+from config import DEBUG, GEE_PROJECT, STATIC_DIR
+
+# ---------------------------------------------------------------------------
+# Configuración de logging (una sola vez, antes de importar blueprints)
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.DEBUG if DEBUG else logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr)],
+)
 
 # ---------------------------------------------------------------------------
 # Inicialización de Earth Engine (debe ocurrir antes de importar módulos GEE)
@@ -66,4 +79,4 @@ def static_files(filename):
 # Arranque directo
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=DEBUG)

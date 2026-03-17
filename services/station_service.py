@@ -4,9 +4,13 @@ Servicio de lectura de series temporales de estaciones hidrológicas locales.
 Los datos provienen de archivos CSV con encabezado de 6 líneas (BDCTB, SPTTB).
 Se aplica interpolación temporal para rellenar huecos de hasta 7 días.
 """
+import logging
+
 import pandas as pd
 
 from config import LOCAL_STATIONS
+
+logger = logging.getLogger(__name__)
 
 
 def read_station_level_timeseries(
@@ -57,5 +61,5 @@ def read_station_level_timeseries(
     dates  = df_clean.index.strftime("%Y-%m-%d").tolist()
     levels = df_clean["Nivel_interp"].astype(float).tolist()
 
-    print(f"Estación {station_id}: {len(dates)} fechas cargadas (con interpolación)")
+    logger.info("Estación %s: %d fechas cargadas (con interpolación)", station_id, len(dates))
     return dates, levels

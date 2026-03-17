@@ -6,6 +6,7 @@ import time
 
 from flask import Blueprint, Response, stream_with_context
 
+from config import SSE_TASK_QUEUE_TIMEOUT_S, SSE_WAIT_ATTEMPTS
 from services.gif_service import progress_queues, remove_progress_queue
 import queue as q_module
 
@@ -24,9 +25,9 @@ def gif_progress(task_id: str) -> Response:
     La conexión se cierra automáticamente cuando el progreso llega a 100 o –1.
     """
     def _generate():
-        # Esperar hasta 2 s a que el endpoint GIF registre su cola de progreso
+        # Esperar hasta que el endpoint GIF registre su cola de progreso
         task_queue = None
-        for _ in range(20):
+        for _ in range(SSE_WAIT_ATTEMPTS):
             task_queue = progress_queues.get(task_id)
             if task_queue:
                 break
@@ -38,7 +39,7 @@ def gif_progress(task_id: str) -> Response:
 
         while True:
             try:
-                message = task_queue.get(timeout=60)
+                message = task_queue.get(timeout=SSE_TASK_QUEUE_TIMEOUT_S)
                 if message is None:
                     break
                 yield f"data: {json.dumps(message)}\n\n"
