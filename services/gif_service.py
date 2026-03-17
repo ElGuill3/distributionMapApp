@@ -6,6 +6,7 @@ Responsabilidades:
   - Limpiar GIFs expirados del directorio local (hilo daemon en segundo plano).
   - Gestionar el diccionario global de colas de progreso (SSE).
 """
+import logging
 import queue
 import threading
 import time
@@ -15,7 +16,9 @@ from typing import Callable, Optional
 import requests
 from PIL import Image as PILImage, ImageDraw, ImageFont, ImageSequence
 
-from config import GIFS_DIR, GIF_MAX_AGE_MINUTES, GIF_CLEANUP_INTERVAL_S
+from config import GIFS_DIR, GIF_CLEANUP_INTERVAL_S, GIF_DOWNLOAD_TIMEOUT_S, GIF_MAX_AGE_MINUTES
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Sistema de progreso SSE
@@ -55,13 +58,13 @@ def cleanup_old_gifs(max_age_minutes: int = GIF_MAX_AGE_MINUTES) -> None:
                     if gif_file.stat().st_mtime < cutoff_time:
                         gif_file.unlink()
                         count += 1
-                        print(f"Eliminado GIF antiguo: {gif_file.name}")
+                        logger.info("Eliminado GIF antiguo: %s", gif_file.name)
                 except Exception as e:
-                    print(f"Error eliminando {gif_file.name}: {e}")
+                    logger.error("Error eliminando %s: %s", gif_file.name, e)
             if count > 0:
-                print(f"Limpieza automática: {count} GIFs eliminados (>{max_age_minutes} min)")
+                logger.info("Limpieza automática: %d GIFs eliminados (>=%d min)", count, max_age_minutes)
         except Exception as e:
-            print(f"Error en limpieza automática: {e}")
+            logger.error("Error en limpieza automática: %s", e)
         time.sleep(GIF_CLEANUP_INTERVAL_S)
 
 
@@ -76,18 +79,18 @@ def cleanup_pattern_gifs(pattern: str) -> None:
         for gif_file in GIFS_DIR.glob(pattern):
             try:
                 gif_file.unlink()
-                print(f"Eliminado GIF previo: {gif_file.name}")
+                logger.info("Eliminado GIF previo: %s", gif_file.name)
             except Exception as e:
-                print(f"Error eliminando {gif_file.name}: {e}")
+                logger.error("Error eliminando %s: %s", gif_file.name, e)
     except Exception as e:
-        print(f"Error en cleanup_pattern_gifs: {e}")
+        logger.error("Error en cleanup_pattern_gifs: %s", e)
 
 
 def start_cleanup_daemon() -> None:
     """Lanza el hilo daemon de limpieza automática."""
     t = threading.Thread(target=cleanup_old_gifs, args=(GIF_MAX_AGE_MINUTES,), daemon=True)
     t.start()
-    print(f"Sistema de limpieza automática iniciado (GIFs > {GIF_MAX_AGE_MINUTES} min)")
+    logger.info("Sistema de limpieza automática iniciado (GIFs >= %d min)", GIF_MAX_AGE_MINUTES)
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +111,7 @@ def _load_font(font_size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
             return ImageFont.truetype(path, font_size)
         except OSError:
             continue
-    print("No se encontró fuente TrueType, usando fuente por defecto")
+    logger.warning("No se encontró fuente TrueType, usando fuente por defecto")
     return ImageFont.load_default()
 
 
@@ -144,8 +147,8 @@ def add_dates_to_gif(
             progress_callback(pct, msg)
 
     _report(5, "Descargando GIF desde Earth Engine...")
-    print(f"Descargando GIF desde: {gif_url}")
-    response = requests.get(gif_url, stream=True, timeout=120)
+    logger.info("Descargando GIF desde: %s", gif_url)
+    response = requests.get(gif_url, stream=True, timeout=GIF_DOWNLOAD_TIMEOUT_S)
     response.raise_for_status()
     gif_bytes = BytesIO(response.content)
 
@@ -196,7 +199,7 @@ def add_dates_to_gif(
         durations.append(original_gif.info.get('duration', 500))
 
     _report(90, "Guardando GIF procesado...")
-    print(f"Guardando GIF procesado en: {output_path}")
+    logger.info("Guardando GIF procesado en: %s", output_path)
     frames[0].save(
         output_path,
         format='GIF',
@@ -208,5 +211,5 @@ def add_dates_to_gif(
     )
 
     _report(100, "¡GIF listo!")
-    print(f"GIF procesado correctamente: {len(frames)} frames")
+    logger.info("GIF procesado correctamente: %d frames", len(frames))
     return output_path

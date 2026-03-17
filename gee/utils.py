@@ -17,6 +17,7 @@ import ee
 from config import (
     MAX_SPAN_DEG,
     MAX_TOTAL_PIXELS,
+    MAX_YEARS_RANGE,
     BASE_PIXELS_PER_FRAME,
     MIN_GIF_DIM,
 )
@@ -172,7 +173,7 @@ def check_max_10_years(start: str, end: str) -> Optional[str]:
         return "La fecha fin debe ser posterior a la fecha inicio."
 
     years_span = (d_end - d_start).days / 365.25
-    if years_span > 10.0:
-        return "El rango de fechas excede el límite de 10 años. Reduce el intervalo."
+    if years_span > MAX_YEARS_RANGE:
+        return f"El rango de fechas excede el límite de {int(MAX_YEARS_RANGE)} años. Reduce el intervalo."
 
     return None
