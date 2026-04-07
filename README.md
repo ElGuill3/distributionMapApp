@@ -134,6 +134,7 @@ rasterio
 matplotlib
 Pillow
 requests
+pytest
 ```
 
 **Dependencias Node** (ver `package.json`):
@@ -287,6 +288,8 @@ distributionMapApp/
 ├── SPTTB.csv                 # Serie de nivel — estación San Pedro (Balancán)
 ├── BDCTB.csv                 # Serie de nivel — estación Boca del Cerro (Tenosique)
 │
+├── tests/                    # Tests de unidad (pytest), p. ej. gee/utils
+│
 ├── gee/                      # Módulos de procesamiento con Google Earth Engine
 │   ├── ndvi.py               # NDVI — MODIS MOD13Q1
 │   ├── temperature.py        # Temperatura — ERA5-Land (Kelvin → Celsius)
@@ -372,6 +375,20 @@ En modo desarrollo con recompilación automática:
 
 ```bash
 npm run watch:ts
+```
+
+### Ejecutar tests (pytest)
+
+Los tests de unidad viven en `tests/` (por ejemplo `tests/test_utils.py` para utilidades de `gee/utils.py`). No requieren conexión a Google Earth Engine para las pruebas de funciones puras.
+
+```bash
+python -m pytest tests/ -v
+```
+
+Si `pytest` está en el PATH del entorno virtual:
+
+```bash
+pytest tests/ -v
 ```
 
 ### Límites de la API de Google Earth Engine
