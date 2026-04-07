@@ -6,3 +6,4 @@ rasterio
 matplotlib
 Pillow
 requests
+pytest

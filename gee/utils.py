@@ -12,8 +12,6 @@ import math
 from typing import Optional
 from datetime import datetime
 
-import ee
-
 from config import (
     MAX_SPAN_DEG,
     MAX_TOTAL_PIXELS,
@@ -74,7 +72,7 @@ def build_base_collection(
     bbox: list[float],
     start: str,
     end: str,
-) -> ee.ImageCollection:
+) -> "ee.ImageCollection":
     """
     Filtra una colección GEE por banda, fecha y región, ordenada cronológicamente.
 
@@ -88,6 +86,8 @@ def build_base_collection(
     Returns:
         ImageCollection filtrada y ordenada por tiempo de inicio.
     """
+    import ee  # import local: permite testear utilidades puras sin cargar earthengine-api al importar el módulo
+
     region = ee.Geometry.Rectangle(bbox)
     return (
         ee.ImageCollection(collection_id)
