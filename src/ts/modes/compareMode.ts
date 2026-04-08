@@ -33,8 +33,11 @@ import {
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
 import * as normalMode from './normalMode.js';
-import * as L from 'leaflet';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
+
+// L is the global Leaflet instance loaded via <script> tag (not an ES module import)
+// eslint-disable-next-line @typescript-eslint/no-shadow
+declare var L: typeof import('leaflet');
 
 // ---------------------------------------------------------------------------
 // Referencias DOM inyectadas desde main.ts

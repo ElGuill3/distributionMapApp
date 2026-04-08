@@ -31,7 +31,10 @@ import {
 } from '../ui/progress.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SoloPlayer } from '../ui/gifPlayer.js';
-import * as L from 'leaflet';
+
+// L is the global Leaflet instance loaded via <script> tag (not an ES module import)
+// eslint-disable-next-line @typescript-eslint/no-shadow
+declare var L: typeof import('leaflet');
 
 // ---------------------------------------------------------------------------
 // Tipos exportados

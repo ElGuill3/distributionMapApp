@@ -18,7 +18,10 @@ import {
   switchColorbar,
   municipalFloodOverlays,
 } from '../map/overlays.js';
-import * as L from 'leaflet';
+
+// L is the global Leaflet instance loaded via <script> tag (not an ES module import)
+// eslint-disable-next-line @typescript-eslint/no-shadow
+declare var L: typeof import('leaflet');
 
 // ---------------------------------------------------------------------------
 // Referencias inyectadas desde main.ts
