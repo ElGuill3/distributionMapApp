@@ -109,6 +109,29 @@ Cada variable genera:
 
 El progreso de generación se comunica en tiempo real mediante **Server-Sent Events (SSE)** a través del endpoint `/api/gif-progress/<task_id>`.
 
+### Arquitectura del frontend
+
+El código TypeScript en `src/ts/` está organizado por responsabilidad:
+
+```
+src/ts/
+├── main.ts               # Composition root — orquesta inicialización y wiring de módulos
+├── apiClient.ts          # Cliente HTTP tipado — todas las peticiones al backend
+├── config.ts             # URLs de endpoints, años disponibles, temporadas
+├── types.ts              # Interfaces de la API (GifResponse, TimeseriesResponse, etc.)
+├── state/
+│   └── mapState.ts       # Store de estado global — bbox, modo, variable, series, players
+└── modes/
+    ├── normalMode.ts     # Lógica del modo normal (generación de GIF + gráfica panel A)
+    ├── compareMode.ts     # Lógica del modo comparativa (paneles A/B, sync, mapB)
+    └── floodRiskMode.ts  # Lógica del modo riesgo (overlays FHI por municipio)
+```
+
+- **`main.ts`** inicializa el mapa Leaflet, los módulos de modo y el sistema de listeners. No contiene lógica de negocio de ningún modo.
+- **`apiClient.ts`** encapsula todos los `fetch()` al backend, incluyendo SSE de progreso y manejo de errores tipados.
+- **`mapState.ts`** mantiene el estado de la sesión: bbox seleccionado, modo activo, series temporales cargadas y referencias a los players de animación (GifPlayer, SyncPlayer, SoloPlayer).
+- **`modes/*.ts`** contienen el comportamiento específico de cada modo de operación y acceden al estado exclusivamente a través de `mapState`.
+
 ---
 
 ## Requisitos previos
@@ -321,10 +344,18 @@ distributionMapApp/
 │   └── flood_maps/           # PNGs de mapas de riesgo renderizados
 │
 ├── src/ts/                   # Código fuente TypeScript (se compila a static/)
-│   ├── main.ts               # Lógica principal: mapa Leaflet, modos, listeners, estados
+│   ├── main.ts               # Composition root — orquestador, inicializa módulos y wiring
+│   ├── apiClient.ts          # Cliente HTTP tipado — todas las llamadas al backend
 │   ├── config.ts             # URLs de endpoints, años disponibles, temporadas, constantes UI
 │   ├── types.ts              # Tipos TypeScript e interfaces de la API
-│   ├── map/overlays.ts       # Control de overlays Leaflet y barras de colores (colorbars)
+│   ├── state/
+│   │   └── mapState.ts       # Store de estado global (bbox, modo, variable, series, players)
+│   ├── modes/                # Lógica de cada modo de operación
+│   │   ├── normalMode.ts     # Modo normal: generación de GIF y gráfica para panel A
+│   │   ├── compareMode.ts    # Modo comparativa: paneles A/B, sincronización, mapB
+│   │   └── floodRiskMode.ts  # Modo riesgo de inundación: overlays FHI por municipio
+│   ├── map/
+│   │   └── overlays.ts       # Control de overlays Leaflet y barras de colores (colorbars)
 │   ├── ui/
 │   │   ├── gifPlayer.ts      # Decodificación y reproducción de GIFs frame a frame
 │   │   ├── chart.ts          # Renderizado de gráficas con Plotly
@@ -412,6 +443,22 @@ gunicorn -w 4 -b 0.0.0.0:8000 app:app
 ```
 
 Junto con un servidor proxy inverso (Nginx o Apache) que sirva los archivos estáticos directamente.
+
+---
+
+## Notas de diseño
+
+La reorganización del código frontend siguió un ciclo de **Spec-Driven Development (SDD)**. El archivo `main.ts`, que originalmente contenía toda la lógica de aplicación (~1334 líneas), se dividió en módulos con responsabilidades claras:
+
+- **`main.ts`** actúa como *composition root*: solo inicializa los módulos, mantiene referencias DOM de infraestructura y delega todo comportamiento de negocio a los módulos de modo.
+
+- **`apiClient.ts`** centraliza el acceso HTTP al backend Flask, tipando todas las respuestas y absorbiendo el manejo de errores y SSE.
+
+- **`state/mapState.ts`** provee un store de estado mutable tipado con funciones de lectura/escritura para bbox, modo de operación, variables, series temporales, players de animación y overlays de mapa.
+
+- **`modes/`** encapsula la lógica de cada modo de operación (`normalMode`, `compareMode`, `floodRiskMode`) de forma que agregar un nuevo modo no requiere modificar `main.ts`, solo crear un nuevo archivo en este directorio.
+
+El refactor no cambió el comportamiento visible de la aplicación ni los contratos de la API con el backend.
 
 ---
 

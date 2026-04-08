@@ -8,19 +8,16 @@ import type {
   BBox,
   VariableKey,
   Season,
-  GifResponse,
-  TimeseriesResponse,
-  StationResponse,
-  FloodRiskResponse,
   SeriesData,
 } from './types.js';
-import { VARIABLE_DATA_KEY } from './types.js';
+import * as mapState from './state/mapState.js';
+import * as normalMode from './modes/normalMode.js';
+import * as compareMode from './modes/compareMode.js';
+import * as floodRiskMode from './modes/floodRiskMode.js';
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
   MAX_SPAN_DEG,
-  GIF_ENDPOINT,
-  TS_ENDPOINT,
   VARIABLE_YEARS,
   SEASONS,
 } from './config.js';
@@ -39,6 +36,9 @@ import {
 import { plotAllSelectedSeries } from './ui/chart.js';
 import { registerVariableListener, seasonToDates } from './listeners/variableListeners.js';
 import { GifPlayer, SyncPlayer, SoloPlayer } from './ui/gifPlayer.js';
+import {
+  fetchLocalStationLevel,
+} from './apiClient.js';
 
 // ---------------------------------------------------------------------------
 // Mapa principal (A)
@@ -112,7 +112,7 @@ const drawControl = new L.Control.Draw({
 });
 map.addControl(drawControl);
 
-let currentBbox: BBox | null = null;
+// Phase B: bbox now managed via mapState.getBbox() / mapState.setBbox()
 
 map.on(L.Draw.Event.CREATED, (e) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,20 +149,18 @@ map.on(L.Draw.Event.CREATED, (e) => {
   drawnItems.clearLayers();
   drawnItems.addLayer(layer);
 
-  currentBbox = [squareWest, squareSouth, squareEast, squareNorth];
+  mapState.setBbox([squareWest, squareSouth, squareEast, squareNorth]);
 
   removeActiveOverlay(map);
   switchColorbar(map, null);
   hideChartContainer();
   if (ndviChartDiv) Plotly.purge(ndviChartDiv);
 
-  (Object.keys(allSeriesData)  as VariableKey[]).forEach(k => delete allSeriesData[k]);
-  (Object.keys(allSeriesDataB) as VariableKey[]).forEach(k => delete allSeriesDataB[k]);
-  _cleanupComparePanels();
+  mapState.clearSeriesData();
+  compareMode.cleanupComparePanels();
   hidePlayerControls();
   hideChartBContainer();
   if (chartBDiv) Plotly.purge(chartBDiv);
-  clearMapBOverlay();
 });
 
 // ---------------------------------------------------------------------------
@@ -172,23 +170,23 @@ map.on(L.Draw.Event.CREATED, (e) => {
 const ndviChartContainer = document.getElementById('ndvi-chart-container') as HTMLDivElement | null;
 const ndviChartDiv       = document.getElementById('ndvi-chart')           as HTMLDivElement | null;
 
-const allSeriesData: Partial<Record<VariableKey, SeriesData | undefined>> = {};
+// Phase B: allSeriesData now managed via mapState (seriesDataA)
 
 function showChartContainer(): void {
   // En modo comparativa la visibilidad se controla via CSS; no ocultar
-  if (!compareModeActive) {
+  if (!mapState.getCompareModeActive()) {
     ndviChartContainer?.classList.remove('hidden');
   }
 }
 function hideChartContainer(): void {
-  if (!compareModeActive) {
+  if (!mapState.getCompareModeActive()) {
     ndviChartContainer?.classList.add('hidden');
   }
 }
 
 function renderChart(): void {
   if (!ndviChartDiv) return;
-  plotAllSelectedSeries(ndviChartDiv, allSeriesData, showChartContainer, hideChartContainer);
+  plotAllSelectedSeries(ndviChartDiv, mapState.getSeriesDataA(), showChartContainer, hideChartContainer);
 }
 
 // ---------------------------------------------------------------------------
@@ -198,47 +196,36 @@ function renderChart(): void {
 const chartBContainer = document.getElementById('chart-b-container') as HTMLDivElement | null;
 const chartBDiv       = document.getElementById('chart-b')           as HTMLDivElement | null;
 
-const allSeriesDataB: Partial<Record<VariableKey, SeriesData | undefined>> = {};
+// Phase B: allSeriesDataB now managed via mapState (seriesDataB)
 
 function showChartBContainer(): void {
   chartBContainer?.classList.remove('hidden');
 }
 function hideChartBContainer(): void {
-  if (compareModeActive) return;  // En compare mode siempre permanece visible
+  if (mapState.getCompareModeActive()) return;  // En compare mode siempre permanece visible
   chartBContainer?.classList.add('hidden');
 }
 
 function renderChartB(): void {
   if (!chartBDiv) return;
-  plotAllSelectedSeries(chartBDiv, allSeriesDataB, showChartBContainer, hideChartBContainer);
+  plotAllSelectedSeries(chartBDiv, mapState.getSeriesDataB(), showChartBContainer, hideChartBContainer);
 }
 
 // ---------------------------------------------------------------------------
 // Estado de variable activa
 // ---------------------------------------------------------------------------
 
-let currentVariable: VariableKey = 'ndvi';
+// Phase B: currentVariable now managed via mapState
 
 // ---------------------------------------------------------------------------
 // Modo comparativa
 // ---------------------------------------------------------------------------
 
-let compareModeActive = false;
-let mapB: L.Map | null = null;
-let mapBSyncLock = false;
+// Phase B: compareModeActive, mapB, mapBSyncLock now managed via mapState
 
-/** Overlay activo en panel B. */
-let activeBOverlay: L.ImageOverlay | null = null;
+// Phase B: activeBOverlay now managed via mapState.getOverlayB() / mapState.setOverlayB()
 
-/** GifPlayers independientes por panel (solo en modo comparativa). */
-let gifPlayerA: GifPlayer | null = null;
-let gifPlayerB: GifPlayer | null = null;
-
-/** Instancia del SyncPlayer activo (ambos paneles sincronizados). */
-let syncPlayer: SyncPlayer | null = null;
-
-/** Instancia del SoloPlayer activo (un solo panel animándose). */
-let soloPlayer: SoloPlayer | null = null;
+// Phase B: gifPlayerA, gifPlayerB, syncPlayer, soloPlayer now managed via mapState
 
 // DOM: modo comparativa
 const toggleCompareModeButton  = document.getElementById('toggleCompareMode')    as HTMLButtonElement | null;
@@ -250,7 +237,7 @@ const toggleFloodRiskModeButton = document.getElementById('toggleFloodRiskMode')
 const floodRiskModeHint         = document.querySelector('.flood-risk-mode-hint') as HTMLElement | null;
 const btnClearNormal            = document.getElementById('btnClearNormal')       as HTMLButtonElement | null;
 
-let floodRiskModeActive = false;
+// Phase B: floodRiskModeActive now managed via mapState
 
 // DOM: selectores de comparativa — panel A
 const compareVarASelect    = document.getElementById('compareVarA')    as HTMLSelectElement | null;
@@ -266,6 +253,15 @@ const compareSeasonBSelect = document.getElementById('compareSeasonB') as HTMLSe
 const btnGenerateB         = document.getElementById('btnGenerateB')   as HTMLButtonElement | null;
 const btnClearB            = document.getElementById('btnClearB')      as HTMLButtonElement | null;
 
+// ---------------------------------------------------------------------------
+// Checkboxes de estaciones en modo comparativa
+// ---------------------------------------------------------------------------
+
+const chkStationSpA = document.getElementById('chkStationSpA') as HTMLInputElement | null;
+const chkStationBdA = document.getElementById('chkStationBdA') as HTMLInputElement | null;
+const chkStationSpB = document.getElementById('chkStationSpB') as HTMLInputElement | null;
+const chkStationBdB = document.getElementById('chkStationBdB') as HTMLInputElement | null;
+
 // DOM: player controls
 const playerControlsDiv  = document.getElementById('player-controls')  as HTMLDivElement | null;
 const playerPlayPauseBtn = document.getElementById('playerPlayPause')   as HTMLButtonElement | null;
@@ -279,126 +275,95 @@ function _selectedInterval(): number {
   return Number(playerSpeedSelect?.value ?? '1000') || 1000;
 }
 
-/** Inicializa mapB la primera vez que se activa el modo comparativa. */
-function initMapB(): void {
-  if (mapB) return;
+// Phase C: inicializar normalMode con referencias al DOM y mapa
+normalMode.initNormalMode({
+  map,
+  chartDiv: ndviChartDiv,
+  playerControlsDiv,
+  playerSlider,
+  playerFrameLabel,
+  playerPlayIcon,
+  playerSpeedSelect,
+});
 
-  mapB = L.map('map-b', { zoomControl: false }).setView(map.getCenter(), map.getZoom());
+// Phase D: inicializar compareMode con referencias al DOM y mapa
+compareMode.initCompareMode({
+  map,
+  stationMarkersMap,
+  stationMarkersMapB,
+  playerControlsDiv,
+  playerSlider,
+  playerFrameLabel,
+  playerPlayIcon,
+  playerSpeedSelect,
+  ndviChartDiv,
+  chartBDiv,
+  compareControlsA,
+  compareModeHint,
+  chartBContainer,
+  compareVarASelect,
+  compareYearASelect,
+  compareSeasonASelect,
+  btnGenerateA,
+  btnClearA,
+  compareVarBSelect,
+  compareYearBSelect,
+  compareSeasonBSelect,
+  btnGenerateB,
+  btnClearB,
+  chkStationSpA,
+  chkStationBdA,
+  chkStationSpB,
+  chkStationBdB,
+});
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom:     19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(mapB);
+// Phase D: registrar todos los listeners de comparativa en compareMode
+compareMode.registerCompareModeListeners();
 
-  map.on('moveend', () => {
-    if (mapBSyncLock || !mapB) return;
-    mapBSyncLock = true;
-    mapB.setView(map.getCenter(), map.getZoom(), { animate: false });
-    mapBSyncLock = false;
-  });
+// Phase E: inicializar floodRiskMode con referencias al DOM y mapa
+floodRiskMode.initFloodRiskMode({
+  map,
+  toggleFloodRiskModeButton,
+  floodRiskModeHint,
+});
 
-  mapB.on('moveend', () => {
-    if (mapBSyncLock) return;
-    mapBSyncLock = true;
-    map.setView(mapB!.getCenter(), mapB!.getZoom(), { animate: false });
-    mapBSyncLock = false;
-  });
+// Phase E: registrar listeners de modo riesgo
+floodRiskMode.registerFloodRiskModeListeners(
+  () => {
+    // Entrar al modo riesgo: coordinación de desactivación de compare mode
+    if (mapState.getCompareModeActive()) {
+      mapState.setCompareModeActive(false);
+      document.body.classList.remove('compare-mode-active');
+      toggleCompareModeButton?.setAttribute('aria-pressed', 'false');
+      compareMode.cleanupComparePanels();
+      mapState.clearSeriesData();
+      hidePlayerControls();
+      hideChartBContainer();
+      if (ndviChartDiv) Plotly.purge(ndviChartDiv);
+      if (chartBDiv) Plotly.purge(chartBDiv);
+      switchColorbar(map, null, mapState.getMapB() ?? undefined);
+      drawnItems.clearLayers();
+      mapState.clearBbox();
+      compareControlsA?.classList.add('hidden');
+      compareModeHint?.classList.add('hidden');
+      setTimeout(() => map.invalidateSize(), 350);
+    }
+    normalMode.clearNormalMode();
+    floodRiskModeHint?.classList.remove('hidden');
+  },
+  () => {
+    // Salir del modo riesgo
+    floodRiskMode.exitFloodRiskMode();
+  },
+  () => { normalMode.clearNormalMode(); },
+);
 
-  // Añadir marcadores de estaciones al mapa B
-  _makeStationMarker('SPTTB', mapB, stationMarkersMapB);
-  _makeStationMarker('BDCTB', mapB, stationMarkersMapB);
-}
-
-function clearMapBOverlay(): void {
-  if (activeBOverlay && mapB) {
-    mapB.removeLayer(activeBOverlay);
-    activeBOverlay = null;
-  }
-}
-
-/** Para el SyncPlayer sin liberar los GifPlayers. */
-function stopSyncPlayer(): void {
-  if (syncPlayer) {
-    syncPlayer.stop();
-    syncPlayer = null;
-  }
-}
-
+// Phase C: delegated to normalMode
 /** Para el SoloPlayer. */
-function stopSoloPlayer(): void {
-  if (soloPlayer) {
-    soloPlayer.stop();
-    soloPlayer = null;
-  }
-}
-
-/** Limpia todos los players y overlays activos. */
-function _cleanupComparePanels(): void {
-  stopSoloPlayer();
-  stopSyncPlayer();
-  gifPlayerA?.dispose();
-  gifPlayerA = null;
-  gifPlayerB?.dispose();
-  gifPlayerB = null;
-  _currentOverlayA = null;
-  removeActiveOverlay(map);
-  clearMapBOverlay();
-  _updateStationMarkersVisibility();
-}
-
-/** Limpia solo el panel A (animación + gráfica) sin tocar el panel B. */
-function _clearPanelA(): void {
-  stopSyncPlayer();
-  stopSoloPlayer();
-  gifPlayerA?.dispose();
-  gifPlayerA       = null;
-  _currentOverlayA = null;
-  removeActiveOverlay(map);
-  switchColorbar(map, null, mapB ?? undefined);
-  (Object.keys(allSeriesData) as VariableKey[]).forEach(k => delete allSeriesData[k]);
-  if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-  hidePlayerControls();
-  if (compareYearASelect)   compareYearASelect.value   = '';
-  if (compareSeasonASelect) { compareSeasonASelect.value = ''; compareSeasonASelect.disabled = true; }
-  if (btnGenerateA)         btnGenerateA.disabled = true;
-  if (chkStationSpA) chkStationSpA.checked = false;
-  if (chkStationBdA) chkStationBdA.checked = false;
-  _updateStationMarkersVisibility();
-}
-
-/** Limpia solo el panel B (animación + gráfica) sin tocar el panel A. */
-function _clearPanelB(): void {
-  stopSyncPlayer();
-  stopSoloPlayer();
-  gifPlayerB?.dispose();
-  gifPlayerB = null;
-  clearMapBOverlay();
-  switchColorbar(map, null, mapB ?? undefined);
-  (Object.keys(allSeriesDataB) as VariableKey[]).forEach(k => delete allSeriesDataB[k]);
-  if (chartBDiv) Plotly.purge(chartBDiv);
-  hidePlayerControls();
-  if (compareYearBSelect)   compareYearBSelect.value   = '';
-  if (compareSeasonBSelect) { compareSeasonBSelect.value = ''; compareSeasonBSelect.disabled = true; }
-  if (btnGenerateB)         btnGenerateB.disabled = true;
-  if (chkStationSpB) chkStationSpB.checked = false;
-  if (chkStationBdB) chkStationBdB.checked = false;
-  _updateStationMarkersVisibility();
-}
+// Phase C: delegated to normalMode
 
 /** Limpia la animación y gráfica en modo normal (panel A). */
-function _clearNormalMode(): void {
-  stopSoloPlayer();
-  gifPlayerA?.dispose();
-  gifPlayerA       = null;
-  _currentOverlayA = null;
-  removeActiveOverlay(map);
-  switchColorbar(map, null);
-  (Object.keys(allSeriesData) as VariableKey[]).forEach(k => delete allSeriesData[k]);
-  if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-  hidePlayerControls();
-  hideChartContainer();
-  _updateStationMarkersVisibility();
-}
+// Phase C: delegated to normalMode.clearNormalMode()
 
 // ---------------------------------------------------------------------------
 // Visibilidad de marcadores de estaciones
@@ -420,10 +385,10 @@ function _setMarkersVisible(markers: L.Marker[], targetMap: L.Map, visible: bool
  * - Mapa B: visibles cuando no hay animación activa en panel B.
  */
 function _updateStationMarkersVisibility(): void {
-  const showOnMap = !_currentOverlayA && Object.keys(municipalFloodOverlays).length === 0;
+  const showOnMap = !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
   _setMarkersVisible(stationMarkersMap, map, showOnMap);
-  if (mapB) {
-    _setMarkersVisible(stationMarkersMapB, mapB, !activeBOverlay);
+  if (mapState.getMapB()) {
+    _setMarkersVisible(stationMarkersMapB, mapState.getMapB()!, !mapState.getOverlayB());
   }
 }
 
@@ -434,6 +399,7 @@ function hidePlayerControls(): void {
   playerControlsDiv?.classList.add('hidden');
 }
 
+// Phase C: player controls delegate to normalMode
 function onPlayerFrameChange(current: number, total: number): void {
   if (playerSlider) {
     playerSlider.max   = String(total - 1);
@@ -446,152 +412,37 @@ function onPlayerFrameChange(current: number, total: number): void {
 
 function syncPlayPauseIcon(): void {
   if (!playerPlayIcon) return;
-  const active = syncPlayer ?? soloPlayer;
+  const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
   playerPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
 }
 
-/**
- * Crea un SyncPlayer cuando ambos paneles tienen GIF cargado.
- * Se llama al terminar de generar cualquiera de los dos paneles.
- */
-function trySyncBothPanels(): void {
-  if (!gifPlayerA || !gifPlayerB || !activeBOverlay) return;
+// Phase D: trySyncBothPanels ahora vive en compareMode.ts
 
-  const overlayA = _currentOverlayA;
-  if (!overlayA) return;
-
-  // Detener el SoloPlayer que animaba cada panel por separado
-  stopSoloPlayer();
-  stopSyncPlayer();
-
-  syncPlayer = new SyncPlayer();
-  syncPlayer.frameIntervalMs = _selectedInterval();
-  syncPlayer.onFrameChange = (current, total) => {
-    onPlayerFrameChange(current, total);
-    syncPlayPauseIcon();
-  };
-  syncPlayer.start(gifPlayerA, overlayA, gifPlayerB, activeBOverlay);
-
-  if (playerSlider) {
-    playerSlider.max   = String(Math.max(gifPlayerA.frameCount, gifPlayerB.frameCount) - 1);
-    playerSlider.value = '0';
-  }
-  showPlayerControls();
-  syncPlayPauseIcon();
-}
-
-/** Referencia al overlay GifPlayer activo en map A (solo modo comparativa). */
-let _currentOverlayA: L.ImageOverlay | null = null;
+// Phase B: _currentOverlayA now managed via mapState.getOverlayA() / mapState.setOverlayA()
 
 // ---------------------------------------------------------------------------
 // Población de selectores de comparativa
 // ---------------------------------------------------------------------------
-
-/** Rellena un selector de años (mantiene solo el placeholder en pos 0). */
-function _populateYearSelect(sel: HTMLSelectElement | null, years: number[]): void {
-  if (!sel) return;
-  while (sel.options.length > 1) sel.remove(1);
-  for (const year of years) {
-    const opt       = document.createElement('option');
-    opt.value       = String(year);
-    opt.textContent = String(year);
-    sel.appendChild(opt);
-  }
-}
-
-/** Rellena las temporadas si todavía solo tiene el placeholder. */
-function _ensureSeasonOptions(sel: HTMLSelectElement | null): void {
-  if (!sel || sel.options.length > 1) return;
-  for (const s of SEASONS) {
-    const opt       = document.createElement('option');
-    opt.value       = s.value;
-    opt.textContent = s.label;
-    sel.appendChild(opt);
-  }
-}
-
-/** Inicializa los selectores de año/temporada de ambos paneles. */
-function _initCompareSelects(): void {
-  const varA = (compareVarASelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-  const varB = (compareVarBSelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-  _populateYearSelect(compareYearASelect, VARIABLE_YEARS[varA]);
-  _populateYearSelect(compareYearBSelect, VARIABLE_YEARS[varB]);
-  _ensureSeasonOptions(compareSeasonASelect);
-  _ensureSeasonOptions(compareSeasonBSelect);
-}
-
-/** Registra la lógica reactiva de los selectores de comparativa de un panel. */
-function _wireCompareSelectPair(
-  yearSel: HTMLSelectElement | null,
-  seasonSel: HTMLSelectElement | null,
-  btn: HTMLButtonElement | null,
-): void {
-  if (!yearSel || !seasonSel || !btn) return;
-
-  const sync = (): void => { btn.disabled = !yearSel.value || !seasonSel.value; };
-
-  yearSel.addEventListener('change', () => {
-    const hasYear       = Boolean(yearSel.value);
-    seasonSel.disabled  = !hasYear;
-    if (!hasYear) seasonSel.value = '';
-    sync();
-  });
-  seasonSel.addEventListener('change', sync);
-}
-
-_wireCompareSelectPair(compareYearASelect, compareSeasonASelect, btnGenerateA);
-_wireCompareSelectPair(compareYearBSelect, compareSeasonBSelect, btnGenerateB);
-
-// Cuando cambia la variable en un panel, repoblar su selector de años
-compareVarASelect?.addEventListener('change', () => {
-  const v = (compareVarASelect.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-  _populateYearSelect(compareYearASelect, VARIABLE_YEARS[v]);
-  if (compareYearASelect)   compareYearASelect.value   = '';
-  if (compareSeasonASelect) { compareSeasonASelect.value = ''; compareSeasonASelect.disabled = true; }
-  if (btnGenerateA)         btnGenerateA.disabled = true;
-});
-
-compareVarBSelect?.addEventListener('change', () => {
-  const v = (compareVarBSelect.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-  _populateYearSelect(compareYearBSelect, VARIABLE_YEARS[v]);
-  if (compareYearBSelect)   compareYearBSelect.value   = '';
-  if (compareSeasonBSelect) { compareSeasonBSelect.value = ''; compareSeasonBSelect.disabled = true; }
-  if (btnGenerateB)         btnGenerateB.disabled = true;
-});
+// Phase D: toda la lógica de selectores y listeners de comparativa ahora
+// vive en compareMode.ts y se registra vía compareMode.registerCompareModeListeners()
 
 // ---------------------------------------------------------------------------
 // Listener: toggle modo comparativa
 // ---------------------------------------------------------------------------
 
-function _deactivateFloodRiskMode(): void {
-  if (!floodRiskModeActive) return;
-  floodRiskModeActive = false;
-  document.body.classList.remove('flood-risk-mode-active');
-  toggleFloodRiskModeButton?.setAttribute('aria-pressed', 'false');
-  floodRiskModeHint?.classList.add('hidden');
-  // Eliminar todos los overlays de riesgo activos
-  for (const muni of Object.keys(municipalFloodOverlays)) {
-    const ov = municipalFloodOverlays[muni];
-    if (ov) map.removeLayer(ov);
-    delete municipalFloodOverlays[muni];
-  }
-  document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => { chk.checked = false; });
-  switchColorbar(map, null);
-}
-
 toggleCompareModeButton?.addEventListener('click', () => {
-  compareModeActive = !compareModeActive;
-  document.body.classList.toggle('compare-mode-active', compareModeActive);
-  toggleCompareModeButton.setAttribute('aria-pressed', String(compareModeActive));
+  const newState = !mapState.getCompareModeActive();
+  mapState.setCompareModeActive(newState);
+  document.body.classList.toggle('compare-mode-active', newState);
+  toggleCompareModeButton.setAttribute('aria-pressed', String(newState));
 
-  if (compareModeActive) {
+  if (newState) {
     // Desactivar flood risk mode si estaba activo
-    _deactivateFloodRiskMode();
+    floodRiskMode.exitFloodRiskMode();
 
     // Limpiar estado previo
-    _cleanupComparePanels();
-    (Object.keys(allSeriesData)  as VariableKey[]).forEach(k => delete allSeriesData[k]);
-    (Object.keys(allSeriesDataB) as VariableKey[]).forEach(k => delete allSeriesDataB[k]);
+    compareMode.cleanupComparePanels();
+    mapState.clearSeriesData();
     if (ndviChartDiv) Plotly.purge(ndviChartDiv);
     if (chartBDiv)    Plotly.purge(chartBDiv);
     hidePlayerControls();
@@ -602,18 +453,17 @@ toggleCompareModeButton?.addEventListener('click', () => {
     compareModeHint?.classList.remove('hidden');
 
     // Poblar selectores de año/temporada según la variable seleccionada en cada panel
-    _initCompareSelects();
+    compareMode.initCompareSelects();
 
-    initMapB();
+    compareMode.initMapB();
     setTimeout(() => {
       map.invalidateSize();
-      mapB?.invalidateSize();
+      mapState.getMapB()?.invalidateSize();
     }, 350);
   } else {
     // Limpiar y restaurar modo normal
-    _cleanupComparePanels();
-    (Object.keys(allSeriesData)  as VariableKey[]).forEach(k => delete allSeriesData[k]);
-    (Object.keys(allSeriesDataB) as VariableKey[]).forEach(k => delete allSeriesDataB[k]);
+    compareMode.cleanupComparePanels();
+    mapState.clearSeriesData();
     hidePlayerControls();
     hideChartBContainer();
     if (ndviChartDiv) Plotly.purge(ndviChartDiv);
@@ -621,11 +471,11 @@ toggleCompareModeButton?.addEventListener('click', () => {
     hideChartContainer();
 
     // Quitar colorbars de ambos mapas al salir de comparativa
-    switchColorbar(map, null, mapB ?? undefined);
+    switchColorbar(map, null, mapState.getMapB() ?? undefined);
 
     // Limpiar bounding box
     drawnItems.clearLayers();
-    currentBbox = null;
+    mapState.clearBbox();
 
     compareControlsA?.classList.add('hidden');
     compareModeHint?.classList.add('hidden');
@@ -635,56 +485,17 @@ toggleCompareModeButton?.addEventListener('click', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Listener: toggle modo riesgo de inundación
-// ---------------------------------------------------------------------------
-
-toggleFloodRiskModeButton?.addEventListener('click', () => {
-  floodRiskModeActive = !floodRiskModeActive;
-  document.body.classList.toggle('flood-risk-mode-active', floodRiskModeActive);
-  toggleFloodRiskModeButton.setAttribute('aria-pressed', String(floodRiskModeActive));
-
-  if (floodRiskModeActive) {
-    // Desactivar compare mode si estaba activo
-    if (compareModeActive) {
-      compareModeActive = false;
-      document.body.classList.remove('compare-mode-active');
-      toggleCompareModeButton?.setAttribute('aria-pressed', 'false');
-      _cleanupComparePanels();
-      (Object.keys(allSeriesData)  as VariableKey[]).forEach(k => delete allSeriesData[k]);
-      (Object.keys(allSeriesDataB) as VariableKey[]).forEach(k => delete allSeriesDataB[k]);
-      hidePlayerControls();
-      hideChartBContainer();
-      if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-      if (chartBDiv)    Plotly.purge(chartBDiv);
-      switchColorbar(map, null, mapB ?? undefined);
-      drawnItems.clearLayers();
-      currentBbox = null;
-      compareControlsA?.classList.add('hidden');
-      compareModeHint?.classList.add('hidden');
-      setTimeout(() => map.invalidateSize(), 350);
-    }
-
-    // Limpiar animación normal si existe
-    _clearNormalMode();
-
-    floodRiskModeHint?.classList.remove('hidden');
-  } else {
-    _deactivateFloodRiskMode();
-  }
-});
-
-// ---------------------------------------------------------------------------
 // Listener: limpiar modo normal
 // ---------------------------------------------------------------------------
 
-btnClearNormal?.addEventListener('click', () => { _clearNormalMode(); });
+btnClearNormal?.addEventListener('click', () => { normalMode.clearNormalMode(); });
 
 // ---------------------------------------------------------------------------
 // Listener: play/pause
 // ---------------------------------------------------------------------------
 
 playerPlayPauseBtn?.addEventListener('click', () => {
-  const active = syncPlayer ?? soloPlayer;
+  const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
   if (!active) return;
   if (active.isPlaying) {
     active.pause();
@@ -697,130 +508,44 @@ playerPlayPauseBtn?.addEventListener('click', () => {
 playerSlider?.addEventListener('input', () => {
   if (!playerSlider) return;
   const frame = Number(playerSlider.value);
-  syncPlayer?.goToFrame(frame);
-  soloPlayer?.goToFrame(frame);
+  mapState.getSyncPlayer()?.goToFrame(frame);
+  mapState.getSoloPlayer()?.goToFrame(frame);
 });
 
 playerSpeedSelect?.addEventListener('change', () => {
   const ms = _selectedInterval();
-  if (syncPlayer) syncPlayer.frameIntervalMs = ms;
-  if (soloPlayer) soloPlayer.frameIntervalMs = ms;
+  const syncP = mapState.getSyncPlayer();
+  const soloP = mapState.getSoloPlayer();
+  if (syncP) syncP.frameIntervalMs = ms;
+  if (soloP) soloP.frameIntervalMs = ms;
 });
 
 // ---------------------------------------------------------------------------
 // SSE + petición GIF + serie temporal — modo NORMAL (panel A)
 // ---------------------------------------------------------------------------
+// Phase C: delegated to normalMode.requestGifAndSeries
 
-async function requestGifAndSeries(
+/**
+ * Wrapper que delega requestGifAndSeries a normalMode.
+ * La firma void es requerida por registerVariableListener.
+ */
+function requestGifAndSeries(
   variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
   start: string,
   end: string,
   bbox: BBox,
-): Promise<void> {
-  currentVariable = variable;
-
-  const bboxJson = JSON.stringify(bbox);
-  const taskId   = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
-  const gifUrl = `${GIF_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
-    + `&end=${encodeURIComponent(end)}`
-    + `&bbox=${encodeURIComponent(bboxJson)}`
-    + `&task_id=${encodeURIComponent(taskId)}`;
-
-  const tsUrl = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
-    + `&end=${encodeURIComponent(end)}`
-    + `&bbox=${encodeURIComponent(bboxJson)}`;
-
-  createProgressIndicator();
-
-  const eventSource = new EventSource(`/api/gif-progress/${taskId}`);
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data) as { progress?: number; message?: string };
-      if (typeof data.progress !== 'number') return;
-      updateProgressIndicator(data.progress, data.message ?? '');
-      if (data.progress === 100 || data.progress === -1) {
-        eventSource.close();
-        if (data.progress === 100) removeProgressIndicator(1000);
-        else removeProgressIndicator(3000);
-      }
-    } catch { /* ignore */ }
-  };
-  eventSource.onerror = () => eventSource.close();
-
-  try {
-    const [gifResp, tsResp] = await Promise.all([fetch(gifUrl), fetch(tsUrl)]);
-
-    const gifData = await gifResp.json() as GifResponse & { error?: string };
-    const tsData  = await tsResp.json()  as TimeseriesResponse & { error?: string };
-
-    if (!gifResp.ok) {
-      alert(gifData.error ?? 'Error generando animación.');
-      return;
-    }
-
-    const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
-    const overlayBounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
-
-    // Limpiar player anterior antes de crear el nuevo
-    stopSoloPlayer();
-    gifPlayerA?.dispose();
-    gifPlayerA = null;
-    _currentOverlayA = null;
-    removeActiveOverlay(map);
-
-    const player  = new GifPlayer();
-    await player.load(gifData.gifUrl);
-
-    const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(map);
-    setActiveOverlay(overlay);
-    switchColorbar(map, variable);
-    map.fitBounds(overlayBounds);
-
-    gifPlayerA       = player;
-    _currentOverlayA = overlay;
-    _updateStationMarkersVisibility();
-
-    soloPlayer = new SoloPlayer();
-    soloPlayer.frameIntervalMs = _selectedInterval();
-    soloPlayer.onFrameChange = (current, total) => {
-      onPlayerFrameChange(current, total);
-      syncPlayPauseIcon();
-    };
-    soloPlayer.start(player, overlay);
-
-    if (playerSlider) {
-      playerSlider.max   = String(player.frameCount - 1);
-      playerSlider.value = '0';
-    }
-    showPlayerControls();
-    syncPlayPauseIcon();
-
-    if (tsResp.ok) {
-      const dataKey = VARIABLE_DATA_KEY[variable] as keyof TimeseriesResponse;
-      const values  = tsData[dataKey] as number[] | undefined;
-      if (tsData.dates && values) {
-        allSeriesData[variable] = { dates: tsData.dates, values };
-        renderChart();
-      }
-    } else {
-      console.warn('Error en serie temporal:', tsData.error);
-    }
-
-  } catch (err) {
-    console.error(err);
-    alert('Error de red al generar animación / serie temporal.');
-    updateProgressIndicator(-1, 'Error de red');
-    removeProgressIndicator(3000);
-  } finally {
-    eventSource.close();
-  }
+): void {
+  void normalMode.requestGifAndSeries(variable, start, end, bbox);
 }
 
 // ---------------------------------------------------------------------------
 // Petición GIF + serie temporal — modo COMPARATIVA (panel A o B)
 // ---------------------------------------------------------------------------
+// Phase D: delegated to compareMode.requestGifAndSeriesForPanel
 
+/**
+ * Wrapper que delega requestGifAndSeriesForPanel a compareMode.
+ */
 async function requestGifAndSeriesForPanel(
   panel: 'A' | 'B',
   variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
@@ -828,250 +553,35 @@ async function requestGifAndSeriesForPanel(
   end: string,
   bbox: BBox,
 ): Promise<void> {
-  currentVariable = variable;
-
-  const bboxJson = JSON.stringify(bbox);
-  const taskId   = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
-  const gifUrl = `${GIF_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
-    + `&end=${encodeURIComponent(end)}`
-    + `&bbox=${encodeURIComponent(bboxJson)}`
-    + `&task_id=${encodeURIComponent(taskId)}`;
-
-  const tsUrl = `${TS_ENDPOINT[variable]}?start=${encodeURIComponent(start)}`
-    + `&end=${encodeURIComponent(end)}`
-    + `&bbox=${encodeURIComponent(bboxJson)}`;
-
-  createProgressIndicator();
-
-  const eventSource = new EventSource(`/api/gif-progress/${taskId}`);
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data) as { progress?: number; message?: string };
-      if (typeof data.progress !== 'number') return;
-      updateProgressIndicator(data.progress, data.message ?? '');
-      if (data.progress === 100 || data.progress === -1) {
-        eventSource.close();
-        if (data.progress === 100) removeProgressIndicator(1000);
-        else removeProgressIndicator(3000);
-      }
-    } catch { /* ignore */ }
-  };
-  eventSource.onerror = () => eventSource.close();
-
-  try {
-    const [gifResp, tsResp] = await Promise.all([fetch(gifUrl), fetch(tsUrl)]);
-
-    const gifData = await gifResp.json() as GifResponse & { error?: string };
-    const tsData  = await tsResp.json()  as TimeseriesResponse & { error?: string };
-
-    if (!gifResp.ok) {
-      alert(gifData.error ?? `Error generando animación (panel ${panel}).`);
-      return;
-    }
-
-    const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
-    const overlayBounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
-
-    // Parar toda reproducción antes de modificar cualquier panel
-    stopSoloPlayer();
-    stopSyncPlayer();
-    hidePlayerControls();
-
-    if (panel === 'A') {
-      // Liberar recursos anteriores del panel A
-      gifPlayerA?.dispose();
-      gifPlayerA = null;
-      _currentOverlayA = null;
-      removeActiveOverlay(map);
-
-      const player  = new GifPlayer();
-      await player.load(gifData.gifUrl);
-
-      const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(map);
-      setActiveOverlay(overlay);
-      // En compare mode la colorbar va al panel derecho (mapB)
-      if (mapB) switchColorbar(mapB, variable, map);
-      map.fitBounds(overlayBounds);
-
-      gifPlayerA       = player;
-      _currentOverlayA = overlay;
-      _updateStationMarkersVisibility();
-
-      // Animar panel A de forma independiente hasta que llegue el panel B
-      soloPlayer = new SoloPlayer();
-      soloPlayer.frameIntervalMs = _selectedInterval();
-      soloPlayer.onFrameChange = (current, total) => {
-        onPlayerFrameChange(current, total);
-        syncPlayPauseIcon();
-      };
-      soloPlayer.start(player, overlay);
-
-      if (playerSlider) {
-        playerSlider.max   = String(player.frameCount - 1);
-        playerSlider.value = '0';
-      }
-      showPlayerControls();
-      syncPlayPauseIcon();
-
-      if (tsResp.ok) {
-        const dataKey = VARIABLE_DATA_KEY[variable] as keyof TimeseriesResponse;
-        const values  = tsData[dataKey] as number[] | undefined;
-        if (tsData.dates && values) {
-          allSeriesData[variable] = { dates: tsData.dates, values };
-          renderChart();
-        }
-      } else {
-        console.warn('Error en serie temporal panel A:', tsData.error);
-      }
-
-    } else {
-      // Panel B
-      gifPlayerB?.dispose();
-      gifPlayerB = null;
-      clearMapBOverlay();
-
-      const player  = new GifPlayer();
-      await player.load(gifData.gifUrl);
-
-      const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(mapB!);
-      activeBOverlay = overlay;
-      _updateStationMarkersVisibility();
-      // La colorbar siempre en el panel derecho (mapB) en compare mode
-      switchColorbar(mapB!, variable, map);
-      mapB?.fitBounds(overlayBounds);
-      setTimeout(() => mapB?.setView(map.getCenter(), map.getZoom(), { animate: false }), 100);
-
-      gifPlayerB = player;
-
-      if (tsResp.ok) {
-        const dataKeyB = VARIABLE_DATA_KEY[variable] as keyof TimeseriesResponse;
-        const valuesB  = tsData[dataKeyB] as number[] | undefined;
-        if (tsData.dates && valuesB) {
-          allSeriesDataB[variable] = { dates: tsData.dates, values: valuesB };
-          renderChartB();
-        }
-      } else {
-        console.warn('Error en serie temporal panel B:', tsData.error);
-      }
-    }
-
-    // Si ambos paneles tienen GIF → sincronizar
-    trySyncBothPanels();
-
-  } catch (err) {
-    console.error(err);
-    alert(`Error de red al generar animación / serie temporal (panel ${panel}).`);
-    updateProgressIndicator(-1, 'Error de red');
-    removeProgressIndicator(3000);
-  } finally {
-    eventSource.close();
-  }
+  await compareMode.requestGifAndSeriesForPanel(panel, variable, start, end, bbox);
 }
-
-// ---------------------------------------------------------------------------
-// Listeners: "Generar panel A" y "Generar panel B" (modo comparativa)
-// ---------------------------------------------------------------------------
-
-btnGenerateA?.addEventListener('click', () => {
-  const variable = (compareVarASelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-  const year     = Number(compareYearASelect?.value);
-  const season   = compareSeasonASelect?.value as Season | undefined;
-  const bbox     = currentBbox;
-
-  if (!year || !season) { alert('Selecciona año y temporada para el panel A.'); return; }
-  if (!bbox)            { alert('Dibuja primero un rectángulo en el mapa.');      return; }
-
-  const { start, end } = seasonToDates(year, season);
-  void requestGifAndSeriesForPanel('A', variable, start, end, bbox);
-});
-
-btnGenerateB?.addEventListener('click', () => {
-  const variable = (compareVarBSelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-  const year     = Number(compareYearBSelect?.value);
-  const season   = compareSeasonBSelect?.value as Season | undefined;
-  const bbox     = currentBbox;
-
-  if (!year || !season) { alert('Selecciona año y temporada para el panel B.'); return; }
-  if (!bbox)            { alert('Dibuja primero un rectángulo en el mapa.');      return; }
-
-  const { start, end } = seasonToDates(year, season);
-  void requestGifAndSeriesForPanel('B', variable, start, end, bbox);
-});
-
-btnClearA?.addEventListener('click', () => { _clearPanelA(); });
-btnClearB?.addEventListener('click', () => { _clearPanelB(); });
 
 // ---------------------------------------------------------------------------
 // Riesgo de inundación por municipio
 // ---------------------------------------------------------------------------
+// Phase E: delegated to floodRiskMode.toggleMunicipalFloodRisk
 
-async function toggleMunicipalFloodRisk(muni: string, checked: boolean): Promise<void> {
-  if (!checked) {
-    const existing = municipalFloodOverlays[muni];
-    if (existing) {
-      map.removeLayer(existing);
-      delete municipalFloodOverlays[muni];
-    }
-    // Ocultar colorbar si ya no hay ninguna capa de riesgo activa
-    if (Object.keys(municipalFloodOverlays).length === 0) {
-      switchColorbar(map, null);
-    }
-    _updateStationMarkersVisibility();
-    return;
-  }
-
-  if (municipalFloodOverlays[muni]) {
-    municipalFloodOverlays[muni]?.addTo(map);
-    _updateStationMarkersVisibility();
-    return;
-  }
-
-  try {
-    const resp = await fetch(`/api/flood-risk-municipio?muni=${encodeURIComponent(muni)}`);
-    const data = await resp.json() as FloodRiskResponse & { error?: string };
-
-    if (!resp.ok) {
-      alert(data.error ?? 'Error generando mapa de riesgo por municipio.');
-      return;
-    }
-
-    const [minLon, minLat, maxLon, maxLat] = data.bbox;
-    const bounds  = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
-    const overlay = L.imageOverlay(data.mapUrl, bounds, { opacity: 0.8 }).addTo(map);
-    municipalFloodOverlays[muni] = overlay;
-    switchColorbar(map, 'flood');
-    _updateStationMarkersVisibility();
-  } catch (err) {
-    console.error(err);
-    alert('Error de red al generar mapa de riesgo por municipio.');
-  }
+function toggleMunicipalFloodRisk(muni: string, checked: boolean): Promise<void> {
+  return floodRiskMode.toggleMunicipalFloodRisk(muni, checked);
 }
 
 // ---------------------------------------------------------------------------
 // Estaciones locales
 // ---------------------------------------------------------------------------
 
+// Phase A: usa fetchLocalStationLevel de apiClient.ts.
+
 async function requestLocalStationLevel(
   stationId: 'SPTTB' | 'BDCTB',
   start: string,
   end: string,
 ): Promise<void> {
-  const url = `/api/local-station-level-range?station=${encodeURIComponent(stationId)}`
-    + `&start=${encodeURIComponent(start)}`
-    + `&end=${encodeURIComponent(end)}`;
-
   try {
-    const resp = await fetch(url);
-    const data = await resp.json() as StationResponse & { error?: string };
-
-    if (!resp.ok) {
-      alert(data.error ?? 'Error cargando serie de nivel de estación local.');
-      return;
-    }
+    // Phase A: usa fetchLocalStationLevel de apiClient.ts
+    const data = await fetchLocalStationLevel({ stationId, start, end });
 
     const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
-    allSeriesData[key] = { dates: data.dates, values: data.level_m };
+    mapState.setSeriesDataForVariable('A', key, { dates: data.dates, values: data.level_m });
     renderChart();
   } catch (err) {
     console.error(err);
@@ -1116,7 +626,7 @@ const btnLocalBdLevel = document.getElementById('btnLocalBdLevel') as HTMLButton
 // Registro de listeners usando la factory
 // ---------------------------------------------------------------------------
 
-const getBbox = () => currentBbox;
+const getBbox = () => mapState.getBbox();
 
 const variableConfigs: Parameters<typeof registerVariableListener>[0][] = [
   { variable: 'ndvi',   yearSelect: ndviYearSelect,   seasonSelect: ndviSeasonSelect,   button: generateGifButton,        getBbox, onRequest: requestGifAndSeries },
@@ -1178,96 +688,9 @@ _wireLocalStation(spYearSelect, spSeasonSelect, btnLocalSpLevel, 'SPTTB', 'local
 _wireLocalStation(bdYearSelect, bdSeasonSelect, btnLocalBdLevel, 'BDCTB', 'local_bd');
 
 // ---------------------------------------------------------------------------
-// Checkboxes de estaciones en modo comparativa
-// ---------------------------------------------------------------------------
-
-const chkStationSpA = document.getElementById('chkStationSpA') as HTMLInputElement | null;
-const chkStationBdA = document.getElementById('chkStationBdA') as HTMLInputElement | null;
-const chkStationSpB = document.getElementById('chkStationSpB') as HTMLInputElement | null;
-const chkStationBdB = document.getElementById('chkStationBdB') as HTMLInputElement | null;
-
-async function _loadCompareStation(
-  stationId: 'SPTTB' | 'BDCTB',
-  panel: 'A' | 'B',
-  year: string,
-  season: string,
-): Promise<void> {
-  const { start, end } = seasonToDates(Number(year), season as Season);
-  const url = `/api/local-station-level-range?station=${encodeURIComponent(stationId)}`
-    + `&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
-
-  try {
-    const resp = await fetch(url);
-    const data = await resp.json() as StationResponse & { error?: string };
-
-    if (!resp.ok) {
-      alert(data.error ?? 'Error cargando serie de nivel de estación local.');
-      return;
-    }
-
-    const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
-    if (panel === 'A') {
-      allSeriesData[key] = { dates: data.dates, values: data.level_m };
-      renderChart();
-    } else {
-      allSeriesDataB[key] = { dates: data.dates, values: data.level_m };
-      renderChartB();
-    }
-  } catch (err) {
-    console.error(err);
-    alert('Error de red al cargar serie de estación local.');
-  }
-}
-
-function _wireCompareStationCheck(
-  chk: HTMLInputElement | null,
-  stationId: 'SPTTB' | 'BDCTB',
-  panel: 'A' | 'B',
-  yearSel: HTMLSelectElement | null,
-  seasonSel: HTMLSelectElement | null,
-): void {
-  if (!chk) return;
-
-  chk.addEventListener('change', () => {
-    const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
-
-    if (chk.checked) {
-      const year   = yearSel?.value   ?? '';
-      const season = seasonSel?.value ?? '';
-      if (!year || !season) {
-        alert('Selecciona año y temporada del panel antes de cargar la estación.');
-        chk.checked = false;
-        return;
-      }
-      void _loadCompareStation(stationId, panel, year, season);
-    } else {
-      if (panel === 'A') {
-        delete allSeriesData[key];
-        renderChart();
-      } else {
-        delete allSeriesDataB[key];
-        renderChartB();
-      }
-    }
-  });
-}
-
-_wireCompareStationCheck(chkStationSpA, 'SPTTB', 'A', compareYearASelect, compareSeasonASelect);
-_wireCompareStationCheck(chkStationBdA, 'BDCTB', 'A', compareYearASelect, compareSeasonASelect);
-_wireCompareStationCheck(chkStationSpB, 'SPTTB', 'B', compareYearBSelect, compareSeasonBSelect);
-_wireCompareStationCheck(chkStationBdB, 'BDCTB', 'B', compareYearBSelect, compareSeasonBSelect);
-
-// ---------------------------------------------------------------------------
 // Listeners de municipios (riesgo de inundación)
 // ---------------------------------------------------------------------------
-
-document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => {
-  chk.addEventListener('change', () => {
-    const muni = chk.dataset['muni'];
-    if (!muni) return;
-    void toggleMunicipalFloodRisk(muni, chk.checked);
-  });
-});
+// Phase E: delegated to floodRiskMode.registerFloodRiskModeListeners()
 
 // ---------------------------------------------------------------------------
 // Actualizar currentVariable al abrir un details de variable
@@ -1283,10 +706,10 @@ const variableDetailsMap: Record<string, Exclude<VariableKey, 'local_sp' | 'loca
 
 document.querySelectorAll<HTMLDetailsElement>('details[id]').forEach(details => {
   details.addEventListener('toggle', () => {
-    if (!details.open || compareModeActive) return;
+    if (!details.open || mapState.getCompareModeActive()) return;
     const v = variableDetailsMap[details.id];
     if (!v) return;
-    currentVariable = v;
+    mapState.setCurrentVariable(v);
   });
 });
 
@@ -1324,7 +747,7 @@ if (collapseButton && restoreButton) {
     if (restoreSr)  restoreSr.textContent  = label;
     setTimeout(() => {
       map.invalidateSize();
-      mapB?.invalidateSize();
+      mapState.getMapB()?.invalidateSize();
     }, 350);
   };
 
