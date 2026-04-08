@@ -33,7 +33,7 @@ import {
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
 import * as normalMode from './normalMode.js';
-import L from 'leaflet';
+import * as L from 'leaflet';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
 
 // ---------------------------------------------------------------------------

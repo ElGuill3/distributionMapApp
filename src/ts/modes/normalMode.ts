@@ -31,7 +31,7 @@ import {
 } from '../ui/progress.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SoloPlayer } from '../ui/gifPlayer.js';
-import L from 'leaflet';
+import * as L from 'leaflet';
 
 // ---------------------------------------------------------------------------
 // Tipos exportados

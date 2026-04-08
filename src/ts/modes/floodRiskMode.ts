@@ -18,7 +18,7 @@ import {
   switchColorbar,
   municipalFloodOverlays,
 } from '../map/overlays.js';
-import L from 'leaflet';
+import * as L from 'leaflet';
 
 // ---------------------------------------------------------------------------
 // Referencias inyectadas desde main.ts
