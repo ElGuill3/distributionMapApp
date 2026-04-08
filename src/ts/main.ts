@@ -330,26 +330,28 @@ floodRiskMode.initFloodRiskMode({
 // Phase E: registrar listeners de modo riesgo
 floodRiskMode.registerFloodRiskModeListeners(
   () => {
-    // Entrar al modo riesgo: coordinación de desactivación de compare mode
-    if (mapState.getCompareModeActive()) {
-      mapState.setCompareModeActive(false);
-      document.body.classList.remove('compare-mode-active');
-      toggleCompareModeButton?.setAttribute('aria-pressed', 'false');
-      compareMode.cleanupComparePanels();
-      mapState.clearSeriesData();
-      hidePlayerControls();
-      hideChartBContainer();
-      if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-      if (chartBDiv) Plotly.purge(chartBDiv);
-      switchColorbar(map, null, mapState.getMapB() ?? undefined);
-      drawnItems.clearLayers();
-      mapState.clearBbox();
-      compareControlsA?.classList.add('hidden');
-      compareModeHint?.classList.add('hidden');
-      setTimeout(() => map.invalidateSize(), 350);
-    }
-    normalMode.clearNormalMode();
-    floodRiskModeHint?.classList.remove('hidden');
+    // Entrar al modo riesgo — delegar completamente a enterFloodRiskMode
+    // que maneja la coordinación de desactivación de compare mode internamente
+    floodRiskMode.enterFloodRiskMode(() => {
+      if (mapState.getCompareModeActive()) {
+        mapState.setCompareModeActive(false);
+        document.body.classList.remove('compare-mode-active');
+        toggleCompareModeButton?.setAttribute('aria-pressed', 'false');
+        compareMode.cleanupComparePanels();
+        mapState.clearSeriesData();
+        hidePlayerControls();
+        hideChartBContainer();
+        if (ndviChartDiv) Plotly.purge(ndviChartDiv);
+        if (chartBDiv) Plotly.purge(chartBDiv);
+        switchColorbar(map, null, mapState.getMapB() ?? undefined);
+        drawnItems.clearLayers();
+        mapState.clearBbox();
+        compareControlsA?.classList.add('hidden');
+        compareModeHint?.classList.add('hidden');
+        setTimeout(() => map.invalidateSize(), 350);
+      }
+      normalMode.clearNormalMode();
+    });
   },
   () => {
     // Salir del modo riesgo
