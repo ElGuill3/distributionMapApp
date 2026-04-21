@@ -141,9 +141,14 @@ src/ts/
 | Python | 3.11 |
 | Node.js | 18 |
 | npm | 9 |
+| Conda / micromamba | Opcional — para crear entorno con `conda create` |
+
+**Gestores de paquetes Python ( elegí uno):**
+- `venv` — incluido con Python, no requiere instalación extra
+- `conda` / `micromamba` — útil si ya usás Anaconda/Miniconda
 
 **Cuenta de Google Earth Engine:**
-- Necesitas una cuenta GEE aprobada y un proyecto de Google Cloud con la API de Earth Engine habilitada.
+- Necesitás una cuenta GEE aprobada y un proyecto de Google Cloud con la API de Earth Engine habilitada.
 - Más información: [earthengine.google.com](https://earthengine.google.com/)
 
 **Dependencias Python** (ver `requirements.txt`):
@@ -158,11 +163,14 @@ matplotlib
 Pillow
 requests
 pytest
+pydantic>=2.0
 ```
 
 **Dependencias Node** (ver `package.json`):
 
 ```
+vitest           # tests unitarios e integración (TypeScript)
+playwright       # tests E2E en navegador
 typescript
 @types/leaflet
 ```
@@ -178,63 +186,134 @@ git clone <https://github.com/ElGuill3/distributionMapApp.git>
 cd distributionMapApp
 ```
 
-### 2. Crear el entorno virtual Python e instalar dependencias
+---
+
+### 2. Crear el entorno virtual Python
+
+Tenés **dos opciones**: `venv` (viene con Python) o `conda`/`micromamba`. Elegí la que tengas disponible.
+
+#### Opción A — `venv` (cualquier sistema, sin instalar nada extra)
 
 ```bash
+# Crear entorno
 python -m venv venv
-source venv/bin/activate        # Linux / macOS
-# venv\Scripts\activate         # Windows
 
+# Activarlo
+# Linux / macOS:
+source venv/bin/activate
+# Windows (PowerShell):
+.\venv\Scripts\Activate
+# Windows (CMD):
+venv\Scripts\activate.bat
+```
+
+#### Opción B — `conda` / `micromamba`
+
+```bash
+# Crear entorno con Python 3.11
+conda create -n distributionMapApp python=3.11 -y
+conda activate distributionMapApp
+
+# Con micromamba (más rápido):
+micromamba create -n distributionMapApp python=3.11 -c conda-forge
+micromamba activate distributionMapApp
+```
+
+---
+
+### 3. Instalar dependencias Python
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. Autenticar Google Earth Engine
+> **En Windows**, si `rasterio` da error al instalar, probá:
+> ```bash
+> pip install rasterio --find-links https://pypi.win.wtf/geos-3.10.2-cp311-cp311-win_amd64.html
+> ```
+> O usá `conda-forge`:
+> ```bash
+> conda install rasterio -c conda-forge
+> ```
+
+---
+
+### 4. Autenticar Google Earth Engine
 
 ```bash
 earthengine authenticate
 ```
 
-Sigue las instrucciones en pantalla para autorizar la cuenta. Tras autenticarte, edita `config.py` y ajusta el nombre de tu proyecto GEE:
+Seguí las instrucciones en pantalla. Tras autenticarte, verificá que funcione:
+
+```bash
+python -c "import ee; ee.Initialize(); print('GEE OK')"
+```
+
+Editá `config.py` y configurá el nombre de tu proyecto de Google Cloud:
 
 ```python
 # config.py
 GEE_PROJECT = "tu-proyecto-de-google-cloud"
 ```
 
-### 4. Instalar dependencias de Node y compilar el TypeScript
+> **¿No tenés proyecto GEE?** Ve a [console.cloud.google.com](https://console.cloud.google.com), creá un proyecto, habilitá la API *Earth Engine* y anotá el ID del proyecto.
+
+---
+
+### 5. Datos de estaciones locales
+
+Los archivos `SPTTB.csv` y `BDCTB.csv` deben estar en la raíz del proyecto. El formato esperado:
+
+```
+<línea 1–6: metadatos (se omiten automáticamente)>
+Fecha,Nivel(m),...
+YYYY-MM-DD,valor,...
+```
+
+Si necesitás agregar nuevas estaciones, registralas en `config.py` bajo `LOCAL_STATIONS`.
+
+---
+
+### 6. Verificar datos de riesgo de inundación
+
+Los GeoTIFFs del índice FHI deben estar en `data/mapa_riesgo/municipios/` con el nombre `fhi_<municipio>_100m.tif`. El repositorio ya incluye los 16 municipios de Tabasco.
+
+---
+
+### 7. Instalar dependencias de Node y compilar TypeScript
 
 ```bash
 npm install
 npm run build:ts
 ```
 
-> Para desarrollo con recompilación automática al guardar cambios:
-> ```bash
-> npm run watch:ts
-> ```
+Para desarrollo con recompilación automática al guardar:
 
-### 5. Datos de estaciones locales
-
-Los archivos CSV de las estaciones deben estar en la raíz del proyecto con los nombres `SPTTB.csv` y `BDCTB.csv`. El formato esperado es:
-
-```
-<línea 1: metadatos>
-<línea 2: metadatos>
-<línea 3: metadatos>
-<línea 4: metadatos>
-<línea 5: metadatos>
-<línea 6: metadatos>
-Fecha,Nivel(m),...
-YYYY-MM-DD,valor,...
+```bash
+npm run watch:ts
 ```
 
-Las primeras 6 líneas son de encabezado y se omiten automáticamente. Las columnas mínimas requeridas son `Fecha` y `Nivel(m)`.
+---
 
-Para añadir nuevas estaciones, regístralas en `config.py` bajo el diccionario `LOCAL_STATIONS`.
+### 8. Ejecutar tests (opcional pero recomendado)
 
-### 6. Verificar los datos de riesgo de inundación
+```bash
+# Tests unitarios y de integración (Vitest)
+npm test
 
-Los GeoTIFFs del índice FHI deben estar en `data/mapa_riesgo/municipios/` con el nombre `fhi_<municipio>_100m.tif`. El repositorio ya incluye los 16 municipios de Tabasco.
+# Tests de unidad con modo watch
+npm run test:watch
+
+# Tests E2E (requiere navegador Chromium)
+# Primero iniciá el servidor de archivos estáticos en otra terminal:
+python -m http.server 8080
+# Luego ejecutá los tests:
+BASE_URL=http://localhost:8080 npm run test:e2e
+
+# Tests E2E con interfaz visual
+BASE_URL=http://localhost:8080 npm run test:e2e:ui
+```
 
 ---
 
@@ -408,19 +487,29 @@ En modo desarrollo con recompilación automática:
 npm run watch:ts
 ```
 
-### Ejecutar tests (pytest)
+### Stack de testing
 
-Los tests de unidad viven en `tests/` (por ejemplo `tests/test_utils.py` para utilidades de `gee/utils.py`). No requieren conexión a Google Earth Engine para las pruebas de funciones puras.
+La aplicación cuenta con un stack de testing bipartito:
 
+**Vitest** — tests unitarios y de integración en TypeScript:
 ```bash
-python -m pytest tests/ -v
+npm test              # todos los tests
+npm run test:watch   # modo watch (reacciona a cambios)
 ```
 
-Si `pytest` está en el PATH del entorno virtual:
-
+**Playwright** — tests E2E en navegador real:
 ```bash
-pytest tests/ -v
+# Iniciá el servidor de archivos en otra terminal:
+python -m http.server 8080
+
+# Ejecutá los tests:
+BASE_URL=http://localhost:8080 npm run test:e2e
+
+# O con interfaz visual (para debug):
+BASE_URL=http://localhost:8080 npm run test:e2e:ui
 ```
+
+Los tests E2E verifican que ningún flujo de usuario dispara `window.alert` sin reemplazarlo por feedback accesible.
 
 ### Límites de la API de Google Earth Engine
 

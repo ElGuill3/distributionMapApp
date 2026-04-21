@@ -88,3 +88,126 @@ export function removeProgressIndicator(delayMs = 0): void {
     document.getElementById(INDICATOR_ID)?.remove();
   }
 }
+
+// ---------------------------------------------------------------------------
+// Error modal
+// ---------------------------------------------------------------------------
+
+const ERROR_MODAL_ID = 'error-modal';
+
+/**
+ * Muestra un modal de error blocking con título, mensaje y acción opcional.
+ *
+ * Reutiliza la estructura DOM del loading-indicator existente, reconfigurándolo
+ * en modo error (barra roja, título+ mensaje, botón de retry opcional).
+ * El modal tiene role="alertdialog" para accessibility.
+ *
+ * @param title        - Título del error (se muestra en negrita).
+ * @param message      - Descripción detallada del error.
+ * @param retryAction  - Callback opcional para el botón "Reintentar".
+ */
+export function showErrorModal(
+  title: string,
+  message: string,
+  retryAction?: () => void,
+): void {
+  // Eliminar cualquier modal de error previo
+  closeErrorModal();
+
+  const div = document.createElement('div');
+  div.id = ERROR_MODAL_ID;
+  div.setAttribute('role', 'alertdialog');
+  div.setAttribute('aria-modal', 'true');
+  div.setAttribute('aria-labelledby', 'error-modal-title');
+  div.setAttribute('tabindex', '-1');
+
+  const retryButton =
+    retryAction !== undefined
+      ? `<button id="error-modal-retry"
+                     style="margin-top: 16px; padding: 8px 20px;
+                            background: #f44336; color: white;
+                            border: none; border-radius: 6px;
+                            cursor: pointer; font-size: 14px;">
+                     Reintentar
+                 </button>`
+      : '';
+
+  div.innerHTML = `
+    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                background: rgba(0,0,0,0.92); color: white; padding: 30px;
+                border-radius: 12px; z-index: 10001; min-width: 420px; max-width: 560px;
+                box-shadow: 0 4px 24px rgba(0,0,0,0.6);">
+      <div style="text-align: center;">
+        <div style="font-size: 22px; margin-bottom: 8px; font-weight: bold; color: #f44336;">
+          ⚠ <span id="error-modal-title">${escapeHtml(title)}</span>
+        </div>
+        <div style="font-size: 14px; margin-bottom: 20px; color: #ddd; line-height: 1.5;">
+          ${escapeHtml(message)}
+        </div>
+        <div style="background: #333; border-radius: 10px; overflow: hidden;
+                    height: 8px; margin-bottom: 20px;">
+          <div style="background: linear-gradient(90deg, #f44336, #e53935);
+                     height: 100%; width: 100%;"></div>
+        </div>
+        ${retryButton}
+        <button id="error-modal-close"
+                style="margin-top: 12px; padding: 8px 20px;
+                       background: transparent; color: #aaa;
+                       border: 1px solid #555; border-radius: 6px;
+                       cursor: pointer; font-size: 14px;">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(div);
+
+  // Botón cerrar
+  document
+    .getElementById('error-modal-close')
+    ?.addEventListener('click', closeErrorModal);
+
+  // Botón retry
+  if (retryAction !== undefined) {
+    document
+      .getElementById('error-modal-retry')
+      ?.addEventListener('click', () => {
+        closeErrorModal();
+        retryAction();
+      });
+  }
+
+  // Escape cierra el modal
+  const escListener = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeErrorModal();
+      document.removeEventListener('keydown', escListener);
+    }
+  };
+  document.addEventListener('keydown', escListener);
+
+  // Focus inicial en el botón Cerrar para accessibility (keyboard users)
+  const closeBtn = document.getElementById('error-modal-close') as HTMLButtonElement | null;
+  closeBtn?.focus();
+}
+
+/**
+ * Cierra y elimina el modal de error del DOM, si existe.
+ */
+export function closeErrorModal(): void {
+  document.getElementById(ERROR_MODAL_ID)?.remove();
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Escapa caracteres HTML para prevenir XSS en contenido dinámico del modal. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}

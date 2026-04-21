@@ -10,7 +10,7 @@ Responsabilidades de este módulo:
 """
 
 import logging
-import sys
+import syshttps://drive.google.com/drive/folders/1SjvcEYTrEAnWFkJBZu-FGV9VgFgrqwJ4?usp=drive_link
 
 import ee
 from flask import Flask, render_template, send_from_directory

@@ -14,6 +14,7 @@
 
 import * as mapState from '../state/mapState.js';
 import { fetchFloodRisk } from '../apiClient.js';
+import { showErrorModal } from '../ui/progress.js';
 import {
   switchColorbar,
   municipalFloodOverlays,
@@ -155,7 +156,7 @@ export async function toggleMunicipalFloodRisk(
     if (_mapRef) switchColorbar(_mapRef, 'flood');
   } catch (err) {
     console.error(err);
-    alert('Error de red al generar mapa de riesgo por municipio.');
+    showErrorModal('Error de red', 'No se pudo generar el mapa de riesgo. Verificá tu conexión.');
   }
 }
 

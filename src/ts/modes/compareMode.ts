@@ -29,7 +29,10 @@ import {
   createProgressIndicator,
   updateProgressIndicator,
   removeProgressIndicator,
+  showErrorModal,
 } from '../ui/progress.js';
+import { showFieldError } from '../ui/fieldErrors.js';
+import { translateBackendError } from '../errorMap.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
 import * as normalMode from './normalMode.js';
@@ -425,28 +428,29 @@ export function registerCompareModeListeners(): void {
     if (_btnGenerateB)         _btnGenerateB.disabled = true;
   });
 
-  // Botones generar
+  // Panel A — botón generar
   _btnGenerateA?.addEventListener('click', () => {
     const variable = (_compareVarASelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
     const year     = Number(_compareYearASelect?.value);
     const season   = _compareSeasonASelect?.value as Season | undefined;
     const bbox     = mapState.getBbox();
 
-    if (!year || !season) { alert('Selecciona año y temporada para el panel A.'); return; }
-    if (!bbox)            { alert('Dibuja primero un rectángulo en el mapa.');      return; }
+    if (!year || !season) { showFieldError(_btnGenerateA!, 'Seleccioná año y temporada para el panel A.'); return; }
+    if (!bbox)            { showFieldError(_btnGenerateA!, 'Dibujá primero un rectángulo en el mapa.');      return; }
 
     const { start, end } = seasonToDates(year, season);
     void requestGifAndSeriesForPanel('A', variable, start, end, bbox);
   });
 
+  // Panel B — botón generar
   _btnGenerateB?.addEventListener('click', () => {
     const variable = (_compareVarBSelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
     const year     = Number(_compareYearBSelect?.value);
     const season   = _compareSeasonBSelect?.value as Season | undefined;
     const bbox     = mapState.getBbox();
 
-    if (!year || !season) { alert('Selecciona año y temporada para el panel B.'); return; }
-    if (!bbox)            { alert('Dibuja primero un rectángulo en el mapa.');      return; }
+    if (!year || !season) { showFieldError(_btnGenerateB!, 'Seleccioná año y temporada para el panel B.'); return; }
+    if (!bbox)            { showFieldError(_btnGenerateB!, 'Dibujá primero un rectángulo en el mapa.');      return; }
 
     const { start, end } = seasonToDates(year, season);
     void requestGifAndSeriesForPanel('B', variable, start, end, bbox);
@@ -532,7 +536,7 @@ async function _loadCompareStation(
     }
   } catch (err) {
     console.error(err);
-    alert('Error de red al cargar serie de estación local.');
+    showErrorModal('Error de red', 'No se pudo cargar la serie de la estación. Verificá tu conexión.');
   }
 }
 
@@ -552,7 +556,7 @@ function _wireCompareStationCheck(
       const year   = yearSel?.value   ?? '';
       const season = seasonSel?.value ?? '';
       if (!year || !season) {
-        alert('Selecciona año y temporada del panel antes de cargar la estación.');
+        showFieldError(chk, 'Seleccioná año y temporada del panel antes de cargar la estación.');
         chk.checked = false;
         return;
       }
@@ -638,7 +642,8 @@ export async function requestGifAndSeriesForPanel(
     const { gifData, tsData } = await fetchGifAndSeriesForPanel({ variable, start, end, bbox, taskId });
 
     if (gifData.error) {
-      alert(gifData.error ?? `Error generando animación (panel ${panel}).`);
+      const uxError = translateBackendError(gifData.error);
+      showErrorModal(uxError.title, uxError.message);
       return;
     }
 
@@ -732,7 +737,7 @@ export async function requestGifAndSeriesForPanel(
 
   } catch (err) {
     console.error(err);
-    alert(`Error de red al generar animación / serie temporal (panel ${panel}).`);
+    showErrorModal('Error de red', `No se pudo generar la animación / serie temporal (panel ${panel}). Verificá tu conexión.`);
     updateProgressIndicator(-1, 'Error de red');
     removeProgressIndicator(3000);
   } finally {
