@@ -7,6 +7,7 @@
 
 import type { VariableKey, BBox, Season } from '../types.js';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
+import { showFieldError } from '../ui/fieldErrors.js';
 
 // ---------------------------------------------------------------------------
 // Helpers de fecha
@@ -125,13 +126,13 @@ export function registerVariableListener(cfg: VariableListenerConfig): void {
     const season = seasonSelect.value as Season;
 
     if (!year || !season) {
-      alert('Selecciona año y temporada.');
+      showFieldError(button, 'Seleccioná año y temporada.');
       return;
     }
 
     const bbox = getBbox();
     if (!bbox) {
-      alert('Dibuja primero un rectángulo (bounding box) en el mapa.');
+      showFieldError(button, 'Dibujá un rectángulo en el mapa primero.');
       return;
     }
 

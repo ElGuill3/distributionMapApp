@@ -32,7 +32,10 @@ import {
   createProgressIndicator,
   updateProgressIndicator,
   removeProgressIndicator,
+  showErrorModal,
 } from './ui/progress.js';
+import { showFieldError, clearFieldError } from './ui/fieldErrors.js';
+import { translateBackendError } from './errorMap.js';
 import { plotAllSelectedSeries } from './ui/chart.js';
 import { registerVariableListener, seasonToDates } from './listeners/variableListeners.js';
 import { GifPlayer, SyncPlayer, SoloPlayer } from './ui/gifPlayer.js';
@@ -125,7 +128,10 @@ map.on(L.Draw.Event.CREATED, (e) => {
   const heightDeg = Math.abs(ne.lat - sw.lat);
 
   if (widthDeg > MAX_SPAN_DEG || heightDeg > MAX_SPAN_DEG) {
-    alert('El bounding box es demasiado grande (máx. ~8° por lado). Dibuja una región más pequeña.');
+    showErrorModal(
+      'Área demasiado grande',
+      'El bounding box es demasiado grande (máx. ~8° por lado). Intentá con un área menor.',
+    );
     return;
   }
 
@@ -531,13 +537,17 @@ playerSpeedSelect?.addEventListener('change', () => {
  * Wrapper que delega requestGifAndSeries a normalMode.
  * La firma void es requerida por registerVariableListener.
  */
-function requestGifAndSeries(
+async function requestGifAndSeries(
   variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
   start: string,
   end: string,
   bbox: BBox,
-): void {
-  void normalMode.requestGifAndSeries(variable, start, end, bbox);
+): Promise<void> {
+  const result = await normalMode.requestGifAndSeries(variable, start, end, bbox);
+  if (!result.success && result.error) {
+    const uxError = translateBackendError(result.error);
+    showErrorModal(uxError.title, uxError.message);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -587,7 +597,7 @@ async function requestLocalStationLevel(
     renderChart();
   } catch (err) {
     console.error(err);
-    alert('Error de red al cargar serie de estación local.');
+    showErrorModal('Error de red', 'No se pudo cargar la serie de la estación. Verificá tu conexión.');
   }
 }
 
@@ -680,7 +690,7 @@ function _wireLocalStation(
   btn.addEventListener('click', () => {
     const year   = Number(yearSel.value);
     const season = seasonSel.value as Season;
-    if (!year || !season) { alert('Selecciona año y temporada.'); return; }
+    if (!year || !season) { showFieldError(btn, 'Seleccioná año y temporada antes de continuar.'); return; }
     const { start, end } = seasonToDates(year, season);
     void requestLocalStationLevel(stationId, start, end);
   });
