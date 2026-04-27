@@ -3,7 +3,7 @@ Configuración centralizada de la aplicación distributionMapApp.
 Todas las constantes, rutas y parámetros de GEE viven aquí.
 
 Variables de entorno (todas con valores por defecto):
-  GEE_PROJECT            - Proyecto GEE (default: inundaciones-proyecto)
+  GEE_PROJECT            - ID del proyecto de Google Cloud (no el nombre visible; p. ej. inundaciones-app-494620)
   FLASK_DEBUG            - Modo debug de Flask (default: false)
   BASE_DIR_OVERRIDE      - Ruta base alternativa para despliegues (opcional)
   GIF_MAX_AGE_MINUTES    - Edad máxima de GIFs antes de limpieza (default: 60)
@@ -30,7 +30,7 @@ def _env_int(key: str, default: int) -> int:
 # Variables de entorno
 # ---------------------------------------------------------------------------
 DEBUG = _env_bool("FLASK_DEBUG", "false")
-GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-proyecto")
+GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-app-494620")
 
 # ---------------------------------------------------------------------------
 # Rutas del proyecto
@@ -49,7 +49,8 @@ FLOOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)
 # ---------------------------------------------------------------------------
 # Google Earth Engine
 # ---------------------------------------------------------------------------
-GEE_PROJECT = "inundaciones-proyecto"
+# GEE_PROJECT ya se leyó arriba desde GEE_PROJECT (env). No reasignar aquí:
+# sobrescribiría la variable de entorno y confundiría despliegues.
 
 # Colecciones GEE
 MODIS_NDVI      = "MODIS/061/MOD13Q1"
