@@ -25,6 +25,7 @@
     "vitest": "^4.1.4"
   },
   "dependencies": {
-    "gifuct-js": "^2.1.2"
+    "gifuct-js": "^2.1.2",
+    "leaflet": "^1.9.4"
   }
 }
