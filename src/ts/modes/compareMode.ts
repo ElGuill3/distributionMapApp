@@ -297,6 +297,8 @@ export function cleanupComparePanels(): void {
   mapState.getGifPlayerB()?.dispose();
   mapState.setGifPlayerB(null);
   mapState.setOverlayA(null);
+  mapState.setActiveGifPathA(null);
+  mapState.setActiveGifPathB(null);
   removeActiveOverlay(_mapRef!);
   clearMapBOverlay();
   _updateStationMarkersVisibility();
@@ -310,6 +312,7 @@ export function clearPanelA(): void {
   mapState.getGifPlayerA()?.dispose();
   mapState.setGifPlayerA(null);
   mapState.setOverlayA(null);
+  mapState.setActiveGifPathA(null);
   removeActiveOverlay(_mapRef!);
   switchColorbar(_mapRef!, null, mapState.getMapB() ?? undefined);
   mapState.clearSeriesDataA();
@@ -331,6 +334,7 @@ export function clearPanelB(): void {
   normalMode.stopSoloPlayer();
   mapState.getGifPlayerB()?.dispose();
   mapState.setGifPlayerB(null);
+  mapState.setActiveGifPathB(null);
   clearMapBOverlay();
   switchColorbar(_mapRef!, null, mapState.getMapB() ?? undefined);
   mapState.clearSeriesDataB();
@@ -673,6 +677,7 @@ export async function requestGifAndSeriesForPanel(
 
       mapState.setGifPlayerA(player);
       mapState.setOverlayA(overlay);
+      mapState.setActiveGifPathA(gifData.gifUrl);
       _updateStationMarkersVisibility();
 
       // Animar panel A de forma independiente hasta que llegue el panel B
@@ -720,6 +725,7 @@ export async function requestGifAndSeriesForPanel(
       setTimeout(() => mapB.setView(_mapRef!.getCenter(), _mapRef!.getZoom(), { animate: false }), 100);
 
       mapState.setGifPlayerB(player);
+      mapState.setActiveGifPathB(gifData.gifUrl);
 
       if (tsData) {
         const extractedB = extractTimeseriesValues(tsData, variable);

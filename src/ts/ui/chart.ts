@@ -92,6 +92,26 @@ export function buildTrace(
 }
 
 /**
+ * Exporta la gráfica actual como PNG usando Plotly.toImage().
+ *
+ * @param chartDiv - Elemento DOM donde está renderizada la gráfica Plotly.
+ * @returns Blob de la imagen PNG.
+ */
+export async function plotChartAsPng(chartDiv: HTMLDivElement): Promise<Blob> {
+  // Plotly.toImage devuelve una string data URL (data:image/png;base64,...)
+  const dataUrl = await Plotly.toImage(chartDiv, {
+    format: 'png',
+    width: 1200,
+    height: 600,
+    scale: 2,
+  } as Record<string, unknown>);
+
+  // Convertir data URL a Blob
+  const response = await fetch(dataUrl);
+  return response.blob();
+}
+
+/**
  * Renderiza todas las series activas en la gráfica Plotly.
  *
  * @param chartDiv    - Elemento DOM donde se monta Plotly.

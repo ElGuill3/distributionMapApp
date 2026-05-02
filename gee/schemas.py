@@ -118,6 +118,38 @@ class MuniQuerySchema(BaseModel):
     palette: str = "gee_flood"
 
 
+class ExportMetadataSchema(BaseModel):
+    """Schema para metadatos de exportación."""
+
+    variableKeys: List[str]
+    panel: Literal["A", "B"]
+
+
+class SeriesDataSchema(BaseModel):
+    """Schema para datos de series temporales en petición de exportación."""
+
+    dates: List[str] = Field(min_length=1)
+    variables: dict[str, List[float | None]] = Field(default_factory=dict)
+
+
+class ExportRequestSchema(BaseModel):
+    """
+    Schema para validar peticiones al endpoint de export bundle.
+
+    gifPaths: rutas relativas a STATIC_DIR ej: ["gifs/ndvi_abc123.gif"]
+    panel: panel activo 'A' o 'B'
+    seriesData: dict con dates (lista de YYYY-MM-DD) y variables (keyed por nombre)
+    bbox: [minLon, minLat, maxLon, maxLat]
+    metadata: variableKeys y panel
+    """
+
+    gifPaths: List[str] = Field(default_factory=list)
+    panel: Literal["A", "B"]
+    seriesData: SeriesDataSchema
+    bbox: List[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
+    metadata: ExportMetadataSchema
+
+
 def _parse_bbox_str(bbox_str: str) -> List[float]:
     """
     Parsea un string JSON de bbox a list[float].

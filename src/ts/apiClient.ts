@@ -15,6 +15,8 @@ import type {
   TimeseriesResponse,
   StationResponse,
   FloodRiskResponse,
+  VariableKey,
+  SeriesData,
 } from './types.js';
 import { VARIABLE_DATA_KEY } from './types.js';
 import { GIF_ENDPOINT, TS_ENDPOINT } from './config.js';
@@ -223,4 +225,148 @@ export function extractTimeseriesValues(
 export function buildDownloadUrl(endpoint: string, params: Record<string, string>): string {
   const searchParams = new URLSearchParams(params);
   return `${endpoint}?${searchParams.toString()}`;
+}
+
+// ---------------------------------------------------------------------------
+// Export bundle
+// ---------------------------------------------------------------------------
+
+/** Mapa de series temporales por variable: { [variableKey]: { dates, values } } */
+export type SeriesDataMap = Partial<Record<VariableKey, SeriesData | undefined>>;
+
+export interface ExportBundleOptions {
+  gifPaths: string[];
+  seriesDataA: SeriesDataMap;
+  seriesDataB: SeriesDataMap | null;
+  bbox: BBox;
+  panel: 'A' | 'B';
+}
+
+/**
+ * Envía los datos de serie al backend y devuelve el ZIP.
+ *
+ * @returns Blob con el ZIP del servidor (contiene timeseries.csv, GIFs, metadata.json)
+ */
+export async function exportBundle(options: ExportBundleOptions): Promise<Blob> {
+  const { gifPaths, seriesDataA, seriesDataB, bbox, panel } = options;
+
+  // Construir seriesData con el formato que espera ExportRequestSchema
+  const allDates: string[] = [];
+  const allVariables: Record<string, (number | null)[]> = {};
+
+  // Recopilar todas las fechas y valores de panel A
+  for (const [key, data] of Object.entries(seriesDataA)) {
+    if (!data) continue;
+    if (allDates.length === 0) {
+      allDates.push(...data.dates);
+    }
+    allVariables[key] = [...data.values];
+  }
+
+  // Agregar datos del panel B si existe
+  if (seriesDataB) {
+    for (const [key, data] of Object.entries(seriesDataB)) {
+      if (!data) continue;
+      if (!(key in allVariables)) {
+        // Nueva variable solo en B — completar A con nulls
+        allVariables[key] = new Array(allDates.length).fill(null);
+      }
+      allVariables[key]!.push(...data.values);
+    }
+  }
+
+  const variableKeys = Object.keys(allVariables);
+
+  const payload = {
+    gifPaths,
+    panel,
+    seriesData: {
+      dates: allDates,
+      variables: allVariables,
+    },
+    bbox,
+    metadata: {
+      variableKeys,
+      panel,
+    },
+  };
+
+  const resp = await fetch('/api/export/bundle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    let errorMsg = 'Error exporting bundle';
+    try {
+      const errData = await resp.json();
+      errorMsg = errData.error ?? errorMsg;
+    } catch { /* ignore */ }
+    throw new Error(errorMsg);
+  }
+
+  return resp.blob();
+}
+
+// ---------------------------------------------------------------------------
+// Client-side ZIP assembly
+// ---------------------------------------------------------------------------
+
+/** Genera timestamp para nombre de archivo. */
+function exportTimestamp(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const mo = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const h = String(now.getHours()).padStart(2, '0');
+  const mi = String(now.getMinutes()).padStart(2, '0');
+  return `${y}${mo}${d}_${h}${mi}`;
+}
+
+/** Dispara descarga de un Blob en el navegador. */
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Combina el ZIP del servidor con el PNG del chart y dispara la descarga.
+ *
+ * @param pngBlob   - PNG del chart generado por plotChartAsPng()
+ * @param zipBlob   - ZIP devuelto por exportBundle() (contiene timeseries.csv, GIFs, metadata.json)
+ */
+export async function buildExportBundleZip(
+  pngBlob: Blob,
+  zipBlob: Blob,
+): Promise<void> {
+  const JSZip = (await import('jszip')).default;
+  const timestamp = exportTimestamp();
+
+  // Cargar ZIP del servidor
+  const serverZip = await JSZip.loadAsync(zipBlob, { base64: false });
+
+  // Crear ZIP final
+  const zip = new JSZip();
+
+  // Agregar PNG del chart como chart.png
+  zip.file('chart.png', pngBlob);
+
+  // Copiar todos los archivos del ZIP del servidor
+  const serverFiles = await serverZip.files;
+  for (const [filename, file] of Object.entries(serverFiles)) {
+    if (!file.dir) {
+      const content = await file.async('uint8array');
+      zip.file(filename, content);
+    }
+  }
+
+  const finalZip = await zip.generateAsync({ type: 'blob' });
+  downloadBlob(finalZip, `analysis_export_${timestamp}.zip`);
 }

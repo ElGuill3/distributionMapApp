@@ -919,3 +919,38 @@ body.sidebar-collapsed .leaflet-left {
   outline: 2px solid #f44336;
   outline-offset: 2px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Export toolbar                                                       */
+/* ------------------------------------------------------------------ */
+
+#export-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid #dce1e7;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+
+.export-btn {
+  padding: 0.4rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #0369a1;
+  background: #0369a1;
+  color: #ffffff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: #025091;
+}
+
+.export-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: #94a3b8;
+  background: #94a3b8;
+}
