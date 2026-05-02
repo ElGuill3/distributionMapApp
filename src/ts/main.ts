@@ -41,7 +41,10 @@ import { registerVariableListener, seasonToDates } from './listeners/variableLis
 import { GifPlayer, SyncPlayer, SoloPlayer } from './ui/gifPlayer.js';
 import {
   fetchLocalStationLevel,
+  exportBundle,
+  buildExportBundleZip,
 } from './apiClient.js';
+import { plotChartAsPng } from './ui/chart.js';
 
 // ---------------------------------------------------------------------------
 // Mapa principal (A)
@@ -193,6 +196,7 @@ function hideChartContainer(): void {
 function renderChart(): void {
   if (!ndviChartDiv) return;
   plotAllSelectedSeries(ndviChartDiv, mapState.getSeriesDataA(), showChartContainer, hideChartContainer);
+  syncExportButton();
 }
 
 // ---------------------------------------------------------------------------
@@ -215,6 +219,7 @@ function hideChartBContainer(): void {
 function renderChartB(): void {
   if (!chartBDiv) return;
   plotAllSelectedSeries(chartBDiv, mapState.getSeriesDataB(), showChartBContainer, hideChartBContainer);
+  syncExportButton();
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +295,7 @@ normalMode.initNormalMode({
   playerFrameLabel,
   playerPlayIcon,
   playerSpeedSelect,
+  onChartRendered: syncExportButton,
 });
 
 // Phase D: inicializar compareMode con referencias al DOM y mapa
@@ -766,4 +772,91 @@ if (collapseButton && restoreButton) {
   syncState();
   collapseButton.addEventListener('click', () => { body.classList.add('sidebar-collapsed');    syncState(); });
   restoreButton.addEventListener('click',  () => { body.classList.remove('sidebar-collapsed'); syncState(); });
+}
+
+// ---------------------------------------------------------------------------
+// Export bundle
+// ---------------------------------------------------------------------------
+
+const btnExportAnalysis = document.getElementById('btnExportAnalysis') as HTMLButtonElement | null;
+
+/**
+ * Determina si hay datos de serie cargados para exportar.
+ */
+function canExport(): boolean {
+  const seriesA = mapState.getSeriesDataA();
+  const seriesB = mapState.getSeriesDataB();
+  const hasSeriesA = Object.keys(seriesA).some(k => (seriesA[k as VariableKey]?.values?.length ?? 0) > 0);
+  const hasSeriesB = Object.keys(seriesB).some(k => (seriesB[k as VariableKey]?.values?.length ?? 0) > 0);
+  return hasSeriesA || hasSeriesB;
+}
+
+/**
+ * Habilita/deshabilita el botón de exportación según el estado.
+ */
+function syncExportButton(): void {
+  if (!btnExportAnalysis) return;
+  btnExportAnalysis.disabled = !canExport();
+}
+
+// Sincronizar cuando cambia la serie de datos
+// (llamada desde los handlers de modo normal y comparativa)
+
+btnExportAnalysis?.addEventListener('click', async () => {
+  const bbox = mapState.getBbox();
+  if (!bbox) {
+    showErrorModal('Sin área seleccionada', 'Dibujá un rectángulo en el mapa antes de exportar.');
+    return;
+  }
+
+  if (!canExport()) {
+    showErrorModal('Sin datos para exportar', 'Cargá al menos una variable antes de exportar.');
+    return;
+  }
+
+  const panel: 'A' | 'B' = mapState.getCompareModeActive() ? 'B' : 'A';
+  const seriesDataA = mapState.getSeriesDataA();
+  const seriesDataB = mapState.getSeriesDataB();
+
+  // Recopilar rutas de GIFs activos
+  const gifPaths: string[] = [];
+  const pathA = mapState.getActiveGifPathA();
+  if (pathA) gifPaths.push(pathA);
+  const pathB = mapState.getActiveGifPathB();
+  if (pathB) gifPaths.push(pathB);
+
+  createProgressIndicator();
+  updateProgressIndicator(10, 'Generando exportación...');
+
+  try {
+    updateProgressIndicator(30, 'Obteniendo ZIP del servidor...');
+    const zipBlob = await exportBundle({
+      gifPaths,
+      seriesDataA,
+      seriesDataB,
+      bbox,
+      panel,
+    });
+
+    updateProgressIndicator(60, 'Capturando gráfica como PNG...');
+    if (!ndviChartDiv) throw new Error('Chart div no encontrado.');
+    const pngBlob = await plotChartAsPng(ndviChartDiv);
+
+    updateProgressIndicator(80, 'Armando ZIP final...');
+    await buildExportBundleZip(pngBlob, zipBlob);
+
+    updateProgressIndicator(100, '¡Descarga lista!');
+    removeProgressIndicator(1500);
+  } catch (err) {
+    console.error(err);
+    removeProgressIndicator(0);
+    const msg = err instanceof Error ? err.message : 'Error generando la exportación.';
+    showErrorModal('Error de exportación', msg);
+  }
+});
+
+// Sincronizar botón de exportación cuando cambia la serie
+// (expuesto para ser llamado desde normalMode y compareMode cuando cargan datos)
+function notifySeriesDataChanged(): void {
+  syncExportButton();
 }

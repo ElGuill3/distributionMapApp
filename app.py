@@ -39,6 +39,7 @@ from routes.timeseries_routes import ts_bp
 from routes.flood_routes import flood_bp
 from routes.station_routes import station_bp
 from routes.progress_routes import progress_bp
+from routes.export_routes import export_bp
 
 # ---------------------------------------------------------------------------
 # Limpieza automática de GIFs en segundo plano
@@ -61,6 +62,7 @@ app.register_blueprint(ts_bp)
 app.register_blueprint(flood_bp)
 app.register_blueprint(station_bp)
 app.register_blueprint(progress_bp)
+app.register_blueprint(export_bp)
 
 
 # ---------------------------------------------------------------------------

@@ -46,6 +46,10 @@ export interface AppState {
 
   // segundo mapa (modo comparativa)
   mapB: L.Map | null;
+
+  // GIF paths — para exportar (originales, no blob URLs)
+  activeGifPathA: string | null;
+  activeGifPathB: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +71,8 @@ export const initialState: AppState = {
   overlayA: null,
   overlayB: null,
   mapB: null,
+  activeGifPathA: null,
+  activeGifPathB: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -137,6 +143,22 @@ export function getOverlayB(): L.ImageOverlay | null {
 
 export function getMapB(): L.Map | null {
   return state.mapB;
+}
+
+export function getActiveGifPathA(): string | null {
+  return state.activeGifPathA;
+}
+
+export function getActiveGifPathB(): string | null {
+  return state.activeGifPathB;
+}
+
+export function setActiveGifPathA(path: string | null): void {
+  state = { ...state, activeGifPathA: path };
+}
+
+export function setActiveGifPathB(path: string | null): void {
+  state = { ...state, activeGifPathB: path };
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +337,8 @@ export function cleanupComparePanels(): void {
     overlayB: null,
     seriesDataA: {},
     seriesDataB: {},
+    activeGifPathA: null,
+    activeGifPathB: null,
   };
 }
 

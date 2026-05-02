@@ -63,6 +63,9 @@ let _playerFrameLabel: HTMLSpanElement | null = null;
 let _playerPlayIcon: HTMLSpanElement | null = null;
 let _playerSpeedSelect: HTMLSelectElement | null = null;
 
+/** Callback invocado cuando la gráfica se renderiza con datos (para sync de UI). */
+let _onChartRendered: (() => void) | undefined = undefined;
+
 /**
  * Inicializa las referencias del módulo al DOM y al mapa.
  * Debe llamarse desde main.ts antes de usar cualquier otra función.
@@ -75,6 +78,7 @@ export function initNormalMode(domRefs: {
   playerFrameLabel: HTMLSpanElement | null;
   playerPlayIcon: HTMLSpanElement | null;
   playerSpeedSelect: HTMLSelectElement | null;
+  onChartRendered?: () => void;
 }): void {
   _mapRef = domRefs.map;
   _chartDiv = domRefs.chartDiv;
@@ -83,6 +87,7 @@ export function initNormalMode(domRefs: {
   _playerFrameLabel = domRefs.playerFrameLabel;
   _playerPlayIcon = domRefs.playerPlayIcon;
   _playerSpeedSelect = domRefs.playerSpeedSelect;
+  _onChartRendered = domRefs.onChartRendered;
 }
 
 /** Intervalo de frame seleccionado (en ms). */
@@ -151,6 +156,7 @@ export function clearNormalMode(): void {
   mapState.getGifPlayerA()?.dispose();
   mapState.setGifPlayerA(null);
   mapState.setOverlayA(null);
+  mapState.setActiveGifPathA(null);
   removeActiveOverlay(_mapRef!);
   switchColorbar(_mapRef!, null);
   mapState.clearSeriesDataA();
@@ -185,6 +191,8 @@ export function enterNormalMode(): void {
     mapState.setGifPlayerA(null);
   }
   mapState.setOverlayA(null);
+  mapState.setActiveGifPathA(null);
+  mapState.setActiveGifPathB(null);
   removeActiveOverlay(_mapRef!);
   switchColorbar(_mapRef!, null);
 
@@ -222,6 +230,7 @@ function hideChartContainer(): void {
 function renderChart(): void {
   if (!_chartDiv) return;
   plotAllSelectedSeries(_chartDiv as HTMLDivElement, mapState.getSeriesDataA(), showChartContainer, hideChartContainer);
+  _onChartRendered?.();
 }
 
 // ---------------------------------------------------------------------------
@@ -293,6 +302,7 @@ export async function requestGifAndSeries(
 
     mapState.setGifPlayerA(player);
     mapState.setOverlayA(overlay);
+    mapState.setActiveGifPathA(gifData.gifUrl);
 
     // Iniciar reproducción
     const soloPlayer = new SoloPlayer();

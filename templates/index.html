@@ -385,6 +385,11 @@
               <label><input type="checkbox" id="chkStationBdA"> Boca del Cerro (BDCTB)</label>
             </div>
           </div>
+          <div id="export-toolbar">
+            <button id="btnExportAnalysis" class="export-btn" disabled>
+              Exportar análisis
+            </button>
+          </div>
           <div id="ndvi-chart"></div>
         </div>
       </div>
@@ -477,11 +482,12 @@
 
   <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 
-  <!-- Importmap: permite importar gifuct-js como módulo ES desde CDN en el browser -->
+  <!-- Importmap: permite importar módulos ES desde CDN en el browser -->
   <script type="importmap">
   {
     "imports": {
-      "gifuct-js": "https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm"
+      "gifuct-js": "https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm",
+      "jszip": "https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm"
     }
   }
   </script>
