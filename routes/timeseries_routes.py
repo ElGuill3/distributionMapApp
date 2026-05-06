@@ -7,6 +7,8 @@ from typing import Optional
 
 from flask import Blueprint, Response, jsonify, request
 
+from extensions import limiter
+
 from gee.ndvi import build_ndvi_timeseries_bbox
 from gee.temperature import build_era5_temp_timeseries_bbox
 from gee.soil import build_era5_soil_timeseries_bbox
@@ -96,6 +98,7 @@ def _timeseries_pipeline(
     return jsonify({"dates": dates, ts_key: vals, "bbox": bbox})
 
 
+@limiter.limit("60/minute")
 @ts_bp.get("/api/ndvi-timeseries-bbox")
 def ndvi_timeseries_bbox() -> Response:
     """Serie temporal de NDVI medio (MODIS MOD13Q1)."""
@@ -137,6 +140,7 @@ def ndvi_timeseries_bbox() -> Response:
     )
 
 
+@limiter.limit("60/minute")
 @ts_bp.get("/api/era5-temp-timeseries-bbox")
 def era5_temp_timeseries_bbox() -> Response:
     """Serie temporal de temperatura media diaria (ERA5-Land, °C)."""
@@ -147,6 +151,7 @@ def era5_temp_timeseries_bbox() -> Response:
     )
 
 
+@limiter.limit("60/minute")
 @ts_bp.get("/api/era5-soil-timeseries-bbox")
 def era5_soil_timeseries_bbox() -> Response:
     """Serie temporal de humedad del suelo media diaria (ERA5-Land, %)."""
@@ -157,6 +162,7 @@ def era5_soil_timeseries_bbox() -> Response:
     )
 
 
+@limiter.limit("60/minute")
 @ts_bp.get("/api/imerg-precip-timeseries-bbox")
 def imerg_precip_timeseries_bbox() -> Response:
     """Serie temporal de precipitación media diaria (CHIRPS, mm)."""
@@ -167,6 +173,7 @@ def imerg_precip_timeseries_bbox() -> Response:
     )
 
 
+@limiter.limit("60/minute")
 @ts_bp.get("/api/water-timeseries-bbox")
 def water_timeseries_bbox() -> Response:
     """Serie temporal de área de agua superficial (Sentinel-2, ha)."""

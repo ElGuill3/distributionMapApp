@@ -15,6 +15,8 @@ from pathlib import Path
 from flask import Blueprint, Response, jsonify, request
 from pydantic import ValidationError
 
+from extensions import limiter
+
 from config import GIFS_DIR, STATIC_DIR
 from gee.schemas import ExportRequestSchema
 from services.export_service import create_export_zip, serialize_series_to_csv
@@ -24,6 +26,7 @@ logger = logging.getLogger(__name__)
 export_bp = Blueprint("export", __name__)
 
 
+@limiter.limit("10/minute")
 @export_bp.route("/api/export/bundle", methods=["POST"])
 def export_bundle() -> Response:
     """
