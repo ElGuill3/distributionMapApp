@@ -112,6 +112,43 @@ GIF_MAX_AGE_MINUTES     = _env_int("GIF_MAX_AGE_MINUTES", 60)
 GIF_CLEANUP_INTERVAL_S  = _env_int("GIF_CLEANUP_INTERVAL_S", 600)  # cada 10 minutos
 
 # ---------------------------------------------------------------------------
+# Cabeceras HTTP de caché
+# ---------------------------------------------------------------------------
+# Route prefix → (max_age_seconds, use_etag)
+# Los endpoints de GIF tienen cache largo (1h) porque el archivo es inmutable
+# una vez generado; timeseries son datos diarios (5 min); flood risk es estático
+# (24h); estaciones locales tienen datos que cambian poco (10 min).
+CACHE_POLICIES = {
+    "/api/ndvi-gif":               (3600, True),    # GIF JSON — 1 hora
+    "/api/era5-temp-gif":          (3600, True),
+    "/api/era5-soil-gif":          (3600, True),
+    "/api/imerg-precip-gif":       (3600, True),
+    "/api/water-gif":              (3600, True),
+    "/api/ndvi-timeseries":        (300, True),     # Timeseries JSON — 5 min
+    "/api/era5-temp-timeseries":   (300, True),
+    "/api/era5-soil-timeseries":   (300, True),
+    "/api/imerg-precip-timeseries": (300, True),
+    "/api/water-timeseries":       (300, True),
+    "/api/flood-risk":            (86400, False),  # Mapa riesgo — 24h, sin ETag
+    "/api/local-station":          (600, True),     # Estaciones — 10 min
+    "/api/export":                (0, False),       # Export ZIP — no cachear
+}
+
+# ---------------------------------------------------------------------------
+# Rate limiting
+# ---------------------------------------------------------------------------
+RATE_LIMIT_ENABLED = _env_bool("RATE_LIMIT_ENABLED", "true")
+
+# Límites por categoría de endpoint (request por minuto por IP)
+RATE_LIMITS = {
+    "gif":          "30/minute",   # Endpoints *-gif-bbox (costosos: llaman GEE)
+    "timeseries":   "60/minute",  # Endpoints *-timeseries-bbox
+    "export":       "10/minute",  # Endpoint /api/export/bundle (POST, genera ZIP)
+    "flood":        "60/minute",  # Endpoint /api/flood-risk-municipio
+    "station":      "60/minute",  # Endpoint /api/local-station-level-range
+}
+
+# ---------------------------------------------------------------------------
 # Timeouts y parámetros de red
 # ---------------------------------------------------------------------------
 GIF_DOWNLOAD_TIMEOUT_S   = 120   # Timeout para descarga de GIF desde GEE
