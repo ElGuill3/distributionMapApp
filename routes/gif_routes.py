@@ -20,6 +20,8 @@ from flask import Blueprint, Response, jsonify, request
 
 logger = logging.getLogger(__name__)
 
+from extensions import limiter
+
 from gee.ndvi import build_ndvi_gif_bbox, build_ndvi_timeseries_bbox
 from gee.temperature import build_era5_temp_gif_bbox, build_era5_temp_timeseries_bbox
 from gee.soil import build_era5_soil_gif_bbox, build_era5_soil_timeseries_bbox
@@ -32,7 +34,6 @@ from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
 from gee.utils import check_max_10_years, season_to_dates
 from services.gif_service import (
     add_dates_to_gif,
-    cleanup_pattern_gifs,
     progress_queues,
 )
 from config import GIFS_DIR
@@ -169,6 +170,32 @@ def _gif_pipeline(
 
     ratio = float(ratio_str) if ratio_str else None
 
+    # --- Cache hit check: computar clave ANTES de llamar a GEE ---
+    bbox_hash = hashlib.md5(str(bbox).encode()).hexdigest()[:8]
+    output_filename = f"{variable_prefix}_{start}_{end}_{bbox_hash}.gif"
+    output_path = GIFS_DIR / output_filename
+
+    # Si el GIF ya existe y tiene tamaño > 0, es cache HIT
+    if output_path.exists() and output_path.stat().st_size > 0:
+        try:
+            dates, vals = build_ts_fn(start, end, bbox)
+            if dates:
+                logger.info("GIF cache HIT: %s", output_filename)
+                return jsonify(
+                    {
+                        "gifUrl": f"/static/gifs/{output_filename}",
+                        "bbox": bbox,
+                        "dates": dates,
+                        ts_key: vals,
+                    }
+                )
+            # Si timeseries falla, caer al path de regeneración
+            logger.warning("Timeseries falló en cache HIT, regenerando: %s", output_filename)
+        except Exception:
+            # Si timeseries falla en cache hit, caer al path de regeneración
+            logger.warning("Excepción en timeseries durante cache HIT, regenerando: %s", output_filename)
+
+    # --- Cache MISS: generar GIF desde GEE ---
     pq = _setup_progress(task_id)
     callback = _make_progress_callback(pq)
 
@@ -187,12 +214,6 @@ def _gif_pipeline(
         if not dates:
             _signal_error(pq, "No se pudieron obtener fechas")
             return jsonify({"error": "No se pudieron obtener las fechas."}), 400
-
-        bbox_hash = hashlib.md5(str(bbox).encode()).hexdigest()[:8]
-        cleanup_pattern_gifs(f"{variable_prefix}_*_{bbox_hash}.gif")
-
-        output_filename = f"{variable_prefix}_{start}_{end}_{bbox_hash}.gif"
-        output_path = GIFS_DIR / output_filename
 
         add_dates_to_gif(
             gif_url=ee_gif_url,
@@ -228,6 +249,7 @@ def _gif_pipeline(
 # ---------------------------------------------------------------------------
 
 
+@limiter.limit("30/minute")
 @gif_bp.get("/api/ndvi-gif-bbox")
 def ndvi_gif_bbox() -> Response:
     """
@@ -281,6 +303,7 @@ def ndvi_gif_bbox() -> Response:
     )
 
 
+@limiter.limit("30/minute")
 @gif_bp.get("/api/era5-temp-gif-bbox")
 def era5_temp_gif_bbox() -> Response:
     """Genera el GIF animado de temperatura del aire (ERA5-Land) para el bbox."""
@@ -294,6 +317,7 @@ def era5_temp_gif_bbox() -> Response:
     )
 
 
+@limiter.limit("30/minute")
 @gif_bp.get("/api/era5-soil-gif-bbox")
 def era5_soil_gif_bbox() -> Response:
     """Genera el GIF animado de humedad del suelo (ERA5-Land) para el bbox."""
@@ -307,6 +331,7 @@ def era5_soil_gif_bbox() -> Response:
     )
 
 
+@limiter.limit("30/minute")
 @gif_bp.get("/api/imerg-precip-gif-bbox")
 def imerg_precip_gif_bbox() -> Response:
     """Genera el GIF animado de precipitación (CHIRPS) para el bbox."""
@@ -320,6 +345,7 @@ def imerg_precip_gif_bbox() -> Response:
     )
 
 
+@limiter.limit("30/minute")
 @gif_bp.get("/api/water-gif-bbox")
 def water_gif_bbox() -> Response:
     """Genera el GIF animado de cuerpos de agua (Sentinel-2) para el bbox."""

@@ -6,6 +6,8 @@ import logging
 
 from flask import Blueprint, Response, jsonify, request
 
+from extensions import limiter
+
 logger = logging.getLogger(__name__)
 
 from gee.flood_risk import render_flood_risk_png
@@ -15,6 +17,7 @@ from config import MUNICIPAL_TIFS
 flood_bp = Blueprint("flood", __name__)
 
 
+@limiter.limit("60/minute")
 @flood_bp.get("/api/flood-risk-municipio")
 def flood_risk_municipio() -> Response:
     """
