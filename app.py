@@ -16,7 +16,7 @@ import sys
 import ee
 from flask import Flask, Request, Response, jsonify, render_template, request, send_from_directory
 
-from config import CACHE_POLICIES, DEBUG, GEE_PROJECT, STATIC_DIR
+from config import BASE_DIR, CACHE_POLICIES, DEBUG, GEE_PROJECT, STATIC_DIR
 from extensions import limiter
 
 # ---------------------------------------------------------------------------
@@ -126,6 +126,32 @@ def index():
 @app.route("/static/<path:filename>")
 def static_files(filename):
     return send_from_directory(str(STATIC_DIR), filename)
+
+
+# ---------------------------------------------------------------------------
+# API documentation (Scalar UI + raw OpenAPI spec)
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/docs")
+def api_docs():
+    """Interactive API documentation UI powered by Scalar."""
+    return render_template("scalar.html", spec_url="/api/docs/openapi.yaml")
+
+
+@app.route("/api/docs/openapi.yaml")
+def api_docs_spec():
+    """Serve the raw OpenAPI 3.1 specification as YAML."""
+    import yaml
+
+    spec_path = BASE_DIR / "openapi.yaml"
+    with open(spec_path, "r") as f:
+        content = yaml.safe_load(f)
+    return app.response_class(
+        response=yaml.dump(content, allow_unicode=True, sort_keys=False),
+        status=200,
+        mimetype="application/yaml",
+    )
 
 
 # ---------------------------------------------------------------------------

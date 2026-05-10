@@ -9,3 +9,4 @@ Pillow
 requests
 pytest
 pydantic>=2.0
+PyYAML
