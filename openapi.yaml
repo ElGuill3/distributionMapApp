@@ -1,0 +1,1345 @@
+openapi: 3.1.0
+info:
+  title: distributionMapApp API
+  description: 'API pública de distributionMapApp para visualización y exportación
+    de datos geoespaciales (NDVI, temperatura, humedad del suelo, precipitación, cuerpos
+    de agua, riesgo de inundación, estaciones hidrológicas) usando Google Earth Engine.
+
+    '
+  version: 1.0.0
+  contact:
+    name: distributionMapApp Support
+servers:
+- url: /
+  description: Current server (relative paths)
+paths:
+  /api/ndvi-gif-bbox:
+    get:
+      operationId: getNdviGifBbox
+      summary: NDVI animated GIF
+      description: 'Generate an animated NDVI (MODIS MOD13Q1) GIF for the given bounding
+        box.
+
+        **Dual date mode:** Accepts direct dates (`start` + `end`) or seasonal shorthand
+        (`year` + `season`). If `start`/`end` are missing, `year`+`season` is converted
+        server-side using the supported seasons.
+
+        '
+      tags:
+      - GIF
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD). Required unless using year+season.
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD). Required unless using year+season.
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'JSON array [minLon, minLat, maxLon, maxLat]. Constraints: min/max
+          lon ∈ [-180,180], min/max lat ∈ [-90,90], min < max for each pair.
+
+          '
+      - name: ratio
+        in: query
+        required: false
+        schema:
+          type: number
+        description: Optional resolution ratio for the GIF.
+      - name: task_id
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Optional SSE task ID to track generation progress.
+      - name: year
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Year for seasonal shorthand. Used only if start/end are absent.
+      - name: season
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Season name for seasonal shorthand. Used only if start/end are
+          absent.
+      responses:
+        '200':
+          description: Animated NDVI GIF with dates and values.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gifUrl:
+                    type: string
+                    description: Relative URL to the generated GIF.
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+                    description: Bounding box used.
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                    description: Date labels in the GIF.
+                  ndvi:
+                    type: array
+                    items:
+                      type: number
+                    description: NDVI mean values per date.
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the client should retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 30/minute
+      x-cache-policy:
+        max_age: 3600
+        etag: true
+  /api/era5-temp-gif-bbox:
+    get:
+      operationId: getEra5TempGifBbox
+      summary: ERA5 temperature animated GIF
+      description: 'Generate an animated air temperature (ERA5-Land) GIF for the given
+        bounding box.
+
+        **Dual date mode:** Accepts direct dates (`start` + `end`) or seasonal shorthand
+        (`year` + `season`). If `start`/`end` are missing, `year`+`season` is converted
+        server-side.
+
+        '
+      tags:
+      - GIF
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD). Required unless using year+season.
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD). Required unless using year+season.
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      - name: ratio
+        in: query
+        required: false
+        schema:
+          type: number
+        description: Optional resolution ratio for the GIF.
+      - name: task_id
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Optional SSE task ID to track generation progress.
+      - name: year
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Year for seasonal shorthand.
+      - name: season
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Season name for seasonal shorthand.
+      responses:
+        '200':
+          description: Animated temperature GIF with dates and values.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gifUrl:
+                    type: string
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  temp:
+                    type: array
+                    items:
+                      type: number
+                    description: Temperature values in °C.
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the client should retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 30/minute
+      x-cache-policy:
+        max_age: 3600
+        etag: true
+  /api/era5-soil-gif-bbox:
+    get:
+      operationId: getEra5SoilGifBbox
+      summary: ERA5 soil moisture animated GIF
+      description: 'Generate an animated soil moisture (ERA5-Land) GIF for the given
+        bounding box.
+
+        **Dual date mode:** Accepts direct dates (`start` + `end`) or seasonal shorthand
+        (`year` + `season`). If `start`/`end` are missing, `year`+`season` is converted
+        server-side.
+
+        '
+      tags:
+      - GIF
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD). Required unless using year+season.
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD). Required unless using year+season.
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      - name: ratio
+        in: query
+        required: false
+        schema:
+          type: number
+        description: Optional resolution ratio for the GIF.
+      - name: task_id
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Optional SSE task ID to track generation progress.
+      - name: year
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Year for seasonal shorthand.
+      - name: season
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Season name for seasonal shorthand.
+      responses:
+        '200':
+          description: Animated soil moisture GIF with dates and values.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gifUrl:
+                    type: string
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  soil_pct:
+                    type: array
+                    items:
+                      type: number
+                    description: Soil moisture values in %.
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the client should retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 30/minute
+      x-cache-policy:
+        max_age: 3600
+        etag: true
+  /api/imerg-precip-gif-bbox:
+    get:
+      operationId: getImergPrecipGifBbox
+      summary: CHIRPS precipitation animated GIF
+      description: 'Generate an animated precipitation (CHIRPS/IMERG) GIF for the
+        given bounding box.
+
+        **Dual date mode:** Accepts direct dates (`start` + `end`) or seasonal shorthand
+        (`year` + `season`). If `start`/`end` are missing, `year`+`season` is converted
+        server-side.
+
+        '
+      tags:
+      - GIF
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD). Required unless using year+season.
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD). Required unless using year+season.
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      - name: ratio
+        in: query
+        required: false
+        schema:
+          type: number
+        description: Optional resolution ratio for the GIF.
+      - name: task_id
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Optional SSE task ID to track generation progress.
+      - name: year
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Year for seasonal shorthand.
+      - name: season
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Season name for seasonal shorthand.
+      responses:
+        '200':
+          description: Animated precipitation GIF with dates and values.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gifUrl:
+                    type: string
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  precip_mm:
+                    type: array
+                    items:
+                      type: number
+                    description: Precipitation values in mm.
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the client should retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 30/minute
+      x-cache-policy:
+        max_age: 3600
+        etag: true
+  /api/water-gif-bbox:
+    get:
+      operationId: getWaterGifBbox
+      summary: Water body area animated GIF
+      description: 'Generate an animated water body area (Sentinel-2) GIF for the
+        given bounding box.
+
+        **Dual date mode:** Accepts direct dates (`start` + `end`) or seasonal shorthand
+        (`year` + `season`). If `start`/`end` are missing, `year`+`season` is converted
+        server-side.
+
+        '
+      tags:
+      - GIF
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD). Required unless using year+season.
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD). Required unless using year+season.
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      - name: ratio
+        in: query
+        required: false
+        schema:
+          type: number
+        description: Optional resolution ratio for the GIF.
+      - name: task_id
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Optional SSE task ID to track generation progress.
+      - name: year
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Year for seasonal shorthand.
+      - name: season
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Season name for seasonal shorthand.
+      responses:
+        '200':
+          description: Animated water body area GIF with dates and values.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gifUrl:
+                    type: string
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  water_ha:
+                    type: array
+                    items:
+                      type: number
+                    description: Water surface area values in hectares.
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the client should retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 30/minute
+      x-cache-policy:
+        max_age: 3600
+        etag: true
+  /api/ndvi-timeseries-bbox:
+    get:
+      operationId: getNdviTimeseriesBbox
+      summary: NDVI timeseries
+      description: 'Get NDVI (MODIS MOD13Q1) time-series values for the given bounding
+        box. The `year` and `season` parameters are resolved internally; only `start`
+        and `end` are exposed as query parameters.
+
+        '
+      tags:
+      - Timeseries
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD).
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD).
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      responses:
+        '200':
+          description: NDVI timeseries data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  ndvi:
+                    type: array
+                    items:
+                      type: number
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 300
+        etag: true
+  /api/era5-temp-timeseries-bbox:
+    get:
+      operationId: getEra5TempTimeseriesBbox
+      summary: ERA5 temperature timeseries
+      description: 'Get air temperature (ERA5-Land) time-series values for the given
+        bounding box. The `year` and `season` parameters are resolved internally;
+        only `start` and `end` are exposed as query parameters.
+
+        '
+      tags:
+      - Timeseries
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD).
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD).
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      responses:
+        '200':
+          description: Temperature timeseries data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  temp:
+                    type: array
+                    items:
+                      type: number
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 300
+        etag: true
+  /api/era5-soil-timeseries-bbox:
+    get:
+      operationId: getEra5SoilTimeseriesBbox
+      summary: ERA5 soil moisture timeseries
+      description: 'Get soil moisture (ERA5-Land) time-series values for the given
+        bounding box. The `year` and `season` parameters are resolved internally;
+        only `start` and `end` are exposed as query parameters.
+
+        '
+      tags:
+      - Timeseries
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD).
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD).
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      responses:
+        '200':
+          description: Soil moisture timeseries data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  soil_pct:
+                    type: array
+                    items:
+                      type: number
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 300
+        etag: true
+  /api/imerg-precip-timeseries-bbox:
+    get:
+      operationId: getImergPrecipTimeseriesBbox
+      summary: CHIRPS precipitation timeseries
+      description: 'Get precipitation (CHIRPS/IMERG) time-series values for the given
+        bounding box. The `year` and `season` parameters are resolved internally;
+        only `start` and `end` are exposed as query parameters.
+
+        '
+      tags:
+      - Timeseries
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD).
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD).
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      responses:
+        '200':
+          description: Precipitation timeseries data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  precip_mm:
+                    type: array
+                    items:
+                      type: number
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 300
+        etag: true
+  /api/water-timeseries-bbox:
+    get:
+      operationId: getWaterTimeseriesBbox
+      summary: Water body area timeseries
+      description: 'Get water surface area (Sentinel-2) time-series values for the
+        given bounding box. The `year` and `season` parameters are resolved internally;
+        only `start` and `end` are exposed as query parameters.
+
+        '
+      tags:
+      - Timeseries
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD).
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD).
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JSON array [minLon, minLat, maxLon, maxLat].
+      responses:
+        '200':
+          description: Water body area timeseries data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  water_ha:
+                    type: array
+                    items:
+                      type: number
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+        '400':
+          description: Invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 300
+        etag: true
+  /api/flood-risk-municipio:
+    get:
+      operationId: getFloodRiskMunicipio
+      summary: Flood risk map by municipality
+      description: 'Generate (or retrieve cached) a flood risk PNG map for the given
+        municipality. Returns JSON with the map URL and bounding box.
+
+        '
+      tags:
+      - Flood Risk
+      parameters:
+      - name: muni
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/MuniQuerySchema/properties/muni'
+        description: 'Municipality key. Must be one of the 16 supported municipalities:
+          balancan, cardenas, centla, centro, comalcalco, cunduacan, emiliano_zapata,
+          huimanguillo, jalapa, jalpa_de_mendez, jonuta, macuspana, nacajuca, paraiso,
+          tacotalpa, tenosique.
+
+          '
+      - name: palette
+        in: query
+        required: false
+        schema:
+          type: string
+          default: gee_flood
+        description: Color palette for the risk map (default "gee_flood").
+      responses:
+        '200':
+          description: Flood risk map data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mapUrl:
+                    type: string
+                    description: Relative URL to the generated PNG.
+                  bbox:
+                    type: array
+                    items:
+                      type: number
+                    description: Bounding box of the municipality.
+        '400':
+          description: Invalid municipality or missing parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 86400
+        etag: false
+  /api/local-station-level-range:
+    get:
+      operationId: getLocalStationLevelRange
+      summary: Local station water level timeseries
+      description: 'Get hydrometric level data for a local station within a date range.
+        Supported stations: SPTTB (San Pedro, Balancán) and BDCTB (Boca del Cerro,
+        Tenosique).
+
+        '
+      tags:
+      - Station
+      parameters:
+      - name: station
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/StationQuerySchema/properties/station_id'
+        description: Station ID — "SPTTB" or "BDCTB".
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD).
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD).
+      responses:
+        '200':
+          description: Station level data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  station:
+                    type: string
+                    description: Station ID.
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                  level_m:
+                    type: array
+                    items:
+                      type:
+                      - number
+                      - 'null'
+                    description: Water level in meters, null for missing data.
+        '400':
+          description: Invalid parameters or station ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 600
+        etag: true
+  /api/gif-progress/{task_id}:
+    get:
+      operationId: getGifProgress
+      summary: SSE progress for GIF generation
+      description: 'Server-Sent Events endpoint that streams progress updates for
+        a GIF generation task. The client opens an `EventSource` connection and receives
+        JSON events with `{ "progress": <0-100|-1>, "message": "..." }`.
+
+        The connection auto-closes when `progress` reaches **100** (complete) or **-1**
+        (error). If the task ID is not found, a single error event is sent and the
+        connection closes.
+
+        '
+      tags:
+      - SSE
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Task ID previously passed to a GIF endpoint.
+      responses:
+        '200':
+          description: SSE stream of progress events.
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  progress:
+                    type: integer
+                    description: Progress percentage (0-100) or -1 on error.
+                  message:
+                    type: string
+                    description: Human-readable status message.
+              example:
+                data: '{"progress": 42, "message": "Descargando GIF de GEE..."}'
+        '400':
+          description: Invalid task_id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-cache-policy:
+        max_age: 0
+        etag: false
+  /api/export/bundle:
+    post:
+      operationId: postExportBundle
+      summary: Export analysis as ZIP
+      description: 'Generate and download a ZIP bundle containing timeseries CSV,
+        optional GIF animations, and metadata.json.
+
+        '
+      tags:
+      - Export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequestSchema'
+      responses:
+        '200':
+          description: ZIP bundle with analysis data.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: attachment; filename="analysis_export_YYYYMMDD_HHMMSS.zip"
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid request body or validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: One or more GIF paths not found on disk.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the client should retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 10/minute
+      x-cache-policy:
+        max_age: 0
+        etag: false
+components:
+  schemas:
+    BBoxSchema:
+      description: Schema para validar bounding boxes geográficos.
+      properties:
+        min_lon:
+          maximum: 180.0
+          minimum: -180.0
+          title: Min Lon
+          type: number
+        min_lat:
+          maximum: 90.0
+          minimum: -90.0
+          title: Min Lat
+          type: number
+        max_lon:
+          maximum: 180.0
+          minimum: -180.0
+          title: Max Lon
+          type: number
+        max_lat:
+          maximum: 90.0
+          minimum: -90.0
+          title: Max Lat
+          type: number
+      required:
+      - min_lon
+      - min_lat
+      - max_lon
+      - max_lat
+      title: BBoxSchema
+      type: object
+    DateRangeSchema:
+      description: Schema para validar rangos de fecha.
+      properties:
+        start:
+          format: date
+          title: Start
+          type: string
+        end:
+          format: date
+          title: End
+          type: string
+      required:
+      - start
+      - end
+      title: DateRangeSchema
+      type: object
+    StationQuerySchema:
+      description: Schema para endpoints de estaciones hidrológicas.
+      properties:
+        station_id:
+          enum:
+          - SPTTB
+          - BDCTB
+          title: Station Id
+          type: string
+        start:
+          format: date
+          title: Start
+          type: string
+        end:
+          format: date
+          title: End
+          type: string
+      required:
+      - station_id
+      - start
+      - end
+      title: StationQuerySchema
+      type: object
+    MuniQuerySchema:
+      description: Schema para endpoints de riesgo por municipio.
+      properties:
+        muni:
+          enum:
+          - balancan
+          - cardenas
+          - centla
+          - centro
+          - comalcalco
+          - cunduacan
+          - emiliano_zapata
+          - huimanguillo
+          - jalapa
+          - jalpa_de_mendez
+          - jonuta
+          - macuspana
+          - nacajuca
+          - paraiso
+          - tacotalpa
+          - tenosique
+          title: Muni
+          type: string
+        palette:
+          default: gee_flood
+          title: Palette
+          type: string
+      required:
+      - muni
+      title: MuniQuerySchema
+      type: object
+    ExportRequestSchema:
+      description: 'Schema para validar peticiones al endpoint de export bundle.
+
+
+        gifPaths: rutas relativas a STATIC_DIR ej: ["gifs/ndvi_abc123.gif"]
+
+        panel: panel activo ''A'' o ''B''
+
+        seriesData: dict con dates (lista de YYYY-MM-DD) y variables (keyed por nombre)
+
+        bbox: [minLon, minLat, maxLon, maxLat]
+
+        metadata: variableKeys y panel'
+      properties:
+        gifPaths:
+          items:
+            type: string
+          title: Gifpaths
+          type: array
+        panel:
+          enum:
+          - A
+          - B
+          title: Panel
+          type: string
+        seriesData:
+          $ref: '#/components/schemas/SeriesDataSchema'
+        bbox:
+          examples:
+          - - -92.5
+            - 17.0
+            - -91.0
+            - 18.0
+          items:
+            type: number
+          title: Bbox
+          type: array
+        metadata:
+          $ref: '#/components/schemas/ExportMetadataSchema'
+      required:
+      - panel
+      - seriesData
+      - bbox
+      - metadata
+      title: ExportRequestSchema
+      type: object
+    ExportMetadataSchema:
+      description: Schema para metadatos de exportación.
+      properties:
+        variableKeys:
+          items:
+            type: string
+          title: Variablekeys
+          type: array
+        panel:
+          enum:
+          - A
+          - B
+          title: Panel
+          type: string
+      required:
+      - variableKeys
+      - panel
+      title: ExportMetadataSchema
+      type: object
+    SeriesDataSchema:
+      description: Schema para datos de series temporales en petición de exportación.
+      properties:
+        dates:
+          items:
+            type: string
+          minItems: 1
+          title: Dates
+          type: array
+        variables:
+          additionalProperties:
+            items:
+              anyOf:
+              - type: number
+              - type: 'null'
+            type: array
+          title: Variables
+          type: object
+      required:
+      - dates
+      title: SeriesDataSchema
+      type: object
+    ErrorResponse:
+      type: object
+      description: Standard error response format.
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+      required:
+      - error
