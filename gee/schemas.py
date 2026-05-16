@@ -144,7 +144,6 @@ class PdfReportRequestSchema(BaseModel):
     gif_path: str = Field(..., description="Relative path to GIF, e.g. gifs/ndvi_2020_abc123.gif")
     series_data: "SeriesDataSchema"
     bbox: List[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
-    report_type: Literal["summary", "anomaly"] = "summary"
 
     @field_validator("bbox")
     @classmethod

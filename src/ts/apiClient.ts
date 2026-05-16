@@ -319,7 +319,6 @@ export interface ExportPdfReportOptions {
   seriesData: { dates: string[]; variables: Record<string, (number | null)[]> };
   bbox: [number, number, number, number];
   metadata: { variableKeys: string[]; panel: string };
-  report_type?: string;
 }
 
 export async function exportPdfReport(options: ExportPdfReportOptions): Promise<Blob> {
@@ -329,7 +328,6 @@ export async function exportPdfReport(options: ExportPdfReportOptions): Promise<
     seriesData,
     bbox,
     metadata,
-    report_type = 'summary',
   } = options;
 
   const payload = {
@@ -338,7 +336,6 @@ export async function exportPdfReport(options: ExportPdfReportOptions): Promise<
     series_data: seriesData,
     bbox,
     metadata,
-    report_type,
   };
 
   const resp = await fetch('/api/export/pdf-report', {

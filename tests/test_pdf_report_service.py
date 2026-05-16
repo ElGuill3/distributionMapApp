@@ -9,9 +9,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from services.pdf_report_service import (
+    AnomalyEvent,
+    AnomalyResult,
     build_pdf_context,
     compute_statistics,
     compute_stats,
+    extract_frame_for_date,
     extract_middle_frame,
     render_pdf_report,
 )
@@ -347,3 +350,256 @@ class TestRenderPdfReport:
         with patch("builtins.__import__", side_effect=mock_import):
             with pytest.raises(RuntimeError, match="WeasyPrint"):
                 render_pdf_report(context)
+
+
+# ---------------------------------------------------------------------------
+# extract_frame_for_date
+# ---------------------------------------------------------------------------
+
+class TestExtractFrameForDate:
+    """Tests para la función extract_frame_for_date."""
+
+    def test_raises_when_gif_not_found(self, tmp_path) -> None:
+        """
+        GIVEN un GIF que no existe
+        WHEN extract_frame_for_date es llamada
+        THEN lanza FileNotFoundError
+        """
+        with pytest.raises(FileNotFoundError, match="GIF not found"):
+            extract_frame_for_date(
+                "gifs/nonexistent.gif",
+                "2020-06-15",
+                ["2020-01-01", "2020-12-31"],
+                cache_dir=tmp_path,
+            )
+
+    def test_fallback_to_middle_on_zero_day_range(self, tmp_path, monkeypatch) -> None:
+        """
+        GIVEN dates with zero day range (first == last)
+        WHEN extract_frame_for_date is called
+        THEN fallback to middle frame
+        """
+        gif_dir = tmp_path / "gifs"
+        gif_dir.mkdir()
+
+        # Create a minimal 3-frame GIF
+        from PIL import Image
+        gif_path = gif_dir / "test.gif"
+        frames = [Image.new("RGB", (10, 10), color) for color in ["red", "green", "blue"]]
+        frames[0].save(str(gif_path), save_all=True, append_images=frames[1:], duration=100, loop=0)
+
+        monkeypatch.setattr("services.pdf_report_service.STATIC_DIR", tmp_path)
+
+        # Zero range — should fall back to middle frame
+        result = extract_frame_for_date(
+            "gifs/test.gif",
+            "2020-06-15",
+            ["2020-06-15", "2020-06-15"],
+            cache_dir=gif_dir,
+        )
+
+        assert result.endswith(".png")
+
+    def test_event_date_before_range_clamped_to_first_frame(self, tmp_path, monkeypatch) -> None:
+        """
+        GIVEN event_start_date before dates[0]
+        WHEN extract_frame_for_date is called
+        THEN clamps to frame 0
+        """
+        gif_dir = tmp_path / "gifs"
+        gif_dir.mkdir()
+
+        from PIL import Image
+        gif_path = gif_dir / "test.gif"
+        frames = [Image.new("RGB", (10, 10), color) for color in ["red", "green", "blue"]]
+        frames[0].save(str(gif_path), save_all=True, append_images=frames[1:], duration=100, loop=0)
+
+        monkeypatch.setattr("services.pdf_report_service.STATIC_DIR", tmp_path)
+
+        result = extract_frame_for_date(
+            "gifs/test.gif",
+            "2019-01-01",  # Before range
+            ["2020-01-01", "2020-12-31"],
+            cache_dir=gif_dir,
+        )
+
+        assert result.endswith(".png")
+
+    def test_event_date_after_range_clamped_to_last_frame(self, tmp_path, monkeypatch) -> None:
+        """
+        GIVEN event_start_date after dates[-1]
+        WHEN extract_frame_for_date is called
+        THEN clamps to last frame
+        """
+        gif_dir = tmp_path / "gifs"
+        gif_dir.mkdir()
+
+        from PIL import Image
+        gif_path = gif_dir / "test.gif"
+        frames = [Image.new("RGB", (10, 10), color) for color in ["red", "green", "blue"]]
+        frames[0].save(str(gif_path), save_all=True, append_images=frames[1:], duration=100, loop=0)
+
+        monkeypatch.setattr("services.pdf_report_service.STATIC_DIR", tmp_path)
+
+        result = extract_frame_for_date(
+            "gifs/test.gif",
+            "2025-01-01",  # After range
+            ["2020-01-01", "2020-12-31"],
+            cache_dir=gif_dir,
+        )
+
+        assert result.endswith(".png")
+
+    def test_proportional_mapping_middle_of_range(self, tmp_path, monkeypatch) -> None:
+        """
+        GIVEN event at 50% of date range
+        WHEN extract_frame_for_date is called
+        THEN frame index is proportional (rounded)
+        """
+        gif_dir = tmp_path / "gifs"
+        gif_dir.mkdir()
+
+        from PIL import Image
+        gif_path = gif_dir / "test.gif"
+        # Create 10 frames so middle (index 4-5) maps to middle of range
+        frames = [Image.new("RGB", (10, 10), (i * 25, 0, 0)) for i in range(10)]
+        frames[0].save(str(gif_path), save_all=True, append_images=frames[1:], duration=100, loop=0)
+
+        monkeypatch.setattr("services.pdf_report_service.STATIC_DIR", tmp_path)
+
+        result = extract_frame_for_date(
+            "gifs/test.gif",
+            "2020-07-01",  # ~middle of Jan-Dec range
+            ["2020-01-01", "2020-12-31"],
+            cache_dir=gif_dir,
+        )
+
+        assert result.endswith(".png")
+        assert "_frame_" in result
+
+    def test_single_frame_gif_returns_that_frame(self, tmp_path, monkeypatch) -> None:
+        """
+        GIVEN a single-frame GIF
+        WHEN extract_frame_for_date is called
+        THEN returns that single frame without error
+        """
+        gif_dir = tmp_path / "gifs"
+        gif_dir.mkdir()
+
+        from PIL import Image
+        gif_path = gif_dir / "single.gif"
+        img = Image.new("RGB", (10, 10), "red")
+        img.save(str(gif_path), save_all=True, duration=100, loop=0)
+
+        monkeypatch.setattr("services.pdf_report_service.STATIC_DIR", tmp_path)
+
+        result = extract_frame_for_date(
+            "gifs/single.gif",
+            "2020-06-15",
+            ["2020-01-01", "2020-12-31"],
+            cache_dir=gif_dir,
+        )
+
+        assert result.endswith(".png")
+
+    def test_malformed_date_string_falls_back_to_middle(self, tmp_path, monkeypatch) -> None:
+        """
+        GIVEN an unparseable event_start_date
+        WHEN extract_frame_for_date is called
+        THEN fallback to middle frame
+        """
+        gif_dir = tmp_path / "gifs"
+        gif_dir.mkdir()
+
+        from PIL import Image
+        gif_path = gif_dir / "test.gif"
+        frames = [Image.new("RGB", (10, 10), color) for color in ["red", "green", "blue"]]
+        frames[0].save(str(gif_path), save_all=True, append_images=frames[1:], duration=100, loop=0)
+
+        monkeypatch.setattr("services.pdf_report_service.STATIC_DIR", tmp_path)
+
+        result = extract_frame_for_date(
+            "gifs/test.gif",
+            "not-a-date",  # Malformed
+            ["2020-01-01", "2020-12-31"],
+            cache_dir=gif_dir,
+        )
+
+        assert result.endswith(".png")
+
+
+# ---------------------------------------------------------------------------
+# build_pdf_context — no anomalies path
+# ---------------------------------------------------------------------------
+
+class TestBuildPdfContextNoAnomalies:
+    """Tests para build_pdf_context con events=[] (no anomalies)."""
+
+    def test_no_anomalies_sets_placeholder_context(self) -> None:
+        """
+        GIVEN anomaly_result with empty events
+        WHEN build_pdf_context is called
+        THEN summary_text is no-anomalies message
+        AND no_anomalies=True
+        AND spatial_caption="Vista del período analizado"
+        """
+        from services.pdf_report_service import AnomalyResult
+
+        context = build_pdf_context(
+            series_data={"ndvi": [0.3, 0.4, 0.5]},
+            dates=["2020-01-01", "2020-01-02", "2020-01-03"],
+            stats={"ndvi": {"min": 0.3, "max": 0.5, "mean": 0.4, "std_dev": 0.1, "first": 0.3, "last": 0.5, "count": 3, "trend": "→"}},
+            chart_blob="base64pngdata",
+            gif_frame_path="/path/to/frame.png",
+            bbox=[-92.5, 17.0, -91.0, 18.0],
+            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            anomaly_result=AnomalyResult(events=[], fallback_reason="zero_variance"),
+        )
+
+        assert context["no_anomalies"] is True
+        assert "No se detectaron anomalías significativas" in context["summary_text"]
+        assert context["spatial_caption"] == "Vista del período analizado"
+        assert context["anomaly_events"] == []
+        assert context["top_event_type"] == ""
+        assert context["top_event_date"] == ""
+        assert context["top_event_severity"] == ""
+
+    def test_with_events_sets_event_context(self) -> None:
+        """
+        GIVEN anomaly_result with events
+        WHEN build_pdf_context is called
+        THEN summary_text from top event
+        AND no_anomalies=False
+        AND anomaly_events populated
+        """
+        from services.pdf_report_service import AnomalyEvent, AnomalyResult
+
+        event = AnomalyEvent(
+            start_date="2020-06-15",
+            end_date="2020-06-15",
+            type="spike",
+            magnitude=3.5,
+            severity="Alta",
+            duration_days=1,
+            description="Significant increase",
+        )
+
+        context = build_pdf_context(
+            series_data={"ndvi": [0.3, 0.4, 0.5]},
+            dates=["2020-01-01", "2020-01-02", "2020-01-03"],
+            stats={"ndvi": {"min": 0.3, "max": 0.5, "mean": 0.4, "std_dev": 0.1, "first": 0.3, "last": 0.5, "count": 3, "trend": "→"}},
+            chart_blob="base64pngdata",
+            gif_frame_path="/path/to/frame.png",
+            bbox=[-92.5, 17.0, -91.0, 18.0],
+            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            anomaly_result=AnomalyResult(events=[event], fallback_reason=None),
+        )
+
+        assert context["no_anomalies"] is False
+        assert "2020-06-15" in context["summary_text"]
+        assert "aumento significativo" in context["summary_text"].lower()
+        assert context["spatial_caption"] == "Mapa en el momento del evento principal"
+        assert len(context["anomaly_events"]) == 1
+        assert context["top_event_type"] == "spike"
+        assert context["top_event_date"] == "2020-06-15"
+        assert context["top_event_severity"] == "Alta"

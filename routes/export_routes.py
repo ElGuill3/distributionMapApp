@@ -182,13 +182,10 @@ def export_pdf_report() -> Response:
         dates=payload.series_data.dates,
     )
 
-    # 6. Detectar anomalías si se pidió modo anomaly
-    anomaly_result = None
-    if payload.report_type == "anomaly":
-        anomaly_result = detect_anomalies(
-            series_data=payload.series_data.variables,
-            dates=payload.series_data.dates,
-        )
+    anomaly_result = detect_anomalies(
+        series_data=payload.series_data.variables,
+        dates=payload.series_data.dates,
+    )
 
     # 7. Construir contexto para la plantilla
     context = build_pdf_context(

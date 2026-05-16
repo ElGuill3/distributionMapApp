@@ -55,10 +55,9 @@ def _make_payload(
     bbox: list[float] | None = None,
     variable_keys: list[str] | None = None,
     panel: str = "A",
-    report_type: str | None = None,
 ) -> dict:
     """Build a valid PDF report payload."""
-    payload = {
+    return {
         "chart_blob": chart_blob or "",
         "gif_path": gif_path,
         "series_data": {
@@ -71,9 +70,6 @@ def _make_payload(
             "panel": panel,
         },
     }
-    if report_type is not None:
-        payload["report_type"] = report_type
-    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -81,11 +77,11 @@ def _make_payload(
 # ---------------------------------------------------------------------------
 
 class TestAnomalyModeEndpoint:
-    """Tests for POST /api/export/pdf-report with report_type=anomaly."""
+    """Tests for POST /api/export/pdf-report anomaly detection (always runs)."""
 
     def test_anomaly_mode_returns_pdf_with_hallazgos(self, client: FlaskClient) -> None:
         """
-        GIVEN report_type=anomaly with seeded spike data (12 obs, one outlier)
+        GIVEN seeded spike data (12 obs, one outlier)
         WHEN POST /api/export/pdf-report is called
         THEN response is 200
         AND Content-Type is application/pdf
@@ -100,7 +96,6 @@ class TestAnomalyModeEndpoint:
             gif_path="",
             dates=dates,
             variables=variables,
-            report_type="anomaly",
         )
 
         response = client.post("/api/export/pdf-report", json=payload)
@@ -111,7 +106,7 @@ class TestAnomalyModeEndpoint:
 
     def test_anomaly_mode_with_9_obs_falls_back(self, client: FlaskClient) -> None:
         """
-        GIVEN report_type=anomaly with only 9 observations (< 10)
+        GIVEN only 9 observations (< 10 threshold)
         WHEN POST /api/export/pdf-report is called
         THEN fallback_reason is set in context
         """
@@ -124,18 +119,17 @@ class TestAnomalyModeEndpoint:
             gif_path="",
             dates=dates,
             variables=variables,
-            report_type="anomaly",
         )
 
         response = client.post("/api/export/pdf-report", json=payload)
 
-        # The endpoint still returns a PDF (falls back to summary mode)
+        # The endpoint still returns a PDF (falls back to no-anomalies mode)
         assert response.status_code == 200
         assert response.content_type == "application/pdf"
 
     def test_anomaly_mode_with_zero_variance_falls_back(self, client: FlaskClient) -> None:
         """
-        GIVEN report_type=anomaly with all identical values
+        GIVEN all identical values
         WHEN POST /api/export/pdf-report is called
         THEN fallback_reason=zero_variance is set
         """
@@ -148,7 +142,6 @@ class TestAnomalyModeEndpoint:
             gif_path="",
             dates=dates,
             variables=variables,
-            report_type="anomaly",
         )
 
         response = client.post("/api/export/pdf-report", json=payload)
@@ -158,73 +151,87 @@ class TestAnomalyModeEndpoint:
 
 
 # ---------------------------------------------------------------------------
-# Backward compatibility — no report_type field
+# No anomalies rendering
+# ---------------------------------------------------------------------------
+
+class TestNoAnomaliesRendering:
+    """Tests for the no-anomalies rendering path."""
+
+    def test_no_anomalies_pdf_renders_hallazgos_placeholder(self, client: FlaskClient) -> None:
+        """
+        GIVEN detect_anomalies returns empty events (flat series)
+        WHEN POST /api/export/pdf-report is called
+        THEN PDF is generated successfully with no-anomalies state
+        """
+        chart_b64 = _minimal_chart_blob()
+        dates = [f"2020-01-{i:02d}" for i in range(1, 21)]
+        # Flat series — all same value → zero variance fallback
+        variables = {"ndvi": [0.5] * 20}
+
+        payload = _make_payload(
+            chart_blob=chart_b64,
+            gif_path="",
+            dates=dates,
+            variables=variables,
+        )
+
+        response = client.post("/api/export/pdf-report", json=payload)
+
+        assert response.status_code == 200
+        assert response.content_type == "application/pdf"
+        assert len(response.data) > 0
+
+
+# ---------------------------------------------------------------------------
+# Backward compatibility — removed report_type field
 # ---------------------------------------------------------------------------
 
 class TestBackwardCompatibility:
-    """Tests that omitting report_type produces the same behavior as pre-change."""
+    """Tests verifying backward compatibility after report_type removal."""
 
-    def test_omit_report_type_no_anomaly_result_in_context(self, client: FlaskClient) -> None:
+    def test_omit_report_type_still_produces_valid_pdf(self, client: FlaskClient) -> None:
         """
         GIVEN payload WITHOUT report_type field (backward compat)
-        WHEN build_pdf_context is called with same inputs
-        THEN context has no anomaly_events key
-        """
-        chart_b64 = _minimal_chart_blob()
-        dates = ["2020-01-01", "2020-01-02", "2020-01-03"]
-        variables = {"ndvi": [0.3, 0.4, 0.5]}
-        stats = compute_statistics(variables, dates)
-
-        context = build_pdf_context(
-            series_data=variables,
-            dates=dates,
-            stats=stats,
-            chart_blob=chart_b64,
-            gif_frame_path=None,
-            bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
-            anomaly_result=None,
-        )
-
-        # No anomaly context should be injected when anomaly_result is None
-        assert "anomaly_events" not in context
-        assert "report_type" not in context
-        assert "fallback_reason" not in context
-
-    def test_summary_report_type_behaves_like_default(self, client: FlaskClient) -> None:
-        """
-        GIVEN report_type=summary (explicit)
         WHEN POST /api/export/pdf-report is called
-        THEN output is same as omitting report_type
+        THEN response is 200 with valid PDF
         """
         chart_b64 = _minimal_chart_blob()
         dates = ["2020-03-01", "2020-03-17"]
         variables = {"ndvi": [0.45, 0.52]}
 
-        # Without report_type
-        payload_no_type = _make_payload(
+        payload = _make_payload(
             chart_blob=chart_b64,
             gif_path="",
             dates=dates,
             variables=variables,
         )
-        response_no_type = client.post("/api/export/pdf-report", json=payload_no_type)
+        response = client.post("/api/export/pdf-report", json=payload)
 
-        # With report_type=summary
-        payload_summary = _make_payload(
+        assert response.status_code == 200
+        assert response.content_type == "application/pdf"
+        assert len(response.data) > 0
+
+    def test_omit_report_type_still_produces_valid_pdf(self, client: FlaskClient) -> None:
+        """
+        GIVEN payload WITHOUT report_type field (backward compat)
+        WHEN POST /api/export/pdf-report is called
+        THEN response is 200 with valid PDF
+        """
+        chart_b64 = _minimal_chart_blob()
+        dates = ["2020-03-01", "2020-03-17"]
+        variables = {"ndvi": [0.45, 0.52]}
+
+        payload = _make_payload(
             chart_blob=chart_b64,
             gif_path="",
             dates=dates,
             variables=variables,
-            report_type="summary",
         )
-        response_summary = client.post("/api/export/pdf-report", json=payload_summary)
+        response = client.post("/api/export/pdf-report", json=payload)
 
-        # Both should return 200 and valid PDFs
-        assert response_no_type.status_code == 200
-        assert response_summary.status_code == 200
-        assert response_no_type.content_type == "application/pdf"
-        assert response_summary.content_type == "application/pdf"
+        assert response.status_code == 200
+        assert response.content_type == "application/pdf"
+        assert len(response.data) > 0
 
 
 # ---------------------------------------------------------------------------
