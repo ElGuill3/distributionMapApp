@@ -1,11 +1,12 @@
 """
-Blueprint 'export' — endpoint para exportar análisis como ZIP.
+Blueprint 'export' — endpoint para exportar análisis como ZIP y PDF.
 
 Responsabilidades:
   - Validar petición de exportación con ExportRequestSchema.
   - Serializar series temporales a CSV.
   - Copiar GIFs del disco y empaquetarlos en ZIP con metadata.json.
   - Devolver el ZIP como descarga.
+  - Generar reportes PDF con WeasyPrint (POST /api/export/pdf-report).
 """
 import logging
 from datetime import datetime
@@ -18,8 +19,15 @@ from pydantic import ValidationError
 from extensions import limiter
 
 from config import GIFS_DIR, STATIC_DIR
-from gee.schemas import ExportRequestSchema
+from gee.schemas import ExportRequestSchema, PdfReportRequestSchema
 from services.export_service import create_export_zip, serialize_series_to_csv
+from services.pdf_report_service import (
+    build_pdf_context,
+    compute_statistics,
+    detect_anomalies,
+    extract_middle_frame,
+    render_pdf_report,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +124,108 @@ def export_bundle() -> Response:
         headers={
             "Content-Disposition": f"attachment; filename={filename}",
             "Content-Length": str(len(zip_bytes)),
+        },
+    )
+    return response
+
+
+@limiter.limit("10/minute")
+@export_bp.route("/api/export/pdf-report", methods=["POST"])
+def export_pdf_report() -> Response:
+    """
+    Genera y devuelve un PDF report con gráfica, frame del GIF y estadísticas.
+
+    Request body (JSON):
+        chart_blob : str — PNG del chart codificado en base64
+        gif_path   : str — ruta relativa al GIF, ej "gifs/ndvi_abc123.gif"
+        seriesData : { dates: list[str], variables: dict<string, list<float|null>> }
+        bbox       : list[float]
+        metadata   : { variableKeys: list[str], panel: "A"|"B" }
+
+    Returns:
+        PDF binary (application/pdf) con Content-Disposition para descarga.
+
+    Errors:
+        400: body malformado o validación falla
+        404: GIF no encontrado en disco
+        500: error interno al generar PDF (WeasyPrint, etc.)
+    """
+    # 1. Verificar que el body es JSON
+    if not request.is_json:
+        return jsonify({"error": "Invalid request body"}), 400
+
+    # 2. Parsear y validar con PdfReportRequestSchema
+    try:
+        payload = PdfReportRequestSchema.model_validate(request.json)
+    except ValidationError as e:
+        logger.warning("ValidationError en pdf-report: %s", e)
+        return jsonify({"error": "Invalid request body"}), 400
+
+    # 3. Validar que seriesData no esté vacío (después de la validación de schema)
+    if not payload.series_data.dates:
+        return jsonify({"error": "Invalid request body"}), 400
+
+    # 4. Extraer frame del medio del GIF (con caché)
+    gif_frame_path = None
+    if payload.gif_path:
+        try:
+            gif_frame_path = extract_middle_frame(payload.gif_path)
+        except FileNotFoundError:
+            logger.warning("GIF no encontrado para PDF: %s", payload.gif_path)
+            return jsonify(
+                {"error": "Animation file no longer available. Please regenerate the animation."}
+            ), 404
+
+    # 5. Calcular estadísticas
+    stats = compute_statistics(
+        series_data=payload.series_data.variables,
+        dates=payload.series_data.dates,
+    )
+
+    # 6. Detectar anomalías si se pidió modo anomaly
+    anomaly_result = None
+    if payload.report_type == "anomaly":
+        anomaly_result = detect_anomalies(
+            series_data=payload.series_data.variables,
+            dates=payload.series_data.dates,
+        )
+
+    # 7. Construir contexto para la plantilla
+    context = build_pdf_context(
+        series_data=payload.series_data.variables,
+        dates=payload.series_data.dates,
+        stats=stats,
+        chart_blob=payload.chart_blob,
+        gif_frame_path=gif_frame_path,
+        bbox=payload.bbox,
+        metadata=payload.metadata.model_dump(),
+        anomaly_result=anomaly_result,
+    )
+
+    # 8. Renderizar PDF
+    try:
+        pdf_bytes = render_pdf_report(context)
+    except RuntimeError as e:
+        logger.error("Error generando PDF: %s", e)
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        logger.error("Error inesperado generando PDF: %s", e)
+        return jsonify({"error": "Failed to generate PDF report."}), 500
+
+    # 8. Preparar nombre de archivo con timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"analysis_report_{timestamp}.pdf"
+
+    # 9. Devolver PDF
+    buffer = BytesIO(pdf_bytes)
+    buffer.seek(0)
+
+    response = Response(
+        buffer.read(),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Length": str(len(pdf_bytes)),
         },
     )
     return response

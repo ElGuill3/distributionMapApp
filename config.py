@@ -144,6 +144,7 @@ RATE_LIMITS = {
     "gif":          "30/minute",   # Endpoints *-gif-bbox (costosos: llaman GEE)
     "timeseries":   "60/minute",  # Endpoints *-timeseries-bbox
     "export":       "10/minute",  # Endpoint /api/export/bundle (POST, genera ZIP)
+    "pdf-export":   "10/minute",  # Endpoint /api/export/pdf-report (POST, genera PDF)
     "flood":        "60/minute",  # Endpoint /api/flood-risk-municipio
     "station":      "60/minute",  # Endpoint /api/local-station-level-range
 }

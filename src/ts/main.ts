@@ -42,6 +42,8 @@ import { GifPlayer, SyncPlayer, SoloPlayer } from './ui/gifPlayer.js';
 import {
   fetchLocalStationLevel,
   exportBundle,
+  exportPdfReport,
+  downloadBlob,
   buildExportBundleZip,
 } from './apiClient.js';
 import { plotChartAsPng } from './ui/chart.js';
@@ -779,6 +781,8 @@ if (collapseButton && restoreButton) {
 // ---------------------------------------------------------------------------
 
 const btnExportAnalysis = document.getElementById('btnExportAnalysis') as HTMLButtonElement | null;
+const btnExportPdfReport = document.getElementById('btnExportPdfReport') as HTMLButtonElement | null;
+const reportModeToggle = document.getElementById('reportModeToggle') as HTMLSelectElement | null;
 
 /**
  * Determina si hay datos de serie cargados para exportar.
@@ -797,6 +801,7 @@ function canExport(): boolean {
 function syncExportButton(): void {
   if (!btnExportAnalysis) return;
   btnExportAnalysis.disabled = !canExport();
+  if (btnExportPdfReport) btnExportPdfReport.disabled = !canExport();
 }
 
 // Sincronizar cuando cambia la serie de datos
@@ -860,3 +865,81 @@ btnExportAnalysis?.addEventListener('click', async () => {
 function notifySeriesDataChanged(): void {
   syncExportButton();
 }
+
+// ---------------------------------------------------------------------------
+// Export PDF Report
+// ---------------------------------------------------------------------------
+
+function getSelectedReportMode(): string {
+  return reportModeToggle?.value ?? 'summary';
+}
+
+btnExportPdfReport?.addEventListener('click', async () => {
+  const bbox = mapState.getBbox();
+  if (!bbox) {
+    showErrorModal('Sin área seleccionada', 'Dibujá un rectángulo en el mapa antes de exportar.');
+    return;
+  }
+
+  if (!canExport()) {
+    showErrorModal('Sin datos para exportar', 'Cargá al menos una variable antes de exportar.');
+    return;
+  }
+
+  const seriesDataA = mapState.getSeriesDataA();
+  const panel: 'A' | 'B' = mapState.getCompareModeActive() ? 'B' : 'A';
+
+  // Recopilar datos
+  const allDates: string[] = [];
+  const allVariables: Record<string, (number | null)[]> = {};
+
+  for (const [key, data] of Object.entries(seriesDataA)) {
+    if (!data) continue;
+    if (allDates.length === 0) allDates.push(...data.dates);
+    allVariables[key] = [...data.values];
+  }
+
+  const variableKeys = Object.keys(allVariables);
+  const gifPath = mapState.getActiveGifPathA() || mapState.getActiveGifPathB() || '';
+
+  createProgressIndicator();
+
+  try {
+    updateProgressIndicator(10, 'Capturando gráfica como PNG...');
+    if (!ndviChartDiv) throw new Error('Chart div no encontrado.');
+    const chartBlob = await plotChartAsPng(ndviChartDiv);
+
+    updateProgressIndicator(30, 'Convirtiendo chart a base64...');
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const parts = result.split(',');
+        resolve(parts[1] ?? result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(chartBlob);
+    });
+
+    updateProgressIndicator(50, 'Enviando solicitud de PDF...');
+    const pdfBlob = await exportPdfReport({
+      chartBlob: base64,
+      gifPath,
+      seriesData: { dates: allDates, variables: allVariables },
+      bbox,
+      metadata: { variableKeys, panel },
+      report_type: getSelectedReportMode(),
+    });
+
+    updateProgressIndicator(80, 'Descargando PDF...');
+    const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+    downloadBlob(pdfBlob, `analysis_report_${timestamp}.pdf`);
+    updateProgressIndicator(100, '¡PDF listo!');
+    removeProgressIndicator(1500);
+  } catch (err) {
+    console.error(err);
+    removeProgressIndicator(0);
+    const msg = err instanceof Error ? err.message : 'Error generando el PDF.';
+    showErrorModal('Error de exportación PDF', msg);
+  }
+});
