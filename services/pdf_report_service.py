@@ -472,6 +472,97 @@ def detect_anomalies(series_data: dict, dates: list) -> AnomalyResult:
 # GIF frame extraction (with caching)
 # ---------------------------------------------------------------------------
 
+def extract_frame_for_date(gif_path: str, event_start_date: str, dates: list[str], cache_dir: Path | None = None) -> str:
+    """
+    Map event start_date to the corresponding GIF frame using proportional indexing.
+
+    Algorithm:
+        date_range_days = dates[-1] - dates[0]  (as int)
+        event_offset_days = event_start_date - dates[0]  (as int)
+        frame_index = round(event_offset_days / date_range_days * (N_frames - 1))
+        Clamp to [0, N_frames - 1]
+        Fallback: extract_middle_frame() if any computation fails
+
+    Args:
+        gif_path: relative path to GIF (e.g. "gifs/ndvi_2020_abc123.gif")
+        event_start_date: ISO date string of the event (e.g. "2020-06-15")
+        dates: sorted list of ISO date strings spanning the GIF period
+        cache_dir: optional cache directory (defaults to GIFS_DIR)
+
+    Returns:
+        Absolute path to selected frame PNG
+
+    Raises:
+        FileNotFoundError: if GIF does not exist
+    """
+    from datetime import datetime
+
+    if cache_dir is None:
+        cache_dir = GIFS_DIR
+
+    # Normalize gif path
+    normalized = gif_path.removeprefix("/static/") if gif_path.startswith("/static/") else gif_path
+    full_gif_path = STATIC_DIR / normalized
+
+    # Verify GIF exists
+    if not full_gif_path.exists():
+        raise FileNotFoundError(f"GIF not found: {gif_path}")
+
+    try:
+        # Parse dates
+        parsed_dates = [datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
+        parsed_event_date = datetime.strptime(event_start_date, "%Y-%m-%d").date()
+
+        if len(parsed_dates) < 2:
+            return extract_middle_frame(gif_path, cache_dir)
+
+        first_date = parsed_dates[0]
+        last_date = parsed_dates[-1]
+        date_range_days = (last_date - first_date).days
+
+        if date_range_days == 0:
+            return extract_middle_frame(gif_path, cache_dir)
+
+        event_offset_days = (parsed_event_date - first_date).days
+        event_offset_days = max(0, min(event_offset_days, date_range_days))
+
+        # Open GIF and get frame count
+        gif = PILImage.open(str(full_gif_path))
+        frames = list(ImageSequence.Iterator(gif))
+        n_frames = len(frames)
+        if n_frames == 1:
+            # Single-frame GIF — return that frame
+            cache_path = cache_dir / f"{Path(normalized).stem}_frame.png"
+            if cache_path.exists():
+                return str(cache_path)
+            frame = frames[0]
+            if frame.mode not in ("RGB", "RGBA"):
+                frame = frame.convert("RGB")
+            frame.save(str(cache_path), "PNG")
+            return str(cache_path)
+
+        # Proportional frame index
+        frame_index = round(event_offset_days / date_range_days * (n_frames - 1))
+        frame_index = max(0, min(frame_index, n_frames - 1))
+
+        stem = Path(normalized).stem
+        cache_path = cache_dir / f"{stem}_frame_{frame_index}.png"
+
+        if cache_path.exists():
+            return str(cache_path)
+
+        frame = frames[frame_index]
+        if frame.mode not in ("RGB", "RGBA"):
+            frame = frame.convert("RGB")
+        frame.save(str(cache_path), "PNG")
+        logger.debug("Frame %d extraído y cacheado: %s", frame_index, cache_path)
+        return str(cache_path)
+
+    except Exception:
+        # Any computation error → fallback to middle frame
+        return extract_middle_frame(gif_path, cache_dir)
+
+
 def extract_middle_frame(gif_path: str, cache_dir: Path | None = None) -> str:
     """
     Extrae el frame del medio de un GIF animado y lo guarda como PNG en caché.
@@ -544,7 +635,7 @@ def build_pdf_context(
         gif_frame_path: ruta absoluta al PNG del frame del GIF (o None)
         bbox: [minLon, minLat, maxLon, maxLat]
         metadata: {variableKeys, panel}
-        anomaly_result: resultado del detector de anomalías (opcional)
+        anomaly_result: resultado del detector de anomalías (always passed now)
 
     Returns:
         dict de contexto para renderizar la plantilla
@@ -611,28 +702,76 @@ def build_pdf_context(
         "panel": metadata.get("panel", "A"),
     }
 
-    # Anomaly context injection
-    if anomaly_result is not None:
-        context["fallback_reason"] = anomaly_result.fallback_reason
-        if anomaly_result.effective_report_type == "anomaly" and anomaly_result.events:
-            context["report_type"] = anomaly_result.effective_report_type
-            context["anomaly_events"] = [
-                {
-                    "start_date": e.start_date,
-                    "end_date": e.end_date,
-                    "type": e.type,
-                    "magnitude": e.magnitude,
-                    "severity": e.severity,
-                    "duration_days": e.duration_days,
-                    "description": e.description,
-                    "chart_annotation": e.chart_annotation,
-                }
-                for e in anomaly_result.events
-            ]
-        else:
-            context["report_type"] = "summary"
+    # Anomaly context injection — anomaly_result is always passed (never None now)
+    # but we guard for backward compatibility with unit tests
+    if anomaly_result is None:
+        anomaly_result = AnomalyResult(events=[], fallback_reason=None)
+
+    context["fallback_reason"] = anomaly_result.fallback_reason
+
+    if anomaly_result.events:
+        # Top event for executive summary and frame selection
+        top_event = anomaly_result.events[0]
+        context["no_anomalies"] = False
+        context["top_event_type"] = top_event.type
+        context["top_event_date"] = top_event.start_date
+        context["top_event_severity"] = top_event.severity
+        context["summary_text"] = _generate_executive_summary(top_event)
+        context["spatial_caption"] = "Mapa en el momento del evento principal"
+        context["anomaly_events"] = [
+            {
+                "start_date": e.start_date,
+                "end_date": e.end_date,
+                "type": e.type,
+                "magnitude": e.magnitude,
+                "severity": e.severity,
+                "duration_days": e.duration_days,
+                "description": e.description,
+                "chart_annotation": e.chart_annotation,
+            }
+            for e in anomaly_result.events
+        ]
+    else:
+        # No anomalies
+        context["no_anomalies"] = True
+        context["top_event_type"] = ""
+        context["top_event_date"] = ""
+        context["top_event_severity"] = ""
+        context["summary_text"] = (
+            "No se detectaron anomalías significativas en el período analizado. "
+            "Los valores observados se encuentran dentro de los rangos esperados."
+        )
+        context["spatial_caption"] = "Vista del período analizado"
+        context["anomaly_events"] = []
 
     return context
+
+
+def _generate_executive_summary(event: AnomalyEvent) -> str:
+    """
+    Generate a 2-3 sentence executive summary from the top anomaly event.
+    """
+    type_labels = {
+        "spike": "aumento significativo",
+        "drop": "descenso significativo",
+        "sustained_shift": "desviación sostenida",
+    }
+    type_label = type_labels.get(event.type, event.type)
+    severity = event.severity.lower()
+
+    if event.type == "sustained_shift":
+        return (
+            f"Se detectó una {type_label} entre el {event.start_date} y el {event.end_date} "
+            f"(duración: {event.duration_days} días). "
+            f"La desviación máxima alcanzó {event.magnitude:.1f}σ con respecto a la media histórica, "
+            f"clasificada como severidad {severity}."
+        )
+    else:
+        return (
+            f"Se registró un {type_label} el {event.start_date} "
+            f"con una desviación de {event.magnitude:.1f}σ respecto a la media histórica, "
+            f"clasificada como severidad {severity}."
+        )
 
 
 # ---------------------------------------------------------------------------

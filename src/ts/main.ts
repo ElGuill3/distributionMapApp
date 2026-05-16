@@ -782,7 +782,6 @@ if (collapseButton && restoreButton) {
 
 const btnExportAnalysis = document.getElementById('btnExportAnalysis') as HTMLButtonElement | null;
 const btnExportPdfReport = document.getElementById('btnExportPdfReport') as HTMLButtonElement | null;
-const reportModeToggle = document.getElementById('reportModeToggle') as HTMLSelectElement | null;
 
 /**
  * Determina si hay datos de serie cargados para exportar.
@@ -870,10 +869,6 @@ function notifySeriesDataChanged(): void {
 // Export PDF Report
 // ---------------------------------------------------------------------------
 
-function getSelectedReportMode(): string {
-  return reportModeToggle?.value ?? 'summary';
-}
-
 btnExportPdfReport?.addEventListener('click', async () => {
   const bbox = mapState.getBbox();
   if (!bbox) {
@@ -928,7 +923,6 @@ btnExportPdfReport?.addEventListener('click', async () => {
       seriesData: { dates: allDates, variables: allVariables },
       bbox,
       metadata: { variableKeys, panel },
-      report_type: getSelectedReportMode(),
     });
 
     updateProgressIndicator(80, 'Descargando PDF...');

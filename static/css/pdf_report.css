@@ -50,6 +50,22 @@ body {
     margin-top: 4px;
 }
 
+/* Executive Summary */
+.executive-summary {
+    background-color: #f0f7f4;
+    border: 1px solid #2c6e49;
+    border-radius: 4px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+}
+
+.executive-summary p {
+    font-size: 10pt;
+    color: #333;
+    line-height: 1.5;
+    margin-top: 6px;
+}
+
 /* Chart section */
 .chart-section {
     margin-bottom: 20px;
@@ -78,13 +94,10 @@ body {
     font-size: 8pt;
     color: #777;
     margin-top: 4px;
+    font-style: italic;
 }
 
-/* Stats table */
-.stats-section {
-    margin-bottom: 20px;
-}
-
+/* Section title */
 .section-title {
     font-size: 12pt;
     font-weight: bold;
@@ -94,22 +107,120 @@ body {
     padding-bottom: 4px;
 }
 
+/* Key Findings Header — PROMINENT, primary position */
+.key-findings-header {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #2c6e49;
+    margin-bottom: 14px;
+    margin-top: 24px;
+    border-bottom: 2px solid #2c6e49;
+    padding-bottom: 6px;
+}
+
+/* Anomaly Cards — promoted to primary layout */
+.anomaly-card {
+    border: 1.5px solid #2c6e49;
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background-color: #fafcfb;
+}
+
+.anomaly-event-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.severity-badge {
+    font-size: 8pt;
+    font-weight: bold;
+    padding: 3px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.severity-badge.severity-alta {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.severity-badge.severity-media {
+    background-color: #f39c12;
+    color: #fff;
+}
+
+.severity-badge.severity-baja {
+    background-color: #95a5a6;
+    color: #fff;
+}
+
+.anomaly-type {
+    font-weight: bold;
+    font-size: 10.5pt;
+    color: #222;
+}
+
+.anomaly-date {
+    font-size: 9pt;
+    color: #666;
+}
+
+.anomaly-description {
+    font-size: 9.5pt;
+    color: #444;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.anomaly-magnitude {
+    font-size: 8.5pt;
+    color: #777;
+}
+
+/* No anomalies empty state */
+.no-anomalies-card {
+    border: 1.5px dashed #aaa;
+    background-color: #f5f5f5;
+}
+
+.no-anomalies-message {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.no-anomalies-detail {
+    font-size: 9pt;
+    color: #888;
+    line-height: 1.4;
+}
+
+/* Stats table — demoted to compact secondary styling */
+.stats-section {
+    margin-bottom: 18px;
+}
+
 .stats-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 9pt;
+    font-size: 8.5pt;
 }
 
 .stats-table th {
-    background-color: #f5f5f5;
+    background-color: #e8f0ec;
     font-weight: bold;
     text-align: left;
-    padding: 6px 8px;
-    border-bottom: 2px solid #2c6e49;
+    padding: 5px 7px;
+    border-bottom: 1.5px solid #2c6e49;
 }
 
 .stats-table td {
-    padding: 5px 8px;
+    padding: 4px 7px;
     border-bottom: 1px solid #eee;
 }
 
@@ -120,6 +231,16 @@ body {
 .stats-table .stat-value {
     font-weight: bold;
     color: #2c6e49;
+}
+
+/* Compact variant — fewer columns */
+.stats-compact th,
+.stats-compact td {
+    padding: 4px 6px;
+}
+
+.stats-compact {
+    font-size: 8pt;
 }
 
 /* Trend indicator */
@@ -152,78 +273,6 @@ body {
     color: #555;
     margin-top: 8px;
     font-style: italic;
-}
-
-/* Anomaly findings styles */
-.key-findings-header {
-    font-size: 13pt;
-    font-weight: bold;
-    color: #2c6e49;
-    margin-bottom: 12px;
-    margin-top: 20px;
-    border-bottom: 2px solid #2c6e49;
-    padding-bottom: 4px;
-}
-
-.anomaly-card {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 10px 12px;
-    margin-bottom: 10px;
-    background-color: #fafafa;
-}
-
-.anomaly-event-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-}
-
-.severity-badge {
-    font-size: 8pt;
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 3px;
-    text-transform: uppercase;
-}
-
-.severity-badge.severity-alta {
-    background-color: #e74c3c;
-    color: #fff;
-}
-
-.severity-badge.severity-media {
-    background-color: #f39c12;
-    color: #fff;
-}
-
-.severity-badge.severity-baja {
-    background-color: #95a5a6;
-    color: #fff;
-}
-
-.anomaly-type {
-    font-weight: bold;
-    font-size: 10pt;
-    color: #333;
-}
-
-.anomaly-date {
-    font-size: 9pt;
-    color: #777;
-}
-
-.anomaly-description {
-    font-size: 9pt;
-    color: #555;
-    margin-bottom: 4px;
-    line-height: 1.4;
-}
-
-.anomaly-magnitude {
-    font-size: 8pt;
-    color: #888;
 }
 
 /* Footer */
