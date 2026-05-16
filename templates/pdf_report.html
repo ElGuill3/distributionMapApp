@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Reporte de Análisis — distributionMapApp</title>
+</head>
+<body>
+    {# ---------------------------------------------------- #}
+    {# HEADER                                               #}
+    {# ---------------------------------------------------- #}
+    <div class="report-header">
+        <div class="report-title">Reporte de Análisis Geoespacial</div>
+        <div class="report-subtitle">{{ variable_label }}</div>
+        <div class="meta-info">
+            Período: {{ date_range }} &nbsp;|&nbsp;
+            BBox: {{ bbox[0] }}, {{ bbox[1] }} → {{ bbox[2] }}, {{ bbox[3] }} &nbsp;|&nbsp;
+            Panel: {{ panel }}
+        </div>
+    </div>
+
+    {# ---------------------------------------------------- #}
+    {# CHART IMAGE                                           #}
+    {# ---------------------------------------------------- #}
+    <div class="chart-section">
+        <div class="section-title">Gráfica de Serie Temporal</div>
+        {% if chart_blob %}
+        <img src="data:image/png;base64,{{ chart_blob }}" alt="Chart" />
+        {% else %}
+        <p style="color:#888;font-size:9pt;">(Chart no disponible)</p>
+        {% endif %}
+    </div>
+
+    {# ---------------------------------------------------- #}
+    {# GIF FRAME (static map preview)                        #}
+    {# ---------------------------------------------------- #}
+    {% if gif_frame_path %}
+    <div class="frame-section">
+        <div class="section-title">Vista Estática del Mapa</div>
+        <img src="{{ gif_frame_path }}" alt="Map Frame" />
+        <div class="frame-caption">Frame del medio de la animación GIF</div>
+    </div>
+    {% endif %}
+
+    {# ---------------------------------------------------- #}
+    {# STATISTICS TABLE                                      #}
+    {# ---------------------------------------------------- #}
+    <div class="stats-section">
+        <div class="section-title">Estadísticas Resumidas</div>
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Mín</th>
+                    <th>Máx</th>
+                    <th>Media</th>
+                    <th>Std Dev</th>
+                    <th>Primero</th>
+                    <th>Último</th>
+                    <th>Obs</th>
+                    <th>Tendencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for var_key, s in stats.items() %}
+                <tr>
+                    <td>{{ var_key }}</td>
+                    <td class="stat-value">{{ s.min if s.min is not none else '—' }}</td>
+                    <td class="stat-value">{{ s.max if s.max is not none else '—' }}</td>
+                    <td class="stat-value">{{ s.mean if s.mean is not none else '—' }}</td>
+                    <td>{{ s.std_dev if s.std_dev is not none else '—' }}</td>
+                    <td>{{ s.first if s.first is not none else '—' }}</td>
+                    <td>{{ s.last if s.last is not none else '—' }}</td>
+                    <td>{{ s.count if s.count is not none else '—' }}</td>
+                    <td class="stat-value">{{ s.trend }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# ---------------------------------------------------- #}
+    {# ANOMALY FINDINGS (Hallazgos clave)                   #}
+    {# ---------------------------------------------------- #}
+    {% if report_type == "anomaly" and anomaly_events %}
+    <div class="key-findings-header">Hallazgos Clave</div>
+    {% for event in anomaly_events %}
+    <div class="anomaly-card">
+        <div class="anomaly-event-header">
+            <span class="severity-badge severity-{{ event.severity|lower }}">{{ event.severity }}</span>
+            <span class="anomaly-type">{{ event.type|replace("_", " ")|title }}</span>
+            <span class="anomaly-date">{{ event.start_date }}{% if event.end_date != event.start_date %} → {{ event.end_date }}{% endif %}</span>
+        </div>
+        <div class="anomaly-description">{{ event.description }}</div>
+        <div class="anomaly-magnitude">Desviación: {{ event.magnitude|round(2) }}σ</div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {# ---------------------------------------------------- #}
+    {# TREND + INTERPRETATION                                 #}
+    {# ---------------------------------------------------- #}
+    <div class="trend-section">
+        <div class="trend-label">Tendencia de la variable principal ({{ primary_var }}):</div>
+        <div class="trend-value {% if primary_stats.trend == '↑' %}up{% elif primary_stats.trend == '↓' %}down{% else %}stable{% endif %}">
+            {{ primary_stats.trend }} {{ trend_str }}
+        </div>
+        <div class="interpretation">{{ interpretation }}</div>
+    </div>
+
+    {# ---------------------------------------------------- #}
+    {# FOOTER                                                #}
+    {# ---------------------------------------------------- #}
+    <div class="report-footer">
+        Generado por distributionMapApp &nbsp;|&nbsp; {{ generated_at }}
+    </div>
+</body>
+</html>

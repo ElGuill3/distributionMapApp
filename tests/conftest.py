@@ -45,12 +45,6 @@ def mock_modules():
     sys.modules["matplotlib.cm"] = mock_matplotlib.cm
     sys.modules["matplotlib.colors"] = mock_matplotlib.colors
 
-    # Mock de PIL
-    mock_pil = MagicMock()
-    mock_pil.Image = MagicMock()
-    sys.modules["PIL"] = mock_pil
-    sys.modules["PIL.Image"] = mock_pil.Image
-
     # Mock de pandas
     mock_pandas = MagicMock()
     sys.modules["pandas"] = mock_pandas

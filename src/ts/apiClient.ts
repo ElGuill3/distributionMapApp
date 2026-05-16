@@ -310,6 +310,56 @@ export async function exportBundle(options: ExportBundleOptions): Promise<Blob> 
 }
 
 // ---------------------------------------------------------------------------
+// PDF Report Export
+// ---------------------------------------------------------------------------
+
+export interface ExportPdfReportOptions {
+  chartBlob: string;
+  gifPath: string;
+  seriesData: { dates: string[]; variables: Record<string, (number | null)[]> };
+  bbox: [number, number, number, number];
+  metadata: { variableKeys: string[]; panel: string };
+  report_type?: string;
+}
+
+export async function exportPdfReport(options: ExportPdfReportOptions): Promise<Blob> {
+  const {
+    chartBlob,
+    gifPath,
+    seriesData,
+    bbox,
+    metadata,
+    report_type = 'summary',
+  } = options;
+
+  const payload = {
+    chart_blob: chartBlob,
+    gif_path: gifPath,
+    series_data: seriesData,
+    bbox,
+    metadata,
+    report_type,
+  };
+
+  const resp = await fetch('/api/export/pdf-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    let errorMsg = 'Error generating PDF report';
+    try {
+      const errData = await resp.json();
+      errorMsg = errData.error ?? errorMsg;
+    } catch { /* ignore */ }
+    throw new Error(errorMsg);
+  }
+
+  return resp.blob();
+}
+
+// ---------------------------------------------------------------------------
 // Client-side ZIP assembly
 // ---------------------------------------------------------------------------
 
@@ -325,7 +375,7 @@ function exportTimestamp(): string {
 }
 
 /** Dispara descarga de un Blob en el navegador. */
-function downloadBlob(blob: Blob, filename: string): void {
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

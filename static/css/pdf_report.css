@@ -1,0 +1,237 @@
+/* PDF Report Styles — WeasyPrint compatible */
+
+/* Reset and base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Helvetica", "Arial", sans-serif;
+    font-size: 10pt;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* Page layout */
+.page {
+    width: 100%;
+    padding: 30px 40px;
+}
+
+@page {
+    size: A4;
+    margin: 20mm 15mm;
+}
+
+/* Header */
+.report-header {
+    border-bottom: 2px solid #2c6e49;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+}
+
+.report-title {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #2c6e49;
+    margin-bottom: 4px;
+}
+
+.report-subtitle {
+    font-size: 11pt;
+    color: #666;
+}
+
+.meta-info {
+    font-size: 9pt;
+    color: #888;
+    margin-top: 4px;
+}
+
+/* Chart section */
+.chart-section {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.chart-section img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+}
+
+/* GIF frame section */
+.frame-section {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.frame-section img {
+    max-width: 60%;
+    height: auto;
+    border: 1px solid #ddd;
+}
+
+.frame-caption {
+    font-size: 8pt;
+    color: #777;
+    margin-top: 4px;
+}
+
+/* Stats table */
+.stats-section {
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #2c6e49;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 4px;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+}
+
+.stats-table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 2px solid #2c6e49;
+}
+
+.stats-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.stats-table tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.stats-table .stat-value {
+    font-weight: bold;
+    color: #2c6e49;
+}
+
+/* Trend indicator */
+.trend-section {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.trend-label {
+    font-size: 10pt;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.trend-value {
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+.trend-value.up { color: #2c6e49; }
+.trend-value.down { color: #c0392b; }
+.trend-value.stable { color: #7f8c8d; }
+
+.interpretation {
+    font-size: 9pt;
+    color: #555;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+/* Anomaly findings styles */
+.key-findings-header {
+    font-size: 13pt;
+    font-weight: bold;
+    color: #2c6e49;
+    margin-bottom: 12px;
+    margin-top: 20px;
+    border-bottom: 2px solid #2c6e49;
+    padding-bottom: 4px;
+}
+
+.anomaly-card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background-color: #fafafa;
+}
+
+.anomaly-event-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.severity-badge {
+    font-size: 8pt;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.severity-badge.severity-alta {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.severity-badge.severity-media {
+    background-color: #f39c12;
+    color: #fff;
+}
+
+.severity-badge.severity-baja {
+    background-color: #95a5a6;
+    color: #fff;
+}
+
+.anomaly-type {
+    font-weight: bold;
+    font-size: 10pt;
+    color: #333;
+}
+
+.anomaly-date {
+    font-size: 9pt;
+    color: #777;
+}
+
+.anomaly-description {
+    font-size: 9pt;
+    color: #555;
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.anomaly-magnitude {
+    font-size: 8pt;
+    color: #888;
+}
+
+/* Footer */
+.report-footer {
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+    margin-top: 30px;
+    font-size: 8pt;
+    color: #888;
+    text-align: center;
+}

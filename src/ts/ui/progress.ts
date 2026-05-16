@@ -90,6 +90,61 @@ export function removeProgressIndicator(delayMs = 0): void {
 }
 
 // ---------------------------------------------------------------------------
+// Warning modal (non-blocking)
+// ---------------------------------------------------------------------------
+
+const WARNING_MODAL_ID = 'warning-modal';
+
+/**
+ * Muestra un modal de warning NO-bloqueante.
+ *
+ * A diferencia de showErrorModal:
+ * - No tiene overlay oscuro de fondo
+ * - No deshabilita ningún botón
+ * - No es role="alertdialog" (no intercepta foco)
+ * - Solo informa al usuario sin bloquear la interacción
+ */
+export function showWarningModal(title: string, message: string): void {
+  closeWarningModal();
+  const div = document.createElement('div');
+  div.id = WARNING_MODAL_ID;
+  div.innerHTML = `
+  <div style="position: fixed; top: 20px; right: 20px;
+              background: #fff3cd; color: #856404; padding: 16px 20px;
+              border-radius: 8px; z-index: 10002; min-width: 300px; max-width: 420px;
+              box-shadow: 0 4px 16px rgba(0,0,0,0.15); border: 1px solid #ffeeba;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+      <div style="flex: 1;">
+        <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">${escapeHtml(title)}</div>
+        <div style="font-size: 13px; color: #856404;">${escapeHtml(message)}</div>
+      </div>
+      <button id="warning-modal-close"
+              style="background: transparent; border: none; cursor: pointer;
+                     font-size: 18px; color: #856404; padding: 0; line-height: 1;">
+        ×
+      </button>
+    </div>
+  </div>
+`;
+  document.body.appendChild(div);
+  document.getElementById('warning-modal-close')?.addEventListener('click', closeWarningModal);
+  // Auto-cerrar a los 8 segundos si el usuario no interactuó
+  setTimeout(() => closeWarningModal(), 8000);
+  // Escape también cierra
+  const escListener = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeWarningModal();
+      document.removeEventListener('keydown', escListener);
+    }
+  };
+  document.addEventListener('keydown', escListener);
+}
+
+export function closeWarningModal(): void {
+  document.getElementById(WARNING_MODAL_ID)?.remove();
+}
+
+// ---------------------------------------------------------------------------
 // Error modal
 // ---------------------------------------------------------------------------
 
