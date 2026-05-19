@@ -90,6 +90,36 @@ class StationQuerySchema(BaseModel):
         return self
 
 
+class LocalStationQuerySchema(BaseModel):
+    """
+    Schema para endpoints de estaciones hidrológicas locales (CSV).
+
+    A diferencia de StationQuerySchema, NO aplica el límite de 10 años
+    porque los datos locales son CSV pre-cargados, no consultas GEE
+    costosas. Esto permite rangos como 2000-2024 (24 años) para análisis
+    histórico completo.
+    """
+
+    station_id: Literal["SPTTB", "BDCTB"]
+    start: date
+    end: date
+
+    @field_validator("start", "end", mode="before")
+    @classmethod
+    def parse_yyyy_mm_dd(cls, v: date | str) -> date:
+        if isinstance(v, date):
+            return v
+        if isinstance(v, str):
+            return datetime.strptime(v, "%Y-%m-%d").date()
+        raise ValueError("must be YYYY-MM-DD")
+
+    @model_validator(mode="after")
+    def end_after_start(self) -> "LocalStationQuerySchema":
+        if not (self.end > self.start):
+            raise ValueError("end must be after start")
+        return self
+
+
 # ALERT: Keep in sync with MUNICIPAL_TIFS keys in config.py
 MUNI_KEYS = Literal[
     "balancan",

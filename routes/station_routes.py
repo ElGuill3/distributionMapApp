@@ -5,7 +5,7 @@ Blueprint 'station' — endpoint de series temporales de estaciones hidrológica
 from flask import Blueprint, Response, jsonify, request
 
 from extensions import limiter
-from gee.schemas import StationQuerySchema
+from gee.schemas import LocalStationQuerySchema
 from services.station_service import read_station_level_timeseries
 
 station_bp = Blueprint("station", __name__)
@@ -35,7 +35,7 @@ def local_station_level_range() -> Response:
         ), 400
 
     try:
-        query = StationQuerySchema(station_id=station_raw, start=start_raw, end=end_raw)
+        query = LocalStationQuerySchema(station_id=station_raw, start=start_raw, end=end_raw)
     except Exception as e:
         return jsonify({"error": f"parámetros inválidos: {e}"}), 400
 

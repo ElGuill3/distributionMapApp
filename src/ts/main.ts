@@ -589,10 +589,10 @@ async function requestLocalStationLevel(
     renderChart();
   } catch (err) {
     console.error(err);
-    showErrorModal(
-      'Error de red',
-      'No se pudo cargar la serie de la estación. Verificá tu conexión.'
-    );
+    // Surface backend errors honestly; fallback to network error only for actual network issues
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const uxError = translateBackendError(errMsg);
+    showErrorModal(uxError.title, uxError.message);
   }
 }
 
