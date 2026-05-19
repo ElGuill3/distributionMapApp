@@ -3,19 +3,17 @@ Blueprint 'ts' — endpoints *-timeseries-bbox para todas las variables.
 """
 
 import json
-from typing import Optional
 
 from flask import Blueprint, Response, jsonify, request
 
 from extensions import limiter
-
 from gee.ndvi import build_ndvi_timeseries_bbox
-from gee.temperature import build_era5_temp_timeseries_bbox
-from gee.soil import build_era5_soil_timeseries_bbox
 from gee.precipitation import build_chirps_precip_timeseries_bbox
-from gee.water import build_water_timeseries_bbox
 from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
+from gee.soil import build_era5_soil_timeseries_bbox
+from gee.temperature import build_era5_temp_timeseries_bbox
 from gee.utils import check_max_10_years, season_to_dates
+from gee.water import build_water_timeseries_bbox
 
 ts_bp = Blueprint("ts", __name__)
 
@@ -32,9 +30,9 @@ def _timeseries_pipeline(
     ts_key: str,
     empty_error: str,
     *,
-    bbox_parsed: Optional[list[float]] = None,
-    start_parsed: Optional[str] = None,
-    end_parsed: Optional[str] = None,
+    bbox_parsed: list[float] | None = None,
+    start_parsed: str | None = None,
+    end_parsed: str | None = None,
 ) -> Response:
     """
     Implementación genérica para endpoints de serie temporal.
@@ -47,9 +45,12 @@ def _timeseries_pipeline(
         build_ts_fn    : función build_*_timeseries_bbox(start, end, bbox).
         ts_key         : clave del array de valores en la respuesta JSON.
         empty_error    : mensaje de error cuando no hay datos.
-        bbox_parsed    : bbox pre-validado (list[float]) — si se provee, usa valores directo.
-        start_parsed   : fecha inicio pre-validada (YYYY-MM-DD) — si se provee, usa valor directo.
-        end_parsed     : fecha fin pre-validada (YYYY-MM-DD) — si se provee, usa valor directo.
+        bbox_parsed    : bbox pre-validado (list[float]) — si se provee,
+                         usa valores directo.
+        start_parsed   : fecha inicio pre-validada (YYYY-MM-DD) — si se
+                         provee, usa valor directo.
+        end_parsed     : fecha fin pre-validada (YYYY-MM-DD) — si se provee,
+                         usa valor directo.
     """
     if bbox_parsed is not None:
         # Ruta de validación externa: params ya validados con Pydantic.
@@ -158,7 +159,9 @@ def era5_soil_timeseries_bbox() -> Response:
     return _timeseries_pipeline(
         build_ts_fn=build_era5_soil_timeseries_bbox,
         ts_key="soil_pct",
-        empty_error="No hay datos de humedad del suelo ERA5-Land para ese rango / región.",
+        empty_error=(
+            "No hay datos de humedad del suelo ERA5-Land para ese rango / región."
+        ),
     )
 
 

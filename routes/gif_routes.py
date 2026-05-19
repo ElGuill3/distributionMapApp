@@ -14,29 +14,27 @@ import hashlib
 import json
 import logging
 import queue
-from typing import Optional
 
 from flask import Blueprint, Response, jsonify, request
 
 logger = logging.getLogger(__name__)
 
+from config import GIFS_DIR
 from extensions import limiter
-
 from gee.ndvi import build_ndvi_gif_bbox, build_ndvi_timeseries_bbox
-from gee.temperature import build_era5_temp_gif_bbox, build_era5_temp_timeseries_bbox
-from gee.soil import build_era5_soil_gif_bbox, build_era5_soil_timeseries_bbox
 from gee.precipitation import (
     build_chirps_precip_gif_bbox,
     build_chirps_precip_timeseries_bbox,
 )
-from gee.water import build_water_gif_bbox, build_water_timeseries_bbox
 from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
+from gee.soil import build_era5_soil_gif_bbox, build_era5_soil_timeseries_bbox
+from gee.temperature import build_era5_temp_gif_bbox, build_era5_temp_timeseries_bbox
 from gee.utils import check_max_10_years, season_to_dates
+from gee.water import build_water_gif_bbox, build_water_timeseries_bbox
 from services.gif_service import (
     add_dates_to_gif,
     progress_queues,
 )
-from config import GIFS_DIR
 
 gif_bp = Blueprint("gif", __name__)
 
@@ -46,7 +44,7 @@ gif_bp = Blueprint("gif", __name__)
 
 
 def _parse_common_params() -> tuple[
-    Optional[str], Optional[str], Optional[list[float]], Optional[float], Optional[str]
+    str | None, str | None, list[float] | None, float | None, str | None
 ]:
     """
     Extrae start, end, bbox, ratio y task_id de la query string.
@@ -82,7 +80,7 @@ def _parse_bbox(bbox_str: str) -> list[float]:
     return [float(v) for v in bbox]
 
 
-def _make_progress_callback(pq: Optional[queue.Queue]):
+def _make_progress_callback(pq: queue.Queue | None):
     """Devuelve una función de callback que escribe en la cola de progreso."""
 
     def _cb(percent: int, message: str) -> None:
@@ -92,7 +90,7 @@ def _make_progress_callback(pq: Optional[queue.Queue]):
     return _cb
 
 
-def _setup_progress(task_id: Optional[str]) -> Optional[queue.Queue]:
+def _setup_progress(task_id: str | None) -> queue.Queue | None:
     """Crea y registra la cola SSE si hay task_id."""
     if not task_id:
         return None
@@ -101,13 +99,13 @@ def _setup_progress(task_id: Optional[str]) -> Optional[queue.Queue]:
     return pq
 
 
-def _signal_error(pq: Optional[queue.Queue], message: str) -> None:
+def _signal_error(pq: queue.Queue | None, message: str) -> None:
     if pq:
         pq.put({"progress": -1, "message": message})
         pq.put(None)
 
 
-def _signal_done(pq: Optional[queue.Queue]) -> None:
+def _signal_done(pq: queue.Queue | None) -> None:
     if pq:
         pq.put(None)
 
@@ -120,9 +118,9 @@ def _gif_pipeline(
     font_size: int,
     start_message: str,
     *,
-    bbox_parsed: Optional[list[float]] = None,
-    start_parsed: Optional[str] = None,
-    end_parsed: Optional[str] = None,
+    bbox_parsed: list[float] | None = None,
+    start_parsed: str | None = None,
+    end_parsed: str | None = None,
 ) -> Response:
     """
     Implementación genérica del pipeline GIF:
@@ -135,9 +133,12 @@ def _gif_pipeline(
         ts_key          : clave del array de valores en la respuesta JSON.
         font_size       : tamaño de la fuente para las fechas en el GIF.
         start_message   : mensaje inicial para la cola SSE.
-        bbox_parsed    : bbox pre-validado (list[float]) — si se provee, saltea parseo.
-        start_parsed    : fecha inicio pre-validada (YYYY-MM-DD) — si se provee, saltea validación.
-        end_parsed      : fecha fin pre-validada (YYYY-MM-DD) — si se provee, saltea validación.
+        bbox_parsed    : bbox pre-validado (list[float]) — si se provee,
+                         saltea parseo.
+        start_parsed   : fecha inicio pre-validada (YYYY-MM-DD) — si se
+                         provee, saltea validación.
+        end_parsed     : fecha fin pre-validada (YYYY-MM-DD) — si se provee,
+                         saltea validación.
     """
     # ratio_str y task_id siempre vienen de request.args (no se pre-validan).
     ratio_str = request.args.get("ratio")
@@ -190,10 +191,15 @@ def _gif_pipeline(
                     }
                 )
             # Si timeseries falla, caer al path de regeneración
-            logger.warning("Timeseries falló en cache HIT, regenerando: %s", output_filename)
+            logger.warning(
+                "Timeseries falló en cache HIT, regenerando: %s", output_filename
+            )
         except Exception:
             # Si timeseries falla en cache hit, caer al path de regeneración
-            logger.warning("Excepción en timeseries durante cache HIT, regenerando: %s", output_filename)
+            logger.warning(
+                "Excepción en timeseries durante cache HIT, regenerando: %s",
+                output_filename,
+            )
 
     # --- Cache MISS: generar GIF desde GEE ---
     pq = _setup_progress(task_id)
