@@ -32,7 +32,7 @@ def _env_int(key: str, default: int) -> int:
 # Variables de entorno
 # ---------------------------------------------------------------------------
 DEBUG = _env_bool("FLASK_DEBUG", "false")
-GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-app-494620")
+GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-proyecto")
 
 # ---------------------------------------------------------------------------
 # Rutas del proyecto

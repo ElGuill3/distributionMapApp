@@ -19,7 +19,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from gee.schemas import StationQuerySchema
+from gee.schemas import LocalStationQuerySchema, StationQuerySchema
 
 
 # ---------------------------------------------------------------------------
@@ -266,3 +266,65 @@ class TestStationQuerySchemaEndpointContract:
         assert str(s.end) == "2024-01-01"
         assert isinstance(s.start, date)
         assert isinstance(s.end, date)
+
+
+# ---------------------------------------------------------------------------
+# LocalStationQuerySchema — Sin límite de 10 años (bugfix: rango histórico completo)
+# ---------------------------------------------------------------------------
+
+
+class TestLocalStationQuerySchemaNoYearLimit:
+    """
+    LocalStationQuerySchema permite rangos > 10 años para datos locales CSV.
+    El límite de 10 años solo aplica a consultas GEE costosas, no a datos locales.
+    """
+
+    def test_24_year_range_passes_for_local_station(self) -> None:
+        """
+        Rango de 24 años (2000-2024) → pasa para LocalStationQuerySchema.
+        Este es el caso de uso del popup "Ver datos 2000-2024".
+        """
+        s = LocalStationQuerySchema(
+            station_id="SPTTB", start="2000-01-01", end="2024-12-31"
+        )
+        assert s.station_id == "SPTTB"
+        assert s.start == date(2000, 1, 1)
+        assert s.end == date(2024, 12, 31)
+
+    def test_50_year_range_passes_for_local_station(self) -> None:
+        """
+        Rango de 50 años → pasa para LocalStationQuerySchema.
+        """
+        s = LocalStationQuerySchema(
+            station_id="BDCTB", start="1974-01-01", end="2024-01-01"
+        )
+        assert s.station_id == "BDCTB"
+        assert s.start == date(1974, 1, 1)
+        assert s.end == date(2024, 1, 1)
+
+    def test_end_after_start_still_validates(self) -> None:
+        """
+        end <= start sigue siendo inválido incluso sin límite de años.
+        """
+        with pytest.raises(ValidationError):
+            LocalStationQuerySchema(
+                station_id="SPTTB", start="2024-01-01", end="2000-01-01"
+            )
+
+    def test_invalid_station_id_still_rejected(self) -> None:
+        """
+        Station ID inválido sigue siendo rechazado.
+        """
+        with pytest.raises(ValidationError):
+            LocalStationQuerySchema(
+                station_id="INVALID", start="2000-01-01", end="2024-01-01"
+            )
+
+    def test_invalid_date_format_still_rejected(self) -> None:
+        """
+        Formato de fecha inválido sigue siendo rechazado.
+        """
+        with pytest.raises(ValidationError):
+            LocalStationQuerySchema(
+                station_id="SPTTB", start="01-01-2000", end="31-12-2024"
+            )
