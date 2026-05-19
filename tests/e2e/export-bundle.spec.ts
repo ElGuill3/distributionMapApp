@@ -76,7 +76,9 @@ test.describe('export bundle — export-bundle', () => {
     expect(btnType).toBe('submit');
   });
 
-  test('error modal can be appended to DOM via showErrorModal flow', async ({ page }) => {
+  test('error modal can be appended to DOM via showErrorModal flow', async ({
+    page,
+  }) => {
     await page.goto('/templates/index.html');
     await page.waitForSelector('#map', { timeout: 15_000 });
 

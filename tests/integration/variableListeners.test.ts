@@ -10,7 +10,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { registerVariableListener, VariableListenerConfig } from '../../src/ts/listeners/variableListeners.js';
+import {
+  registerVariableListener,
+  VariableListenerConfig,
+} from '../../src/ts/listeners/variableListeners.js';
 
 describe('variableListeners — error handling without bbox', () => {
   // Mock DOM elements

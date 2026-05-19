@@ -249,9 +249,11 @@ export function deleteSeriesDataForVariable(
 ): void {
   if (panel === 'A') {
     const { [variable]: _removed, ...restA } = state.seriesDataA;
+    void _removed;
     state = { ...state, seriesDataA: restA };
   } else {
     const { [variable]: _removed, ...restB } = state.seriesDataB;
+    void _removed;
     state = { ...state, seriesDataB: restB };
   }
 }

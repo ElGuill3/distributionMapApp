@@ -18,8 +18,7 @@ import { showErrorModal } from '../ui/progress.js';
 import { switchColorbar, municipalFloodOverlays } from '../map/overlays.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
-// eslint-disable-next-line @typescript-eslint/no-shadow
-declare var L: typeof import('leaflet');
+declare const L: typeof import('leaflet');
 
 // ---------------------------------------------------------------------------
 // Referencias inyectadas desde main.ts
@@ -175,8 +174,10 @@ export async function toggleMunicipalFloodRisk(
 export function registerFloodRiskModeListeners(
   onEnter: () => void,
   onExit: () => void,
-  clearNormalMode: () => void
+  _clearNormalMode: () => void
 ): void {
+  // _clearNormalMode is kept for API compatibility but not used in this implementation
+  void _clearNormalMode;
   _toggleFloodRiskModeButton?.addEventListener('click', () => {
     const newState = !mapState.getFloodRiskModeActive();
 

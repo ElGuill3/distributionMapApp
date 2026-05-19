@@ -36,9 +36,6 @@ test.describe('window.alert() interception — frontend-ux-error-handling', () =
       calls.push(msg);
     });
     await page.addInitScript(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const original = (window as any).alert;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).alert = (msg: any) => {
         // @ts-expect-error — exposed function
         window.__alertSpy(String(msg));
@@ -48,7 +45,9 @@ test.describe('window.alert() interception — frontend-ux-error-handling', () =
     return { calls };
   }
 
-  test('variableListeners: generate without bbox → no window.alert', async ({ page }) => {
+  test('variableListeners: generate without bbox → no window.alert', async ({
+    page,
+  }) => {
     const { calls } = await installAlertSpy(page);
 
     await page.goto('/templates/index.html');
@@ -75,7 +74,9 @@ test.describe('window.alert() interception — frontend-ux-error-handling', () =
         await generateBtn.click();
       } else {
         // Button is disabled — enable it to test the bbox check path
-        await generateBtn.evaluate(el => { (el as HTMLButtonElement).disabled = false; });
+        await generateBtn.evaluate(el => {
+          (el as HTMLButtonElement).disabled = false;
+        });
         await generateBtn.click();
       }
 

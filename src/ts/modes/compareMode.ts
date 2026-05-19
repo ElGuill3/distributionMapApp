@@ -19,7 +19,6 @@ import {
   extractTimeseriesValues,
 } from '../apiClient.js';
 import {
-  buildColorbars,
   switchColorbar,
   removeActiveOverlay,
   setActiveOverlay,
@@ -39,8 +38,7 @@ import * as normalMode from './normalMode.js';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
-// eslint-disable-next-line @typescript-eslint/no-shadow
-declare var L: typeof import('leaflet');
+declare const L: typeof import('leaflet');
 
 // ---------------------------------------------------------------------------
 // Referencias DOM inyectadas desde main.ts
@@ -65,8 +63,6 @@ let _ndviChartDiv: HTMLElement | null = null;
 let _chartBDiv: HTMLElement | null = null;
 
 /** UI de modo comparativa. */
-let _compareControlsA: HTMLElement | null = null;
-let _compareModeHint: HTMLElement | null = null;
 let _chartBContainer: HTMLElement | null = null;
 
 /** Selectores de comparativa — panel A. */
@@ -142,8 +138,6 @@ export function initCompareMode(domRefs: CompareModeDomRefs): void {
   _playerSpeedSelect = domRefs.playerSpeedSelect;
   _ndviChartDiv = domRefs.ndviChartDiv;
   _chartBDiv = domRefs.chartBDiv;
-  _compareControlsA = domRefs.compareControlsA;
-  _compareModeHint = domRefs.compareModeHint;
   _chartBContainer = domRefs.chartBContainer;
   _compareVarASelect = domRefs.compareVarASelect;
   _compareYearASelect = domRefs.compareYearASelect;
