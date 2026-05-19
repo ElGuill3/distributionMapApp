@@ -1,0 +1,43 @@
+# Ruff configuration for distributionmapapp
+# Lint and format rules matching existing repo style
+
+# Exclude paths as per spec
+exclude = [
+    "static/**",
+    "scripts/**",
+    "tests/**",
+    "__pycache__/**",
+    ".git/**",
+    ".pytest_cache/**",
+    "node_modules/**",
+]
+
+# Target Python version (adjust if needed based on project)
+target-version = "py311"
+
+# Line length matching common conventions
+line-length = 88
+
+[lint]
+# Enable commonly useful rule sets
+select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+]
+
+[format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with 4 spaces
+indent-style = "space"
+
+# Respect magic trailing commas
+skip-magic-trailing-comma = false
+
+# Line ending style
+line-ending = "auto"

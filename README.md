@@ -511,6 +511,39 @@ BASE_URL=http://localhost:8080 npm run test:e2e:ui
 
 Los tests E2E verifican que ningún flujo de usuario dispara `window.alert` sin reemplazarlo por feedback accesible.
 
+### Comandos de calidad
+
+Además del stack de testing, el proyecto ahora incluye comandos de calidad para Python y TypeScript. Para usarlos, instalá también las dependencias de desarrollo Python:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+**Python** — coverage, lint y format check con `pytest-cov` y Ruff:
+
+```bash
+./scripts/python/quality/coverage.sh  # Ejecuta pytest con coverage
+./scripts/python/quality/lint.sh      # Ejecuta ruff check
+./scripts/python/quality/format.sh    # Ejecuta ruff format --check
+```
+
+Notas:
+- Estos comandos están pensados como **guardrails** iniciales: reportan baseline, no corrigen el repo automáticamente.
+- La primera pasada excluye `static/`, `scripts/` y tests Python para evitar ruido de revisión.
+- Si faltan dependencias del entorno Flask, el comando de coverage puede fallar durante la recolección de tests.
+
+**TypeScript** — lint y format check con ESLint + Prettier:
+
+```bash
+npm run lint:ts      # Ejecuta ESLint sobre src/ts y tests TS permitidos
+npm run format:ts    # Ejecuta Prettier en modo check
+npm run quality:ts   # Corre lint + format check
+```
+
+Notas:
+- La configuración excluye `static/` y otros artefactos generados para no mezclar código fuente con build output.
+- Esta etapa no hace auto-fix ni reformateo masivo; primero expone la baseline del proyecto.
+
 ### Límites de la API de Google Earth Engine
 
 - **Rango de fechas máximo por petición:** 10 años.
