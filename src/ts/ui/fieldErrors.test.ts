@@ -83,7 +83,9 @@ describe('fieldErrors.ts', () => {
 
     it('does nothing if field is falsy', () => {
       // Should not throw
-      expect(() => showFieldError(null as unknown as HTMLElement, 'error')).not.toThrow();
+      expect(() =>
+        showFieldError(null as unknown as HTMLElement, 'error')
+      ).not.toThrow();
     });
   });
 

@@ -11,7 +11,7 @@
  * indicando que se resolverá en Phase D.
  */
 
-import type { BBox, VariableKey, Season } from '../types.js';
+import type { BBox, VariableKey } from '../types.js';
 import * as mapState from '../state/mapState.js';
 import {
   fetchGifAndSeries,
@@ -19,7 +19,6 @@ import {
   extractTimeseriesValues,
 } from '../apiClient.js';
 import {
-  buildColorbars,
   switchColorbar,
   removeActiveOverlay,
   setActiveOverlay,
@@ -33,8 +32,7 @@ import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SoloPlayer } from '../ui/gifPlayer.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
-// eslint-disable-next-line @typescript-eslint/no-shadow
-declare var L: typeof import('leaflet');
+declare const L: typeof import('leaflet');
 
 // ---------------------------------------------------------------------------
 // Tipos exportados
@@ -449,8 +447,10 @@ import { municipalFloodOverlays } from '../map/overlays.js';
  */
 export function updateStationMarkersVisibility(
   stationMarkersMap: L.Marker[],
-  mapB: L.Map | null
+  _mapB: L.Map | null
 ): void {
+  // _mapB is kept for API compatibility but not used in this implementation
+  void _mapB;
   const showOnMap =
     !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
   for (const m of stationMarkersMap) {
@@ -460,9 +460,5 @@ export function updateStationMarkersVisibility(
       _mapRef!.removeLayer(m);
     }
   }
-  if (mapB) {
-    for (const m of stationMarkersMap) {
-      // stationMarkersMapB would be passed separately when mapB is present
-    }
-  }
+  // stationMarkersMapB would be handled separately when mapB is present
 }
