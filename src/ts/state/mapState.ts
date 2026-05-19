@@ -202,13 +202,13 @@ export function setCurrentVariable(variable: VariableKey): void {
 // ---------------------------------------------------------------------------
 
 export function setSeriesDataA(
-  data: Partial<Record<VariableKey, SeriesData | undefined>>,
+  data: Partial<Record<VariableKey, SeriesData | undefined>>
 ): void {
   state = { ...state, seriesDataA: data };
 }
 
 export function setSeriesDataB(
-  data: Partial<Record<VariableKey, SeriesData | undefined>>,
+  data: Partial<Record<VariableKey, SeriesData | undefined>>
 ): void {
   state = { ...state, seriesDataB: data };
 }
@@ -216,7 +216,7 @@ export function setSeriesDataB(
 export function setSeriesDataForVariable(
   panel: 'A' | 'B',
   variable: VariableKey,
-  data: SeriesData,
+  data: SeriesData
 ): void {
   if (panel === 'A') {
     state = {
@@ -245,7 +245,7 @@ export function clearSeriesData(): void {
 
 export function deleteSeriesDataForVariable(
   panel: 'A' | 'B',
-  variable: VariableKey,
+  variable: VariableKey
 ): void {
   if (panel === 'A') {
     const { [variable]: _removed, ...restA } = state.seriesDataA;

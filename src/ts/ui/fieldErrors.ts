@@ -43,8 +43,6 @@ export function showFieldError(field: HTMLElement, message: string): void {
 export function clearFieldError(field: HTMLElement): void {
   if (!field?.parentNode) return;
 
-  const existing = field.parentNode.querySelector(
-    `:scope > .${FIELD_ERROR_CLASS}`
-  );
+  const existing = field.parentNode.querySelector(`:scope > .${FIELD_ERROR_CLASS}`);
   existing?.remove();
 }

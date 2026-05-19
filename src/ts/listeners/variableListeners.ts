@@ -27,20 +27,27 @@ export function isLeapYear(year: number): boolean {
  *   otono     → Y-09-01 .. Y-11-30
  *   anual     → Y-01-01 .. Y-12-31
  */
-export function seasonToDates(year: number, season: Season): { start: string; end: string } {
+export function seasonToDates(
+  year: number,
+  season: Season
+): { start: string; end: string } {
   switch (season) {
     case 'invierno': {
       const endYear = year + 1;
-      const endDay  = isLeapYear(endYear) ? 29 : 28;
+      const endDay = isLeapYear(endYear) ? 29 : 28;
       return {
         start: `${year}-12-01`,
-        end:   `${endYear}-02-${String(endDay).padStart(2, '0')}`,
+        end: `${endYear}-02-${String(endDay).padStart(2, '0')}`,
       };
     }
-    case 'primavera': return { start: `${year}-03-01`, end: `${year}-05-31` };
-    case 'verano':    return { start: `${year}-06-01`, end: `${year}-08-31` };
-    case 'otono':     return { start: `${year}-09-01`, end: `${year}-11-30` };
-    case 'anual':     return { start: `${year}-01-01`, end: `${year}-12-31` };
+    case 'primavera':
+      return { start: `${year}-03-01`, end: `${year}-05-31` };
+    case 'verano':
+      return { start: `${year}-06-01`, end: `${year}-08-31` };
+    case 'otono':
+      return { start: `${year}-09-01`, end: `${year}-11-30` };
+    case 'anual':
+      return { start: `${year}-01-01`, end: `${year}-12-31` };
   }
 }
 
@@ -64,7 +71,7 @@ export interface VariableListenerConfig {
     variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
     start: string,
     end: string,
-    bbox: BBox,
+    bbox: BBox
   ) => void;
 }
 
@@ -74,8 +81,8 @@ export interface VariableListenerConfig {
 
 function _populateYearSelect(select: HTMLSelectElement, years: number[]): void {
   for (const year of years) {
-    const opt       = document.createElement('option');
-    opt.value       = String(year);
+    const opt = document.createElement('option');
+    opt.value = String(year);
     opt.textContent = String(year);
     select.appendChild(opt);
   }
@@ -83,8 +90,8 @@ function _populateYearSelect(select: HTMLSelectElement, years: number[]): void {
 
 function _populateSeasonSelect(select: HTMLSelectElement): void {
   for (const s of SEASONS) {
-    const opt       = document.createElement('option');
-    opt.value       = s.value;
+    const opt = document.createElement('option');
+    opt.value = s.value;
     opt.textContent = s.label;
     select.appendChild(opt);
   }
@@ -105,7 +112,7 @@ export function registerVariableListener(cfg: VariableListenerConfig): void {
 
   if (!yearSelect || !seasonSelect || !button) return;
 
-  _populateYearSelect(yearSelect,  VARIABLE_YEARS[variable]);
+  _populateYearSelect(yearSelect, VARIABLE_YEARS[variable]);
   _populateSeasonSelect(seasonSelect);
 
   const syncButtonState = (): void => {
@@ -113,8 +120,8 @@ export function registerVariableListener(cfg: VariableListenerConfig): void {
   };
 
   yearSelect.addEventListener('change', () => {
-    const hasYear           = Boolean(yearSelect.value);
-    seasonSelect.disabled   = !hasYear;
+    const hasYear = Boolean(yearSelect.value);
+    seasonSelect.disabled = !hasYear;
     if (!hasYear) seasonSelect.value = '';
     syncButtonState();
   });
@@ -122,7 +129,7 @@ export function registerVariableListener(cfg: VariableListenerConfig): void {
   seasonSelect.addEventListener('change', syncButtonState);
 
   button.addEventListener('click', () => {
-    const year   = Number(yearSelect.value);
+    const year = Number(yearSelect.value);
     const season = seasonSelect.value as Season;
 
     if (!year || !season) {

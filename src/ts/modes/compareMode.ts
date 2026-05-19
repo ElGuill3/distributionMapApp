@@ -175,7 +175,7 @@ function hidePlayerControls(): void {
 
 function onPlayerFrameChange(current: number, total: number): void {
   if (_playerSlider) {
-    _playerSlider.max   = String(total - 1);
+    _playerSlider.max = String(total - 1);
     _playerSlider.value = String(current);
   }
   if (_playerFrameLabel) {
@@ -197,7 +197,11 @@ function _selectedInterval(): number {
 // Helpers internos — station markers
 // ---------------------------------------------------------------------------
 
-function _setMarkersVisible(markers: L.Marker[], targetMap: L.Map, visible: boolean): void {
+function _setMarkersVisible(
+  markers: L.Marker[],
+  targetMap: L.Map,
+  visible: boolean
+): void {
   for (const m of markers) {
     if (visible && !targetMap.hasLayer(m)) {
       m.addTo(targetMap);
@@ -208,10 +212,15 @@ function _setMarkersVisible(markers: L.Marker[], targetMap: L.Map, visible: bool
 }
 
 function _updateStationMarkersVisibility(): void {
-  const showOnMap = !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
+  const showOnMap =
+    !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
   _setMarkersVisible(_stationMarkersMap, _mapRef!, showOnMap);
   if (mapState.getMapB()) {
-    _setMarkersVisible(_stationMarkersMapB, mapState.getMapB()!, !mapState.getOverlayB());
+    _setMarkersVisible(
+      _stationMarkersMapB,
+      mapState.getMapB()!,
+      !mapState.getOverlayB()
+    );
   }
 }
 
@@ -225,17 +234,23 @@ function _updateStationMarkersVisibility(): void {
 export function initMapB(): void {
   if (mapState.getMapB()) return;
 
-  const newMapB = L.map('map-b', { zoomControl: false }).setView(_mapRef!.getCenter(), _mapRef!.getZoom());
+  const newMapB = L.map('map-b', { zoomControl: false }).setView(
+    _mapRef!.getCenter(),
+    _mapRef!.getZoom()
+  );
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom:     19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(newMapB);
 
   newMapB.on('moveend', () => {
     if (mapState.getMapBSyncLock() || !mapState.getMapB()) return;
     mapState.setMapBSyncLock(true);
-    _mapRef!.setView(mapState.getMapB()!.getCenter(), mapState.getMapB()!.getZoom(), { animate: false });
+    _mapRef!.setView(mapState.getMapB()!.getCenter(), mapState.getMapB()!.getZoom(), {
+      animate: false,
+    });
     mapState.setMapBSyncLock(false);
   });
 
@@ -244,7 +259,9 @@ export function initMapB(): void {
   _mapRef!.on('moveend', () => {
     if (mapState.getMapBSyncLock() || !mapState.getMapB()) return;
     mapState.setMapBSyncLock(true);
-    mapState.getMapB()!.setView(_mapRef!.getCenter(), _mapRef!.getZoom(), { animate: false });
+    mapState
+      .getMapB()!
+      .setView(_mapRef!.getCenter(), _mapRef!.getZoom(), { animate: false });
     mapState.setMapBSyncLock(false);
   });
 
@@ -257,14 +274,14 @@ export function initMapB(): void {
     SPTTB: 'San Pedro (SPTTB)',
     BDCTB: 'Boca del Cerro (BDCTB)',
   };
-  for (const id of (['SPTTB', 'BDCTB'] as const)) {
+  for (const id of ['SPTTB', 'BDCTB'] as const) {
     const [lat, lon] = STATION_COORDS[id];
     const marker = L.marker(L.latLng(lat, lon))
       .bindPopup(
         `<div class="station-popup-content">` +
-        `<b>${STATION_LABELS[id]}</b><br>Estación de nivel local<br>` +
-        `<a href="#" class="station-full-data-link" data-station-id="${id}">` +
-        `Ver datos 2000–2024</a></div>`,
+          `<b>${STATION_LABELS[id]}</b><br>Estación de nivel local<br>` +
+          `<a href="#" class="station-full-data-link" data-station-id="${id}">` +
+          `Ver datos 2000–2024</a></div>`
       )
       .addTo(newMapB);
     _stationMarkersMapB.push(marker);
@@ -318,9 +335,12 @@ export function clearPanelA(): void {
   mapState.clearSeriesDataA();
   if (_ndviChartDiv) Plotly.purge(_ndviChartDiv as HTMLDivElement);
   hidePlayerControls();
-  if (_compareYearASelect)   _compareYearASelect.value   = '';
-  if (_compareSeasonASelect) { _compareSeasonASelect.value = ''; _compareSeasonASelect.disabled = true; }
-  if (_btnGenerateA)         _btnGenerateA.disabled = true;
+  if (_compareYearASelect) _compareYearASelect.value = '';
+  if (_compareSeasonASelect) {
+    _compareSeasonASelect.value = '';
+    _compareSeasonASelect.disabled = true;
+  }
+  if (_btnGenerateA) _btnGenerateA.disabled = true;
   if (_chkStationSpA) _chkStationSpA.checked = false;
   if (_chkStationBdA) _chkStationBdA.checked = false;
   _updateStationMarkersVisibility();
@@ -340,9 +360,12 @@ export function clearPanelB(): void {
   mapState.clearSeriesDataB();
   if (_chartBDiv) Plotly.purge(_chartBDiv as HTMLDivElement);
   hidePlayerControls();
-  if (_compareYearBSelect)   _compareYearBSelect.value   = '';
-  if (_compareSeasonBSelect) { _compareSeasonBSelect.value = ''; _compareSeasonBSelect.disabled = true; }
-  if (_btnGenerateB)         _btnGenerateB.disabled = true;
+  if (_compareYearBSelect) _compareYearBSelect.value = '';
+  if (_compareSeasonBSelect) {
+    _compareSeasonBSelect.value = '';
+    _compareSeasonBSelect.disabled = true;
+  }
+  if (_btnGenerateB) _btnGenerateB.disabled = true;
   if (_chkStationSpB) _chkStationSpB.checked = false;
   if (_chkStationBdB) _chkStationBdB.checked = false;
   _updateStationMarkersVisibility();
@@ -356,8 +379,8 @@ function _populateYearSelect(sel: HTMLSelectElement | null, years: number[]): vo
   if (!sel) return;
   while (sel.options.length > 1) sel.remove(1);
   for (const year of years) {
-    const opt       = document.createElement('option');
-    opt.value       = String(year);
+    const opt = document.createElement('option');
+    opt.value = String(year);
     opt.textContent = String(year);
     sel.appendChild(opt);
   }
@@ -366,16 +389,22 @@ function _populateYearSelect(sel: HTMLSelectElement | null, years: number[]): vo
 function _ensureSeasonOptions(sel: HTMLSelectElement | null): void {
   if (!sel || sel.options.length > 1) return;
   for (const s of SEASONS) {
-    const opt       = document.createElement('option');
-    opt.value       = s.value;
+    const opt = document.createElement('option');
+    opt.value = s.value;
     opt.textContent = s.label;
     sel.appendChild(opt);
   }
 }
 
 export function initCompareSelects(): void {
-  const varA = (_compareVarASelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-  const varB = (_compareVarBSelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
+  const varA = (_compareVarASelect?.value ?? 'ndvi') as Exclude<
+    VariableKey,
+    'local_sp' | 'local_bd'
+  >;
+  const varB = (_compareVarBSelect?.value ?? 'ndvi') as Exclude<
+    VariableKey,
+    'local_sp' | 'local_bd'
+  >;
   _populateYearSelect(_compareYearASelect, VARIABLE_YEARS[varA]);
   _populateYearSelect(_compareYearBSelect, VARIABLE_YEARS[varB]);
   _ensureSeasonOptions(_compareSeasonASelect);
@@ -385,15 +414,17 @@ export function initCompareSelects(): void {
 function _wireCompareSelectPair(
   yearSel: HTMLSelectElement | null,
   seasonSel: HTMLSelectElement | null,
-  btn: HTMLButtonElement | null,
+  btn: HTMLButtonElement | null
 ): void {
   if (!yearSel || !seasonSel || !btn) return;
 
-  const sync = (): void => { btn.disabled = !yearSel.value || !seasonSel.value; };
+  const sync = (): void => {
+    btn.disabled = !yearSel.value || !seasonSel.value;
+  };
 
   yearSel.addEventListener('change', () => {
-    const hasYear       = Boolean(yearSel.value);
-    seasonSel.disabled  = !hasYear;
+    const hasYear = Boolean(yearSel.value);
+    seasonSel.disabled = !hasYear;
     if (!hasYear) seasonSel.value = '';
     sync();
   });
@@ -418,29 +449,44 @@ export function registerCompareModeListeners(): void {
     const sel = _compareVarASelect as HTMLSelectElement;
     const v = (sel.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
     _populateYearSelect(_compareYearASelect, VARIABLE_YEARS[v]);
-    if (_compareYearASelect)   _compareYearASelect.value   = '';
-    if (_compareSeasonASelect) { _compareSeasonASelect.value = ''; _compareSeasonASelect.disabled = true; }
-    if (_btnGenerateA)         _btnGenerateA.disabled = true;
+    if (_compareYearASelect) _compareYearASelect.value = '';
+    if (_compareSeasonASelect) {
+      _compareSeasonASelect.value = '';
+      _compareSeasonASelect.disabled = true;
+    }
+    if (_btnGenerateA) _btnGenerateA.disabled = true;
   });
 
   _compareVarBSelect?.addEventListener('change', () => {
     const sel = _compareVarBSelect as HTMLSelectElement;
     const v = (sel.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
     _populateYearSelect(_compareYearBSelect, VARIABLE_YEARS[v]);
-    if (_compareYearBSelect)   _compareYearBSelect.value   = '';
-    if (_compareSeasonBSelect) { _compareSeasonBSelect.value = ''; _compareSeasonBSelect.disabled = true; }
-    if (_btnGenerateB)         _btnGenerateB.disabled = true;
+    if (_compareYearBSelect) _compareYearBSelect.value = '';
+    if (_compareSeasonBSelect) {
+      _compareSeasonBSelect.value = '';
+      _compareSeasonBSelect.disabled = true;
+    }
+    if (_btnGenerateB) _btnGenerateB.disabled = true;
   });
 
   // Panel A — botón generar
   _btnGenerateA?.addEventListener('click', () => {
-    const variable = (_compareVarASelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-    const year     = Number(_compareYearASelect?.value);
-    const season   = _compareSeasonASelect?.value as Season | undefined;
-    const bbox     = mapState.getBbox();
+    const variable = (_compareVarASelect?.value ?? 'ndvi') as Exclude<
+      VariableKey,
+      'local_sp' | 'local_bd'
+    >;
+    const year = Number(_compareYearASelect?.value);
+    const season = _compareSeasonASelect?.value as Season | undefined;
+    const bbox = mapState.getBbox();
 
-    if (!year || !season) { showFieldError(_btnGenerateA!, 'Seleccioná año y temporada para el panel A.'); return; }
-    if (!bbox)            { showFieldError(_btnGenerateA!, 'Dibujá primero un rectángulo en el mapa.');      return; }
+    if (!year || !season) {
+      showFieldError(_btnGenerateA!, 'Seleccioná año y temporada para el panel A.');
+      return;
+    }
+    if (!bbox) {
+      showFieldError(_btnGenerateA!, 'Dibujá primero un rectángulo en el mapa.');
+      return;
+    }
 
     const { start, end } = seasonToDates(year, season);
     void requestGifAndSeriesForPanel('A', variable, start, end, bbox);
@@ -448,27 +494,64 @@ export function registerCompareModeListeners(): void {
 
   // Panel B — botón generar
   _btnGenerateB?.addEventListener('click', () => {
-    const variable = (_compareVarBSelect?.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-    const year     = Number(_compareYearBSelect?.value);
-    const season   = _compareSeasonBSelect?.value as Season | undefined;
-    const bbox     = mapState.getBbox();
+    const variable = (_compareVarBSelect?.value ?? 'ndvi') as Exclude<
+      VariableKey,
+      'local_sp' | 'local_bd'
+    >;
+    const year = Number(_compareYearBSelect?.value);
+    const season = _compareSeasonBSelect?.value as Season | undefined;
+    const bbox = mapState.getBbox();
 
-    if (!year || !season) { showFieldError(_btnGenerateB!, 'Seleccioná año y temporada para el panel B.'); return; }
-    if (!bbox)            { showFieldError(_btnGenerateB!, 'Dibujá primero un rectángulo en el mapa.');      return; }
+    if (!year || !season) {
+      showFieldError(_btnGenerateB!, 'Seleccioná año y temporada para el panel B.');
+      return;
+    }
+    if (!bbox) {
+      showFieldError(_btnGenerateB!, 'Dibujá primero un rectángulo en el mapa.');
+      return;
+    }
 
     const { start, end } = seasonToDates(year, season);
     void requestGifAndSeriesForPanel('B', variable, start, end, bbox);
   });
 
   // Botones limpiar
-  _btnClearA?.addEventListener('click', () => { clearPanelA(); });
-  _btnClearB?.addEventListener('click', () => { clearPanelB(); });
+  _btnClearA?.addEventListener('click', () => {
+    clearPanelA();
+  });
+  _btnClearB?.addEventListener('click', () => {
+    clearPanelB();
+  });
 
   // Station checkboxes
-  _wireCompareStationCheck(_chkStationSpA, 'SPTTB', 'A', _compareYearASelect, _compareSeasonASelect);
-  _wireCompareStationCheck(_chkStationBdA, 'BDCTB', 'A', _compareYearASelect, _compareSeasonASelect);
-  _wireCompareStationCheck(_chkStationSpB, 'SPTTB', 'B', _compareYearBSelect, _compareSeasonBSelect);
-  _wireCompareStationCheck(_chkStationBdB, 'BDCTB', 'B', _compareYearBSelect, _compareSeasonBSelect);
+  _wireCompareStationCheck(
+    _chkStationSpA,
+    'SPTTB',
+    'A',
+    _compareYearASelect,
+    _compareSeasonASelect
+  );
+  _wireCompareStationCheck(
+    _chkStationBdA,
+    'BDCTB',
+    'A',
+    _compareYearASelect,
+    _compareSeasonASelect
+  );
+  _wireCompareStationCheck(
+    _chkStationSpB,
+    'SPTTB',
+    'B',
+    _compareYearBSelect,
+    _compareSeasonBSelect
+  );
+  _wireCompareStationCheck(
+    _chkStationBdB,
+    'BDCTB',
+    'B',
+    _compareYearBSelect,
+    _compareSeasonBSelect
+  );
 
   // Poblar selects de comparativa al iniciar
   initCompareSelects();
@@ -505,7 +588,9 @@ export function trySyncBothPanels(): void {
   mapState.setSyncPlayer(syncPlayer);
 
   if (_playerSlider) {
-    _playerSlider.max   = String(Math.max(gifPlayerA.frameCount, gifPlayerB.frameCount) - 1);
+    _playerSlider.max = String(
+      Math.max(gifPlayerA.frameCount, gifPlayerB.frameCount) - 1
+    );
     _playerSlider.value = '0';
   }
   showPlayerControls();
@@ -523,7 +608,7 @@ async function _loadCompareStation(
   stationId: 'SPTTB' | 'BDCTB',
   panel: 'A' | 'B',
   year: string,
-  season: string,
+  season: string
 ): Promise<void> {
   const { start, end } = seasonToDates(Number(year), season as Season);
   const { fetchLocalStationLevel } = await import('../apiClient.js');
@@ -532,15 +617,36 @@ async function _loadCompareStation(
 
     const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
     if (panel === 'A') {
-      mapState.setSeriesDataForVariable('A', key, { dates: data.dates, values: data.level_m });
-      if (_ndviChartDiv) plotAllSelectedSeries(_ndviChartDiv as HTMLDivElement, mapState.getSeriesDataA(), showChartBContainer, hideChartBContainer);
+      mapState.setSeriesDataForVariable('A', key, {
+        dates: data.dates,
+        values: data.level_m,
+      });
+      if (_ndviChartDiv)
+        plotAllSelectedSeries(
+          _ndviChartDiv as HTMLDivElement,
+          mapState.getSeriesDataA(),
+          showChartBContainer,
+          hideChartBContainer
+        );
     } else {
-      mapState.setSeriesDataForVariable('B', key, { dates: data.dates, values: data.level_m });
-      if (_chartBDiv) plotAllSelectedSeries(_chartBDiv as HTMLDivElement, mapState.getSeriesDataB(), showChartBContainer, hideChartBContainer);
+      mapState.setSeriesDataForVariable('B', key, {
+        dates: data.dates,
+        values: data.level_m,
+      });
+      if (_chartBDiv)
+        plotAllSelectedSeries(
+          _chartBDiv as HTMLDivElement,
+          mapState.getSeriesDataB(),
+          showChartBContainer,
+          hideChartBContainer
+        );
     }
   } catch (err) {
     console.error(err);
-    showErrorModal('Error de red', 'No se pudo cargar la serie de la estación. Verificá tu conexión.');
+    showErrorModal(
+      'Error de red',
+      'No se pudo cargar la serie de la estación. Verificá tu conexión.'
+    );
   }
 }
 
@@ -549,7 +655,7 @@ function _wireCompareStationCheck(
   stationId: 'SPTTB' | 'BDCTB',
   panel: 'A' | 'B',
   yearSel: HTMLSelectElement | null,
-  seasonSel: HTMLSelectElement | null,
+  seasonSel: HTMLSelectElement | null
 ): void {
   if (!chk) return;
 
@@ -557,10 +663,13 @@ function _wireCompareStationCheck(
     const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
 
     if (chk.checked) {
-      const year   = yearSel?.value   ?? '';
+      const year = yearSel?.value ?? '';
       const season = seasonSel?.value ?? '';
       if (!year || !season) {
-        showFieldError(chk, 'Seleccioná año y temporada del panel antes de cargar la estación.');
+        showFieldError(
+          chk,
+          'Seleccioná año y temporada del panel antes de cargar la estación.'
+        );
         chk.checked = false;
         return;
       }
@@ -568,9 +677,21 @@ function _wireCompareStationCheck(
     } else {
       mapState.deleteSeriesDataForVariable(panel, key);
       if (panel === 'A') {
-        if (_ndviChartDiv) plotAllSelectedSeries(_ndviChartDiv as HTMLDivElement, mapState.getSeriesDataA(), showChartBContainer, hideChartBContainer);
+        if (_ndviChartDiv)
+          plotAllSelectedSeries(
+            _ndviChartDiv as HTMLDivElement,
+            mapState.getSeriesDataA(),
+            showChartBContainer,
+            hideChartBContainer
+          );
       } else {
-        if (_chartBDiv) plotAllSelectedSeries(_chartBDiv as HTMLDivElement, mapState.getSeriesDataB(), showChartBContainer, hideChartBContainer);
+        if (_chartBDiv)
+          plotAllSelectedSeries(
+            _chartBDiv as HTMLDivElement,
+            mapState.getSeriesDataB(),
+            showChartBContainer,
+            hideChartBContainer
+          );
       }
     }
   });
@@ -591,12 +712,22 @@ function hideChartBContainer(): void {
 
 function renderChart(): void {
   if (!_ndviChartDiv) return;
-  plotAllSelectedSeries(_ndviChartDiv as HTMLDivElement, mapState.getSeriesDataA(), showChartBContainer, hideChartBContainer);
+  plotAllSelectedSeries(
+    _ndviChartDiv as HTMLDivElement,
+    mapState.getSeriesDataA(),
+    showChartBContainer,
+    hideChartBContainer
+  );
 }
 
 function renderChartB(): void {
   if (!_chartBDiv) return;
-  plotAllSelectedSeries(_chartBDiv as HTMLDivElement, mapState.getSeriesDataB(), showChartBContainer, hideChartBContainer);
+  plotAllSelectedSeries(
+    _chartBDiv as HTMLDivElement,
+    mapState.getSeriesDataB(),
+    showChartBContainer,
+    hideChartBContainer
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -621,7 +752,7 @@ export async function requestGifAndSeriesForPanel(
   variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
   start: string,
   end: string,
-  bbox: BBox,
+  bbox: BBox
 ): Promise<void> {
   mapState.setCurrentVariable(variable);
 
@@ -639,11 +770,19 @@ export async function requestGifAndSeriesForPanel(
         else removeProgressIndicator(3000);
       }
     },
-    () => { eventSource.close(); },
+    () => {
+      eventSource.close();
+    }
   );
 
   try {
-    const { gifData, tsData } = await fetchGifAndSeriesForPanel({ variable, start, end, bbox, taskId });
+    const { gifData, tsData } = await fetchGifAndSeriesForPanel({
+      variable,
+      start,
+      end,
+      bbox,
+      taskId,
+    });
 
     if (gifData.error) {
       const uxError = translateBackendError(gifData.error);
@@ -652,7 +791,10 @@ export async function requestGifAndSeriesForPanel(
     }
 
     const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
-    const overlayBounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
+    const overlayBounds = L.latLngBounds(
+      L.latLng(minLat, minLon),
+      L.latLng(maxLat, maxLon)
+    );
 
     // Parar toda reproducción antes de modificar cualquier panel
     normalMode.stopSoloPlayer();
@@ -666,10 +808,12 @@ export async function requestGifAndSeriesForPanel(
       mapState.setOverlayA(null);
       removeActiveOverlay(_mapRef!);
 
-      const player  = new GifPlayer();
+      const player = new GifPlayer();
       await player.load(gifData.gifUrl);
 
-      const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(_mapRef!);
+      const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, {
+        opacity: 0.8,
+      }).addTo(_mapRef!);
       setActiveOverlay(overlay);
       const mapB = mapState.getMapB();
       if (mapB) switchColorbar(mapB, variable, _mapRef!);
@@ -691,7 +835,7 @@ export async function requestGifAndSeriesForPanel(
       mapState.setSoloPlayer(soloPlayer);
 
       if (_playerSlider) {
-        _playerSlider.max   = String(player.frameCount - 1);
+        _playerSlider.max = String(player.frameCount - 1);
         _playerSlider.value = '0';
       }
       showPlayerControls();
@@ -706,23 +850,28 @@ export async function requestGifAndSeriesForPanel(
       } else {
         console.warn('Error en serie temporal panel A.');
       }
-
     } else {
       // Panel B
       mapState.getGifPlayerB()?.dispose();
       mapState.setGifPlayerB(null);
       clearMapBOverlay();
 
-      const player  = new GifPlayer();
+      const player = new GifPlayer();
       await player.load(gifData.gifUrl);
 
       const mapB = mapState.getMapB()!;
-      const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(mapB);
+      const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, {
+        opacity: 0.8,
+      }).addTo(mapB);
       mapState.setOverlayB(overlay);
       _updateStationMarkersVisibility();
       switchColorbar(mapB, variable, _mapRef!);
       mapB.fitBounds(overlayBounds);
-      setTimeout(() => mapB.setView(_mapRef!.getCenter(), _mapRef!.getZoom(), { animate: false }), 100);
+      setTimeout(
+        () =>
+          mapB.setView(_mapRef!.getCenter(), _mapRef!.getZoom(), { animate: false }),
+        100
+      );
 
       mapState.setGifPlayerB(player);
       mapState.setActiveGifPathB(gifData.gifUrl);
@@ -730,7 +879,10 @@ export async function requestGifAndSeriesForPanel(
       if (tsData) {
         const extractedB = extractTimeseriesValues(tsData, variable);
         if (extractedB) {
-          mapState.setSeriesDataForVariable('B', variable, { dates: extractedB.dates, values: extractedB.values });
+          mapState.setSeriesDataForVariable('B', variable, {
+            dates: extractedB.dates,
+            values: extractedB.values,
+          });
           renderChartB();
         }
       } else {
@@ -740,10 +892,12 @@ export async function requestGifAndSeriesForPanel(
 
     // Si ambos paneles tienen GIF → sincronizar
     trySyncBothPanels();
-
   } catch (err) {
     console.error(err);
-    showErrorModal('Error de red', `No se pudo generar la animación / serie temporal (panel ${panel}). Verificá tu conexión.`);
+    showErrorModal(
+      'Error de red',
+      `No se pudo generar la animación / serie temporal (panel ${panel}). Verificá tu conexión.`
+    );
     updateProgressIndicator(-1, 'Error de red');
     removeProgressIndicator(3000);
   } finally {

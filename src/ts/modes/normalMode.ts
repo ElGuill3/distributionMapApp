@@ -109,7 +109,7 @@ function hidePlayerControls(): void {
 
 function onPlayerFrameChange(current: number, total: number): void {
   if (_playerSlider) {
-    _playerSlider.max   = String(total - 1);
+    _playerSlider.max = String(total - 1);
     _playerSlider.value = String(current);
   }
   if (_playerFrameLabel) {
@@ -229,7 +229,12 @@ function hideChartContainer(): void {
 
 function renderChart(): void {
   if (!_chartDiv) return;
-  plotAllSelectedSeries(_chartDiv as HTMLDivElement, mapState.getSeriesDataA(), showChartContainer, hideChartContainer);
+  plotAllSelectedSeries(
+    _chartDiv as HTMLDivElement,
+    mapState.getSeriesDataA(),
+    showChartContainer,
+    hideChartContainer
+  );
   _onChartRendered?.();
 }
 
@@ -251,7 +256,7 @@ export async function requestGifAndSeries(
   variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
   start: string,
   end: string,
-  bbox: BBox,
+  bbox: BBox
 ): Promise<NormalModeResult> {
   mapState.setCurrentVariable(variable);
 
@@ -271,18 +276,29 @@ export async function requestGifAndSeries(
         else removeProgressIndicator(3000);
       }
     },
-    () => { eventSource.close(); },
+    () => {
+      eventSource.close();
+    }
   );
 
   try {
-    const { gifData, tsData } = await fetchGifAndSeries({ variable, start, end, bbox, taskId });
+    const { gifData, tsData } = await fetchGifAndSeries({
+      variable,
+      start,
+      end,
+      bbox,
+      taskId,
+    });
 
     if (gifData.error) {
       return { success: false, error: gifData.error ?? 'Error generando animación.' };
     }
 
     const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
-    const overlayBounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
+    const overlayBounds = L.latLngBounds(
+      L.latLng(minLat, minLon),
+      L.latLng(maxLat, maxLon)
+    );
 
     // Limpiar player anterior antes de crear el nuevo
     stopSoloPlayer();
@@ -292,10 +308,12 @@ export async function requestGifAndSeries(
     removeActiveOverlay(_mapRef!);
 
     // Crear GIF player y overlay
-    const player  = new GifPlayer();
+    const player = new GifPlayer();
     await player.load(gifData.gifUrl);
 
-    const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, { opacity: 0.8 }).addTo(_mapRef!);
+    const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, {
+      opacity: 0.8,
+    }).addTo(_mapRef!);
     setActiveOverlay(overlay);
     switchColorbar(_mapRef!, variable);
     _mapRef!.fitBounds(overlayBounds);
@@ -315,7 +333,7 @@ export async function requestGifAndSeries(
     mapState.setSoloPlayer(soloPlayer);
 
     if (_playerSlider) {
-      _playerSlider.max   = String(player.frameCount - 1);
+      _playerSlider.max = String(player.frameCount - 1);
       _playerSlider.value = '0';
     }
     showPlayerControls();
@@ -333,10 +351,12 @@ export async function requestGifAndSeries(
     }
 
     return { success: true };
-
   } catch (err) {
     console.error(err);
-    return { success: false, error: 'Error de red al generar animación / serie temporal.' };
+    return {
+      success: false,
+      error: 'Error de red al generar animación / serie temporal.',
+    };
   } finally {
     eventSource.close();
   }
@@ -346,12 +366,15 @@ export async function requestGifAndSeries(
 // Actualizar currentVariable al abrir un details de variable
 // ---------------------------------------------------------------------------
 
-const variableDetailsMap: Record<string, Exclude<VariableKey, 'local_sp' | 'local_bd'>> = {
-  'ndvi-controls':   'ndvi',
-  'temp-controls':   'temp',
-  'soil-controls':   'soil',
+const variableDetailsMap: Record<
+  string,
+  Exclude<VariableKey, 'local_sp' | 'local_bd'>
+> = {
+  'ndvi-controls': 'ndvi',
+  'temp-controls': 'temp',
+  'soil-controls': 'soil',
   'precip-controls': 'precip',
-  'water-controls':  'water',
+  'water-controls': 'water',
 };
 
 /**
@@ -426,9 +449,10 @@ import { municipalFloodOverlays } from '../map/overlays.js';
  */
 export function updateStationMarkersVisibility(
   stationMarkersMap: L.Marker[],
-  mapB: L.Map | null,
+  mapB: L.Map | null
 ): void {
-  const showOnMap = !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
+  const showOnMap =
+    !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
   for (const m of stationMarkersMap) {
     if (showOnMap && !_mapRef!.hasLayer(m)) {
       m.addTo(_mapRef!);

@@ -4,12 +4,7 @@
  * Conecta todos los módulos: mapa, API, UI y listeners.
  */
 
-import type {
-  BBox,
-  VariableKey,
-  Season,
-  SeriesData,
-} from './types.js';
+import type { BBox, VariableKey, Season, SeriesData } from './types.js';
 import * as mapState from './state/mapState.js';
 import * as normalMode from './modes/normalMode.js';
 import * as compareMode from './modes/compareMode.js';
@@ -37,7 +32,10 @@ import {
 import { showFieldError, clearFieldError } from './ui/fieldErrors.js';
 import { translateBackendError } from './errorMap.js';
 import { plotAllSelectedSeries } from './ui/chart.js';
-import { registerVariableListener, seasonToDates } from './listeners/variableListeners.js';
+import {
+  registerVariableListener,
+  seasonToDates,
+} from './listeners/variableListeners.js';
 import { GifPlayer, SyncPlayer, SoloPlayer } from './ui/gifPlayer.js';
 import {
   fetchLocalStationLevel,
@@ -55,8 +53,9 @@ import { plotChartAsPng } from './ui/chart.js';
 const map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom:     19,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19,
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 }).addTo(map);
 
 buildColorbars();
@@ -76,17 +75,21 @@ const STATION_LABELS: Record<'SPTTB' | 'BDCTB', string> = {
 };
 
 /** Marcadores de estaciones en mapa principal y mapa B. */
-const stationMarkersMap:  L.Marker[] = [];
+const stationMarkersMap: L.Marker[] = [];
 const stationMarkersMapB: L.Marker[] = [];
 
-function _makeStationMarker(id: 'SPTTB' | 'BDCTB', targetMap: L.Map, markerList: L.Marker[]): L.Marker {
+function _makeStationMarker(
+  id: 'SPTTB' | 'BDCTB',
+  targetMap: L.Map,
+  markerList: L.Marker[]
+): L.Marker {
   const [lat, lon] = STATION_COORDS[id];
   const marker = L.marker(L.latLng(lat, lon))
     .bindPopup(
       `<div class="station-popup-content">` +
-      `<b>${STATION_LABELS[id]}</b><br>Estación de nivel local<br>` +
-      `<a href="#" class="station-full-data-link" data-station-id="${id}">` +
-      `Ver datos 2000–2024</a></div>`,
+        `<b>${STATION_LABELS[id]}</b><br>Estación de nivel local<br>` +
+        `<a href="#" class="station-full-data-link" data-station-id="${id}">` +
+        `Ver datos 2000–2024</a></div>`
     )
     .addTo(targetMap);
   markerList.push(marker);
@@ -105,53 +108,53 @@ map.addLayer(drawnItems);
 
 const drawControl = new L.Control.Draw({
   draw: {
-    marker:       false,
-    circle:       false,
-    polyline:     false,
-    polygon:      false,
+    marker: false,
+    circle: false,
+    polyline: false,
+    polygon: false,
     circlemarker: false,
-    rectangle:    { shapeOptions: { color: '#ff7800', weight: 2 } },
+    rectangle: { shapeOptions: { color: '#ff7800', weight: 2 } },
   },
   edit: {
     featureGroup: drawnItems as L.FeatureGroup,
-    edit:         true,
-    remove:       true,
+    edit: true,
+    remove: true,
   },
 });
 map.addControl(drawControl);
 
 // Phase B: bbox now managed via mapState.getBbox() / mapState.setBbox()
 
-map.on(L.Draw.Event.CREATED, (e) => {
+map.on(L.Draw.Event.CREATED, e => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const layer = ((e as unknown) as { layer: L.Rectangle }).layer;
+  const layer = (e as unknown as { layer: L.Rectangle }).layer;
   const bounds = layer.getBounds();
-  const sw     = bounds.getSouthWest();
-  const ne     = bounds.getNorthEast();
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
 
-  const widthDeg  = Math.abs(ne.lng - sw.lng);
+  const widthDeg = Math.abs(ne.lng - sw.lng);
   const heightDeg = Math.abs(ne.lat - sw.lat);
 
   if (widthDeg > MAX_SPAN_DEG || heightDeg > MAX_SPAN_DEG) {
     showErrorModal(
       'Área demasiado grande',
-      'El bounding box es demasiado grande (máx. ~8° por lado). Intentá con un área menor.',
+      'El bounding box es demasiado grande (máx. ~8° por lado). Intentá con un área menor.'
     );
     return;
   }
 
   const centerLat = (sw.lat + ne.lat) / 2;
   const centerLng = (sw.lng + ne.lng) / 2;
-  const halfSide  = Math.min(widthDeg, heightDeg) / 2;
+  const halfSide = Math.min(widthDeg, heightDeg) / 2;
 
   const squareSouth = centerLat - halfSide;
   const squareNorth = centerLat + halfSide;
-  const squareWest  = centerLng - halfSide;
-  const squareEast  = centerLng + halfSide;
+  const squareWest = centerLng - halfSide;
+  const squareEast = centerLng + halfSide;
 
   const squareBounds = L.latLngBounds(
     L.latLng(squareSouth, squareWest),
-    L.latLng(squareNorth, squareEast),
+    L.latLng(squareNorth, squareEast)
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -178,8 +181,10 @@ map.on(L.Draw.Event.CREATED, (e) => {
 // Gráfica Plotly — Panel A
 // ---------------------------------------------------------------------------
 
-const ndviChartContainer = document.getElementById('ndvi-chart-container') as HTMLDivElement | null;
-const ndviChartDiv       = document.getElementById('ndvi-chart')           as HTMLDivElement | null;
+const ndviChartContainer = document.getElementById(
+  'ndvi-chart-container'
+) as HTMLDivElement | null;
+const ndviChartDiv = document.getElementById('ndvi-chart') as HTMLDivElement | null;
 
 // Phase B: allSeriesData now managed via mapState (seriesDataA)
 
@@ -197,7 +202,12 @@ function hideChartContainer(): void {
 
 function renderChart(): void {
   if (!ndviChartDiv) return;
-  plotAllSelectedSeries(ndviChartDiv, mapState.getSeriesDataA(), showChartContainer, hideChartContainer);
+  plotAllSelectedSeries(
+    ndviChartDiv,
+    mapState.getSeriesDataA(),
+    showChartContainer,
+    hideChartContainer
+  );
   syncExportButton();
 }
 
@@ -205,8 +215,10 @@ function renderChart(): void {
 // Gráfica Plotly — Panel B
 // ---------------------------------------------------------------------------
 
-const chartBContainer = document.getElementById('chart-b-container') as HTMLDivElement | null;
-const chartBDiv       = document.getElementById('chart-b')           as HTMLDivElement | null;
+const chartBContainer = document.getElementById(
+  'chart-b-container'
+) as HTMLDivElement | null;
+const chartBDiv = document.getElementById('chart-b') as HTMLDivElement | null;
 
 // Phase B: allSeriesDataB now managed via mapState (seriesDataB)
 
@@ -214,13 +226,18 @@ function showChartBContainer(): void {
   chartBContainer?.classList.remove('hidden');
 }
 function hideChartBContainer(): void {
-  if (mapState.getCompareModeActive()) return;  // En compare mode siempre permanece visible
+  if (mapState.getCompareModeActive()) return; // En compare mode siempre permanece visible
   chartBContainer?.classList.add('hidden');
 }
 
 function renderChartB(): void {
   if (!chartBDiv) return;
-  plotAllSelectedSeries(chartBDiv, mapState.getSeriesDataB(), showChartBContainer, hideChartBContainer);
+  plotAllSelectedSeries(
+    chartBDiv,
+    mapState.getSeriesDataB(),
+    showChartBContainer,
+    hideChartBContainer
+  );
   syncExportButton();
 }
 
@@ -241,47 +258,93 @@ function renderChartB(): void {
 // Phase B: gifPlayerA, gifPlayerB, syncPlayer, soloPlayer now managed via mapState
 
 // DOM: modo comparativa
-const toggleCompareModeButton  = document.getElementById('toggleCompareMode')    as HTMLButtonElement | null;
-const compareControlsA         = document.getElementById('compare-controls-a')   as HTMLDivElement | null;
-const compareModeHint          = document.querySelector('.compare-mode-hint')     as HTMLElement | null;
+const toggleCompareModeButton = document.getElementById(
+  'toggleCompareMode'
+) as HTMLButtonElement | null;
+const compareControlsA = document.getElementById(
+  'compare-controls-a'
+) as HTMLDivElement | null;
+const compareModeHint = document.querySelector(
+  '.compare-mode-hint'
+) as HTMLElement | null;
 
 // DOM: modo riesgo de inundación
-const toggleFloodRiskModeButton = document.getElementById('toggleFloodRiskMode') as HTMLButtonElement | null;
-const floodRiskModeHint         = document.querySelector('.flood-risk-mode-hint') as HTMLElement | null;
-const btnClearNormal            = document.getElementById('btnClearNormal')       as HTMLButtonElement | null;
+const toggleFloodRiskModeButton = document.getElementById(
+  'toggleFloodRiskMode'
+) as HTMLButtonElement | null;
+const floodRiskModeHint = document.querySelector(
+  '.flood-risk-mode-hint'
+) as HTMLElement | null;
+const btnClearNormal = document.getElementById(
+  'btnClearNormal'
+) as HTMLButtonElement | null;
 
 // Phase B: floodRiskModeActive now managed via mapState
 
 // DOM: selectores de comparativa — panel A
-const compareVarASelect    = document.getElementById('compareVarA')    as HTMLSelectElement | null;
-const compareYearASelect   = document.getElementById('compareYearA')   as HTMLSelectElement | null;
-const compareSeasonASelect = document.getElementById('compareSeasonA') as HTMLSelectElement | null;
-const btnGenerateA         = document.getElementById('btnGenerateA')   as HTMLButtonElement | null;
-const btnClearA            = document.getElementById('btnClearA')      as HTMLButtonElement | null;
+const compareVarASelect = document.getElementById(
+  'compareVarA'
+) as HTMLSelectElement | null;
+const compareYearASelect = document.getElementById(
+  'compareYearA'
+) as HTMLSelectElement | null;
+const compareSeasonASelect = document.getElementById(
+  'compareSeasonA'
+) as HTMLSelectElement | null;
+const btnGenerateA = document.getElementById(
+  'btnGenerateA'
+) as HTMLButtonElement | null;
+const btnClearA = document.getElementById('btnClearA') as HTMLButtonElement | null;
 
 // DOM: selectores de comparativa — panel B
-const compareVarBSelect    = document.getElementById('compareVarB')    as HTMLSelectElement | null;
-const compareYearBSelect   = document.getElementById('compareYearB')   as HTMLSelectElement | null;
-const compareSeasonBSelect = document.getElementById('compareSeasonB') as HTMLSelectElement | null;
-const btnGenerateB         = document.getElementById('btnGenerateB')   as HTMLButtonElement | null;
-const btnClearB            = document.getElementById('btnClearB')      as HTMLButtonElement | null;
+const compareVarBSelect = document.getElementById(
+  'compareVarB'
+) as HTMLSelectElement | null;
+const compareYearBSelect = document.getElementById(
+  'compareYearB'
+) as HTMLSelectElement | null;
+const compareSeasonBSelect = document.getElementById(
+  'compareSeasonB'
+) as HTMLSelectElement | null;
+const btnGenerateB = document.getElementById(
+  'btnGenerateB'
+) as HTMLButtonElement | null;
+const btnClearB = document.getElementById('btnClearB') as HTMLButtonElement | null;
 
 // ---------------------------------------------------------------------------
 // Checkboxes de estaciones en modo comparativa
 // ---------------------------------------------------------------------------
 
-const chkStationSpA = document.getElementById('chkStationSpA') as HTMLInputElement | null;
-const chkStationBdA = document.getElementById('chkStationBdA') as HTMLInputElement | null;
-const chkStationSpB = document.getElementById('chkStationSpB') as HTMLInputElement | null;
-const chkStationBdB = document.getElementById('chkStationBdB') as HTMLInputElement | null;
+const chkStationSpA = document.getElementById(
+  'chkStationSpA'
+) as HTMLInputElement | null;
+const chkStationBdA = document.getElementById(
+  'chkStationBdA'
+) as HTMLInputElement | null;
+const chkStationSpB = document.getElementById(
+  'chkStationSpB'
+) as HTMLInputElement | null;
+const chkStationBdB = document.getElementById(
+  'chkStationBdB'
+) as HTMLInputElement | null;
 
 // DOM: player controls
-const playerControlsDiv  = document.getElementById('player-controls')  as HTMLDivElement | null;
-const playerPlayPauseBtn = document.getElementById('playerPlayPause')   as HTMLButtonElement | null;
-const playerSlider       = document.getElementById('playerSlider')      as HTMLInputElement | null;
-const playerFrameLabel   = document.getElementById('playerFrameLabel')  as HTMLSpanElement | null;
-const playerPlayIcon     = document.getElementById('playerPlayIcon')    as HTMLSpanElement | null;
-const playerSpeedSelect  = document.getElementById('playerSpeed')       as HTMLSelectElement | null;
+const playerControlsDiv = document.getElementById(
+  'player-controls'
+) as HTMLDivElement | null;
+const playerPlayPauseBtn = document.getElementById(
+  'playerPlayPause'
+) as HTMLButtonElement | null;
+const playerSlider = document.getElementById('playerSlider') as HTMLInputElement | null;
+const playerFrameLabel = document.getElementById(
+  'playerFrameLabel'
+) as HTMLSpanElement | null;
+const playerPlayIcon = document.getElementById(
+  'playerPlayIcon'
+) as HTMLSpanElement | null;
+const playerSpeedSelect = document.getElementById(
+  'playerSpeed'
+) as HTMLSelectElement | null;
 
 /** Devuelve el intervalo de frame seleccionado actualmente (en ms). */
 function _selectedInterval(): number {
@@ -371,7 +434,9 @@ floodRiskMode.registerFloodRiskModeListeners(
     // Salir del modo riesgo
     floodRiskMode.exitFloodRiskMode();
   },
-  () => { normalMode.clearNormalMode(); },
+  () => {
+    normalMode.clearNormalMode();
+  }
 );
 
 // Phase C: delegated to normalMode
@@ -385,7 +450,11 @@ floodRiskMode.registerFloodRiskModeListeners(
 // Visibilidad de marcadores de estaciones
 // ---------------------------------------------------------------------------
 
-function _setMarkersVisible(markers: L.Marker[], targetMap: L.Map, visible: boolean): void {
+function _setMarkersVisible(
+  markers: L.Marker[],
+  targetMap: L.Map,
+  visible: boolean
+): void {
   for (const m of markers) {
     if (visible && !targetMap.hasLayer(m)) {
       m.addTo(targetMap);
@@ -401,10 +470,15 @@ function _setMarkersVisible(markers: L.Marker[], targetMap: L.Map, visible: bool
  * - Mapa B: visibles cuando no hay animación activa en panel B.
  */
 function _updateStationMarkersVisibility(): void {
-  const showOnMap = !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
+  const showOnMap =
+    !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
   _setMarkersVisible(stationMarkersMap, map, showOnMap);
   if (mapState.getMapB()) {
-    _setMarkersVisible(stationMarkersMapB, mapState.getMapB()!, !mapState.getOverlayB());
+    _setMarkersVisible(
+      stationMarkersMapB,
+      mapState.getMapB()!,
+      !mapState.getOverlayB()
+    );
   }
 }
 
@@ -418,7 +492,7 @@ function hidePlayerControls(): void {
 // Phase C: player controls delegate to normalMode
 function onPlayerFrameChange(current: number, total: number): void {
   if (playerSlider) {
-    playerSlider.max   = String(total - 1);
+    playerSlider.max = String(total - 1);
     playerSlider.value = String(current);
   }
   if (playerFrameLabel) {
@@ -460,7 +534,7 @@ toggleCompareModeButton?.addEventListener('click', () => {
     compareMode.cleanupComparePanels();
     mapState.clearSeriesData();
     if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-    if (chartBDiv)    Plotly.purge(chartBDiv);
+    if (chartBDiv) Plotly.purge(chartBDiv);
     hidePlayerControls();
 
     // Mostrar controles de comparativa y pistas
@@ -483,7 +557,7 @@ toggleCompareModeButton?.addEventListener('click', () => {
     hidePlayerControls();
     hideChartBContainer();
     if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-    if (chartBDiv)    Plotly.purge(chartBDiv);
+    if (chartBDiv) Plotly.purge(chartBDiv);
     hideChartContainer();
 
     // Quitar colorbars de ambos mapas al salir de comparativa
@@ -504,7 +578,9 @@ toggleCompareModeButton?.addEventListener('click', () => {
 // Listener: limpiar modo normal
 // ---------------------------------------------------------------------------
 
-btnClearNormal?.addEventListener('click', () => { normalMode.clearNormalMode(); });
+btnClearNormal?.addEventListener('click', () => {
+  normalMode.clearNormalMode();
+});
 
 // ---------------------------------------------------------------------------
 // Listener: play/pause
@@ -549,7 +625,7 @@ async function requestGifAndSeries(
   variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
   start: string,
   end: string,
-  bbox: BBox,
+  bbox: BBox
 ): Promise<void> {
   const result = await normalMode.requestGifAndSeries(variable, start, end, bbox);
   if (!result.success && result.error) {
@@ -571,7 +647,7 @@ async function requestGifAndSeriesForPanel(
   variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
   start: string,
   end: string,
-  bbox: BBox,
+  bbox: BBox
 ): Promise<void> {
   await compareMode.requestGifAndSeriesForPanel(panel, variable, start, end, bbox);
 }
@@ -594,18 +670,24 @@ function toggleMunicipalFloodRisk(muni: string, checked: boolean): Promise<void>
 async function requestLocalStationLevel(
   stationId: 'SPTTB' | 'BDCTB',
   start: string,
-  end: string,
+  end: string
 ): Promise<void> {
   try {
     // Phase A: usa fetchLocalStationLevel de apiClient.ts
     const data = await fetchLocalStationLevel({ stationId, start, end });
 
     const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
-    mapState.setSeriesDataForVariable('A', key, { dates: data.dates, values: data.level_m });
+    mapState.setSeriesDataForVariable('A', key, {
+      dates: data.dates,
+      values: data.level_m,
+    });
     renderChart();
   } catch (err) {
     console.error(err);
-    showErrorModal('Error de red', 'No se pudo cargar la serie de la estación. Verificá tu conexión.');
+    showErrorModal(
+      'Error de red',
+      'No se pudo cargar la serie de la estación. Verificá tu conexión.'
+    );
   }
 }
 
@@ -613,34 +695,62 @@ async function requestLocalStationLevel(
 // Selectores DOM — variables principales
 // ---------------------------------------------------------------------------
 
-const ndviYearSelect   = document.getElementById('ndviYear')   as HTMLSelectElement | null;
-const ndviSeasonSelect = document.getElementById('ndviSeason') as HTMLSelectElement | null;
-const generateGifButton = document.getElementById('generateNdviGifBBox') as HTMLButtonElement | null;
+const ndviYearSelect = document.getElementById('ndviYear') as HTMLSelectElement | null;
+const ndviSeasonSelect = document.getElementById(
+  'ndviSeason'
+) as HTMLSelectElement | null;
+const generateGifButton = document.getElementById(
+  'generateNdviGifBBox'
+) as HTMLButtonElement | null;
 
-const tempYearSelect   = document.getElementById('tempYear')   as HTMLSelectElement | null;
-const tempSeasonSelect = document.getElementById('tempSeason') as HTMLSelectElement | null;
-const generateTempGifButton = document.getElementById('generateTempGifBBox') as HTMLButtonElement | null;
+const tempYearSelect = document.getElementById('tempYear') as HTMLSelectElement | null;
+const tempSeasonSelect = document.getElementById(
+  'tempSeason'
+) as HTMLSelectElement | null;
+const generateTempGifButton = document.getElementById(
+  'generateTempGifBBox'
+) as HTMLButtonElement | null;
 
-const soilYearSelect   = document.getElementById('soilYear')   as HTMLSelectElement | null;
-const soilSeasonSelect = document.getElementById('soilSeason') as HTMLSelectElement | null;
-const generateSoilGifButton = document.getElementById('generateSoilGifBBox') as HTMLButtonElement | null;
+const soilYearSelect = document.getElementById('soilYear') as HTMLSelectElement | null;
+const soilSeasonSelect = document.getElementById(
+  'soilSeason'
+) as HTMLSelectElement | null;
+const generateSoilGifButton = document.getElementById(
+  'generateSoilGifBBox'
+) as HTMLButtonElement | null;
 
-const precipYearSelect   = document.getElementById('precipYear')   as HTMLSelectElement | null;
-const precipSeasonSelect = document.getElementById('precipSeason') as HTMLSelectElement | null;
-const generatePrecipGifButton = document.getElementById('generatePrecipGifBBox') as HTMLButtonElement | null;
+const precipYearSelect = document.getElementById(
+  'precipYear'
+) as HTMLSelectElement | null;
+const precipSeasonSelect = document.getElementById(
+  'precipSeason'
+) as HTMLSelectElement | null;
+const generatePrecipGifButton = document.getElementById(
+  'generatePrecipGifBBox'
+) as HTMLButtonElement | null;
 
-const waterYearSelect   = document.getElementById('waterYear')   as HTMLSelectElement | null;
-const waterSeasonSelect = document.getElementById('waterSeason') as HTMLSelectElement | null;
-const generateWaterGifButton = document.getElementById('generateWaterGifBBox') as HTMLButtonElement | null;
+const waterYearSelect = document.getElementById(
+  'waterYear'
+) as HTMLSelectElement | null;
+const waterSeasonSelect = document.getElementById(
+  'waterSeason'
+) as HTMLSelectElement | null;
+const generateWaterGifButton = document.getElementById(
+  'generateWaterGifBBox'
+) as HTMLButtonElement | null;
 
 // Selectores DOM — estaciones locales
-const spYearSelect   = document.getElementById('spYear')       as HTMLSelectElement | null;
-const spSeasonSelect = document.getElementById('spSeason')     as HTMLSelectElement | null;
-const btnLocalSpLevel = document.getElementById('btnLocalSpLevel') as HTMLButtonElement | null;
+const spYearSelect = document.getElementById('spYear') as HTMLSelectElement | null;
+const spSeasonSelect = document.getElementById('spSeason') as HTMLSelectElement | null;
+const btnLocalSpLevel = document.getElementById(
+  'btnLocalSpLevel'
+) as HTMLButtonElement | null;
 
-const bdYearSelect   = document.getElementById('bdYear')       as HTMLSelectElement | null;
-const bdSeasonSelect = document.getElementById('bdSeason')     as HTMLSelectElement | null;
-const btnLocalBdLevel = document.getElementById('btnLocalBdLevel') as HTMLButtonElement | null;
+const bdYearSelect = document.getElementById('bdYear') as HTMLSelectElement | null;
+const bdSeasonSelect = document.getElementById('bdSeason') as HTMLSelectElement | null;
+const btnLocalBdLevel = document.getElementById(
+  'btnLocalBdLevel'
+) as HTMLButtonElement | null;
 
 // ---------------------------------------------------------------------------
 // Registro de listeners usando la factory
@@ -649,11 +759,46 @@ const btnLocalBdLevel = document.getElementById('btnLocalBdLevel') as HTMLButton
 const getBbox = () => mapState.getBbox();
 
 const variableConfigs: Parameters<typeof registerVariableListener>[0][] = [
-  { variable: 'ndvi',   yearSelect: ndviYearSelect,   seasonSelect: ndviSeasonSelect,   button: generateGifButton,        getBbox, onRequest: requestGifAndSeries },
-  { variable: 'temp',   yearSelect: tempYearSelect,   seasonSelect: tempSeasonSelect,   button: generateTempGifButton,    getBbox, onRequest: requestGifAndSeries },
-  { variable: 'soil',   yearSelect: soilYearSelect,   seasonSelect: soilSeasonSelect,   button: generateSoilGifButton,    getBbox, onRequest: requestGifAndSeries },
-  { variable: 'precip', yearSelect: precipYearSelect, seasonSelect: precipSeasonSelect, button: generatePrecipGifButton,  getBbox, onRequest: requestGifAndSeries },
-  { variable: 'water',  yearSelect: waterYearSelect,  seasonSelect: waterSeasonSelect,  button: generateWaterGifButton,   getBbox, onRequest: requestGifAndSeries },
+  {
+    variable: 'ndvi',
+    yearSelect: ndviYearSelect,
+    seasonSelect: ndviSeasonSelect,
+    button: generateGifButton,
+    getBbox,
+    onRequest: requestGifAndSeries,
+  },
+  {
+    variable: 'temp',
+    yearSelect: tempYearSelect,
+    seasonSelect: tempSeasonSelect,
+    button: generateTempGifButton,
+    getBbox,
+    onRequest: requestGifAndSeries,
+  },
+  {
+    variable: 'soil',
+    yearSelect: soilYearSelect,
+    seasonSelect: soilSeasonSelect,
+    button: generateSoilGifButton,
+    getBbox,
+    onRequest: requestGifAndSeries,
+  },
+  {
+    variable: 'precip',
+    yearSelect: precipYearSelect,
+    seasonSelect: precipSeasonSelect,
+    button: generatePrecipGifButton,
+    getBbox,
+    onRequest: requestGifAndSeries,
+  },
+  {
+    variable: 'water',
+    yearSelect: waterYearSelect,
+    seasonSelect: waterSeasonSelect,
+    button: generateWaterGifButton,
+    getBbox,
+    onRequest: requestGifAndSeries,
+  },
 ];
 
 variableConfigs.forEach(cfg => registerVariableListener(cfg));
@@ -667,28 +812,30 @@ function _wireLocalStation(
   seasonSel: HTMLSelectElement | null,
   btn: HTMLButtonElement | null,
   stationId: 'SPTTB' | 'BDCTB',
-  stationKey: 'local_sp' | 'local_bd',
+  stationKey: 'local_sp' | 'local_bd'
 ): void {
   if (!yearSel || !seasonSel || !btn) return;
 
   // Poblar selectores
   for (const year of VARIABLE_YEARS[stationKey]) {
-    const opt       = document.createElement('option');
-    opt.value       = String(year);
+    const opt = document.createElement('option');
+    opt.value = String(year);
     opt.textContent = String(year);
     yearSel.appendChild(opt);
   }
   for (const s of SEASONS) {
-    const opt       = document.createElement('option');
-    opt.value       = s.value;
+    const opt = document.createElement('option');
+    opt.value = s.value;
     opt.textContent = s.label;
     seasonSel.appendChild(opt);
   }
 
-  const syncBtn = (): void => { btn.disabled = !yearSel.value || !seasonSel.value; };
+  const syncBtn = (): void => {
+    btn.disabled = !yearSel.value || !seasonSel.value;
+  };
 
   yearSel.addEventListener('change', () => {
-    const hasYear      = Boolean(yearSel.value);
+    const hasYear = Boolean(yearSel.value);
     seasonSel.disabled = !hasYear;
     if (!hasYear) seasonSel.value = '';
     syncBtn();
@@ -696,9 +843,12 @@ function _wireLocalStation(
   seasonSel.addEventListener('change', syncBtn);
 
   btn.addEventListener('click', () => {
-    const year   = Number(yearSel.value);
+    const year = Number(yearSel.value);
     const season = seasonSel.value as Season;
-    if (!year || !season) { showFieldError(btn, 'Seleccioná año y temporada antes de continuar.'); return; }
+    if (!year || !season) {
+      showFieldError(btn, 'Seleccioná año y temporada antes de continuar.');
+      return;
+    }
     const { start, end } = seasonToDates(year, season);
     void requestLocalStationLevel(stationId, start, end);
   });
@@ -716,12 +866,15 @@ _wireLocalStation(bdYearSelect, bdSeasonSelect, btnLocalBdLevel, 'BDCTB', 'local
 // Actualizar currentVariable al abrir un details de variable
 // ---------------------------------------------------------------------------
 
-const variableDetailsMap: Record<string, Exclude<VariableKey, 'local_sp' | 'local_bd'>> = {
-  'ndvi-controls':   'ndvi',
-  'temp-controls':   'temp',
-  'soil-controls':   'soil',
+const variableDetailsMap: Record<
+  string,
+  Exclude<VariableKey, 'local_sp' | 'local_bd'>
+> = {
+  'ndvi-controls': 'ndvi',
+  'temp-controls': 'temp',
+  'soil-controls': 'soil',
   'precip-controls': 'precip',
-  'water-controls':  'water',
+  'water-controls': 'water',
 };
 
 document.querySelectorAll<HTMLDetailsElement>('details[id]').forEach(details => {
@@ -737,8 +890,10 @@ document.querySelectorAll<HTMLDetailsElement>('details[id]').forEach(details => 
 // Listener: botón "Ver datos" en popup de estaciones locales
 // ---------------------------------------------------------------------------
 
-document.addEventListener('click', (e) => {
-  const link = (e.target as HTMLElement).closest<HTMLElement>('.station-full-data-link');
+document.addEventListener('click', e => {
+  const link = (e.target as HTMLElement).closest<HTMLElement>(
+    '.station-full-data-link'
+  );
   if (!link) return;
   e.preventDefault();
   const stationId = link.dataset['stationId'] as 'SPTTB' | 'BDCTB' | undefined;
@@ -750,21 +905,25 @@ document.addEventListener('click', (e) => {
 // Sidebar colapsar/restaurar
 // ---------------------------------------------------------------------------
 
-const collapseButton = document.getElementById('sidebarToggle')  as HTMLButtonElement | null;
-const restoreButton  = document.getElementById('sidebarRestore') as HTMLButtonElement | null;
-const body           = document.body;
+const collapseButton = document.getElementById(
+  'sidebarToggle'
+) as HTMLButtonElement | null;
+const restoreButton = document.getElementById(
+  'sidebarRestore'
+) as HTMLButtonElement | null;
+const body = document.body;
 
 if (collapseButton && restoreButton) {
   const collapseSr = collapseButton.querySelector('.sr-only') as HTMLElement | null;
-  const restoreSr  = restoreButton.querySelector('.sr-only')  as HTMLElement | null;
+  const restoreSr = restoreButton.querySelector('.sr-only') as HTMLElement | null;
 
   const syncState = () => {
     const isHidden = body.classList.contains('sidebar-collapsed');
     collapseButton.setAttribute('aria-expanded', String(!isHidden));
-    restoreButton.setAttribute('aria-expanded',  String(isHidden));
+    restoreButton.setAttribute('aria-expanded', String(isHidden));
     const label = isHidden ? 'Mostrar panel lateral' : 'Ocultar panel lateral';
     if (collapseSr) collapseSr.textContent = label;
-    if (restoreSr)  restoreSr.textContent  = label;
+    if (restoreSr) restoreSr.textContent = label;
     setTimeout(() => {
       map.invalidateSize();
       mapState.getMapB()?.invalidateSize();
@@ -772,16 +931,26 @@ if (collapseButton && restoreButton) {
   };
 
   syncState();
-  collapseButton.addEventListener('click', () => { body.classList.add('sidebar-collapsed');    syncState(); });
-  restoreButton.addEventListener('click',  () => { body.classList.remove('sidebar-collapsed'); syncState(); });
+  collapseButton.addEventListener('click', () => {
+    body.classList.add('sidebar-collapsed');
+    syncState();
+  });
+  restoreButton.addEventListener('click', () => {
+    body.classList.remove('sidebar-collapsed');
+    syncState();
+  });
 }
 
 // ---------------------------------------------------------------------------
 // Export bundle
 // ---------------------------------------------------------------------------
 
-const btnExportAnalysis = document.getElementById('btnExportAnalysis') as HTMLButtonElement | null;
-const btnExportPdfReport = document.getElementById('btnExportPdfReport') as HTMLButtonElement | null;
+const btnExportAnalysis = document.getElementById(
+  'btnExportAnalysis'
+) as HTMLButtonElement | null;
+const btnExportPdfReport = document.getElementById(
+  'btnExportPdfReport'
+) as HTMLButtonElement | null;
 
 /**
  * Determina si hay datos de serie cargados para exportar.
@@ -789,8 +958,12 @@ const btnExportPdfReport = document.getElementById('btnExportPdfReport') as HTML
 function canExport(): boolean {
   const seriesA = mapState.getSeriesDataA();
   const seriesB = mapState.getSeriesDataB();
-  const hasSeriesA = Object.keys(seriesA).some(k => (seriesA[k as VariableKey]?.values?.length ?? 0) > 0);
-  const hasSeriesB = Object.keys(seriesB).some(k => (seriesB[k as VariableKey]?.values?.length ?? 0) > 0);
+  const hasSeriesA = Object.keys(seriesA).some(
+    k => (seriesA[k as VariableKey]?.values?.length ?? 0) > 0
+  );
+  const hasSeriesB = Object.keys(seriesB).some(
+    k => (seriesB[k as VariableKey]?.values?.length ?? 0) > 0
+  );
   return hasSeriesA || hasSeriesB;
 }
 
@@ -809,12 +982,18 @@ function syncExportButton(): void {
 btnExportAnalysis?.addEventListener('click', async () => {
   const bbox = mapState.getBbox();
   if (!bbox) {
-    showErrorModal('Sin área seleccionada', 'Dibujá un rectángulo en el mapa antes de exportar.');
+    showErrorModal(
+      'Sin área seleccionada',
+      'Dibujá un rectángulo en el mapa antes de exportar.'
+    );
     return;
   }
 
   if (!canExport()) {
-    showErrorModal('Sin datos para exportar', 'Cargá al menos una variable antes de exportar.');
+    showErrorModal(
+      'Sin datos para exportar',
+      'Cargá al menos una variable antes de exportar.'
+    );
     return;
   }
 
@@ -872,12 +1051,18 @@ function notifySeriesDataChanged(): void {
 btnExportPdfReport?.addEventListener('click', async () => {
   const bbox = mapState.getBbox();
   if (!bbox) {
-    showErrorModal('Sin área seleccionada', 'Dibujá un rectángulo en el mapa antes de exportar.');
+    showErrorModal(
+      'Sin área seleccionada',
+      'Dibujá un rectángulo en el mapa antes de exportar.'
+    );
     return;
   }
 
   if (!canExport()) {
-    showErrorModal('Sin datos para exportar', 'Cargá al menos una variable antes de exportar.');
+    showErrorModal(
+      'Sin datos para exportar',
+      'Cargá al menos una variable antes de exportar.'
+    );
     return;
   }
 
@@ -926,7 +1111,10 @@ btnExportPdfReport?.addEventListener('click', async () => {
     });
 
     updateProgressIndicator(80, 'Descargando PDF...');
-    const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[^0-9]/g, '')
+      .slice(0, 14);
     downloadBlob(pdfBlob, `analysis_report_${timestamp}.pdf`);
     updateProgressIndicator(100, '¡PDF listo!');
     removeProgressIndicator(1500);

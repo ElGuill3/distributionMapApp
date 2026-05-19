@@ -15,10 +15,7 @@
 import * as mapState from '../state/mapState.js';
 import { fetchFloodRisk } from '../apiClient.js';
 import { showErrorModal } from '../ui/progress.js';
-import {
-  switchColorbar,
-  municipalFloodOverlays,
-} from '../map/overlays.js';
+import { switchColorbar, municipalFloodOverlays } from '../map/overlays.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
 // eslint-disable-next-line @typescript-eslint/no-shadow
@@ -73,9 +70,7 @@ export function initFloodRiskMode(domRefs: FloodRiskModeDomRefs): void {
  *
  * @param deactivateCompareMode - Función para desactivar compare mode (inyectada)
  */
-export function enterFloodRiskMode(
-  deactivateCompareMode: () => void,
-): void {
+export function enterFloodRiskMode(deactivateCompareMode: () => void): void {
   // Desactivar compare mode si estaba activo
   if (mapState.getCompareModeActive()) {
     deactivateCompareMode();
@@ -126,7 +121,7 @@ export function exitFloodRiskMode(): void {
  */
 export async function toggleMunicipalFloodRisk(
   muni: string,
-  checked: boolean,
+  checked: boolean
 ): Promise<void> {
   if (!checked) {
     const existing = municipalFloodOverlays[muni];
@@ -150,13 +145,18 @@ export async function toggleMunicipalFloodRisk(
     const data = await fetchFloodRisk({ municipio: muni });
 
     const [minLon, minLat, maxLon, maxLat] = data.bbox;
-    const bounds  = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
-    const overlay = L.imageOverlay(data.mapUrl, bounds, { opacity: 0.8 }).addTo(_mapRef!);
+    const bounds = L.latLngBounds(L.latLng(minLat, minLon), L.latLng(maxLat, maxLon));
+    const overlay = L.imageOverlay(data.mapUrl, bounds, { opacity: 0.8 }).addTo(
+      _mapRef!
+    );
     municipalFloodOverlays[muni] = overlay;
     if (_mapRef) switchColorbar(_mapRef, 'flood');
   } catch (err) {
     console.error(err);
-    showErrorModal('Error de red', 'No se pudo generar el mapa de riesgo. Verificá tu conexión.');
+    showErrorModal(
+      'Error de red',
+      'No se pudo generar el mapa de riesgo. Verificá tu conexión.'
+    );
   }
 }
 
@@ -175,7 +175,7 @@ export async function toggleMunicipalFloodRisk(
 export function registerFloodRiskModeListeners(
   onEnter: () => void,
   onExit: () => void,
-  clearNormalMode: () => void,
+  clearNormalMode: () => void
 ): void {
   _toggleFloodRiskModeButton?.addEventListener('click', () => {
     const newState = !mapState.getFloodRiskModeActive();
@@ -210,7 +210,7 @@ export function registerFloodRiskModeListeners(
  */
 export function updateStationMarkersVisibility(
   stationMarkersMap: L.Marker[],
-  stationMarkersMapB: L.Marker[] | null,
+  stationMarkersMapB: L.Marker[] | null
 ): void {
   const showOnMap = Object.keys(municipalFloodOverlays).length === 0;
   if (_mapRef) {
