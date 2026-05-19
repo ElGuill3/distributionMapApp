@@ -4,7 +4,7 @@
  * Conecta todos los módulos: mapa, API, UI y listeners.
  */
 
-import type { BBox, VariableKey, Season, SeriesData } from './types.js';
+import type { BBox, VariableKey, Season } from './types.js';
 import * as mapState from './state/mapState.js';
 import * as normalMode from './modes/normalMode.js';
 import * as compareMode from './modes/compareMode.js';
@@ -16,27 +16,21 @@ import {
   VARIABLE_YEARS,
   SEASONS,
 } from './config.js';
-import {
-  buildColorbars,
-  switchColorbar,
-  removeActiveOverlay,
-  setActiveOverlay,
-  municipalFloodOverlays,
-} from './map/overlays.js';
+import { buildColorbars, switchColorbar, removeActiveOverlay } from './map/overlays.js';
 import {
   createProgressIndicator,
   updateProgressIndicator,
   removeProgressIndicator,
   showErrorModal,
 } from './ui/progress.js';
-import { showFieldError, clearFieldError } from './ui/fieldErrors.js';
+import { showFieldError } from './ui/fieldErrors.js';
 import { translateBackendError } from './errorMap.js';
 import { plotAllSelectedSeries } from './ui/chart.js';
 import {
   registerVariableListener,
   seasonToDates,
 } from './listeners/variableListeners.js';
-import { GifPlayer, SyncPlayer, SoloPlayer } from './ui/gifPlayer.js';
+
 import {
   fetchLocalStationLevel,
   exportBundle,
@@ -126,7 +120,6 @@ map.addControl(drawControl);
 // Phase B: bbox now managed via mapState.getBbox() / mapState.setBbox()
 
 map.on(L.Draw.Event.CREATED, e => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const layer = (e as unknown as { layer: L.Rectangle }).layer;
   const bounds = layer.getBounds();
   const sw = bounds.getSouthWest();
@@ -228,17 +221,6 @@ function showChartBContainer(): void {
 function hideChartBContainer(): void {
   if (mapState.getCompareModeActive()) return; // En compare mode siempre permanece visible
   chartBContainer?.classList.add('hidden');
-}
-
-function renderChartB(): void {
-  if (!chartBDiv) return;
-  plotAllSelectedSeries(
-    chartBDiv,
-    mapState.getSeriesDataB(),
-    showChartBContainer,
-    hideChartBContainer
-  );
-  syncExportButton();
 }
 
 // ---------------------------------------------------------------------------
@@ -351,6 +333,10 @@ function _selectedInterval(): number {
   return Number(playerSpeedSelect?.value ?? '1000') || 1000;
 }
 
+function hidePlayerControls(): void {
+  playerControlsDiv?.classList.add('hidden');
+}
+
 // Phase C: inicializar normalMode con referencias al DOM y mapa
 normalMode.initNormalMode({
   map,
@@ -445,60 +431,6 @@ floodRiskMode.registerFloodRiskModeListeners(
 
 /** Limpia la animación y gráfica en modo normal (panel A). */
 // Phase C: delegated to normalMode.clearNormalMode()
-
-// ---------------------------------------------------------------------------
-// Visibilidad de marcadores de estaciones
-// ---------------------------------------------------------------------------
-
-function _setMarkersVisible(
-  markers: L.Marker[],
-  targetMap: L.Map,
-  visible: boolean
-): void {
-  for (const m of markers) {
-    if (visible && !targetMap.hasLayer(m)) {
-      m.addTo(targetMap);
-    } else if (!visible && targetMap.hasLayer(m)) {
-      targetMap.removeLayer(m);
-    }
-  }
-}
-
-/**
- * Muestra u oculta los marcadores de estaciones según el estado actual:
- * - Mapa A: visibles cuando no hay animación activa ni capas flood.
- * - Mapa B: visibles cuando no hay animación activa en panel B.
- */
-function _updateStationMarkersVisibility(): void {
-  const showOnMap =
-    !mapState.getOverlayA() && Object.keys(municipalFloodOverlays).length === 0;
-  _setMarkersVisible(stationMarkersMap, map, showOnMap);
-  if (mapState.getMapB()) {
-    _setMarkersVisible(
-      stationMarkersMapB,
-      mapState.getMapB()!,
-      !mapState.getOverlayB()
-    );
-  }
-}
-
-function showPlayerControls(): void {
-  playerControlsDiv?.classList.remove('hidden');
-}
-function hidePlayerControls(): void {
-  playerControlsDiv?.classList.add('hidden');
-}
-
-// Phase C: player controls delegate to normalMode
-function onPlayerFrameChange(current: number, total: number): void {
-  if (playerSlider) {
-    playerSlider.max = String(total - 1);
-    playerSlider.value = String(current);
-  }
-  if (playerFrameLabel) {
-    playerFrameLabel.textContent = `${current + 1} / ${total}`;
-  }
-}
 
 function syncPlayPauseIcon(): void {
   if (!playerPlayIcon) return;
@@ -632,33 +564,6 @@ async function requestGifAndSeries(
     const uxError = translateBackendError(result.error);
     showErrorModal(uxError.title, uxError.message);
   }
-}
-
-// ---------------------------------------------------------------------------
-// Petición GIF + serie temporal — modo COMPARATIVA (panel A o B)
-// ---------------------------------------------------------------------------
-// Phase D: delegated to compareMode.requestGifAndSeriesForPanel
-
-/**
- * Wrapper que delega requestGifAndSeriesForPanel a compareMode.
- */
-async function requestGifAndSeriesForPanel(
-  panel: 'A' | 'B',
-  variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>,
-  start: string,
-  end: string,
-  bbox: BBox
-): Promise<void> {
-  await compareMode.requestGifAndSeriesForPanel(panel, variable, start, end, bbox);
-}
-
-// ---------------------------------------------------------------------------
-// Riesgo de inundación por municipio
-// ---------------------------------------------------------------------------
-// Phase E: delegated to floodRiskMode.toggleMunicipalFloodRisk
-
-function toggleMunicipalFloodRisk(muni: string, checked: boolean): Promise<void> {
-  return floodRiskMode.toggleMunicipalFloodRisk(muni, checked);
 }
 
 // ---------------------------------------------------------------------------
@@ -1037,12 +942,6 @@ btnExportAnalysis?.addEventListener('click', async () => {
     showErrorModal('Error de exportación', msg);
   }
 });
-
-// Sincronizar botón de exportación cuando cambia la serie
-// (expuesto para ser llamado desde normalMode y compareMode cuando cargan datos)
-function notifySeriesDataChanged(): void {
-  syncExportButton();
-}
 
 // ---------------------------------------------------------------------------
 // Export PDF Report
