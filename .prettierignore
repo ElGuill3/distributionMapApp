@@ -1,0 +1,7 @@
+# Prettier ignore patterns
+static/
+node_modules/
+dist/
+build/
+*.d.ts
+package-lock.json

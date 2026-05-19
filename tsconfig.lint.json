@@ -1,0 +1,21 @@
+{
+  // TypeScript config for linting tests
+  // Extends the main tsconfig but includes tests/ directory
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Allow JS for broader compatibility during linting
+    "allowJs": true,
+    // Don't emit files - this is for linting only
+    "noEmit": true,
+    // Include test types
+    "types": ["leaflet", "node"]
+  },
+  "include": [
+    "src/ts/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules/**",
+    "static/**"
+  ]
+}
