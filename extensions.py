@@ -4,6 +4,7 @@ Extensiones Flask inicializadas fuera del módulo app para evitar imports circul
 Los blueprints importan `limiter` desde aquí. La inicialización con la app
 se hace en app.py vía `limiter.init_app(app)`.
 """
+
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 

@@ -5,21 +5,20 @@ Colección : UCSB-CHG/CHIRPS/DAILY
 Banda     : precipitation (mm/día, sin conversión)
 Período   : diario
 """
-from typing import Optional
 
 import ee
 
-from config import CHIRPS_DAILY, BASE_PIXELS_PER_FRAME
-from gee.utils import validate_bbox, compute_gif_dims, build_base_collection
+from config import BASE_PIXELS_PER_FRAME, CHIRPS_DAILY
+from gee.utils import build_base_collection, compute_gif_dims, validate_bbox
 
-_BAND              = 'precipitation'
+_BAND = "precipitation"
 _FRAMES_PER_SECOND = 5
-_REDUCE_SCALE      = 5_000  # metros — resolución nativa CHIRPS ≈ 5.5 km
+_REDUCE_SCALE = 5_000  # metros — resolución nativa CHIRPS ≈ 5.5 km
 
 _VIS_PARAMS: dict = {
-    'min': 0.0,
-    'max': 80.0,
-    'palette': ['ffffff', 'cce7ff', '99ccff', '66b2ff', '3389ff', '0055ff', '002b7f'],
+    "min": 0.0,
+    "max": 80.0,
+    "palette": ["ffffff", "cce7ff", "99ccff", "66b2ff", "3389ff", "0055ff", "002b7f"],
 }
 
 
@@ -27,8 +26,8 @@ def build_chirps_precip_gif_bbox(
     start: str,
     end: str,
     bbox: list[float],
-    ratio: Optional[float] = None,
-) -> Optional[str]:
+    ratio: float | None = None,
+) -> str | None:
     """
     Genera la URL de un GIF animado de precipitación diaria (CHIRPS).
 
@@ -45,24 +44,26 @@ def build_chirps_precip_gif_bbox(
     """
     validate_bbox(bbox)
 
-    region    = ee.Geometry.Rectangle(bbox)
-    col       = build_base_collection(CHIRPS_DAILY, _BAND, bbox, start, end)
-    n_frames  = int(col.size().getInfo())
+    region = ee.Geometry.Rectangle(bbox)
+    col = build_base_collection(CHIRPS_DAILY, _BAND, bbox, start, end)
+    n_frames = int(col.size().getInfo())
 
     if n_frames == 0:
         return None
 
     dims = compute_gif_dims(n_frames, ratio, BASE_PIXELS_PER_FRAME)
 
-    return col.getVideoThumbURL({
-        'region':          region,
-        'dimensions':      dims,
-        'framesPerSecond': _FRAMES_PER_SECOND,
-        'format':          'gif',
-        'bands':           [_BAND],
-        'crs':             'EPSG:3857',
-        **_VIS_PARAMS,
-    })
+    return col.getVideoThumbURL(
+        {
+            "region": region,
+            "dimensions": dims,
+            "framesPerSecond": _FRAMES_PER_SECOND,
+            "format": "gif",
+            "bands": [_BAND],
+            "crs": "EPSG:3857",
+            **_VIS_PARAMS,
+        }
+    )
 
 
 def build_chirps_precip_timeseries_bbox(
@@ -84,7 +85,7 @@ def build_chirps_precip_timeseries_bbox(
     validate_bbox(bbox)
 
     region = ee.Geometry.Rectangle(bbox)
-    col    = build_base_collection(CHIRPS_DAILY, _BAND, bbox, start, end)
+    col = build_base_collection(CHIRPS_DAILY, _BAND, bbox, start, end)
 
     if col.size().eq(0).getInfo():
         return [], []
@@ -98,15 +99,15 @@ def build_chirps_precip_timeseries_bbox(
                 maxPixels=1e7,
             ).get(_BAND)
         ).max(0)
-        date_str = ee.Date(img.get('system:time_start')).format('YYYY-MM-dd')
-        return ee.Feature(None, {'date': date_str, 'precip_mm': mean_val})
+        date_str = ee.Date(img.get("system:time_start")).format("YYYY-MM-dd")
+        return ee.Feature(None, {"date": date_str, "precip_mm": mean_val})
 
-    fc    = col.map(_daily_mean_feature)
-    dates = fc.aggregate_array('date').getInfo()
-    vals  = fc.aggregate_array('precip_mm').getInfo()
+    fc = col.map(_daily_mean_feature)
+    dates = fc.aggregate_array("date").getInfo()
+    vals = fc.aggregate_array("precip_mm").getInfo()
 
-    out_dates: list[str]   = []
-    out_vals:  list[float] = []
+    out_dates: list[str] = []
+    out_vals: list[float] = []
     for d, v in zip(dates, vals):
         if d is not None and v is not None:
             out_dates.append(d)

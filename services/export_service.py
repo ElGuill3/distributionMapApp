@@ -5,6 +5,7 @@ Responsabilidades:
   - Serializar series temporales a formato CSV con metadatos.
   - Empaquetar CSV, GIFs y metadatos en un ZIP.
 """
+
 import json
 import logging
 import zipfile
@@ -50,8 +51,9 @@ def serialize_series_to_csv(
         if key not in series_data:
             raise ValueError(f"Variable '{key}' not found in series_data")
         if len(series_data[key]) != len(dates):
+            key_len = len(series_data[key])
             raise ValueError(
-                f"Length mismatch for '{key}': {len(series_data[key])} values vs {len(dates)} dates"
+                f"Length mismatch for '{key}': {key_len} values vs {len(dates)} dates"
             )
 
     lines: list[str] = []
