@@ -6,17 +6,24 @@ Responsabilidades:
   - Limpiar GIFs expirados del directorio local (hilo daemon en segundo plano).
   - Gestionar el diccionario global de colas de progreso (SSE).
 """
+
 import logging
 import queue
 import threading
 import time
+from collections.abc import Callable
 from io import BytesIO
-from typing import Callable, Optional
 
 import requests
-from PIL import Image as PILImage, ImageDraw, ImageFont, ImageSequence
+from PIL import Image as PILImage
+from PIL import ImageDraw, ImageFont, ImageSequence
 
-from config import GIFS_DIR, GIF_CLEANUP_INTERVAL_S, GIF_DOWNLOAD_TIMEOUT_S, GIF_MAX_AGE_MINUTES
+from config import (
+    GIF_CLEANUP_INTERVAL_S,
+    GIF_DOWNLOAD_TIMEOUT_S,
+    GIF_MAX_AGE_MINUTES,
+    GIFS_DIR,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +51,7 @@ def remove_progress_queue(task_id: str) -> None:
 # Limpieza automática de GIFs
 # ---------------------------------------------------------------------------
 
+
 def cleanup_old_gifs(max_age_minutes: int = GIF_MAX_AGE_MINUTES) -> None:
     """
     Elimina periódicamente los GIFs más antiguos que max_age_minutes.
@@ -62,7 +70,11 @@ def cleanup_old_gifs(max_age_minutes: int = GIF_MAX_AGE_MINUTES) -> None:
                 except Exception as e:
                     logger.error("Error eliminando %s: %s", gif_file.name, e)
             if count > 0:
-                logger.info("Limpieza automática: %d GIFs eliminados (>=%d min)", count, max_age_minutes)
+                logger.info(
+                    "Limpieza automática: %d GIFs eliminados (>=%d min)",
+                    count,
+                    max_age_minutes,
+                )
         except Exception as e:
             logger.error("Error en limpieza automática: %s", e)
         time.sleep(GIF_CLEANUP_INTERVAL_S)
@@ -88,9 +100,13 @@ def cleanup_pattern_gifs(pattern: str) -> None:
 
 def start_cleanup_daemon() -> None:
     """Lanza el hilo daemon de limpieza automática."""
-    t = threading.Thread(target=cleanup_old_gifs, args=(GIF_MAX_AGE_MINUTES,), daemon=True)
+    t = threading.Thread(
+        target=cleanup_old_gifs, args=(GIF_MAX_AGE_MINUTES,), daemon=True
+    )
     t.start()
-    logger.info("Sistema de limpieza automática iniciado (GIFs >= %d min)", GIF_MAX_AGE_MINUTES)
+    logger.info(
+        "Sistema de limpieza automática iniciado (GIFs >= %d min)", GIF_MAX_AGE_MINUTES
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -99,8 +115,8 @@ def start_cleanup_daemon() -> None:
 
 _FONT_PATHS = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux
-    "/System/Library/Fonts/Helvetica.ttc",                    # macOS
-    "C:\\Windows\\Fonts\\arial.ttf",                          # Windows
+    "/System/Library/Fonts/Helvetica.ttc",  # macOS
+    "C:\\Windows\\Fonts\\arial.ttf",  # Windows
 ]
 
 
@@ -120,8 +136,8 @@ def add_dates_to_gif(
     dates: list[str],
     output_path: str,
     font_size: int = 14,
-    position: str = 'top-left',
-    progress_callback: Optional[Callable[[int, str], None]] = None,
+    position: str = "top-left",
+    progress_callback: Callable[[int, str], None] | None = None,
 ) -> str:
     """
     Descarga un GIF de Earth Engine, superpone la fecha en cada frame y lo guarda.
@@ -142,6 +158,7 @@ def add_dates_to_gif(
         requests.HTTPError: si la descarga del GIF falla.
         Exception: si el procesamiento PIL falla.
     """
+
     def _report(pct: int, msg: str) -> None:
         if progress_callback:
             progress_callback(pct, msg)
@@ -156,33 +173,33 @@ def add_dates_to_gif(
     original_gif = PILImage.open(gif_bytes)
 
     _report(20, "Preparando fuente...")
-    font        = _load_font(font_size)
-    frames      = []
-    durations   = []
+    font = _load_font(font_size)
+    frames = []
+    durations = []
     total_frames = len(list(ImageSequence.Iterator(original_gif)))
 
     for i, frame in enumerate(ImageSequence.Iterator(original_gif)):
         progress = 20 + int((i / total_frames) * 70)
         _report(progress, f"Procesando frame {i + 1}/{total_frames}...")
 
-        frame_rgb = frame.convert('RGBA')
-        overlay   = PILImage.new('RGBA', frame_rgb.size, (255, 255, 255, 0))
-        draw      = ImageDraw.Draw(overlay)
+        frame_rgb = frame.convert("RGBA")
+        overlay = PILImage.new("RGBA", frame_rgb.size, (255, 255, 255, 0))
+        draw = ImageDraw.Draw(overlay)
 
-        date_text  = dates[i] if i < len(dates) else "Sin fecha"
-        bbox_text  = draw.textbbox((0, 0), date_text, font=font)
-        text_w     = bbox_text[2] - bbox_text[0]
-        text_h     = bbox_text[3] - bbox_text[1]
-        padding    = 8
+        date_text = dates[i] if i < len(dates) else "Sin fecha"
+        bbox_text = draw.textbbox((0, 0), date_text, font=font)
+        text_w = bbox_text[2] - bbox_text[0]
+        text_h = bbox_text[3] - bbox_text[1]
+        padding = 8
 
-        if position == 'top-left':
+        if position == "top-left":
             x, y = padding, padding
-        elif position == 'top-right':
+        elif position == "top-right":
             x, y = frame_rgb.width - text_w - padding, padding
-        elif position == 'bottom-left':
+        elif position == "bottom-left":
             x, y = padding, frame_rgb.height - text_h - padding * 2
-        elif position == 'bottom-right':
-            x = frame_rgb.width  - text_w - padding
+        elif position == "bottom-right":
+            x = frame_rgb.width - text_w - padding
             y = frame_rgb.height - text_h - padding * 2
         else:
             x, y = padding, padding
@@ -194,19 +211,19 @@ def add_dates_to_gif(
         )
         draw.text((x, y), date_text, fill=(255, 255, 255, 255), font=font)
 
-        frame_final = PILImage.alpha_composite(frame_rgb, overlay).convert('RGB')
+        frame_final = PILImage.alpha_composite(frame_rgb, overlay).convert("RGB")
         frames.append(frame_final)
-        durations.append(original_gif.info.get('duration', 500))
+        durations.append(original_gif.info.get("duration", 500))
 
     _report(90, "Guardando GIF procesado...")
     logger.info("Guardando GIF procesado en: %s", output_path)
     frames[0].save(
         output_path,
-        format='GIF',
+        format="GIF",
         save_all=True,
         append_images=frames[1:],
         duration=durations,
-        loop=original_gif.info.get('loop', 0),
+        loop=original_gif.info.get("loop", 0),
         optimize=False,
     )
 

@@ -7,13 +7,15 @@ Responsabilidades:
   - Extraer el frame del medio de un GIF animado (con caché en disco).
   - Renderizar plantilla Jinja2 y convertir a PDF con WeasyPrint.
 """
+
 import logging
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from PIL import Image as PILImage, ImageSequence
+from PIL import Image as PILImage
+from PIL import ImageSequence
 
 from config import GIFS_DIR, STATIC_DIR
 
@@ -24,7 +26,10 @@ logger = logging.getLogger(__name__)
 # Statistics computation
 # ---------------------------------------------------------------------------
 
-def compute_statistics(series_data: dict[str, Any], dates: list[str]) -> dict[str, dict[str, Any]]:
+
+def compute_statistics(
+    series_data: dict[str, Any], dates: list[str]
+) -> dict[str, dict[str, Any]]:
     """
     Calcula estadísticas para cada variable en series_data.
 
@@ -41,9 +46,14 @@ def compute_statistics(series_data: dict[str, Any], dates: list[str]) -> dict[st
         valid_pairs = [(d, v) for d, v in zip(dates, values) if v is not None]
         if not valid_pairs:
             stats[var_key] = {
-                "min": None, "max": None, "mean": None,
-                "std_dev": None, "first": None, "last": None,
-                "count": 0, "trend": "→",
+                "min": None,
+                "max": None,
+                "mean": None,
+                "std_dev": None,
+                "first": None,
+                "last": None,
+                "count": 0,
+                "trend": "→",
             }
             continue
 
@@ -70,7 +80,9 @@ def compute_statistics(series_data: dict[str, Any], dates: list[str]) -> dict[st
             indices = list(range(n))
             x_mean = sum(indices) / n
             y_mean = mean_val
-            numerator = sum((i - x_mean) * (v - y_mean) for i, (_, v) in enumerate(valid_pairs))
+            numerator = sum(
+                (i - x_mean) * (v - y_mean) for i, (_, v) in enumerate(valid_pairs)
+            )
             denominator = sum((i - x_mean) ** 2 for i in indices)
             if denominator > 0:
                 slope = numerator / denominator
@@ -186,9 +198,7 @@ def rolling_z_scores(
     return z_scores
 
 
-def identify_events(
-    z_scores: list[float], dates: list[str]
-) -> list[AnomalyEvent]:
+def identify_events(z_scores: list[float], dates: list[str]) -> list[AnomalyEvent]:
     """
     Identify anomaly events from z-scores.
 
@@ -196,7 +206,6 @@ def identify_events(
     or sustained_shift (3+ consecutive |z|>1.5).
     """
     events: list[AnomalyEvent] = []
-    n = len(z_scores)
 
     # Pair z_scores with valid (date, value) pairs
     valid_pairs: list[tuple[str, float]] = []
@@ -307,7 +316,9 @@ def merge_consecutive_events(events: list[AnomalyEvent]) -> list[AnomalyEvent]:
     return merged
 
 
-def rank_and_truncate_events(events: list[AnomalyEvent], top_n: int = TOP_N_EVENTS) -> list[AnomalyEvent]:
+def rank_and_truncate_events(
+    events: list[AnomalyEvent], top_n: int = TOP_N_EVENTS
+) -> list[AnomalyEvent]:
     """Sort events by magnitude descending and return top N."""
     sorted_events = sorted(events, key=lambda e: e.magnitude, reverse=True)
     return sorted_events[:top_n]
@@ -472,7 +483,13 @@ def detect_anomalies(series_data: dict, dates: list) -> AnomalyResult:
 # GIF frame extraction (with caching)
 # ---------------------------------------------------------------------------
 
-def extract_frame_for_date(gif_path: str, event_start_date: str, dates: list[str], cache_dir: Path | None = None) -> str:
+
+def extract_frame_for_date(
+    gif_path: str,
+    event_start_date: str,
+    dates: list[str],
+    cache_dir: Path | None = None,
+) -> str:
     """
     Map event start_date to the corresponding GIF frame using proportional indexing.
 
@@ -501,7 +518,11 @@ def extract_frame_for_date(gif_path: str, event_start_date: str, dates: list[str
         cache_dir = GIFS_DIR
 
     # Normalize gif path
-    normalized = gif_path.removeprefix("/static/") if gif_path.startswith("/static/") else gif_path
+    normalized = (
+        gif_path.removeprefix("/static/")
+        if gif_path.startswith("/static/")
+        else gif_path
+    )
     full_gif_path = STATIC_DIR / normalized
 
     # Verify GIF exists
@@ -582,7 +603,11 @@ def extract_middle_frame(gif_path: str, cache_dir: Path | None = None) -> str:
         cache_dir = GIFS_DIR
 
     # Normalizar ruta del GIF
-    normalized = gif_path.removeprefix("/static/") if gif_path.startswith("/static/") else gif_path
+    normalized = (
+        gif_path.removeprefix("/static/")
+        if gif_path.startswith("/static/")
+        else gif_path
+    )
     full_gif_path = STATIC_DIR / normalized
 
     # Generar nombre de caché: mismo stem + _frame.png
@@ -648,7 +673,7 @@ def build_pdf_context(
     primary_var = variable_keys[0] if variable_keys else list(series_data.keys())[0]
 
     # Etiquetas legibles de variables
-    VARIABLE_LABELS = {
+    VARIABLE_LABELS = {  # noqa: N806
         "ndvi": "NDVI (Índice de Vegetación)",
         "temp": "Temperatura (°C)",
         "soil": "Humedad del suelo (%)",
@@ -676,12 +701,27 @@ def build_pdf_context(
     trend_str = trend_map.get(primary_stats.get("trend", "→"), "Estable")
 
     # Interpretation text per variable
-    INTERPRETATIONS = {
-        "ndvi": "El NDVI mide la salud de la vegetación. Valores positivos indican vegetación densa y saludable.",
-        "temp": "La temperatura superficial influencia procesos de evapotranspiración y desarrollo de cultivos.",
-        "soil": "La humedad del suelo es crítica para el estrés hídrico de cultivos y la infiltración.",
-        "precip": "La precipitación diaria determina la recarga de acuíferos y el riesgo de inundación.",
-        "water": "La superficie de agua indica la disponibilidad hídrica y cambios en cuerpos de agua.",
+    INTERPRETATIONS = {  # noqa: N806
+        "ndvi": (
+            "El NDVI mide la salud de la vegetación. Valores positivos "
+            "indican vegetación densa y saludable."
+        ),
+        "temp": (
+            "La temperatura superficial influencia procesos de "
+            "evapotranspiración y desarrollo de cultivos."
+        ),
+        "soil": (
+            "La humedad del suelo es crítica para el estrés hídrico de "
+            "cultivos y la infiltración."
+        ),
+        "precip": (
+            "La precipitación diaria determina la recarga de acuíferos "
+            "y el riesgo de inundación."
+        ),
+        "water": (
+            "La superficie de agua indica la disponibilidad hídrica y "
+            "cambios en cuerpos de agua."
+        ),
         "local_sp": "Nivel medido en la estación San Pedro (Balancán).",
         "local_bd": "Nivel medido en la estación Boca del Cerro (Tenosique).",
     }
@@ -761,16 +801,16 @@ def _generate_executive_summary(event: AnomalyEvent) -> str:
 
     if event.type == "sustained_shift":
         return (
-            f"Se detectó una {type_label} entre el {event.start_date} y el {event.end_date} "
-            f"(duración: {event.duration_days} días). "
-            f"La desviación máxima alcanzó {event.magnitude:.1f}σ con respecto a la media histórica, "
-            f"clasificada como severidad {severity}."
+            f"Se detectó una {type_label} entre el {event.start_date} "
+            f"y el {event.end_date} (duración: {event.duration_days} días). "
+            f"La desviación máxima alcanzó {event.magnitude:.1f}σ con respecto "
+            f"a la media histórica, clasificada como severidad {severity}."
         )
     else:
         return (
             f"Se registró un {type_label} el {event.start_date} "
-            f"con una desviación de {event.magnitude:.1f}σ respecto a la media histórica, "
-            f"clasificada como severidad {severity}."
+            f"con una desviación de {event.magnitude:.1f}σ respecto a la "
+            f"media histórica, clasificada como severidad {severity}."
         )
 
 
@@ -778,7 +818,10 @@ def _generate_executive_summary(event: AnomalyEvent) -> str:
 # PDF rendering
 # ---------------------------------------------------------------------------
 
-def render_pdf_report(context: dict[str, Any], output_path: Path | None = None) -> bytes:
+
+def render_pdf_report(
+    context: dict[str, Any], output_path: Path | None = None
+) -> bytes:
     """
     Renderiza el PDF report desde el contexto y devuelve los bytes del PDF.
 
@@ -792,12 +835,12 @@ def render_pdf_report(context: dict[str, Any], output_path: Path | None = None) 
     Raises:
         RuntimeError: si WeasyPrint no puede renderizar el documento
     """
-    from pathlib import Path as P
 
     from jinja2 import Environment, FileSystemLoader, select_autoescape
 
     # Obtener la ruta de la plantilla
     from config import BASE_DIR
+
     template_dir = BASE_DIR / "templates"
     static_dir = BASE_DIR / "static"
 
@@ -816,8 +859,9 @@ def render_pdf_report(context: dict[str, Any], output_path: Path | None = None) 
         import weasyprint
     except ImportError as e:
         raise RuntimeError(
-            "WeasyPrint no está instalado o sus dependencias del sistema (cairo, pango) "
-            "no están disponibles. Instale con: pip install weasyprint>=60.0"
+            "WeasyPrint no está instalado o sus dependencias del sistema "
+            "(cairo, pango) no están disponibles. "
+            "Instale con: pip install weasyprint>=60.0"
         ) from e
 
     # CSS path
@@ -845,6 +889,8 @@ def render_pdf_report(context: dict[str, Any], output_path: Path | None = None) 
 
 
 # Alias para mantener consistencia con la nomenclatura del design
-def compute_stats(series_data: dict[str, Any], dates: list[str]) -> dict[str, dict[str, Any]]:
+def compute_stats(
+    series_data: dict[str, Any], dates: list[str]
+) -> dict[str, dict[str, Any]]:
     """Alias de compute_statistics para mantener compatibilidad."""
     return compute_statistics(series_data, dates)

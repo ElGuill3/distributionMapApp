@@ -7,7 +7,7 @@ antes de llamar a cualquier servicio GEE.
 
 import json
 from datetime import date, datetime
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -123,7 +123,7 @@ class ExportMetadataSchema(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-    variableKeys: List[str]
+    variableKeys: list[str]  # noqa: N815
     panel: Literal["A", "B"]
 
 
@@ -141,24 +141,29 @@ class PdfReportRequestSchema(BaseModel):
     model_config = {"populate_by_name": True}
 
     chart_blob: str = Field(..., description="base64-encoded PNG from Plotly chart")
-    gif_path: str = Field(..., description="Relative path to GIF, e.g. gifs/ndvi_2020_abc123.gif")
+    gif_path: str = Field(
+        ..., description="Relative path to GIF, e.g. gifs/ndvi_2020_abc123.gif"
+    )
     series_data: "SeriesDataSchema"
-    bbox: List[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
+    bbox: list[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
 
     @field_validator("bbox")
     @classmethod
-    def bbox_must_have_4_elements(cls, v: List[float]) -> List[float]:
+    def bbox_must_have_4_elements(cls, v: list[float]) -> list[float]:
         if len(v) != 4:
-            raise ValueError("bbox must have exactly 4 elements [minLon, minLat, maxLon, maxLat]")
+            raise ValueError(
+                "bbox must have exactly 4 elements [minLon, minLat, maxLon, maxLat]"
+            )
         return v
+
     metadata: ExportMetadataSchema
 
 
 class SeriesDataSchema(BaseModel):
     """Schema para datos de series temporales en petición de exportación."""
 
-    dates: List[str] = Field(min_length=1)
-    variables: dict[str, List[float | None]] = Field(default_factory=dict)
+    dates: list[str] = Field(min_length=1)
+    variables: dict[str, list[float | None]] = Field(default_factory=dict)
 
 
 class ExportRequestSchema(BaseModel):
@@ -172,14 +177,14 @@ class ExportRequestSchema(BaseModel):
     metadata: variableKeys y panel
     """
 
-    gifPaths: List[str] = Field(default_factory=list)
+    gifPaths: list[str] = Field(default_factory=list)  # noqa: N815
     panel: Literal["A", "B"]
-    seriesData: SeriesDataSchema
-    bbox: List[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
+    seriesData: SeriesDataSchema  # noqa: N815
+    bbox: list[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
     metadata: ExportMetadataSchema
 
 
-def _parse_bbox_str(bbox_str: str) -> List[float]:
+def _parse_bbox_str(bbox_str: str) -> list[float]:
     """
     Parsea un string JSON de bbox a list[float].
 

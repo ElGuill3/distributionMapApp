@@ -8,17 +8,16 @@ Responsabilidades:
   - Devolver el ZIP como descarga.
   - Generar reportes PDF con WeasyPrint (POST /api/export/pdf-report).
 """
+
 import logging
 from datetime import datetime
 from io import BytesIO
-from pathlib import Path
 
 from flask import Blueprint, Response, jsonify, request
 from pydantic import ValidationError
 
+from config import STATIC_DIR
 from extensions import limiter
-
-from config import GIFS_DIR, STATIC_DIR
 from gee.schemas import ExportRequestSchema, PdfReportRequestSchema
 from services.export_service import create_export_zip, serialize_series_to_csv
 from services.pdf_report_service import (
@@ -65,9 +64,7 @@ def export_bundle() -> Response:
 
     # 2. Normalizar rutas de GIF: quitar "/static/" si viene prefixado
     # (el frontend envía "/static/gifs/..." pero STATIC_DIR ya incluye "static/")
-    normalized_gif_paths = [
-        p.removeprefix("/static/") for p in payload.gifPaths
-    ]
+    normalized_gif_paths = [p.removeprefix("/static/") for p in payload.gifPaths]
 
     # 3. Validar que cada GIF exista en disco
     for gif_path in normalized_gif_paths:
@@ -75,10 +72,15 @@ def export_bundle() -> Response:
         if not full_path.exists():
             logger.warning("GIF no encontrado: %s", gif_path)
             return jsonify(
-                {"error": "Animation file no longer available. Please regenerate the animation."}
+                {
+                    "error": (
+                        "Animation file no longer available. "
+                        "Please regenerate the animation."
+                    )
+                }
             ), 404
 
-    # 3. Serializar series a CSV
+    # 4. Serializar series a CSV
     try:
         csv_content = serialize_series_to_csv(
             series_data=payload.seriesData.variables,
@@ -90,7 +92,7 @@ def export_bundle() -> Response:
         logger.warning("Error serializando CSV: %s", e)
         return jsonify({"error": "Invalid request body"}), 400
 
-    # 4. Construir metadata
+    # 5. Construir metadata
     metadata = {
         "variableKeys": payload.metadata.variableKeys,
         "panel": payload.metadata.panel,
@@ -107,7 +109,12 @@ def export_bundle() -> Response:
     except FileNotFoundError as e:
         logger.warning("GIF no encontrado al crear ZIP: %s", e)
         return jsonify(
-            {"error": "Animation file no longer available. Please regenerate the animation."}
+            {
+                "error": (
+                    "Animation file no longer available. "
+                    "Please regenerate the animation."
+                )
+            }
         ), 404
 
     # 6. Preparar nombre de archivo con timestamp
@@ -173,7 +180,12 @@ def export_pdf_report() -> Response:
         except FileNotFoundError:
             logger.warning("GIF no encontrado para PDF: %s", payload.gif_path)
             return jsonify(
-                {"error": "Animation file no longer available. Please regenerate the animation."}
+                {
+                    "error": (
+                        "Animation file no longer available. "
+                        "Please regenerate the animation."
+                    )
+                }
             ), 404
 
     # 5. Calcular estadísticas

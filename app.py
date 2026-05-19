@@ -14,7 +14,14 @@ import logging
 import sys
 
 import ee
-from flask import Flask, Request, Response, jsonify, render_template, request, send_from_directory
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    render_template,
+    request,
+    send_from_directory,
+)
 
 from config import BASE_DIR, CACHE_POLICIES, DEBUG, GEE_PROJECT, STATIC_DIR
 from extensions import limiter
@@ -36,12 +43,12 @@ ee.Initialize(project=GEE_PROJECT)
 # ---------------------------------------------------------------------------
 # Blueprints
 # ---------------------------------------------------------------------------
-from routes.gif_routes import gif_bp
-from routes.timeseries_routes import ts_bp
-from routes.flood_routes import flood_bp
-from routes.station_routes import station_bp
-from routes.progress_routes import progress_bp
 from routes.export_routes import export_bp
+from routes.flood_routes import flood_bp
+from routes.gif_routes import gif_bp
+from routes.progress_routes import progress_bp
+from routes.station_routes import station_bp
+from routes.timeseries_routes import ts_bp
 
 # ---------------------------------------------------------------------------
 # Limpieza automática de GIFs en segundo plano
@@ -68,9 +75,12 @@ limiter.init_app(app)
 @app.errorhandler(429)
 def rate_limit_exceeded(e):
     """Handler personalizado para respuestas 429 — JSON consistente con Retry-After."""
-    return jsonify({
-        "error": f"Rate limit exceeded. Retry after {int(e.description)}s.",
-    }), 429
+    return jsonify(
+        {
+            "error": f"Rate limit exceeded. Retry after {int(e.description)}s.",
+        }
+    ), 429
+
 
 app.register_blueprint(gif_bp)
 app.register_blueprint(ts_bp)
@@ -83,6 +93,7 @@ app.register_blueprint(export_bp)
 # ---------------------------------------------------------------------------
 # Cabeceras HTTP de caché
 # ---------------------------------------------------------------------------
+
 
 @app.after_request
 def inject_cache_headers(response: Response) -> Response:
@@ -145,7 +156,7 @@ def api_docs_spec():
     import yaml
 
     spec_path = BASE_DIR / "openapi.yaml"
-    with open(spec_path, "r") as f:
+    with open(spec_path) as f:
         content = yaml.safe_load(f)
     return app.response_class(
         response=yaml.dump(content, allow_unicode=True, sort_keys=False),

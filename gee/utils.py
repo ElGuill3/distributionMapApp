@@ -7,16 +7,22 @@ Este módulo provee las funciones que se repetían en cada variable:
   - build_base_collection: filtra una colección GEE por fecha, región y banda
   - season_to_dates    : convierte año + temporada a rango YYYY-MM-DD
 """
+
+from __future__ import annotations
+
 import calendar
 import math
-from typing import Optional
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import ee
 
 from config import (
+    BASE_PIXELS_PER_FRAME,
     MAX_SPAN_DEG,
     MAX_TOTAL_PIXELS,
     MAX_YEARS_RANGE,
-    BASE_PIXELS_PER_FRAME,
     MIN_GIF_DIM,
 )
 
@@ -39,15 +45,17 @@ def validate_bbox(bbox: list[float], max_span: float = MAX_SPAN_DEG) -> None:
 
 def compute_gif_dims(
     n_frames: int,
-    ratio: Optional[float] = None,
+    ratio: float | None = None,
     base_pixels: int = BASE_PIXELS_PER_FRAME,
 ) -> str:
     """
-    Calcula dimensiones 'WxH' para getVideoThumbURL respetando el límite total de píxeles.
+    Calcula dimensiones 'WxH' para getVideoThumbURL respetando el
+    límite total de píxeles.
 
     Args:
         n_frames: número de frames del GIF.
-        ratio: relación ancho/alto (width/height). Si es None se usa imagen cuadrada.
+        ratio: relación ancho/alto (width/height). Si es None se usa imagen
+            cuadrada.
         base_pixels: píxeles máximos por frame antes de escalar por n_frames.
 
     Returns:
@@ -72,7 +80,7 @@ def build_base_collection(
     bbox: list[float],
     start: str,
     end: str,
-) -> "ee.ImageCollection":
+) -> ee.ImageCollection:
     """
     Filtra una colección GEE por banda, fecha y región, ordenada cronológicamente.
 
@@ -86,7 +94,9 @@ def build_base_collection(
     Returns:
         ImageCollection filtrada y ordenada por tiempo de inicio.
     """
-    import ee  # import local: permite testear utilidades puras sin cargar earthengine-api al importar el módulo
+    # import local: permite testear utilidades puras sin cargar
+    # earthengine-api al importar el módulo
+    import ee
 
     region = ee.Geometry.Rectangle(bbox)
     return (
@@ -105,11 +115,11 @@ def build_base_collection(
 #: Mapeo de temporada → (mes-día inicio, mes-día fin).
 #: Invierno se trata de forma especial porque cruza el cambio de año.
 SEASON_RANGES: dict[str, tuple[str, str]] = {
-    'invierno':  ('12-01', '02'),   # fin dinámico: 28 o 29 según año bisiesto
-    'primavera': ('03-01', '05-31'),
-    'verano':    ('06-01', '08-31'),
-    'otono':     ('09-01', '11-30'),
-    'anual':     ('01-01', '12-31'),
+    "invierno": ("12-01", "02"),  # fin dinámico: 28 o 29 según año bisiesto
+    "primavera": ("03-01", "05-31"),
+    "verano": ("06-01", "08-31"),
+    "otono": ("09-01", "11-30"),
+    "anual": ("01-01", "12-31"),
 }
 
 VALID_SEASONS: frozenset[str] = frozenset(SEASON_RANGES.keys())
@@ -142,9 +152,9 @@ def season_to_dates(year: int, season: str) -> tuple[str, str]:
             f"Opciones válidas: {sorted(VALID_SEASONS)}"
         )
 
-    if season == 'invierno':
+    if season == "invierno":
         end_year = year + 1
-        end_day  = 29 if calendar.isleap(end_year) else 28
+        end_day = 29 if calendar.isleap(end_year) else 28
         return f"{year}-12-01", f"{end_year}-02-{end_day:02d}"
 
     start_suffix, end_suffix = SEASON_RANGES[season]
@@ -156,7 +166,7 @@ def season_to_dates(year: int, season: str) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def check_max_10_years(start: str, end: str) -> Optional[str]:
+def check_max_10_years(start: str, end: str) -> str | None:
     """
     Valida que el rango de fechas no supere 10 años y que el formato sea correcto.
 
@@ -165,7 +175,7 @@ def check_max_10_years(start: str, end: str) -> Optional[str]:
     """
     try:
         d_start = datetime.strptime(start, "%Y-%m-%d")
-        d_end   = datetime.strptime(end,   "%Y-%m-%d")
+        d_end = datetime.strptime(end, "%Y-%m-%d")
     except ValueError:
         return "Formato de fecha inválido. Usa YYYY-MM-DD."
 
@@ -174,6 +184,9 @@ def check_max_10_years(start: str, end: str) -> Optional[str]:
 
     years_span = (d_end - d_start).days / 365.25
     if years_span > MAX_YEARS_RANGE:
-        return f"El rango de fechas excede el límite de {int(MAX_YEARS_RANGE)} años. Reduce el intervalo."
+        return (
+            f"El rango de fechas excede el límite de {int(MAX_YEARS_RANGE)} "
+            "años. Reduce el intervalo."
+        )
 
     return None
