@@ -10,9 +10,9 @@ from extensions import limiter
 
 logger = logging.getLogger(__name__)
 
+from config import MUNICIPAL_TIFS
 from gee.flood_risk import render_flood_risk_png
 from gee.schemas import MuniQuerySchema
-from config import MUNICIPAL_TIFS
 
 flood_bp = Blueprint("flood", __name__)
 
