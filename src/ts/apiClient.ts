@@ -31,21 +31,25 @@ function buildGifUrl(
   start: string,
   end: string,
   bbox: BBox,
-  taskId: string,
+  taskId: string
 ): string {
   const bboxJson = JSON.stringify(bbox);
-  return `${GIF_ENDPOINT[variable as keyof typeof GIF_ENDPOINT]}?start=${encodeURIComponent(start)}`
-    + `&end=${encodeURIComponent(end)}`
-    + `&bbox=${encodeURIComponent(bboxJson)}`
-    + `&task_id=${encodeURIComponent(taskId)}`;
+  return (
+    `${GIF_ENDPOINT[variable as keyof typeof GIF_ENDPOINT]}?start=${encodeURIComponent(start)}` +
+    `&end=${encodeURIComponent(end)}` +
+    `&bbox=${encodeURIComponent(bboxJson)}` +
+    `&task_id=${encodeURIComponent(taskId)}`
+  );
 }
 
 /** Construye la URL completa para una petición de serie temporal. */
 function buildTsUrl(variable: string, start: string, end: string, bbox: BBox): string {
   const bboxJson = JSON.stringify(bbox);
-  return `${TS_ENDPOINT[variable as keyof typeof TS_ENDPOINT]}?start=${encodeURIComponent(start)}`
-    + `&end=${encodeURIComponent(end)}`
-    + `&bbox=${encodeURIComponent(bboxJson)}`;
+  return (
+    `${TS_ENDPOINT[variable as keyof typeof TS_ENDPOINT]}?start=${encodeURIComponent(start)}` +
+    `&end=${encodeURIComponent(end)}` +
+    `&bbox=${encodeURIComponent(bboxJson)}`
+  );
 }
 
 /** Tipo para los datos de progreso SSE */
@@ -65,15 +69,17 @@ interface ProgressEvent {
 export function createProgressEventSource(
   taskId: string,
   onProgress: (progress: number, message: string) => void,
-  onError: () => void,
+  onError: () => void
 ): EventSource {
   const eventSource = new EventSource(`/api/gif-progress/${taskId}`);
-  eventSource.onmessage = (event) => {
+  eventSource.onmessage = event => {
     try {
       const data = JSON.parse(event.data) as ProgressEvent;
       if (typeof data.progress !== 'number') return;
       onProgress(data.progress, data.message ?? '');
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
   eventSource.onerror = () => {
     eventSource.close();
@@ -108,21 +114,23 @@ export interface FetchGifAndSeriesOptions {
  * @throwsnothing Este función nunca lanza — los errores se manejan internamente
  */
 export async function fetchGifAndSeries(
-  options: FetchGifAndSeriesOptions,
+  options: FetchGifAndSeriesOptions
 ): Promise<FetchGifAndSeriesResult> {
   const { variable, start, end, bbox } = options;
-  const taskId = options.taskId ?? `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  const taskId =
+    options.taskId ??
+    `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
   const gifUrl = buildGifUrl(variable, start, end, bbox, taskId);
-  const tsUrl  = buildTsUrl(variable, start, end, bbox);
+  const tsUrl = buildTsUrl(variable, start, end, bbox);
 
   // Nota: el manejo de progress indicator queda a cargo del llamador
   // (createProgressIndicator / updateProgressIndicator / removeProgressIndicator)
 
   const [gifResp, tsResp] = await Promise.all([fetch(gifUrl), fetch(tsUrl)]);
 
-  const gifData = await gifResp.json() as GifResponse & { error?: string };
-  const tsData  = await tsResp.json() as TimeseriesResponse & { error?: string };
+  const gifData = (await gifResp.json()) as GifResponse & { error?: string };
+  const tsData = (await tsResp.json()) as TimeseriesResponse & { error?: string };
 
   return { gifData, tsData: tsResp.ok ? tsData : null };
 }
@@ -134,7 +142,7 @@ export async function fetchGifAndSeries(
  * @returns Objeto con gifData y tsData (puede ser null si la serie falla)
  */
 export async function fetchGifAndSeriesForPanel(
-  options: FetchGifAndSeriesOptions,
+  options: FetchGifAndSeriesOptions
 ): Promise<FetchGifAndSeriesResult> {
   // Phase A: usa la misma implementación que fetchGifAndSeries
   // (las diferencias entre modo normal y comparativa están en main.ts,
@@ -156,9 +164,13 @@ export interface FetchFloodRiskOptions {
  * @returns FloodRiskResponse con mapUrl y bbox
  * @throws Error si la respuesta no es OK
  */
-export async function fetchFloodRisk(options: FetchFloodRiskOptions): Promise<FloodRiskResponse & { error?: string }> {
-  const resp = await fetch(`/api/flood-risk-municipio?muni=${encodeURIComponent(options.municipio)}`);
-  const data = await resp.json() as FloodRiskResponse & { error?: string };
+export async function fetchFloodRisk(
+  options: FetchFloodRiskOptions
+): Promise<FloodRiskResponse & { error?: string }> {
+  const resp = await fetch(
+    `/api/flood-risk-municipio?muni=${encodeURIComponent(options.municipio)}`
+  );
+  const data = (await resp.json()) as FloodRiskResponse & { error?: string };
 
   if (!resp.ok) {
     throw new Error(data.error ?? 'Error generando mapa de riesgo por municipio.');
@@ -183,14 +195,15 @@ export interface FetchLocalStationLevelOptions {
  * @returns StationResponse con station, dates y level_m
  */
 export async function fetchLocalStationLevel(
-  options: FetchLocalStationLevelOptions,
+  options: FetchLocalStationLevelOptions
 ): Promise<StationResponse & { error?: string }> {
-  const url = `/api/local-station-level-range?station=${encodeURIComponent(options.stationId)}`
-    + `&start=${encodeURIComponent(options.start)}`
-    + `&end=${encodeURIComponent(options.end)}`;
+  const url =
+    `/api/local-station-level-range?station=${encodeURIComponent(options.stationId)}` +
+    `&start=${encodeURIComponent(options.start)}` +
+    `&end=${encodeURIComponent(options.end)}`;
 
   const resp = await fetch(url);
-  const data = await resp.json() as StationResponse & { error?: string };
+  const data = (await resp.json()) as StationResponse & { error?: string };
 
   if (!resp.ok) {
     throw new Error(data.error ?? 'Error cargando serie de nivel de estación local.');
@@ -209,9 +222,11 @@ export async function fetchLocalStationLevel(
  */
 export function extractTimeseriesValues(
   tsData: TimeseriesResponse,
-  variable: string,
+  variable: string
 ): { dates: string[]; values: number[] } | null {
-  const dataKey = VARIABLE_DATA_KEY[variable as keyof typeof VARIABLE_DATA_KEY] as keyof TimeseriesResponse;
+  const dataKey = VARIABLE_DATA_KEY[
+    variable as keyof typeof VARIABLE_DATA_KEY
+  ] as keyof TimeseriesResponse;
   const values = tsData[dataKey] as number[] | undefined;
   if (!tsData.dates || !values) return null;
   return { dates: tsData.dates, values };
@@ -222,7 +237,10 @@ export function extractTimeseriesValues(
 // ---------------------------------------------------------------------------
 
 /** Construye la URL de descarga directa para un archivo en el backend. */
-export function buildDownloadUrl(endpoint: string, params: Record<string, string>): string {
+export function buildDownloadUrl(
+  endpoint: string,
+  params: Record<string, string>
+): string {
   const searchParams = new URLSearchParams(params);
   return `${endpoint}?${searchParams.toString()}`;
 }
@@ -302,7 +320,9 @@ export async function exportBundle(options: ExportBundleOptions): Promise<Blob> 
     try {
       const errData = await resp.json();
       errorMsg = errData.error ?? errorMsg;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     throw new Error(errorMsg);
   }
 
@@ -322,13 +342,7 @@ export interface ExportPdfReportOptions {
 }
 
 export async function exportPdfReport(options: ExportPdfReportOptions): Promise<Blob> {
-  const {
-    chartBlob,
-    gifPath,
-    seriesData,
-    bbox,
-    metadata,
-  } = options;
+  const { chartBlob, gifPath, seriesData, bbox, metadata } = options;
 
   const payload = {
     chart_blob: chartBlob,
@@ -349,7 +363,9 @@ export async function exportPdfReport(options: ExportPdfReportOptions): Promise<
     try {
       const errData = await resp.json();
       errorMsg = errData.error ?? errorMsg;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     throw new Error(errorMsg);
   }
 
@@ -391,7 +407,7 @@ export function downloadBlob(blob: Blob, filename: string): void {
  */
 export async function buildExportBundleZip(
   pngBlob: Blob,
-  zipBlob: Blob,
+  zipBlob: Blob
 ): Promise<void> {
   const JSZip = (await import('jszip')).default;
   const timestamp = exportTimestamp();

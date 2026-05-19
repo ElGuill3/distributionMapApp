@@ -39,12 +39,12 @@ export let allColorbars: Partial<Record<VariableKey | 'flood', L.Control>> = {};
  */
 export function buildColorbars(): void {
   allColorbars = {
-    ndvi:   _makeColorbar('ndvi-colorbar',       _ndviHtml()),
-    temp:   _makeColorbar('temp-colorbar',       _tempHtml()),
-    soil:   _makeColorbar('soil-colorbar',       _soilHtml()),
-    precip: _makeColorbar('precip-colorbar',     _precipHtml()),
-    water:  _makeColorbar('precip-colorbar',     _waterHtml()),
-    flood:  _makeColorbar('flood-risk-colorbar', _floodHtml()),
+    ndvi: _makeColorbar('ndvi-colorbar', _ndviHtml()),
+    temp: _makeColorbar('temp-colorbar', _tempHtml()),
+    soil: _makeColorbar('soil-colorbar', _soilHtml()),
+    precip: _makeColorbar('precip-colorbar', _precipHtml()),
+    water: _makeColorbar('precip-colorbar', _waterHtml()),
+    flood: _makeColorbar('flood-risk-colorbar', _floodHtml()),
   };
 }
 
@@ -60,7 +60,7 @@ export function buildColorbars(): void {
 export function switchColorbar(
   targetMap: L.Map,
   variable: VariableKey | 'flood' | null,
-  removeFromMap?: L.Map,
+  removeFromMap?: L.Map
 ): void {
   for (const [key, ctrl] of Object.entries(allColorbars)) {
     if (!ctrl) continue;
@@ -93,8 +93,12 @@ function _makeColorbar(cssClass: string, innerHtml: string): L.Control {
     L.DomEvent.disableClickPropagation(wrapper);
     L.DomEvent.disableScrollPropagation(wrapper);
 
-    const toggleBtn = L.DomUtil.create('button', 'colorbar-toggle-btn', wrapper) as HTMLButtonElement;
-    toggleBtn.type  = 'button';
+    const toggleBtn = L.DomUtil.create(
+      'button',
+      'colorbar-toggle-btn',
+      wrapper
+    ) as HTMLButtonElement;
+    toggleBtn.type = 'button';
     toggleBtn.title = 'Ocultar leyenda';
     toggleBtn.textContent = '◀';
 
@@ -104,7 +108,7 @@ function _makeColorbar(cssClass: string, innerHtml: string): L.Control {
     toggleBtn.addEventListener('click', () => {
       const hidden = content.classList.toggle('colorbar-content-hidden');
       toggleBtn.textContent = hidden ? '▶' : '◀';
-      toggleBtn.title       = hidden ? 'Mostrar leyenda' : 'Ocultar leyenda';
+      toggleBtn.title = hidden ? 'Mostrar leyenda' : 'Ocultar leyenda';
     });
 
     return wrapper;

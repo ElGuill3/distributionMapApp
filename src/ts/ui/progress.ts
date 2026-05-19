@@ -55,26 +55,26 @@ export function createProgressIndicator(): HTMLDivElement {
  * @param message  - Texto descriptivo del estado actual.
  */
 export function updateProgressIndicator(progress: number, message: string): void {
-  const barEl     = document.getElementById('progress-bar');
-  const msgEl     = document.getElementById('progress-message');
-  const pctEl     = document.getElementById('progress-percent');
+  const barEl = document.getElementById('progress-bar');
+  const msgEl = document.getElementById('progress-message');
+  const pctEl = document.getElementById('progress-percent');
 
   if (!barEl || !msgEl || !pctEl) return;
 
   if (progress === -1) {
     barEl.style.background = 'linear-gradient(90deg, #f44336, #e53935)';
-    barEl.style.width      = '100%';
-    msgEl.textContent      = `Error: ${message}`;
-    pctEl.textContent      = 'Error';
-    pctEl.style.color      = '#f44336';
+    barEl.style.width = '100%';
+    msgEl.textContent = `Error: ${message}`;
+    pctEl.textContent = 'Error';
+    pctEl.style.color = '#f44336';
     return;
   }
 
-  const pct             = Math.max(0, Math.min(100, progress));
-  barEl.style.width     = `${pct}%`;
-  barEl.textContent     = pct > 20 ? `${pct}%` : '';
-  msgEl.textContent     = message;
-  pctEl.textContent     = `${pct}%`;
+  const pct = Math.max(0, Math.min(100, progress));
+  barEl.style.width = `${pct}%`;
+  barEl.textContent = pct > 20 ? `${pct}%` : '';
+  msgEl.textContent = message;
+  pctEl.textContent = `${pct}%`;
 }
 
 /**
@@ -127,7 +127,9 @@ export function showWarningModal(title: string, message: string): void {
   </div>
 `;
   document.body.appendChild(div);
-  document.getElementById('warning-modal-close')?.addEventListener('click', closeWarningModal);
+  document
+    .getElementById('warning-modal-close')
+    ?.addEventListener('click', closeWarningModal);
   // Auto-cerrar a los 8 segundos si el usuario no interactuó
   setTimeout(() => closeWarningModal(), 8000);
   // Escape también cierra
@@ -164,7 +166,7 @@ const ERROR_MODAL_ID = 'error-modal';
 export function showErrorModal(
   title: string,
   message: string,
-  retryAction?: () => void,
+  retryAction?: () => void
 ): void {
   // Eliminar cualquier modal de error previo
   closeErrorModal();
@@ -225,12 +227,10 @@ export function showErrorModal(
 
   // Botón retry
   if (retryAction !== undefined) {
-    document
-      .getElementById('error-modal-retry')
-      ?.addEventListener('click', () => {
-        closeErrorModal();
-        retryAction();
-      });
+    document.getElementById('error-modal-retry')?.addEventListener('click', () => {
+      closeErrorModal();
+      retryAction();
+    });
   }
 
   // Escape cierra el modal
@@ -243,7 +243,9 @@ export function showErrorModal(
   document.addEventListener('keydown', escListener);
 
   // Focus inicial en el botón Cerrar para accessibility (keyboard users)
-  const closeBtn = document.getElementById('error-modal-close') as HTMLButtonElement | null;
+  const closeBtn = document.getElementById(
+    'error-modal-close'
+  ) as HTMLButtonElement | null;
   closeBtn?.focus();
 }
 

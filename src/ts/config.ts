@@ -15,11 +15,11 @@ function _yearsRange(from: number, to: number): number[] {
 
 /** Array de años disponibles para cada variable. */
 export const VARIABLE_YEARS: Record<VariableKey, number[]> = {
-  ndvi:     _yearsRange(2000, 2024),
-  temp:     _yearsRange(2000, 2024),
-  soil:     _yearsRange(2000, 2024),
-  precip:   _yearsRange(2000, 2024),
-  water:    _yearsRange(2015, 2024),
+  ndvi: _yearsRange(2000, 2024),
+  temp: _yearsRange(2000, 2024),
+  soil: _yearsRange(2000, 2024),
+  precip: _yearsRange(2000, 2024),
+  water: _yearsRange(2015, 2024),
   local_sp: _yearsRange(2000, 2024),
   local_bd: _yearsRange(2000, 2024),
 };
@@ -35,31 +35,37 @@ export interface SeasonOption {
 
 /** Opciones de temporada disponibles (misma lógica que backend). */
 export const SEASONS: SeasonOption[] = [
-  { value: 'invierno',  label: 'Invierno (dic–feb)' },
+  { value: 'invierno', label: 'Invierno (dic–feb)' },
   { value: 'primavera', label: 'Primavera (mar–may)' },
-  { value: 'verano',    label: 'Verano (jun–ago)' },
-  { value: 'otono',     label: 'Otoño (sep–nov)' },
-  { value: 'anual',     label: 'Año completo (ene–dic)' },
+  { value: 'verano', label: 'Verano (jun–ago)' },
+  { value: 'otono', label: 'Otoño (sep–nov)' },
+  { value: 'anual', label: 'Año completo (ene–dic)' },
 ];
 
 export const DEFAULT_CENTER: [number, number] = [17.8409, -92.6189];
-export const DEFAULT_ZOOM   = 8;
-export const MAX_SPAN_DEG   = 8.0;
+export const DEFAULT_ZOOM = 8;
+export const MAX_SPAN_DEG = 8.0;
 
 /** Mapa de VariableKey → URL base del endpoint gif-bbox */
-export const GIF_ENDPOINT: Record<Exclude<VariableKey, 'local_sp' | 'local_bd'>, string> = {
-  ndvi:   '/api/ndvi-gif-bbox',
-  temp:   '/api/era5-temp-gif-bbox',
-  soil:   '/api/era5-soil-gif-bbox',
+export const GIF_ENDPOINT: Record<
+  Exclude<VariableKey, 'local_sp' | 'local_bd'>,
+  string
+> = {
+  ndvi: '/api/ndvi-gif-bbox',
+  temp: '/api/era5-temp-gif-bbox',
+  soil: '/api/era5-soil-gif-bbox',
   precip: '/api/imerg-precip-gif-bbox',
-  water:  '/api/water-gif-bbox',
+  water: '/api/water-gif-bbox',
 };
 
 /** Mapa de VariableKey → URL base del endpoint timeseries-bbox */
-export const TS_ENDPOINT: Record<Exclude<VariableKey, 'local_sp' | 'local_bd'>, string> = {
-  ndvi:   '/api/ndvi-timeseries-bbox',
-  temp:   '/api/era5-temp-timeseries-bbox',
-  soil:   '/api/era5-soil-timeseries-bbox',
+export const TS_ENDPOINT: Record<
+  Exclude<VariableKey, 'local_sp' | 'local_bd'>,
+  string
+> = {
+  ndvi: '/api/ndvi-timeseries-bbox',
+  temp: '/api/era5-temp-timeseries-bbox',
+  soil: '/api/era5-soil-timeseries-bbox',
   precip: '/api/imerg-precip-timeseries-bbox',
-  water:  '/api/water-timeseries-bbox',
+  water: '/api/water-timeseries-bbox',
 };

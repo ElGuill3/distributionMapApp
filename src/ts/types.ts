@@ -95,12 +95,14 @@ export interface SeriesData {
  * necesitan esta clave — se incluyen con un valor placeholder ('ndvi') que
  * nunca se usa para ellas.
  */
-export const VARIABLE_DATA_KEY: Readonly<Record<VariableKey, keyof TimeseriesResponse>> = {
-  ndvi:     'ndvi',
-  temp:     'temp',
-  soil:     'soil_pct',
-  precip:   'precip_mm',
-  water:    'water_ha',
+export const VARIABLE_DATA_KEY: Readonly<
+  Record<VariableKey, keyof TimeseriesResponse>
+> = {
+  ndvi: 'ndvi',
+  temp: 'temp',
+  soil: 'soil_pct',
+  precip: 'precip_mm',
+  water: 'water_ha',
   local_sp: 'ndvi',
   local_bd: 'ndvi',
 } as const;

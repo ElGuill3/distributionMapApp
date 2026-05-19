@@ -22,24 +22,24 @@ import type { ParsedFrame } from 'gifuct-js';
  */
 export class GifPlayer {
   private blobUrls: string[] = [];
-  private delays:   number[]  = [];
-  private width  = 0;
+  private delays: number[] = [];
+  private width = 0;
   private height = 0;
 
   /** Descarga y pre-renderiza todos los frames del GIF indicado. */
   async load(gifUrl: string): Promise<void> {
-    const resp   = await fetch(gifUrl);
+    const resp = await fetch(gifUrl);
     const buffer = await resp.arrayBuffer();
 
     const parsed = parseGIF(buffer);
     const frames: ParsedFrame[] = decompressFrames(parsed, true);
 
-    this.width  = parsed.lsd.width;
+    this.width = parsed.lsd.width;
     this.height = parsed.lsd.height;
 
     // Canvas reutilizable para componer cada frame
     const canvas = document.createElement('canvas');
-    canvas.width  = this.width;
+    canvas.width = this.width;
     canvas.height = this.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('GifPlayer: no se pudo obtener 2D context del canvas.');
@@ -47,7 +47,7 @@ export class GifPlayer {
     // Pre-renderizamos cada frame sobre el canvas acumulativo (disposal 0/1)
     // y capturamos un blob URL por frame.
     this.blobUrls = [];
-    this.delays   = [];
+    this.delays = [];
 
     for (const frame of frames) {
       const { dims, patch, delay, disposalType } = frame;
@@ -59,7 +59,11 @@ export class GifPlayer {
 
       // Cast necesario: gifuct-js tipifica patch como Uint8ClampedArray<ArrayBufferLike>
       // pero ImageData espera Uint8ClampedArray<ArrayBuffer>.
-      const imageData = new ImageData(patch as unknown as Uint8ClampedArray<ArrayBuffer>, dims.width, dims.height);
+      const imageData = new ImageData(
+        patch as unknown as Uint8ClampedArray<ArrayBuffer>,
+        dims.width,
+        dims.height
+      );
       ctx.putImageData(imageData, dims.left, dims.top);
 
       const url = await canvasToBlobUrl(canvas);
@@ -88,7 +92,7 @@ export class GifPlayer {
   dispose(): void {
     for (const url of this.blobUrls) URL.revokeObjectURL(url);
     this.blobUrls = [];
-    this.delays   = [];
+    this.delays = [];
   }
 }
 
@@ -115,28 +119,30 @@ export class SyncPlayer {
   private overlayB!: L.ImageOverlay;
 
   private currentFrame = 0;
-  private totalFrames  = 0;
-  private _isPlaying   = false;
-  private lastTime     = 0;
-  private rafId        = 0;
+  private totalFrames = 0;
+  private _isPlaying = false;
+  private lastTime = 0;
+  private rafId = 0;
 
   /**
    * Inicia la reproducción sincronizada.
    * Llama a play() internamente tras configurar los overlays.
    */
   start(
-    playerA: GifPlayer, overlayA: L.ImageOverlay,
-    playerB: GifPlayer, overlayB: L.ImageOverlay,
+    playerA: GifPlayer,
+    overlayA: L.ImageOverlay,
+    playerB: GifPlayer,
+    overlayB: L.ImageOverlay
   ): void {
-    this.playerA  = playerA;
-    this.playerB  = playerB;
+    this.playerA = playerA;
+    this.playerB = playerB;
     this.overlayA = overlayA;
     this.overlayB = overlayB;
 
     // Usamos el máximo de frames entre ambos GIFs; cada player cicla por separado
-    this.totalFrames  = Math.max(playerA.frameCount, playerB.frameCount);
+    this.totalFrames = Math.max(playerA.frameCount, playerB.frameCount);
     this.currentFrame = 0;
-    this.lastTime     = 0;
+    this.lastTime = 0;
 
     this.showFrame(0);
     this.play();
@@ -152,7 +158,7 @@ export class SyncPlayer {
   play(): void {
     if (this._isPlaying) return;
     this._isPlaying = true;
-    this.lastTime   = 0;
+    this.lastTime = 0;
     this.rafId = requestAnimationFrame(this.tick.bind(this));
   }
 
@@ -194,7 +200,7 @@ export class SyncPlayer {
     const elapsed = time - this.lastTime;
 
     if (elapsed >= this.frameIntervalMs) {
-      this.lastTime     = time;
+      this.lastTime = time;
       this.currentFrame = (this.currentFrame + 1) % this.totalFrames;
       this.showFrame(this.currentFrame);
     }
@@ -238,18 +244,22 @@ export class SoloPlayer {
   private overlay!: L.ImageOverlay;
 
   private currentFrame = 0;
-  private _isPlaying   = false;
-  private lastTime     = 0;
-  private rafId        = 0;
+  private _isPlaying = false;
+  private lastTime = 0;
+  private rafId = 0;
 
-  get isPlaying(): boolean  { return this._isPlaying; }
-  get frameCount(): number  { return this.player?.frameCount ?? 0; }
+  get isPlaying(): boolean {
+    return this._isPlaying;
+  }
+  get frameCount(): number {
+    return this.player?.frameCount ?? 0;
+  }
 
   start(player: GifPlayer, overlay: L.ImageOverlay): void {
-    this.player       = player;
-    this.overlay      = overlay;
+    this.player = player;
+    this.overlay = overlay;
     this.currentFrame = 0;
-    this.lastTime     = 0;
+    this.lastTime = 0;
     this.showFrame(0);
     this.play();
   }
@@ -257,7 +267,7 @@ export class SoloPlayer {
   play(): void {
     if (this._isPlaying) return;
     this._isPlaying = true;
-    this.lastTime   = 0;
+    this.lastTime = 0;
     this.rafId = requestAnimationFrame(this.tick.bind(this));
   }
 
@@ -280,7 +290,7 @@ export class SoloPlayer {
     if (this.lastTime === 0) this.lastTime = time;
     const elapsed = time - this.lastTime;
     if (elapsed >= this.frameIntervalMs) {
-      this.lastTime     = time;
+      this.lastTime = time;
       this.currentFrame = (this.currentFrame + 1) % this.frameCount;
       this.showFrame(this.currentFrame);
     }
@@ -302,7 +312,10 @@ export class SoloPlayer {
 function canvasToBlobUrl(canvas: HTMLCanvasElement): Promise<string> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(blob => {
-      if (!blob) { reject(new Error('canvas.toBlob devolvió null.')); return; }
+      if (!blob) {
+        reject(new Error('canvas.toBlob devolvió null.'));
+        return;
+      }
       resolve(URL.createObjectURL(blob));
     }, 'image/png');
   });
