@@ -2,9 +2,132 @@
   color-scheme: light dark;
   --sidebar-width: min(320px, 80vw);
   --sidebar-padding: 1.5rem 1.2rem;
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #1f2933;
+
+  /* ==========================================================================
+     Raw Palette Tokens (Foundation)
+     ========================================================================== */
+  --gray-0: #ffffff;
+  --gray-50: #f8f9fb;
+  --gray-100: #f0f2f5;
+  --gray-200: #dce1e7;
+  --gray-300: #b0b8c4;
+  --gray-400: #6b7280;
+  --gray-500: #374151;
+  --gray-600: #1f2933;
+  --gray-700: #111827;
+  --gray-800: #0b0f19;
+  --gray-900: #000000;
+
+  --sky-400: #38bdf8;
+  --sky-500: #0369a1;
+  --sky-600: #075985;
+
+  --teal-400: #2dd4bf;
+  --teal-600: #0f766e;
+
+  --red-400: #f87171;
+  --red-500: #ef4444;
+
+  --amber-400: #fbbf24;
+
+  /* ==========================================================================
+     Semantic Role Tokens (Surface Layer)
+     ========================================================================== */
+  --surface-bg: var(--gray-50);
+  --surface-fg: var(--gray-600);
+
+  --sidebar-bg: var(--gray-0);
+  --sidebar-fg: var(--gray-600);
+  --sidebar-border: var(--gray-200);
+
+  --btn-primary-bg: var(--sky-500);
+  --btn-primary-fg: var(--gray-0);
+  --btn-primary-hover: var(--sky-600);
+
+  --btn-destructive-bg: #fee2e2;
+  --btn-destructive-fg: #991b1b;
+  --btn-destructive-border: #fca5a5;
+  --btn-destructive-hover-bg: #fecaca;
+  --btn-destructive-hover-border: #ef4444;
+  --btn-destructive-hover-fg: #7f1d1d;
+
+  --btn-disabled-bg: var(--gray-100);
+  --btn-disabled-fg: var(--gray-300);
+  --btn-disabled-border: var(--gray-200);
+
+  --modal-backdrop: rgba(0, 0, 0, 0.9);
+  --modal-surface: var(--gray-700);
+  --modal-fg: var(--gray-0);
+
+  --warning-bg: #fff3cd;
+  --warning-fg: #856404;
+  --warning-border: #ffeeba;
+
+  --colorbar-bg: rgba(255, 255, 255, 0.92);
+  --colorbar-toggle-bg: rgba(255, 255, 255, 0.92);
+  --colorbar-toggle-border: rgba(0, 0, 0, 0.2);
+  --colorbar-toggle-fg: var(--gray-500);
+
+  /* ==========================================================================
+     Spacing, Radii, Shadows, Type Scale
+     ========================================================================== */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+
+  --radius-sm: 0.35rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 4px 24px rgba(0, 0, 0, 0.6);
+
+  --text-sm: 0.8rem;
+  --text-base: 0.9rem;
+  --text-lg: 1rem;
+  --text-xl: 1.1rem;
+  --text-2xl: 1.25rem;
+
+  /* Legacy tokens for backward compatibility */
   --accent: #f4f4f4;
+}
+
+/* ==========================================================================
+   Dark Mode Overrides
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Raw palette inversion */
+    --gray-0: #0b0f19;
+    --gray-50: #111827;
+    --gray-100: #1f2933;
+    --gray-200: #374151;
+    --gray-300: #6b7280;
+    --gray-400: #9ca3af;
+    --gray-600: #f0f2f5;
+    --gray-700: #ffffff;
+
+    /* Shadows for dark backgrounds */
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+    --modal-backdrop: rgba(0, 0, 0, 0.92);
+
+    /* Warning modal dark mode */
+    --warning-bg: #3a2f0f;
+    --warning-fg: #fde68a;
+    --warning-border: #b45309;
+
+    /* Colorbar dark mode */
+    --colorbar-bg: rgba(17, 24, 39, 0.92);
+    --colorbar-toggle-bg: rgba(31, 41, 51, 0.95);
+    --colorbar-toggle-border: rgba(255, 255, 255, 0.15);
+    --colorbar-toggle-fg: var(--gray-100);
+  }
 }
 
 * {
@@ -19,8 +142,8 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   height: 100vh;
-  background-color: #f8f9fb;
-  color: var(--sidebar-text);
+  background-color: var(--surface-bg);
+  color: var(--surface-fg);
 }
 
 body.sidebar-collapsed .layout {
@@ -41,7 +164,7 @@ body.sidebar-collapsed .sidebar {
 
 .sidebar {
   background: var(--sidebar-bg);
-  border-right: 1px solid #dce1e7;
+  border-right: 1px solid var(--sidebar-border);
   padding: var(--sidebar-padding);
   display: flex;
   flex-direction: column;
@@ -60,15 +183,32 @@ body.sidebar-collapsed .sidebar {
   margin-bottom: 0.5rem;
 }
 
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-brand img {
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+}
+
 .sidebar h1 {
-  font-size: 1.1rem;
+  font-size: var(--text-xl);
   margin: 0;
+  color: var(--sidebar-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-header button {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--gray-300);
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -77,10 +217,11 @@ body.sidebar-collapsed .sidebar {
   justify-content: center;
   cursor: pointer;
   transition: color 0.2s ease;
+  flex-shrink: 0;
 }
 
 .sidebar-header button:hover {
-  color: #2b2b2b;
+  color: var(--surface-fg);
 }
 
 .sidebar-header button svg {
@@ -99,20 +240,74 @@ body.sidebar-collapsed .sidebar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--sidebar-fg);
 }
 
 .sidebar select,
 .sidebar input[type="date"] {
   padding: 0.35rem 0.4rem;
-  border-radius: 0.35rem;
-  border: 1px solid #dce1e7;
-  font-size: 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sidebar-border);
+  font-size: var(--text-base);
   width: 100%;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
 }
 
-.sidebar select:disabled {
-  opacity: 0.5;
+.sidebar select:disabled,
+.sidebar input[type="date"]:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border-style: dashed;
   cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* ==========================================================================
+   Details / Summary Custom Styling
+   ========================================================================== */
+details > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: var(--space-2) 0;
+  font-weight: 500;
+  color: var(--sidebar-fg);
+  user-select: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::before {
+  content: '▶';
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+
+details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+details > summary:hover {
+  color: var(--btn-primary-bg);
+}
+
+details > summary:hover::before {
+  color: var(--btn-primary-bg);
+}
+
+details[open] > summary {
+  margin-bottom: var(--space-2);
+}
+
+details > *:not(summary) {
+  margin-left: var(--space-4);
 }
 
 /* En modo comparativa, ocultar los botones de generación del sidebar */
@@ -175,23 +370,71 @@ body.flood-risk-mode-active #btnClearNormal {
 }
 
 .hint {
-  font-size: 0.8rem;
-  color: #6b7280;
+  font-size: var(--text-sm);
+  color: var(--gray-400);
   margin: 0;
 }
 
+/* ==========================================================================
+   Button Hierarchy
+   ========================================================================== */
+
+/* Primary Action Button - Filled, high contrast */
 .primary-action {
-  padding: 0.6rem;
-  border-radius: 0.5rem;
-  border: 1px solid #dce1e7;
-  background: #f0f9ff;
-  color: var(--sidebar-text);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--btn-primary-bg);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  font-weight: 500;
+  font-size: var(--text-base);
 }
 
-.primary-action:hover {
-  background: #e0f2fe;
+.primary-action:hover:not(:disabled) {
+  background: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
+}
+
+.primary-action:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.primary-action:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border: 1px dashed var(--btn-disabled-border);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* Destructive Button - Subdued, light tint */
+.destructive-btn {
+  align-self: flex-end;
+  padding: 0.35rem 0.75rem;
+  font-size: var(--text-base);
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--btn-destructive-border);
+  background: var(--btn-destructive-bg);
+  color: var(--btn-destructive-fg);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.destructive-btn:hover:not(:disabled) {
+  background: var(--btn-destructive-hover-bg);
+  border-color: var(--btn-destructive-hover-border);
+  color: var(--btn-destructive-hover-fg);
+}
+
+.destructive-btn:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border: 1px dashed var(--btn-disabled-border);
+  cursor: not-allowed;
+  opacity: 0.8;
 }
 
 #sidebarRestore {
@@ -239,6 +482,7 @@ body.sidebar-collapsed #sidebarRestore {
   flex-direction: row;
   height: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 /* Panel individual (A o B) */
@@ -253,14 +497,14 @@ body.sidebar-collapsed #sidebarRestore {
 /* Etiqueta de panel (visible solo en compare mode) */
 .panel-label {
   display: none;
-  background: #f0f9ff;
-  color: #0369a1;
+  background: var(--btn-primary-bg);
+  color: var(--gray-0);
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-align: center;
   padding: 3px 0;
-  border-bottom: 1px solid #bae6fd;
+  border-bottom: 1px solid var(--btn-primary-hover);
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -268,7 +512,7 @@ body.sidebar-collapsed #sidebarRestore {
 /* Panel B oculto por defecto */
 #map-panel-b {
   display: none;
-  border-left: 2px solid #bae6fd;
+  border-left: 2px solid var(--btn-primary-hover);
 }
 
 /* Modo comparativa: mostrar panel B y etiquetas */
@@ -291,15 +535,11 @@ body.compare-mode-active .panel-label {
   align-items: center;
   gap: 0.75rem;
   padding: 0.45rem 0.9rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--colorbar-bg);
   backdrop-filter: blur(4px);
-  border-top: 1px solid #dce1e7;
+  border-top: 1px solid var(--sidebar-border);
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
-}
-
-/* Posicionamos el player-controls relativo a map-and-chart */
-#map-and-chart {
-  position: relative;
+  color: var(--sidebar-fg);
 }
 
 .player-btn {
@@ -307,9 +547,9 @@ body.compare-mode-active .panel-label {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1px solid #dce1e7;
-  background: #f0f9ff;
-  color: #0369a1;
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--btn-primary-bg);
   font-size: 0.85rem;
   cursor: pointer;
   display: inline-flex;
@@ -319,20 +559,20 @@ body.compare-mode-active .panel-label {
 }
 
 .player-btn:hover {
-  background: #e0f2fe;
+  background: var(--gray-100);
 }
 
 .player-slider {
   flex: 1;
-  accent-color: #0369a1;
+  accent-color: var(--btn-primary-bg);
   height: 4px;
   cursor: pointer;
 }
 
 .player-frame-label {
   flex-shrink: 0;
-  font-size: 0.8rem;
-  color: #6b7280;
+  font-size: var(--text-sm);
+  color: var(--gray-400);
   min-width: 52px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -341,10 +581,10 @@ body.compare-mode-active .panel-label {
 .player-speed-select {
   flex-shrink: 0;
   padding: 0.15rem 0.3rem;
-  border-radius: 0.35rem;
-  border: 1px solid #dce1e7;
-  background: #f0f9ff;
-  color: var(--sidebar-text);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--sidebar-fg);
   font-size: 0.78rem;
   cursor: pointer;
   font-variant-numeric: tabular-nums;
@@ -365,8 +605,8 @@ body.compare-mode-active .panel-label {
   width: 100%;
   min-width: 0;
   min-height: 220px;
-  border-top: 1px solid #dce1e7;
-  background: #ffffff;
+  border-top: 1px solid var(--sidebar-border);
+  background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
 }
@@ -385,14 +625,14 @@ body.compare-mode-active #ndvi-chart-container {
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.6rem 0.8rem;
-  background: #f0f9ff;
-  border-bottom: 1px solid #bae6fd;
+  background: var(--surface-bg);
+  border-bottom: 1px solid var(--sky-400);
   flex-shrink: 0;
 }
 
 .compare-panel-var-label {
-  font-size: 0.8rem;
-  color: #0369a1;
+  font-size: var(--text-sm);
+  color: var(--btn-primary-bg);
 }
 
 .compare-panel-var-label strong {
@@ -416,22 +656,25 @@ body.compare-mode-active #ndvi-chart-container {
 .compare-select-group label {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #0369a1;
+  color: var(--btn-primary-bg);
 }
 
 .compare-select-group select {
   padding: 0.3rem 0.4rem;
-  border-radius: 0.35rem;
-  border: 1px solid #7dd3fc;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sky-400);
   font-size: 0.85rem;
-  background: #ffffff;
-  color: var(--sidebar-text);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
   min-width: 110px;
 }
 
 .compare-select-group select:disabled {
-  opacity: 0.5;
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border-style: dashed;
   cursor: not-allowed;
+  opacity: 0.8;
 }
 
 .compare-generate-btn {
@@ -441,57 +684,37 @@ body.compare-mode-active #ndvi-chart-container {
   white-space: nowrap;
 }
 
-/* Botón "Limpiar panel" — aspecto destructivo/advertencia */
-.compare-clear-btn {
-  align-self: flex-end;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  border-radius: 0.5rem;
-  border: 1px solid #fca5a5;
-  background: #fee2e2;
-  color: #991b1b;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.compare-clear-btn:hover {
-  background: #fecaca;
-  border-color: #ef4444;
-  color: #7f1d1d;
-}
-
 /* Etiqueta panel A en modo comparativa — sky */
 body.compare-mode-active #map-panel-a .panel-label {
-  background: #0369a1;
-  color: #ffffff;
-  border-bottom-color: #075985;
+  background: var(--btn-primary-bg);
+  color: var(--gray-0);
+  border-bottom-color: var(--btn-primary-hover);
 }
 
 /* Etiqueta panel B en modo comparativa — slate (contraste) */
 body.compare-mode-active #map-panel-b .panel-label {
-  background: #334155;
-  color: #ffffff;
-  border-bottom-color: #1e293b;
+  background: var(--gray-500);
+  color: var(--gray-0);
+  border-bottom-color: var(--gray-600);
 }
 
 /* Borde separador panel B en modo comparativa */
 body.compare-mode-active #map-panel-b {
-  border-left-color: #334155;
+  border-left-color: var(--gray-500);
 }
 
 /* Controles panel B — fondo slate muy suave */
 #compare-controls-b {
-  background: #f8fafc;
-  border-bottom-color: #e2e8f0;
+  background: var(--surface-bg);
+  border-bottom-color: var(--gray-200);
 }
 
 #compare-controls-b .compare-select-group label {
-  color: #334155;
+  color: var(--gray-500);
 }
 
 #compare-controls-b .compare-select-group select {
-  border-color: #94a3b8;
+  border-color: var(--gray-300);
 }
 
 /* Popup de marcadores de estaciones */
@@ -503,14 +726,14 @@ body.compare-mode-active #map-panel-b {
 .station-full-data-link {
   display: inline-block;
   margin-top: 0.3rem;
-  font-size: 0.8rem;
-  color: #0369a1;
+  font-size: var(--text-sm);
+  color: var(--btn-primary-bg);
   text-decoration: underline;
   cursor: pointer;
 }
 
 .station-full-data-link:hover {
-  color: #075985;
+  color: var(--btn-primary-hover);
 }
 
 /* Checkboxes de estaciones en controles de comparativa */
@@ -520,19 +743,18 @@ body.compare-mode-active #map-panel-b {
   align-items: center;
   gap: 0.5rem 1rem;
   padding-top: 0.35rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--gray-200);
   margin-top: 0.1rem;
 }
 
 .compare-station-checks-label {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #0369a1;
-  white-space: nowrap;
+  color: var(--btn-primary-bg);
 }
 
 #compare-controls-b .compare-station-checks-label {
-  color: #334155;
+  color: var(--gray-500);
 }
 
 .compare-station-checks label {
@@ -565,7 +787,7 @@ body.compare-mode-active #map-panel-b {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #dce1e7;
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .compare-toggle-btn {
@@ -573,10 +795,10 @@ body.compare-mode-active #map-panel-b {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid #dce1e7;
-  background: #f0f9ff;
-  color: var(--sidebar-text);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--sidebar-fg);
   font-size: 0.88rem;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
@@ -588,63 +810,40 @@ body.compare-mode-active #map-panel-b {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  color: #94a3b8;
+  color: var(--gray-300);
   transition: color 0.2s ease;
 }
 
 .compare-toggle-btn:hover {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
+  background: var(--gray-100);
+  border-color: var(--sky-400);
 }
 
 .compare-toggle-btn[aria-pressed="true"] {
-  background: #0369a1;
-  border-color: #0369a1;
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
+  color: var(--gray-0);
 }
 
 .compare-toggle-btn[aria-pressed="true"] svg {
-  color: #bae6fd;
+  color: var(--sky-400);
 }
 
 /* Flood risk toggle activo — acento teal */
 .flood-risk-toggle-btn[aria-pressed="true"] {
-  background: #0f766e;
-  border-color: #0f766e;
-  color: #ffffff;
+  background: var(--teal-600);
+  border-color: var(--teal-600);
+  color: var(--gray-0);
 }
 
 .flood-risk-toggle-btn[aria-pressed="true"] svg {
-  color: #99f6e4;
-}
-
-/* Botón limpiar en modo normal */
-.normal-clear-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid #fca5a5;
-  background: #fee2e2;
-  color: #991b1b;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-  width: 100%;
-  text-align: left;
-}
-
-.normal-clear-btn:hover {
-  background: #fecaca;
-  border-color: #ef4444;
-  color: #7f1d1d;
+  color: var(--teal-400);
 }
 
 .compare-mode-hint,
 .flood-risk-mode-hint {
-  font-size: 0.8rem;
-  color: #0369a1;
+  font-size: var(--text-sm);
+  color: var(--btn-primary-bg);
   margin: 0;
   animation: fadeIn 0.2s ease;
 }
@@ -674,14 +873,21 @@ body.sidebar-collapsed .leaflet-left {
   }
 }
 
-/* Barra de colores NDVI tipo Matplotlib */
-.ndvi-colorbar {
+/* ==========================================================================
+   Colorbars (with theming)
+   ========================================================================== */
+
+.ndvi-colorbar,
+.temp-colorbar,
+.soil-colorbar,
+.precip-colorbar,
+.flood-risk-colorbar {
   display: flex;
   align-items: stretch;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--colorbar-bg);
   padding: 6px;
   border-radius: 4px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-sm);
   font-size: 12px;
   margin-right: 8px;
 }
@@ -689,7 +895,7 @@ body.sidebar-collapsed .leaflet-left {
 .ndvi-colorbar-scale {
   width: 14px;
   height: 140px;
-  border: 1px solid #999;
+  border: 1px solid var(--gray-300);
   background: linear-gradient(
     to top,
     #A50026 0%,
@@ -705,24 +911,13 @@ body.sidebar-collapsed .leaflet-left {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
-
-/* Barra de colores Temperatura ERA5 */
-.temp-colorbar {
-  display: flex;
-  align-items: stretch;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 6px;
-  border-radius: 4px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-  font-size: 12px;
-  margin-right: 8px;
+  color: var(--sidebar-fg);
 }
 
 .temp-colorbar-scale {
   width: 14px;
   height: 160px;
-  border: 1px solid #999;
+  border: 1px solid var(--gray-300);
   background: linear-gradient(
     to top,
     #000080 0%,
@@ -744,24 +939,13 @@ body.sidebar-collapsed .leaflet-left {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
-
-/* Barra de colores Humedad del suelo */
-.soil-colorbar {
-  display: flex;
-  align-items: stretch;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 6px;
-  border-radius: 4px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-  font-size: 12px;
-  margin-right: 8px;
+  color: var(--sidebar-fg);
 }
 
 .soil-colorbar-scale {
   width: 14px;
   height: 140px;
-  border: 1px solid #999;
+  border: 1px solid var(--gray-300);
   background: linear-gradient(
     to top,
     #552200 0%,
@@ -781,24 +965,13 @@ body.sidebar-collapsed .leaflet-left {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
-
-/* Barra de colores Precipitación IMERG */
-.precip-colorbar {
-  display: flex;
-  align-items: stretch;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 6px;
-  border-radius: 4px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-  font-size: 12px;
-  margin-right: 8px;
+  color: var(--sidebar-fg);
 }
 
 .precip-colorbar-scale {
   width: 14px;
   height: 160px;
-  border: 1px solid #999;
+  border: 1px solid var(--gray-300);
   background: linear-gradient(
     to top,
     #ffffff 0%,
@@ -816,23 +989,13 @@ body.sidebar-collapsed .leaflet-left {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
-/* Barra de colores Riesgo de inundación */
-.flood-risk-colorbar {
-  display: flex;
-  align-items: stretch;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 6px;
-  border-radius: 4px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-  font-size: 12px;
-  margin-right: 8px;
+  color: var(--sidebar-fg);
 }
 
 .flood-risk-colorbar-scale {
   width: 14px;
   height: 140px;
-  border: 1px solid #999;
+  border: 1px solid var(--gray-300);
   background: linear-gradient(
     to top,
     #2ecc71 0%,    /* Verde - Muy bajo (0-20) */
@@ -849,17 +1012,21 @@ body.sidebar-collapsed .leaflet-left {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  color: var(--sidebar-fg);
 }
+
 .municipios-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 0.3rem 0.5rem;
   font-size: 0.9rem;
 }
+
 .municipios-grid label {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  color: var(--sidebar-fg);
 }
 
 /* ------------------------------------------------------------------ */
@@ -877,23 +1044,23 @@ body.sidebar-collapsed .leaflet-left {
   width: 22px;
   height: 22px;
   border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  background: rgba(255, 255, 255, 0.92);
-  color: #374151;
+  border: 1px solid var(--colorbar-toggle-border);
+  background: var(--colorbar-toggle-bg);
+  color: var(--colorbar-toggle-fg);
   cursor: pointer;
   font-size: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
   transition: background 0.2s ease, color 0.2s ease;
   line-height: 1;
   flex-shrink: 0;
 }
 
 .colorbar-toggle-btn:hover {
-  background: #f0f9ff;
-  color: #0369a1;
+  background: var(--surface-bg);
+  color: var(--btn-primary-bg);
 }
 
 /* Oculta el contenido de la colorbar pero mantiene visible el botón */
@@ -907,7 +1074,7 @@ body.sidebar-collapsed .leaflet-left {
 
 .field-error {
   display: block;
-  color: #d32f2f;
+  color: var(--red-500);
   font-size: 12px;
   margin-top: 4px;
   line-height: 1.4;
@@ -916,7 +1083,7 @@ body.sidebar-collapsed .leaflet-left {
 /* Keyboard reachability: outline on the error span when it receives focus
    (e.g., user tabs to it via its tabindex="-1") */
 .field-error:focus {
-  outline: 2px solid #f44336;
+  outline: 2px solid var(--red-500);
   outline-offset: 2px;
 }
 
@@ -930,8 +1097,8 @@ body.sidebar-collapsed .leaflet-left {
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0.8rem;
-  border-bottom: 1px solid #dce1e7;
-  background: #fafafa;
+  border-bottom: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
   flex-shrink: 0;
 }
 
@@ -942,40 +1109,240 @@ body.sidebar-collapsed .leaflet-left {
 }
 
 .toggle-label {
-  font-size: 0.8rem;
-  color: #555;
+  font-size: var(--text-sm);
+  color: var(--gray-400);
 }
 
 .mode-select {
   padding: 0.3rem 0.5rem;
   border-radius: 0.3rem;
-  border: 1px solid #ccc;
-  background: #fff;
+  border: 1px solid var(--gray-200);
+  background: var(--sidebar-bg);
   font-size: 0.82rem;
-  color: #333;
-  cursor: pointer;
-}
+  color: var(--sidebar-fg);
   cursor: pointer;
 }
 
 .export-btn {
   padding: 0.4rem 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid #0369a1;
-  background: #0369a1;
-  color: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--btn-primary-bg);
+  background: var(--btn-primary-bg);
+  color: var(--gray-0);
   font-size: 0.85rem;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .export-btn:hover:not(:disabled) {
-  background: #025091;
+  background: var(--btn-primary-hover);
 }
 
 .export-btn:disabled {
-  opacity: 0.45;
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border: 1px dashed var(--btn-disabled-border);
   cursor: not-allowed;
-  border-color: #94a3b8;
-  background: #94a3b8;
+  opacity: 0.8;
+}
+
+/* ==========================================================================
+   Modal CSS Classes (extracted from progress.ts)
+   ========================================================================== */
+
+/* Modal Overlay Base */
+.modal-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--modal-backdrop);
+  color: var(--modal-fg);
+  padding: 30px;
+  border-radius: 12px;
+  z-index: 10000;
+  min-width: 400px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Progress Modal */
+.modal-progress {
+  text-align: center;
+}
+
+.modal-progress-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.modal-progress-message {
+  font-size: 14px;
+  margin-bottom: 15px;
+  color: var(--gray-300);
+}
+
+.modal-progress-bar-bg {
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 24px;
+  margin-bottom: 10px;
+}
+
+.modal-progress-bar-fill {
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.modal-progress-bar-fill.error {
+  background: linear-gradient(90deg, #f44336, #e53935);
+}
+
+.modal-progress-percent {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4CAF50;
+}
+
+.modal-progress-percent.error {
+  color: #f44336;
+}
+
+/* Warning Modal */
+.modal-warning {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  padding: 16px 20px;
+  border-radius: 8px;
+  z-index: 10002;
+  min-width: 300px;
+  max-width: 420px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--warning-border);
+}
+
+.modal-warning-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.modal-warning-text {
+  flex: 1;
+}
+
+.modal-warning-title {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.modal-warning-message {
+  font-size: 13px;
+  color: var(--warning-fg);
+}
+
+.modal-warning-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--warning-fg);
+  padding: 0;
+  line-height: 1;
+}
+
+/* Error Modal */
+.modal-error-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+}
+
+.modal-error {
+  background: var(--modal-surface);
+  color: var(--modal-fg);
+  padding: 30px;
+  border-radius: 12px;
+  min-width: 420px;
+  max-width: 560px;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-error-content {
+  text-align: center;
+}
+
+.modal-error-title {
+  font-size: 22px;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #f44336;
+}
+
+.modal-error-message {
+  font-size: 14px;
+  margin-bottom: 20px;
+  color: var(--gray-300);
+  line-height: 1.5;
+}
+
+.modal-error-bar-bg {
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 8px;
+  margin-bottom: 20px;
+}
+
+.modal-error-bar-fill {
+  background: linear-gradient(90deg, #f44336, #e53935);
+  height: 100%;
+  width: 100%;
+}
+
+.modal-error-btn-primary {
+  margin-top: 16px;
+  padding: 8px 20px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-error-btn-secondary {
+  margin-top: 12px;
+  padding: 8px 20px;
+  background: transparent;
+  color: var(--gray-300);
+  border: 1px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-error-btn-primary:hover {
+  background: #d32f2f;
+}
+
+.modal-error-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
