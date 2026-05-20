@@ -620,7 +620,9 @@ async function _loadCompareStation(
           _ndviChartDiv as HTMLDivElement,
           mapState.getSeriesDataA(),
           showChartBContainer,
-          hideChartBContainer
+          hideChartBContainer,
+          showChartPlaceholderA,
+          hideChartPlaceholderA
         );
     } else {
       mapState.setSeriesDataForVariable('B', key, {
@@ -632,7 +634,9 @@ async function _loadCompareStation(
           _chartBDiv as HTMLDivElement,
           mapState.getSeriesDataB(),
           showChartBContainer,
-          hideChartBContainer
+          hideChartBContainer,
+          showChartPlaceholderB,
+          hideChartPlaceholderB
         );
     }
   } catch (err) {
@@ -676,7 +680,9 @@ function _wireCompareStationCheck(
             _ndviChartDiv as HTMLDivElement,
             mapState.getSeriesDataA(),
             showChartBContainer,
-            hideChartBContainer
+            hideChartBContainer,
+            showChartPlaceholderA,
+            hideChartPlaceholderA
           );
       } else {
         if (_chartBDiv)
@@ -684,7 +690,9 @@ function _wireCompareStationCheck(
             _chartBDiv as HTMLDivElement,
             mapState.getSeriesDataB(),
             showChartBContainer,
-            hideChartBContainer
+            hideChartBContainer,
+            showChartPlaceholderB,
+            hideChartPlaceholderB
           );
       }
     }
@@ -710,8 +718,20 @@ function renderChart(): void {
     _ndviChartDiv as HTMLDivElement,
     mapState.getSeriesDataA(),
     showChartBContainer,
-    hideChartBContainer
+    hideChartBContainer,
+    showChartPlaceholderA,
+    hideChartPlaceholderA
   );
+}
+
+function showChartPlaceholderA(): void {
+  const placeholder = document.getElementById('chartPlaceholderA');
+  placeholder?.classList.remove('chart-placeholder--hidden');
+}
+
+function hideChartPlaceholderA(): void {
+  const placeholder = document.getElementById('chartPlaceholderA');
+  placeholder?.classList.add('chart-placeholder--hidden');
 }
 
 function renderChartB(): void {
@@ -720,8 +740,20 @@ function renderChartB(): void {
     _chartBDiv as HTMLDivElement,
     mapState.getSeriesDataB(),
     showChartBContainer,
-    hideChartBContainer
+    hideChartBContainer,
+    showChartPlaceholderB,
+    hideChartPlaceholderB
   );
+}
+
+function showChartPlaceholderB(): void {
+  const placeholder = document.getElementById('chartPlaceholderB');
+  placeholder?.classList.remove('chart-placeholder--hidden');
+}
+
+function hideChartPlaceholderB(): void {
+  const placeholder = document.getElementById('chartPlaceholderB');
+  placeholder?.classList.add('chart-placeholder--hidden');
 }
 
 // ---------------------------------------------------------------------------

@@ -26,10 +26,7 @@ import {
 import { showFieldError } from './ui/fieldErrors.js';
 import { translateBackendError } from './errorMap.js';
 import { plotAllSelectedSeries } from './ui/chart.js';
-import {
-  registerVariableListener,
-  seasonToDates,
-} from './listeners/variableListeners.js';
+import { seasonToDates } from './utils/seasonDates.js';
 
 import {
   fetchLocalStationLevel,
@@ -157,6 +154,12 @@ map.on(L.Draw.Event.CREATED, e => {
   drawnItems.addLayer(layer);
 
   mapState.setBbox([squareWest, squareSouth, squareEast, squareNorth]);
+  updateBboxStatusBar('selected');
+
+  // PR1: Notify new task flow of bbox change
+  document.dispatchEvent(new CustomEvent('bboxChanged', {
+    detail: { hasBbox: true }
+  }));
 
   removeActiveOverlay(map);
   switchColorbar(map, null);
@@ -178,6 +181,9 @@ const ndviChartContainer = document.getElementById(
   'ndvi-chart-container'
 ) as HTMLDivElement | null;
 const ndviChartDiv = document.getElementById('ndvi-chart') as HTMLDivElement | null;
+const chartPlaceholderA = document.getElementById(
+  'chartPlaceholderA'
+) as HTMLDivElement | null;
 
 // Phase B: allSeriesData now managed via mapState (seriesDataA)
 
@@ -193,13 +199,23 @@ function hideChartContainer(): void {
   }
 }
 
+function showChartPlaceholderA(): void {
+  chartPlaceholderA?.classList.remove('chart-placeholder--hidden');
+}
+
+function hideChartPlaceholderA(): void {
+  chartPlaceholderA?.classList.add('chart-placeholder--hidden');
+}
+
 function renderChart(): void {
   if (!ndviChartDiv) return;
   plotAllSelectedSeries(
     ndviChartDiv,
     mapState.getSeriesDataA(),
     showChartContainer,
-    hideChartContainer
+    hideChartContainer,
+    showChartPlaceholderA,
+    hideChartPlaceholderA
   );
   syncExportButton();
 }
@@ -409,21 +425,43 @@ floodRiskMode.registerFloodRiskModeListeners(
         switchColorbar(map, null, mapState.getMapB() ?? undefined);
         drawnItems.clearLayers();
         mapState.clearBbox();
+        updateBboxStatusBar('draw');
         compareControlsA?.classList.add('hidden');
         compareModeHint?.classList.add('hidden');
+        toggleModeBanner('compare', false);
         setTimeout(() => map.invalidateSize(), 350);
       }
       normalMode.clearNormalMode();
     });
+    toggleModeBanner('flood-risk', true);
   },
   () => {
     // Salir del modo riesgo
     floodRiskMode.exitFloodRiskMode();
+    toggleModeBanner('flood-risk', false);
   },
   () => {
     normalMode.clearNormalMode();
   }
 );
+
+// PR2: Initialize new sidebar task flow modules directly (no bridge)
+if (typeof window !== 'undefined') {
+  // @ts-ignore - Modules are plain JS browser modules
+  Promise.all([
+    import('./sidebar/taskFlow.js'),
+    import('./sidebar/variableSelector.js'),
+    import('./sidebar/configPanel.js'),
+    import('./sidebar/modoSection.js'),
+  ]).then(([taskFlow, variableSelector, configPanel, modoSection]) => {
+    taskFlow.init();
+    variableSelector.initChipContainer();
+    configPanel.init();
+    modoSection.init();
+  }).catch((err: Error) => {
+    console.warn('Failed to load sidebar modules:', err);
+  });
+}
 
 // Phase C: delegated to normalMode
 /** Para el SoloPlayer. */
@@ -473,6 +511,7 @@ toggleCompareModeButton?.addEventListener('click', () => {
     compareControlsA?.classList.remove('hidden');
     showChartBContainer();
     compareModeHint?.classList.remove('hidden');
+    toggleModeBanner('compare', true);
 
     // Poblar selectores de año/temporada según la variable seleccionada en cada panel
     compareMode.initCompareSelects();
@@ -498,9 +537,11 @@ toggleCompareModeButton?.addEventListener('click', () => {
     // Limpiar bounding box
     drawnItems.clearLayers();
     mapState.clearBbox();
+    updateBboxStatusBar('draw');
 
     compareControlsA?.classList.add('hidden');
     compareModeHint?.classList.add('hidden');
+    toggleModeBanner('compare', false);
 
     setTimeout(() => map.invalidateSize(), 350);
   }
@@ -510,8 +551,26 @@ toggleCompareModeButton?.addEventListener('click', () => {
 // Listener: limpiar modo normal
 // ---------------------------------------------------------------------------
 
-btnClearNormal?.addEventListener('click', () => {
+const tflowClearBtn = document.getElementById('tflow-clear-btn') as HTMLButtonElement | null;
+tflowClearBtn?.addEventListener('click', () => {
   normalMode.clearNormalMode();
+  drawnItems.clearLayers();
+  mapState.clearBbox();
+  updateBboxStatusBar('draw');
+
+  // Notify task flow of bbox clear
+  document.dispatchEvent(new CustomEvent('bboxChanged', {
+    detail: { hasBbox: false }
+  }));
+});
+
+// PR2: Update currentVariable when chip is selected in new UI
+document.addEventListener('variableSelected', (e: Event) => {
+  const customEvent = e as CustomEvent;
+  const { variable } = customEvent.detail || {};
+  if (variable) {
+    mapState.setCurrentVariable(variable as VariableKey);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -564,7 +623,30 @@ async function requestGifAndSeries(
     const uxError = translateBackendError(result.error);
     showErrorModal(uxError.title, uxError.message);
   }
+  // PR1: Notify task flow of generation complete
+  document.dispatchEvent(new CustomEvent('generationComplete'));
 }
+
+// PR1: New task flow generation handler
+document.addEventListener('tflowGenerateAnimation', (e: Event) => {
+  const customEvent = e as CustomEvent;
+  const { variable, year, season } = customEvent.detail || {};
+  
+  if (!variable || !year || !season) {
+    console.warn('[PR1] Missing generation parameters');
+    return;
+  }
+  
+  const bbox = mapState.getBbox();
+  if (!bbox) {
+    showErrorModal('Sin área seleccionada', 'Dibujá un rectángulo en el mapa antes de generar.');
+    document.dispatchEvent(new CustomEvent('generationComplete')); // Reset loading state
+    return;
+  }
+  
+  const { start, end } = seasonToDates(year, season);
+  void requestGifAndSeries(variable, start, end, bbox);
+});
 
 // ---------------------------------------------------------------------------
 // Estaciones locales
@@ -597,116 +679,20 @@ async function requestLocalStationLevel(
 }
 
 // ---------------------------------------------------------------------------
-// Selectores DOM — variables principales
+// Selectores DOM — estaciones locales (nuevos IDs tflow-)
 // ---------------------------------------------------------------------------
 
-const ndviYearSelect = document.getElementById('ndviYear') as HTMLSelectElement | null;
-const ndviSeasonSelect = document.getElementById(
-  'ndviSeason'
-) as HTMLSelectElement | null;
-const generateGifButton = document.getElementById(
-  'generateNdviGifBBox'
-) as HTMLButtonElement | null;
-
-const tempYearSelect = document.getElementById('tempYear') as HTMLSelectElement | null;
-const tempSeasonSelect = document.getElementById(
-  'tempSeason'
-) as HTMLSelectElement | null;
-const generateTempGifButton = document.getElementById(
-  'generateTempGifBBox'
-) as HTMLButtonElement | null;
-
-const soilYearSelect = document.getElementById('soilYear') as HTMLSelectElement | null;
-const soilSeasonSelect = document.getElementById(
-  'soilSeason'
-) as HTMLSelectElement | null;
-const generateSoilGifButton = document.getElementById(
-  'generateSoilGifBBox'
-) as HTMLButtonElement | null;
-
-const precipYearSelect = document.getElementById(
-  'precipYear'
-) as HTMLSelectElement | null;
-const precipSeasonSelect = document.getElementById(
-  'precipSeason'
-) as HTMLSelectElement | null;
-const generatePrecipGifButton = document.getElementById(
-  'generatePrecipGifBBox'
-) as HTMLButtonElement | null;
-
-const waterYearSelect = document.getElementById(
-  'waterYear'
-) as HTMLSelectElement | null;
-const waterSeasonSelect = document.getElementById(
-  'waterSeason'
-) as HTMLSelectElement | null;
-const generateWaterGifButton = document.getElementById(
-  'generateWaterGifBBox'
-) as HTMLButtonElement | null;
-
-// Selectores DOM — estaciones locales
-const spYearSelect = document.getElementById('spYear') as HTMLSelectElement | null;
-const spSeasonSelect = document.getElementById('spSeason') as HTMLSelectElement | null;
+const spYearSelect = document.getElementById('tflow-spYear') as HTMLSelectElement | null;
+const spSeasonSelect = document.getElementById('tflow-spSeason') as HTMLSelectElement | null;
 const btnLocalSpLevel = document.getElementById(
-  'btnLocalSpLevel'
+  'tflow-btnLocalSpLevel'
 ) as HTMLButtonElement | null;
 
-const bdYearSelect = document.getElementById('bdYear') as HTMLSelectElement | null;
-const bdSeasonSelect = document.getElementById('bdSeason') as HTMLSelectElement | null;
+const bdYearSelect = document.getElementById('tflow-bdYear') as HTMLSelectElement | null;
+const bdSeasonSelect = document.getElementById('tflow-bdSeason') as HTMLSelectElement | null;
 const btnLocalBdLevel = document.getElementById(
-  'btnLocalBdLevel'
+  'tflow-btnLocalBdLevel'
 ) as HTMLButtonElement | null;
-
-// ---------------------------------------------------------------------------
-// Registro de listeners usando la factory
-// ---------------------------------------------------------------------------
-
-const getBbox = () => mapState.getBbox();
-
-const variableConfigs: Parameters<typeof registerVariableListener>[0][] = [
-  {
-    variable: 'ndvi',
-    yearSelect: ndviYearSelect,
-    seasonSelect: ndviSeasonSelect,
-    button: generateGifButton,
-    getBbox,
-    onRequest: requestGifAndSeries,
-  },
-  {
-    variable: 'temp',
-    yearSelect: tempYearSelect,
-    seasonSelect: tempSeasonSelect,
-    button: generateTempGifButton,
-    getBbox,
-    onRequest: requestGifAndSeries,
-  },
-  {
-    variable: 'soil',
-    yearSelect: soilYearSelect,
-    seasonSelect: soilSeasonSelect,
-    button: generateSoilGifButton,
-    getBbox,
-    onRequest: requestGifAndSeries,
-  },
-  {
-    variable: 'precip',
-    yearSelect: precipYearSelect,
-    seasonSelect: precipSeasonSelect,
-    button: generatePrecipGifButton,
-    getBbox,
-    onRequest: requestGifAndSeries,
-  },
-  {
-    variable: 'water',
-    yearSelect: waterYearSelect,
-    seasonSelect: waterSeasonSelect,
-    button: generateWaterGifButton,
-    getBbox,
-    onRequest: requestGifAndSeries,
-  },
-];
-
-variableConfigs.forEach(cfg => registerVariableListener(cfg));
 
 // ---------------------------------------------------------------------------
 // Listeners de estaciones locales (año + temporada)
@@ -768,28 +754,69 @@ _wireLocalStation(bdYearSelect, bdSeasonSelect, btnLocalBdLevel, 'BDCTB', 'local
 // Phase E: delegated to floodRiskMode.registerFloodRiskModeListeners()
 
 // ---------------------------------------------------------------------------
-// Actualizar currentVariable al abrir un details de variable
+// Bbox Status Bar Update
 // ---------------------------------------------------------------------------
 
-const variableDetailsMap: Record<
-  string,
-  Exclude<VariableKey, 'local_sp' | 'local_bd'>
-> = {
-  'ndvi-controls': 'ndvi',
-  'temp-controls': 'temp',
-  'soil-controls': 'soil',
-  'precip-controls': 'precip',
-  'water-controls': 'water',
-};
+const sidebarStatusBar = document.getElementById(
+  'sidebarStatusBar'
+) as HTMLDivElement | null;
+const modeBannerCompare = document.getElementById(
+  'modeBannerCompare'
+) as HTMLDivElement | null;
+const modeBannerFloodRisk = document.getElementById(
+  'modeBannerFloodRisk'
+) as HTMLDivElement | null;
 
-document.querySelectorAll<HTMLDetailsElement>('details[id]').forEach(details => {
-  details.addEventListener('toggle', () => {
-    if (!details.open || mapState.getCompareModeActive()) return;
-    const v = variableDetailsMap[details.id];
-    if (!v) return;
-    mapState.setCurrentVariable(v);
-  });
-});
+/**
+ * Updates the sidebar status bar based on bbox state and generation progress.
+ * States: 'draw' (no bbox), 'selected' (bbox exists), 'generating' (animation in progress)
+ */
+export function updateBboxStatusBar(
+  state: 'draw' | 'selected' | 'generating' = 'draw'
+): void {
+  if (!sidebarStatusBar) return;
+
+  // Remove all state classes
+  sidebarStatusBar.classList.remove(
+    'sidebar-status-bar--draw',
+    'sidebar-status-bar--selected',
+    'sidebar-status-bar--generating'
+  );
+
+  // Update text and class based on state
+  if (state === 'draw' || !mapState.hasBbox()) {
+    sidebarStatusBar.classList.add('sidebar-status-bar--draw');
+    sidebarStatusBar.textContent = 'Dibuja un rectángulo en el mapa';
+  } else if (state === 'generating') {
+    sidebarStatusBar.classList.add('sidebar-status-bar--generating');
+    sidebarStatusBar.textContent = 'Generando…';
+  } else {
+    sidebarStatusBar.classList.add('sidebar-status-bar--selected');
+    sidebarStatusBar.textContent = 'Área seleccionada';
+  }
+}
+
+// Initialize status bar
+updateBboxStatusBar(mapState.hasBbox() ? 'selected' : 'draw');
+
+// ---------------------------------------------------------------------------
+// Mode Banner Visibility Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Toggles the visibility of a mode banner.
+ * @param mode - 'compare' for compare mode banner, 'flood-risk' for flood risk mode banner
+ * @param visible - true to show, false to hide
+ */
+export function toggleModeBanner(
+  mode: 'compare' | 'flood-risk',
+  visible: boolean
+): void {
+  const banner = mode === 'compare' ? modeBannerCompare : modeBannerFloodRisk;
+  if (banner) {
+    banner.classList.toggle('hidden', !visible);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Listener: botón "Ver datos" en popup de estaciones locales
@@ -877,8 +904,33 @@ function canExport(): boolean {
  */
 function syncExportButton(): void {
   if (!btnExportAnalysis) return;
-  btnExportAnalysis.disabled = !canExport();
-  if (btnExportPdfReport) btnExportPdfReport.disabled = !canExport();
+
+  const hasData = canExport();
+  const hasBbox = mapState.hasBbox();
+  const exportToolbar = document.getElementById('export-toolbar');
+
+  btnExportAnalysis.disabled = !hasData;
+  if (btnExportPdfReport) btnExportPdfReport.disabled = !hasData;
+
+  // Toggle export toolbar visibility
+  if (exportToolbar) {
+    if (hasData) {
+      exportToolbar.classList.add('can-export');
+    } else {
+      exportToolbar.classList.remove('can-export');
+    }
+  }
+
+  // Update title attributes
+  const baseTitle = 'Cargá al menos una variable para exportar';
+  const bboxSuffix = hasBbox ? '' : ' — Selecciona un área primero';
+
+  if (btnExportAnalysis) {
+    btnExportAnalysis.title = hasData ? '' : baseTitle + bboxSuffix;
+  }
+  if (btnExportPdfReport) {
+    btnExportPdfReport.title = hasData ? '' : baseTitle + bboxSuffix;
+  }
 }
 
 // Sincronizar cuando cambia la serie de datos

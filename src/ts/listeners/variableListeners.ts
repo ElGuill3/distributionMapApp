@@ -110,6 +110,24 @@ function _populateSeasonSelect(select: HTMLSelectElement): void {
 export function registerVariableListener(cfg: VariableListenerConfig): void {
   const { variable, yearSelect, seasonSelect, button, getBbox, onRequest } = cfg;
 
+  // PR1: Skip if new UI is active (chips handle this now)
+  const newUIActive = document.getElementById('tflow-container');
+  if (newUIActive) {
+    // Keep the button click handler for bridge compatibility
+    // but skip the select population (new UI handles it)
+    if (button) {
+      button.addEventListener('click', () => {
+        const bbox = getBbox();
+        if (!bbox) {
+          showFieldError(button, 'Dibujá un rectángulo en el mapa primero.');
+          return;
+        }
+        // Variable, year, season will come from new UI
+      });
+    }
+    return;
+  }
+
   if (!yearSelect || !seasonSelect || !button) return;
 
   _populateYearSelect(yearSelect, VARIABLE_YEARS[variable]);

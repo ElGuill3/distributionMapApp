@@ -225,13 +225,25 @@ function hideChartContainer(): void {
   }
 }
 
+function showChartPlaceholderA(): void {
+  const placeholder = document.getElementById('chartPlaceholderA');
+  placeholder?.classList.remove('chart-placeholder--hidden');
+}
+
+function hideChartPlaceholderA(): void {
+  const placeholder = document.getElementById('chartPlaceholderA');
+  placeholder?.classList.add('chart-placeholder--hidden');
+}
+
 function renderChart(): void {
   if (!_chartDiv) return;
   plotAllSelectedSeries(
     _chartDiv as HTMLDivElement,
     mapState.getSeriesDataA(),
     showChartContainer,
-    hideChartContainer
+    hideChartContainer,
+    showChartPlaceholderA,
+    hideChartPlaceholderA
   );
   _onChartRendered?.();
 }
@@ -358,37 +370,6 @@ export async function requestGifAndSeries(
   } finally {
     eventSource.close();
   }
-}
-
-// ---------------------------------------------------------------------------
-// Actualizar currentVariable al abrir un details de variable
-// ---------------------------------------------------------------------------
-
-const variableDetailsMap: Record<
-  string,
-  Exclude<VariableKey, 'local_sp' | 'local_bd'>
-> = {
-  'ndvi-controls': 'ndvi',
-  'temp-controls': 'temp',
-  'soil-controls': 'soil',
-  'precip-controls': 'precip',
-  'water-controls': 'water',
-};
-
-/**
- * Registra el listener para actualizar currentVariable cuando se abre
- * un details de variable en modo normal.
- * Debe llamarse desde main.ts durante la inicialización.
- */
-export function registerVariableDetailsListener(): void {
-  document.querySelectorAll<HTMLDetailsElement>('details[id]').forEach(details => {
-    details.addEventListener('toggle', () => {
-      if (!details.open || mapState.getCompareModeActive()) return;
-      const v = variableDetailsMap[details.id];
-      if (!v) return;
-      mapState.setCurrentVariable(v);
-    });
-  });
 }
 
 // ---------------------------------------------------------------------------

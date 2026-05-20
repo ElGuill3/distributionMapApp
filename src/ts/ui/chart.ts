@@ -125,12 +125,16 @@ export async function plotChartAsPng(chartDiv: HTMLDivElement): Promise<Blob> {
  * @param allSeries   - Mapa con los datos de cada variable activa.
  * @param onShow      - Callback llamado cuando la gráfica tiene al menos una serie.
  * @param onHide      - Callback llamado cuando no hay ninguna serie.
+ * @param onShowPlaceholder - Callback llamado para mostrar el placeholder (cuando no hay datos).
+ * @param onHidePlaceholder - Callback llamado para ocultar el placeholder (cuando hay datos).
  */
 export function plotAllSelectedSeries(
   chartDiv: HTMLDivElement,
   allSeries: Partial<Record<VariableKey, SeriesData | undefined>>,
   onShow: () => void,
-  onHide: () => void
+  onHide: () => void,
+  onShowPlaceholder?: () => void,
+  onHidePlaceholder?: () => void
 ): void {
   const vars: VariableKey[] = [
     'ndvi',
@@ -152,10 +156,12 @@ export function plotAllSelectedSeries(
   if (seriesReady.length === 0) {
     Plotly.purge(chartDiv);
     onHide();
+    if (onShowPlaceholder) onShowPlaceholder();
     return;
   }
 
   onShow();
+  if (onHidePlaceholder) onHidePlaceholder();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const traces: any[] = [];
