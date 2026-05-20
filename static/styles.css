@@ -382,63 +382,33 @@ details > *:not(summary) {
   margin-left: var(--space-4);
 }
 
-/* En modo comparativa, ocultar los botones de generación del sidebar */
-body.compare-mode-active details .primary-action {
+/* En modo comparativa, ocultar botón generar del task flow (los pasos 1-2 están deshabilitados) */
+body.compare-mode-active #tflow-config .tflow-generate-btn,
+body.flood-risk-mode-active #tflow-config .tflow-generate-btn {
   display: none;
-}
-
-/* En modo comparativa, bloquear las secciones de variable del sidebar */
-body.compare-mode-active #ndvi-controls,
-body.compare-mode-active #temp-controls,
-body.compare-mode-active #soil-controls,
-body.compare-mode-active #precip-controls,
-body.compare-mode-active #water-controls {
-  pointer-events: none;
-  opacity: 0.45;
-  user-select: none;
 }
 
 /* ------------------------------------------------------------------ */
 /* Modo riesgo de inundación                                           */
 /* ------------------------------------------------------------------ */
 
-/* Flood risk bloqueado por defecto (se activa solo en su modo) */
-#flood-risk-controls {
-  pointer-events: none;
-  opacity: 0.45;
-  user-select: none;
-}
-
-/* Desbloquear flood risk en su modo dedicado */
-body.flood-risk-mode-active #flood-risk-controls {
-  pointer-events: auto;
-  opacity: 1;
-  user-select: auto;
-}
-
-/* Bloquear variables y estaciones en modo flood risk */
-body.flood-risk-mode-active #ndvi-controls,
-body.flood-risk-mode-active #temp-controls,
-body.flood-risk-mode-active #soil-controls,
-body.flood-risk-mode-active #precip-controls,
-body.flood-risk-mode-active #water-controls,
-body.flood-risk-mode-active .sidebar section {
-  pointer-events: none;
-  opacity: 0.45;
-  user-select: none;
-}
-
-/* Flood risk bloqueado también en modo comparativa */
-body.compare-mode-active #flood-risk-controls {
-  pointer-events: none;
-  opacity: 0.45;
-  user-select: none;
-}
-
-/* Botón limpiar normal: oculto en modos especiales */
-body.compare-mode-active #btnClearNormal,
-body.flood-risk-mode-active #btnClearNormal {
+/* Municipality grid: visible only in flood risk mode, hidden otherwise */
+.municipios-grid {
   display: none;
+}
+
+body.flood-risk-mode-active .municipios-grid {
+  display: grid;
+}
+
+/* ------------------------------------------------------------------ */
+/* Task Flow disabled states                                           */
+/* ------------------------------------------------------------------ */
+
+/* PR2: Task flow steps disabled during compare/flood modes via ModoSection */
+.tflow-step.disabled {
+  pointer-events: none;
+  opacity: 0.45;
 }
 
 .hint {
