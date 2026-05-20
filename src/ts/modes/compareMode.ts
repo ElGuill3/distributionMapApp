@@ -596,7 +596,7 @@ export function trySyncBothPanels(): void {
 // ---------------------------------------------------------------------------
 
 // Importación lazy para evitar dependencia circular con listeners/variableListeners
-import { seasonToDates } from '../listeners/variableListeners.js';
+import { seasonToDates } from '../utils/seasonDates.js';
 
 async function _loadCompareStation(
   stationId: 'SPTTB' | 'BDCTB',
