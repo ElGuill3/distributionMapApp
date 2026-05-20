@@ -17,6 +17,23 @@ import type L from 'leaflet';
 // Tipos del estado
 // ---------------------------------------------------------------------------
 
+/** Estados posibles de un paso del flujo */
+export type StepStatus = 'pending' | 'active' | 'complete' | 'generating';
+
+/** Paso del flujo de tareas */
+export interface StepState {
+  status: StepStatus;
+  isValid: boolean;
+}
+
+/** Estado del flujo de tareas (PR1) */
+export interface TaskFlowState {
+  currentStep: 'area' | 'variable' | 'config' | 'explore';
+  currentVariable: VariableKey;
+  hasBbox: boolean;
+  steps: Record<string, StepState>;
+}
+
 /** Estado completo de la aplicación. */
 export interface AppState {
   // bbox
@@ -29,6 +46,9 @@ export interface AppState {
 
   // variable activa
   currentVariable: VariableKey;
+
+  // PR1: Task flow state
+  taskFlow: TaskFlowState;
 
   // series data — panel A y B
   seriesDataA: Partial<Record<VariableKey, SeriesData | undefined>>;
@@ -73,6 +93,18 @@ export const initialState: AppState = {
   mapB: null,
   activeGifPathA: null,
   activeGifPathB: null,
+  // PR1: Task flow initial state
+  taskFlow: {
+    currentStep: 'area',
+    currentVariable: 'ndvi',
+    hasBbox: false,
+    steps: {
+      area: { status: 'active', isValid: false },
+      variable: { status: 'pending', isValid: false },
+      config: { status: 'pending', isValid: false },
+      explore: { status: 'pending', isValid: false },
+    },
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -93,6 +125,10 @@ export function getBbox(): BBox | null {
   return state.bbox;
 }
 
+export function hasBbox(): boolean {
+  return state.bbox !== null;
+}
+
 export function getCompareModeActive(): boolean {
   return state.compareModeActive;
 }
@@ -107,6 +143,19 @@ export function getMapBSyncLock(): boolean {
 
 export function getCurrentVariable(): VariableKey {
   return state.currentVariable;
+}
+
+// PR1: Task flow getters
+export function getTaskFlowState(): TaskFlowState {
+  return state.taskFlow;
+}
+
+export function getTaskFlowStep(): TaskFlowState['currentStep'] {
+  return state.taskFlow.currentStep;
+}
+
+export function getTaskFlowStepValidity(step: string): boolean {
+  return state.taskFlow.steps[step]?.isValid || false;
 }
 
 export function getSeriesDataA(): Partial<Record<VariableKey, SeriesData | undefined>> {
@@ -166,11 +215,25 @@ export function setActiveGifPathB(path: string | null): void {
 // ---------------------------------------------------------------------------
 
 export function setBbox(bbox: BBox | null): void {
-  state = { ...state, bbox };
+  state = {
+    ...state,
+    bbox,
+    taskFlow: {
+      ...state.taskFlow,
+      hasBbox: bbox !== null,
+    },
+  };
 }
 
 export function clearBbox(): void {
-  state = { ...state, bbox: null };
+  state = {
+    ...state,
+    bbox: null,
+    taskFlow: {
+      ...state.taskFlow,
+      hasBbox: false,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -194,7 +257,59 @@ export function setMapBSyncLock(locked: boolean): void {
 // ---------------------------------------------------------------------------
 
 export function setCurrentVariable(variable: VariableKey): void {
-  state = { ...state, currentVariable: variable };
+  state = {
+    ...state,
+    currentVariable: variable,
+    taskFlow: {
+      ...state.taskFlow,
+      currentVariable: variable,
+    },
+  };
+}
+
+// PR1: Task flow setters
+export function setTaskFlowStep(step: TaskFlowState['currentStep']): void {
+  state = {
+    ...state,
+    taskFlow: {
+      ...state.taskFlow,
+      currentStep: step,
+    },
+  };
+}
+
+export function updateTaskFlowStepValidity(step: string, isValid: boolean): void {
+  const currentStep = state.taskFlow.steps[step] || { status: 'pending', isValid: false };
+  state = {
+    ...state,
+    taskFlow: {
+      ...state.taskFlow,
+      steps: {
+        ...state.taskFlow.steps,
+        [step]: {
+          status: currentStep.status,
+          isValid,
+        },
+      },
+    },
+  };
+}
+
+export function updateTaskFlowStepStatus(step: string, status: StepStatus): void {
+  const currentStep = state.taskFlow.steps[step] || { status: 'pending', isValid: false };
+  state = {
+    ...state,
+    taskFlow: {
+      ...state.taskFlow,
+      steps: {
+        ...state.taskFlow.steps,
+        [step]: {
+          status,
+          isValid: currentStep.isValid,
+        },
+      },
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
