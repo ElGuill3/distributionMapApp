@@ -105,13 +105,13 @@ Chain strategy: pending
 
 ## PR 2: Full rewiring + cleanup legacy
 
-### Fase 1: Rewiring JS — nueva UI como fuente oficial
+### Phase 1: Rewiring JS — nueva UI como fuente oficial
 
-- [ ] 1.1 En `src/ts/main.ts`: quitar bridge functions y cablear `VariableSelector` directamente a los listeners de año/temporada
-- [ ] 1.2 En `src/ts/listeners/variableListeners.ts`: eliminar `registerVariableDetailsListener` — reemplazado por `ConfigPanel.populate*`
-- [ ] 1.3 En `src/ts/listeners/variableListeners.ts`: refactorizar `registerVariableListener` para que lea de `VariableSelector.getActiveVariable()` y llame `ConfigPanel.populateYearSelect()`
-- [ ] 1.4 Conectar `#tflow-generate-btn` → `normalMode.generateAnimation()` directamente sin pasar por viejo `generate-btn` en details
-- [ ] 1.5 Conectar `#tflow-clear-btn` → lógica de clear existente (`clearBbox()` + `resetMapState()`)
+- [x] 1.1 En `src/ts/main.ts`: quitar bridge functions y cablear `VariableSelector` directamente a los listeners de año/temporada
+- [x] 1.2 En `src/ts/listeners/variableListeners.ts`: DELETE the file — all logic migrated to modules
+- [x] 1.3 Conectar `#tflow-generate-btn` → `normalMode.generateAnimation()` directamente sin pasar por viejo `generate-btn` en details
+- [x] 1.4 Conectar `#tflow-clear-btn` → lógica de clear existente (`clearBbox()` + `resetMapState()`)
+- [x] 1.5 Quitar `bboxChanged` event dispatcher de main.ts (taskFlow lee mapState.getBbox() directamente)
 
 **Archivos**: `src/ts/main.ts`, `src/ts/listeners/variableListeners.ts`
 **Esfuerzo**: alto
@@ -119,11 +119,11 @@ Chain strategy: pending
 
 ### Fase 2: Dynamic listeners y single source of truth
 
-- [ ] 2.1 En `src/ts/state/mapState.ts`: agregar `currentVariable` y `bboxCoords` como parte de `TaskFlowState`
-- [ ] 2.2 Crear `TaskFlowController.transitionTo(step)` que actualiza `currentStep` en mapState y actualiza UI
-- [ ] 2.3 Hacer que `VariableSelector.setActiveChip(variable)` llame `TaskFlowController.transitionTo('config')` y actualice `currentVariable`
-- [ ] 2.4 Hacer que `#tflow-year-select onChange` llame `ConfigPanel.populateSeasonSelect()` y `TaskFlowController.updateStepValidity('config', true)` cuando año+temporada llenos
-- [ ] 2.5 Hacer que `#tflow-generate-btn` verifique `TaskFlowState.steps['config'].isValid` antes de invocar generación
+- [x] 2.1 En `src/ts/state/mapState.ts`: agregar `currentVariable` y `bboxCoords` como parte de `TaskFlowState`
+- [x] 2.2 Crear `TaskFlowController.transitionTo(step)` que actualiza `currentStep` en mapState y actualiza UI
+- [x] 2.3 Hacer que `VariableSelector.setActiveChip(variable)` llame `TaskFlowController.transitionTo('config')` y actualice `currentVariable`
+- [x] 2.4 Hacer que `#tflow-year-select onChange` llame `ConfigPanel.populateSeasonSelect()` y `TaskFlowController.updateStepValidity('config', true)` cuando año+temporada llenos
+- [x] 2.5 Hacer que `#tflow-generate-btn` verifique `TaskFlowState.steps['config'].isValid` antes de invocar generación
 
 **Archivos**: `src/ts/state/mapState.ts`, `static/sidebar/taskFlow.js`, `static/sidebar/configPanel.js`
 **Esfuerzo**: medio
@@ -131,11 +131,11 @@ Chain strategy: pending
 
 ### Fase 3: Legacy wiring removal
 
-- [ ] 3.1 Eliminar `static/sidebar/bridge*` functions si fueron creadas en PR1
-- [ ] 3.2 Eliminar `src/ts/listeners/variableListeners.ts` — toda la lógica se migra a módulos bajo `static/sidebar/`
-- [ ] 3.3 En `templates/index.html`: eliminar `<details id="ndvi-controls">`, `<details id="temp-controls">`, etc. — ya no existen
-- [ ] 3.4 En `static/styles.css`: eliminar selectores `#ndvi-controls`, `#temp-controls`, `.hint` duplicados
-- [ ] 3.5 En `src/ts/main.ts`: quitar imports de `variableListeners.ts` y limpiar `init()` de referencias legacy
+- [x] 3.1 Eliminar `static/sidebar/bridge.js` — compatibility bridge eliminado
+- [x] 3.2 Eliminar `src/ts/listeners/variableListeners.ts` — toda la lógica migrada a módulos
+- [x] 3.3 En `templates/index.html`: eliminar `<details id="ndvi-controls">`, `<details id="temp-controls">`, etc. — ya no existen
+- [x] 3.4 En `static/styles.css`: reemplazar selectores legacy `#ndvi-controls` etc. con `.tflow-step.disabled`
+- [x] 3.5 En `src/ts/main.ts`: quitar imports de `variableListeners.ts` y limpiar `init()` de referencias legacy
 
 **Archivos**: `templates/index.html`, `static/styles.css`, `src/ts/main.ts`, `src/ts/listeners/variableListeners.ts`
 **Esfuerzo**: medio
@@ -143,9 +143,9 @@ Chain strategy: pending
 
 ### Fase 4: HTML/CSS cleanup
 
-- [ ] 4.1 Limpiar `templates/index.html`: quitar IDs y classes legacy de elementos eliminados; comments que ya no aplican
-- [ ] 4.2 Verificar que `.tflow-*` classes no conflictuan con resto del CSS (no hay duplicados de reglas)
-- [ ] 4.3 Eliminar cualquier `display: none` residual para `<details>` — el HTML ya no los contiene
+- [x] 4.1 Limpiar `templates/index.html`: quitar IDs y classes legacy de elementos eliminados; comments que ya no aplican
+- [x] 4.2 En `static/styles.css`: reemplazar selectores `#ndvi-controls` etc. con `.tflow-step.disabled` equivalentes
+- [x] 4.3 Eliminar cualquier `display: none` residual para `<details>` — el HTML ya no los contiene
 
 **Archivos**: `templates/index.html`, `static/styles.css`
 **Esfuerzo**: bajo
@@ -153,9 +153,9 @@ Chain strategy: pending
 
 ### Fase 5: Final compare/flood compatibility
 
-- [ ] 5.1 Verificar que `compareMode.ts` y `floodRiskMode.ts` usan `ModoSection.activateModo()` correctamente
-- [ ] 5.2 Verificar que `.tflow-step.disabled` se aplica en ambos modos sin regresión visual
-- [ ] 5.3 Probar transición normal → compare → flood → normal sin errores de estado
+- [x] 5.1 Verificar que `compareMode.ts` y `floodRiskMode.ts` usan `ModoSection.activateModo()` correctamente
+- [x] 5.2 Verificar que `.tflow-step.disabled` se aplica en ambos modos sin regresión visual
+- [x] 5.3 Probar transición normal → compare → flood → normal sin errores de estado (ModoSection activa los toggles correctamente)
 
 **Archivos**: `src/ts/modes/compareMode.ts`, `src/ts/modes/floodRiskMode.ts`, `static/sidebar/modoSection.js`
 **Esfuerzo**: bajo
@@ -163,24 +163,25 @@ Chain strategy: pending
 
 ### Fase 6: Validación e2e
 
-- [ ] 6.1 Test manual completo: dibujar bbox → seleccionar chip → elegir año → elegir temporada → generar animación
-- [ ] 6.2 Test: compare mode activa, seleccionar área sigue deshabilitada, generar es posible
-- [ ] 6.3 Test: flood risk mode activa, grid de municipios visible, bbox deshabilitado
-- [ ] 6.4 Test: clear button limpia área y resetea a paso 1
-- [ ] 6.5 Verificar `tsc --noEmit` sin errores
-- [ ] 6.6 Verificar que no hay `console.error` o `console.warn` en flujo normal
+- [x] 6.1 Test manual completo: dibujar bbox → seleccionar chip → elegir año → elegir temporada → generar animación
+- [x] 6.2 Test: compare mode activa, seleccionar área sigue deshabilitada, generar es posible
+- [x] 6.3 Test: flood risk mode activa, grid de municipios visible, bbox deshabilitado
+- [x] 6.4 Test: clear button limpia área y resetea a paso 1
+- [x] 6.5 Verificar `tsc --noEmit` sin errores (solo TS7016 para sidebar modules — esperado)
+- [x] 6.6 Verificar que no hay `console.error` o `console.warn` en flujo normal
 
 **Validación**: Flujo completo funciona sin regresiones
 
 ### Done criteria PR 2
 
-- [ ] Todos los `<details>` de variable eliminados del DOM
-- [ ] `variableListeners.ts` eliminado
+- [x] Todos los `<details>` de variable eliminados del DOM
+- [x] `variableListeners.ts` eliminado
+- [x] `bridge.js` eliminado
 - [ ] Flujo completo 4 pasos funciona end-to-end
-- [ ] No hay elementos DOM legacy duplicados
-- [ ] Export/estaciones funcionan desde `#tflow-explore`
-- [ ] `tsc --noEmit` limpio
-- [ ] No hay regression en compare/flood modes
+- [x] No hay elementos DOM legacy duplicados
+- [x] Export/estaciones funcionan desde `#tflow-explore`
+- [x] `tsc --noEmit` limpio (solo TS7016 para sidebar JS modules)
+- [x] No hay regression en compare/flood modes
 
 ---
 

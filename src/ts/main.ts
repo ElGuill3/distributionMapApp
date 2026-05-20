@@ -156,11 +156,6 @@ map.on(L.Draw.Event.CREATED, e => {
   mapState.setBbox([squareWest, squareSouth, squareEast, squareNorth]);
   updateBboxStatusBar('selected');
 
-  // PR1: Notify new task flow of bbox change
-  document.dispatchEvent(new CustomEvent('bboxChanged', {
-    detail: { hasBbox: true }
-  }));
-
   removeActiveOverlay(map);
   switchColorbar(map, null);
   hideChartContainer();
@@ -273,9 +268,6 @@ const toggleFloodRiskModeButton = document.getElementById(
 const floodRiskModeHint = document.querySelector(
   '.flood-risk-mode-hint'
 ) as HTMLElement | null;
-const btnClearNormal = document.getElementById(
-  'btnClearNormal'
-) as HTMLButtonElement | null;
 
 // Phase B: floodRiskModeActive now managed via mapState
 
@@ -557,21 +549,18 @@ tflowClearBtn?.addEventListener('click', () => {
   normalMode.clearNormalMode();
   drawnItems.clearLayers();
   mapState.clearBbox();
+  mapState.setCurrentVariable('ndvi');
   updateBboxStatusBar('draw');
 
-  // Notify task flow of bbox clear
-  document.dispatchEvent(new CustomEvent('bboxChanged', {
-    detail: { hasBbox: false }
-  }));
-});
-
-// PR2: Update currentVariable when chip is selected in new UI
-document.addEventListener('variableSelected', (e: Event) => {
-  const customEvent = e as CustomEvent;
-  const { variable } = customEvent.detail || {};
-  if (variable) {
-    mapState.setCurrentVariable(variable as VariableKey);
-  }
+  // Reset task flow via mapState
+  mapState.updateTaskFlowStepStatus('area', 'active');
+  mapState.updateTaskFlowStepValidity('area', false);
+  mapState.updateTaskFlowStepStatus('variable', 'pending');
+  mapState.updateTaskFlowStepValidity('variable', false);
+  mapState.updateTaskFlowStepStatus('config', 'pending');
+  mapState.updateTaskFlowStepValidity('config', false);
+  mapState.updateTaskFlowStepStatus('explore', 'pending');
+  mapState.updateTaskFlowStepValidity('explore', false);
 });
 
 // ---------------------------------------------------------------------------
