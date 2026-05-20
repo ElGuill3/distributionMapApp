@@ -49,7 +49,16 @@
       aria-label="Barra lateral de controles"
     >
       <header class="sidebar-header">
-        <h1>Visor meteorológico</h1>
+        <div class="sidebar-brand">
+          <img
+            src="/static/assets/branding/logo.webp"
+            alt="Logo"
+            width="32"
+            height="32"
+            loading="lazy"
+          />
+          <h1>Visor meteorológico</h1>
+        </div>
         <button
           id="sidebarToggle"
           type="button"
@@ -117,7 +126,7 @@
           <span class="compare-btn-label">Mapa de riesgo</span>
         </button>
 
-        <button id="btnClearNormal" type="button" class="normal-clear-btn">
+        <button id="btnClearNormal" type="button" class="destructive-btn">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -375,7 +384,7 @@
               <button id="btnGenerateA" class="primary-action compare-generate-btn" disabled>
                 Generar panel A
               </button>
-              <button id="btnClearA" type="button" class="compare-clear-btn">
+              <button id="btnClearA" type="button" class="destructive-btn">
                 Limpiar panel
               </button>
             </div>
@@ -437,7 +446,7 @@
               <button id="btnGenerateB" class="primary-action compare-generate-btn" disabled>
                 Generar panel B
               </button>
-              <button id="btnClearB" type="button" class="compare-clear-btn">
+              <button id="btnClearB" type="button" class="destructive-btn">
                 Limpiar panel
               </button>
             </div>

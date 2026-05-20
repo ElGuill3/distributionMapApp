@@ -19,29 +19,13 @@ export function createProgressIndicator(): HTMLDivElement {
   const div = document.createElement('div');
   div.id = INDICATOR_ID;
   div.innerHTML = `
-    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                background: rgba(0,0,0,0.9); color: white; padding: 30px;
-                border-radius: 12px; z-index: 10000; min-width: 400px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-      <div style="text-align: center;">
-        <div style="font-size: 20px; margin-bottom: 15px; font-weight: bold;">
-          Procesando GIF
-        </div>
-        <div id="progress-message"
-             style="font-size: 14px; margin-bottom: 15px; color: #aaa;">
-          Iniciando...
-        </div>
-        <div style="background: #333; border-radius: 10px; overflow: hidden;
-                    height: 24px; margin-bottom: 10px;">
-          <div id="progress-bar"
-               style="background: linear-gradient(90deg, #4CAF50, #8BC34A);
-                      height: 100%; width: 0%; transition: width 0.3s ease;
-                      display: flex; align-items: center; justify-content: center;
-                      font-size: 12px; font-weight: bold;"></div>
-        </div>
-        <div id="progress-percent"
-             style="font-size: 16px; font-weight: bold; color: #4CAF50;">0%</div>
+    <div class="modal-overlay modal-progress">
+      <div class="modal-progress-title">Procesando GIF</div>
+      <div id="progress-message" class="modal-progress-message">Iniciando...</div>
+      <div class="modal-progress-bar-bg">
+        <div id="progress-bar" class="modal-progress-bar-fill"></div>
       </div>
+      <div id="progress-percent" class="modal-progress-percent">0%</div>
     </div>
   `;
   document.body.appendChild(div);
@@ -62,11 +46,11 @@ export function updateProgressIndicator(progress: number, message: string): void
   if (!barEl || !msgEl || !pctEl) return;
 
   if (progress === -1) {
-    barEl.style.background = 'linear-gradient(90deg, #f44336, #e53935)';
+    barEl.classList.add('error');
     barEl.style.width = '100%';
     msgEl.textContent = `Error: ${message}`;
     pctEl.textContent = 'Error';
-    pctEl.style.color = '#f44336';
+    pctEl.classList.add('error');
     return;
   }
 
@@ -109,23 +93,16 @@ export function showWarningModal(title: string, message: string): void {
   const div = document.createElement('div');
   div.id = WARNING_MODAL_ID;
   div.innerHTML = `
-  <div style="position: fixed; top: 20px; right: 20px;
-              background: #fff3cd; color: #856404; padding: 16px 20px;
-              border-radius: 8px; z-index: 10002; min-width: 300px; max-width: 420px;
-              box-shadow: 0 4px 16px rgba(0,0,0,0.15); border: 1px solid #ffeeba;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-      <div style="flex: 1;">
-        <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">${escapeHtml(title)}</div>
-        <div style="font-size: 13px; color: #856404;">${escapeHtml(message)}</div>
+    <div class="modal-warning">
+      <div class="modal-warning-content">
+        <div class="modal-warning-text">
+          <div class="modal-warning-title">${escapeHtml(title)}</div>
+          <div class="modal-warning-message">${escapeHtml(message)}</div>
+        </div>
+        <button id="warning-modal-close" class="modal-warning-close">×</button>
       </div>
-      <button id="warning-modal-close"
-              style="background: transparent; border: none; cursor: pointer;
-                     font-size: 18px; color: #856404; padding: 0; line-height: 1;">
-        ×
-      </button>
     </div>
-  </div>
-`;
+  `;
   document.body.appendChild(div);
   document
     .getElementById('warning-modal-close')
@@ -180,40 +157,23 @@ export function showErrorModal(
 
   const retryButton =
     retryAction !== undefined
-      ? `<button id="error-modal-retry"
-                     style="margin-top: 16px; padding: 8px 20px;
-                            background: #f44336; color: white;
-                            border: none; border-radius: 6px;
-                            cursor: pointer; font-size: 14px;">
-                     Reintentar
-                 </button>`
+      ? `<button id="error-modal-retry" class="modal-error-btn-primary">Reintentar</button>`
       : '';
 
   div.innerHTML = `
-    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                background: rgba(0,0,0,0.92); color: white; padding: 30px;
-                border-radius: 12px; z-index: 10001; min-width: 420px; max-width: 560px;
-                box-shadow: 0 4px 24px rgba(0,0,0,0.6);">
-      <div style="text-align: center;">
-        <div style="font-size: 22px; margin-bottom: 8px; font-weight: bold; color: #f44336;">
-          ⚠ <span id="error-modal-title">${escapeHtml(title)}</span>
+    <div class="modal-error-overlay">
+      <div class="modal-error" role="document">
+        <div class="modal-error-content">
+          <div class="modal-error-title">
+            ⚠ <span id="error-modal-title">${escapeHtml(title)}</span>
+          </div>
+          <div class="modal-error-message">${escapeHtml(message)}</div>
+          <div class="modal-error-bar-bg">
+            <div class="modal-error-bar-fill"></div>
+          </div>
+          ${retryButton}
+          <button id="error-modal-close" class="modal-error-btn-secondary">Cerrar</button>
         </div>
-        <div style="font-size: 14px; margin-bottom: 20px; color: #ddd; line-height: 1.5;">
-          ${escapeHtml(message)}
-        </div>
-        <div style="background: #333; border-radius: 10px; overflow: hidden;
-                    height: 8px; margin-bottom: 20px;">
-          <div style="background: linear-gradient(90deg, #f44336, #e53935);
-                     height: 100%; width: 100%;"></div>
-        </div>
-        ${retryButton}
-        <button id="error-modal-close"
-                style="margin-top: 12px; padding: 8px 20px;
-                       background: transparent; color: #aaa;
-                       border: 1px solid #555; border-radius: 6px;
-                       cursor: pointer; font-size: 14px;">
-          Cerrar
-        </button>
       </div>
     </div>
   `;
