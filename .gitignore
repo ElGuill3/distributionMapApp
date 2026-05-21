@@ -55,6 +55,7 @@ static/**/*.js
 static/**/*.d.ts
 static/**/*.js.map
 static/**/*.d.ts.map
+!static/sidebar/*.js
 
 # ---------------------------------------------------------------------------
 # Documentación/scripts auxiliares (no parte del core)
