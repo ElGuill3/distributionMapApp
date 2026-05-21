@@ -440,11 +440,14 @@ floodRiskMode.registerFloodRiskModeListeners(
 // PR2: Initialize new sidebar task flow modules directly (no bridge)
 // These modules are plain JS browser modules — type declarations deferred to PR2
 if (typeof window !== 'undefined') {
-  // @ts-ignore - Modules are plain JS browser modules; types will be added in PR2
   Promise.all([
+    // @ts-ignore - plain JS module, no types
     import('../../static/sidebar/taskFlow.js'),
+    // @ts-ignore - plain JS module, no types
     import('../../static/sidebar/variableSelector.js'),
+    // @ts-ignore - plain JS module, no types
     import('../../static/sidebar/configPanel.js'),
+    // @ts-ignore - plain JS module, no types
     import('../../static/sidebar/modoSection.js'),
   ]).then(([taskFlow, variableSelector, configPanel, modoSection]) => {
     taskFlow.init();
