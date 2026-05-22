@@ -566,6 +566,212 @@ body.compare-mode-active .panel-label {
   display: block;
 }
 
+/* ==========================================================================
+   PR1: Map Overlay Topbar (topbar above map)
+   ========================================================================== */
+
+/* Topbar container — positioned above the map inside .map-panel */
+.map-overlay-topbar {
+  display: none; /* hidden until animation loaded, toggled via JS class */
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--colorbar-bg);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--sidebar-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  color: var(--sidebar-fg);
+  flex-shrink: 0;
+  z-index: 400;
+}
+
+/* Show topbar when animation is loaded */
+body.animation-loaded .map-overlay-topbar {
+  display: flex;
+}
+
+/* Playback row: play/pause + slider + frame label + speed */
+.topbar-playback {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.topbar-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.topbar-btn:hover {
+  background: var(--gray-100);
+}
+
+.topbar-play-btn {
+  color: var(--btn-primary-bg);
+  font-size: 0.8rem;
+}
+
+.topbar-slider {
+  flex: 1;
+  accent-color: var(--btn-primary-bg);
+  height: 4px;
+  cursor: pointer;
+}
+
+.topbar-frame-label {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--gray-400);
+  min-width: 50px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-speed-select {
+  flex-shrink: 0;
+  padding: 0.15rem 0.3rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--sidebar-fg);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Layer toggle row */
+.topbar-layer-toggles {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.topbar-layer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-500);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.topbar-layer-btn:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+.topbar-layer-btn[aria-pressed="true"] {
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
+  color: var(--gray-0);
+}
+
+.topbar-layer-btn[aria-pressed="true"]:hover {
+  background: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
+}
+
+/* Floating date label overlay on the map */
+.animation-date-label {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 600;
+  padding: 0.2rem 0.6rem;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--gray-0);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 500;
+  pointer-events: none;
+  white-space: nowrap;
+  display: none;
+}
+
+body.animation-loaded .animation-date-label {
+  display: block;
+}
+
+/* Leaflet draw toolbar overrides — match app design */
+.leaflet-draw-toolbar a {
+  /* PR1: Override leaflet-draw buttons to match app button sizing */
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  border: 1px solid var(--sidebar-border) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--surface-bg) !important;
+  transition: background 0.15s ease !important;
+}
+
+.leaflet-draw-toolbar a:hover {
+  background: var(--gray-100) !important;
+}
+
+.leaflet-draw-toolbar a:focus {
+  outline: 2px solid var(--btn-primary-bg);
+  outline-offset: 1px;
+}
+
+/* Dark mode for topbar */
+@media (prefers-color-scheme: dark) {
+  .map-overlay-topbar {
+    background: rgba(17, 24, 39, 0.92);
+    border-bottom-color: var(--gray-700);
+  }
+
+  .topbar-btn {
+    background: var(--gray-800);
+    border-color: var(--gray-600);
+  }
+
+  .topbar-btn:hover {
+    background: var(--gray-700);
+  }
+
+  .topbar-layer-btn {
+    background: var(--gray-800);
+    border-color: var(--gray-600);
+    color: var(--gray-300);
+  }
+
+  .topbar-layer-btn:hover {
+    background: var(--gray-700);
+    border-color: var(--gray-500);
+  }
+
+  .animation-date-label {
+    background: rgba(0, 0, 0, 0.65);
+  }
+
+  .leaflet-draw-toolbar a {
+    background: var(--gray-800) !important;
+    border-color: var(--gray-600) !important;
+  }
+
+  .leaflet-draw-toolbar a:hover {
+    background: var(--gray-700) !important;
+  }
+}
+
 /* Player controls: barra fija al fondo del área de mapas */
 #player-controls {
   position: absolute;

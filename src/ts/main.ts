@@ -16,7 +16,7 @@ import {
   VARIABLE_YEARS,
   SEASONS,
 } from './config.js';
-import { buildColorbars, switchColorbar, removeActiveOverlay } from './map/overlays.js';
+import { buildColorbars, switchColorbar, removeActiveOverlay, municipalFloodOverlays } from './map/overlays.js';
 import {
   createProgressIndicator,
   updateProgressIndicator,
@@ -336,6 +336,34 @@ const playerSpeedSelect = document.getElementById(
   'playerSpeed'
 ) as HTMLSelectElement | null;
 
+// PR1: Topbar DOM references
+const topbarPlayPauseBtn = document.getElementById(
+  'topbar-play-pause'
+) as HTMLButtonElement | null;
+const topbarPlayIcon = document.getElementById(
+  'topbar-play-icon'
+) as HTMLSpanElement | null;
+const topbarSlider = document.getElementById(
+  'topbar-slider'
+) as HTMLInputElement | null;
+const topbarFrameLabel = document.getElementById(
+  'topbar-frame-label'
+) as HTMLSpanElement | null;
+const topbarSpeedSelect = document.getElementById(
+  'topbar-speed'
+) as HTMLSelectElement | null;
+
+// PR1: Topbar layer toggle buttons
+const topbarLayerGif = document.getElementById(
+  'topbar-layer-gif'
+) as HTMLButtonElement | null;
+const topbarLayerStations = document.getElementById(
+  'topbar-layer-stations'
+) as HTMLButtonElement | null;
+const topbarLayerFlood = document.getElementById(
+  'topbar-layer-flood'
+) as HTMLButtonElement | null;
+
 /** Devuelve el intervalo de frame seleccionado actualmente (en ms). */
 function _selectedInterval(): number {
   return Number(playerSpeedSelect?.value ?? '1000') || 1000;
@@ -354,6 +382,9 @@ normalMode.initNormalMode({
   playerFrameLabel,
   playerPlayIcon,
   playerSpeedSelect,
+  topbarSlider,
+  topbarFrameLabel,
+  topbarPlayIcon,
   onChartRendered: syncExportButton,
 });
 
@@ -593,6 +624,128 @@ playerSpeedSelect?.addEventListener('change', () => {
   const soloP = mapState.getSoloPlayer();
   if (syncP) syncP.frameIntervalMs = ms;
   if (soloP) soloP.frameIntervalMs = ms;
+});
+
+// ---------------------------------------------------------------------------
+// PR1: Topbar playback controls — parallel wiring to existing player controls
+// ---------------------------------------------------------------------------
+
+function syncTopbarPlayPauseIcon(): void {
+  if (!topbarPlayIcon) return;
+  const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
+  topbarPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+}
+
+topbarPlayPauseBtn?.addEventListener('click', () => {
+  const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
+  if (!active) return;
+  if (active.isPlaying) {
+    active.pause();
+  } else {
+    active.play();
+  }
+  syncPlayPauseIcon();
+  syncTopbarPlayPauseIcon();
+});
+
+topbarSlider?.addEventListener('input', () => {
+  if (!topbarSlider) return;
+  const frame = Number(topbarSlider.value);
+  mapState.getSyncPlayer()?.goToFrame(frame);
+  mapState.getSoloPlayer()?.goToFrame(frame);
+});
+
+topbarSpeedSelect?.addEventListener('change', () => {
+  const ms = Number(topbarSpeedSelect?.value ?? '1000') || 1000;
+  const syncP = mapState.getSyncPlayer();
+  const soloP = mapState.getSoloPlayer();
+  if (syncP) syncP.frameIntervalMs = ms;
+  if (soloP) soloP.frameIntervalMs = ms;
+});
+
+// ---------------------------------------------------------------------------
+// PR1: Topbar layer toggles
+// ---------------------------------------------------------------------------
+
+/**
+ * Tracks visibility state of each layer controlled by topbar toggles.
+ * Initial states: GIF (visible=true since animation loaded), stations (true by default), flood (false).
+ */
+const layerVisibility: Record<'gif' | 'stations' | 'flood', boolean> = {
+  gif: true,
+  stations: true,
+  flood: false,
+};
+
+/**
+ * Updates the aria-pressed state and CSS class of a layer toggle button.
+ */
+function syncLayerButtonState(btn: HTMLButtonElement, isActive: boolean): void {
+  btn.setAttribute('aria-pressed', String(isActive));
+  btn.classList.toggle('topbar-layer-btn--active', isActive);
+}
+
+/**
+ * Shows or hides the active GIF overlay based on layer toggle state.
+ */
+function toggleGifLayer(show: boolean): void {
+  const overlay = mapState.getOverlayA();
+  if (!overlay) return;
+  if (show && !map.hasLayer(overlay)) {
+    overlay.addTo(map);
+  } else if (!show && map.hasLayer(overlay)) {
+    map.removeLayer(overlay);
+  }
+  layerVisibility.gif = show;
+  if (topbarLayerGif) syncLayerButtonState(topbarLayerGif, show);
+}
+
+/**
+ * Shows or hides the station markers based on layer toggle state.
+ */
+function toggleStationsLayer(show: boolean): void {
+  if (show) {
+    for (const m of stationMarkersMap) {
+      if (!map.hasLayer(m)) m.addTo(map);
+    }
+  } else {
+    for (const m of stationMarkersMap) {
+      if (map.hasLayer(m)) map.removeLayer(m);
+    }
+  }
+  layerVisibility.stations = show;
+  if (topbarLayerStations) syncLayerButtonState(topbarLayerStations, show);
+}
+
+/**
+ * Shows or hides the municipal flood overlays based on layer toggle state.
+ */
+function toggleFloodLayer(show: boolean): void {
+  for (const overlay of Object.values(municipalFloodOverlays)) {
+    if (show && !map.hasLayer(overlay)) {
+      overlay.addTo(map);
+    } else if (!show && map.hasLayer(overlay)) {
+      map.removeLayer(overlay);
+    }
+  }
+  layerVisibility.flood = show;
+  if (topbarLayerFlood) syncLayerButtonState(topbarLayerFlood, show);
+}
+
+topbarLayerFlood?.addEventListener('click', () => {
+  toggleFloodLayer(!layerVisibility.flood);
+});
+
+topbarLayerGif?.addEventListener('click', () => {
+  toggleGifLayer(!layerVisibility.gif);
+});
+
+topbarLayerStations?.addEventListener('click', () => {
+  toggleStationsLayer(!layerVisibility.stations);
+});
+
+topbarLayerFlood?.addEventListener('click', () => {
+  void toggleFloodLayer(!layerVisibility.flood);
 });
 
 // ---------------------------------------------------------------------------
