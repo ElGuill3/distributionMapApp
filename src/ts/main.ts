@@ -16,7 +16,7 @@ import {
   VARIABLE_YEARS,
   SEASONS,
 } from './config.js';
-import { buildColorbars, switchColorbar, removeActiveOverlay, municipalFloodOverlays } from './map/overlays.js';
+import { buildColorbars, switchColorbar, removeActiveOverlay, municipalFloodOverlays, setOverlayOpacity } from './map/overlays.js';
 import {
   createProgressIndicator,
   updateProgressIndicator,
@@ -364,6 +364,14 @@ const topbarLayerFlood = document.getElementById(
   'topbar-layer-flood'
 ) as HTMLButtonElement | null;
 
+// PR2: Topbar opacity slider
+const topbarOpacitySlider = document.getElementById(
+  'topbar-opacity-slider'
+) as HTMLInputElement | null;
+const topbarOpacityValue = document.getElementById(
+  'topbar-opacity-value'
+) as HTMLSpanElement | null;
+
 /** Devuelve el intervalo de frame seleccionado actualmente (en ms). */
 function _selectedInterval(): number {
   return Number(playerSpeedSelect?.value ?? '1000') || 1000;
@@ -386,6 +394,7 @@ normalMode.initNormalMode({
   topbarFrameLabel,
   topbarPlayIcon,
   onChartRendered: syncExportButton,
+  onDateLabelUpdate: updateDateLabel,
 });
 
 // Phase D: inicializar compareMode con referencias al DOM y mapa
@@ -661,6 +670,65 @@ topbarSpeedSelect?.addEventListener('change', () => {
   const soloP = mapState.getSoloPlayer();
   if (syncP) syncP.frameIntervalMs = ms;
   if (soloP) soloP.frameIntervalMs = ms;
+});
+
+// ---------------------------------------------------------------------------
+// PR2: Opacity slider
+// ---------------------------------------------------------------------------
+
+/**
+ * Capitalizes first letter of season name for Spanish display.
+ */
+function formatFrameLabel(season: string, year: number): string {
+  const SEASON_LABELS: Record<string, string> = {
+    verano: 'Verano',
+    invierno: 'Invierno',
+    primavera: 'Primavera',
+    otono: 'Otoño',
+    anual: 'Anual',
+  };
+  const label = SEASON_LABELS[season] ?? season.charAt(0).toUpperCase() + season.slice(1);
+  return `${label} ${year}`;
+}
+
+/**
+ * Updates the date label DOM element with the formatted season/year for the current frame.
+ * Called from onPlayerFrameChange during playback.
+ * In compare mode, updates both panel A and panel B date labels (same frame index for both).
+ */
+function updateDateLabel(frameIdx: number): void {
+  const labels = mapState.getFrameDateLabels();
+  if (labels.length === 0) return;
+
+  // Update panel A date label
+  const dateLabelEl = document.getElementById('animation-date-label');
+  if (dateLabelEl) {
+    const info = labels[frameIdx];
+    if (info) {
+      dateLabelEl.textContent = formatFrameLabel(info.season, info.year);
+    } else {
+      dateLabelEl.textContent = '';
+    }
+  }
+
+  // Update panel B date label (compare mode - same frame index)
+  const dateLabelB = document.getElementById('animation-date-label-b');
+  if (dateLabelB) {
+    const info = labels[frameIdx];
+    if (info) {
+      dateLabelB.textContent = formatFrameLabel(info.season, info.year);
+    } else {
+      dateLabelB.textContent = '';
+    }
+  }
+}
+
+topbarOpacitySlider?.addEventListener('input', () => {
+  const opacity = Number(topbarOpacitySlider?.value ?? '100');
+  setOverlayOpacity(opacity);
+  if (topbarOpacityValue) {
+    topbarOpacityValue.textContent = `${opacity}%`;
+  }
 });
 
 // ---------------------------------------------------------------------------

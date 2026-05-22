@@ -324,6 +324,21 @@
               <option value="500">2x</option>
             </select>
           </div>
+          <!-- PR2: Opacity slider -->
+          <div class="topbar-opacity-row">
+            <label for="topbar-opacity-slider" class="topbar-opacity-label">Opacidad</label>
+            <input
+              id="topbar-opacity-slider"
+              type="range"
+              min="0"
+              max="100"
+              value="100"
+              step="1"
+              class="topbar-opacity-slider"
+              aria-label="Opacidad del overlay"
+            />
+            <span id="topbar-opacity-value" class="topbar-opacity-value">100%</span>
+          </div>
           <div class="topbar-layer-toggles">
             <button id="topbar-layer-gif" type="button" class="topbar-layer-btn topbar-layer-btn--active" data-layer="gif" aria-pressed="true" title="Mostrar/ocultar animación GIF">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">

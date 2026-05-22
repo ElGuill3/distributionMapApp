@@ -85,6 +85,9 @@ let _chkStationBdA: HTMLInputElement | null = null;
 let _chkStationSpB: HTMLInputElement | null = null;
 let _chkStationBdB: HTMLInputElement | null = null;
 
+/** PR2: Callback para actualizar la etiqueta de fecha en el overlay del mapa. */
+let _onDateLabelUpdate: ((frameIdx: number) => void) | undefined = undefined;
+
 // ---------------------------------------------------------------------------
 // Interfaz pública del módulo
 // ---------------------------------------------------------------------------
@@ -117,6 +120,7 @@ export interface CompareModeDomRefs {
   chkStationBdA: HTMLInputElement | null;
   chkStationSpB: HTMLInputElement | null;
   chkStationBdB: HTMLInputElement | null;
+  onDateLabelUpdate?: (frameIdx: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +157,7 @@ export function initCompareMode(domRefs: CompareModeDomRefs): void {
   _chkStationBdA = domRefs.chkStationBdA;
   _chkStationSpB = domRefs.chkStationSpB;
   _chkStationBdB = domRefs.chkStationBdB;
+  _onDateLabelUpdate = domRefs.onDateLabelUpdate ?? undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +180,8 @@ function onPlayerFrameChange(current: number, total: number): void {
   if (_playerFrameLabel) {
     _playerFrameLabel.textContent = `${current + 1} / ${total}`;
   }
+  // PR2: Update date label with current frame's season/year
+  _onDateLabelUpdate?.(current);
 }
 
 function syncPlayPauseIcon(): void {
