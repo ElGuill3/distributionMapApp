@@ -656,6 +656,35 @@ body.animation-loaded .map-overlay-topbar {
   flex-wrap: wrap;
 }
 
+/* PR2: Opacity slider row in topbar */
+.topbar-opacity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar-opacity-label {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+
+.topbar-opacity-slider {
+  flex: 1;
+  accent-color: var(--btn-primary-bg);
+  height: 4px;
+  cursor: pointer;
+  max-width: 120px;
+}
+
+.topbar-opacity-value {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  min-width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .topbar-layer-btn {
   display: inline-flex;
   align-items: center;
