@@ -61,6 +61,11 @@ let _playerFrameLabel: HTMLSpanElement | null = null;
 let _playerPlayIcon: HTMLSpanElement | null = null;
 let _playerSpeedSelect: HTMLSelectElement | null = null;
 
+/** PR1: Topbar controles del player (inyectados desde main.ts al inicializar). */
+let _topbarSlider: HTMLInputElement | null = null;
+let _topbarFrameLabel: HTMLSpanElement | null = null;
+let _topbarPlayIcon: HTMLSpanElement | null = null;
+
 /** Callback invocado cuando la gráfica se renderiza con datos (para sync de UI). */
 let _onChartRendered: (() => void) | undefined = undefined;
 
@@ -76,6 +81,9 @@ export function initNormalMode(domRefs: {
   playerFrameLabel: HTMLSpanElement | null;
   playerPlayIcon: HTMLSpanElement | null;
   playerSpeedSelect: HTMLSelectElement | null;
+  topbarSlider?: HTMLInputElement | null;
+  topbarFrameLabel?: HTMLSpanElement | null;
+  topbarPlayIcon?: HTMLSpanElement | null;
   onChartRendered?: () => void;
 }): void {
   _mapRef = domRefs.map;
@@ -85,6 +93,9 @@ export function initNormalMode(domRefs: {
   _playerFrameLabel = domRefs.playerFrameLabel;
   _playerPlayIcon = domRefs.playerPlayIcon;
   _playerSpeedSelect = domRefs.playerSpeedSelect;
+  _topbarSlider = domRefs.topbarSlider ?? null;
+  _topbarFrameLabel = domRefs.topbarFrameLabel ?? null;
+  _topbarPlayIcon = domRefs.topbarPlayIcon ?? null;
   _onChartRendered = domRefs.onChartRendered;
 }
 
@@ -113,12 +124,24 @@ function onPlayerFrameChange(current: number, total: number): void {
   if (_playerFrameLabel) {
     _playerFrameLabel.textContent = `${current + 1} / ${total}`;
   }
+  // PR1: Also sync topbar controls
+  if (_topbarSlider) {
+    _topbarSlider.max = String(total - 1);
+    _topbarSlider.value = String(current);
+  }
+  if (_topbarFrameLabel) {
+    _topbarFrameLabel.textContent = `${current + 1} / ${total}`;
+  }
 }
 
 function syncPlayPauseIcon(): void {
   if (!_playerPlayIcon) return;
   const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
   _playerPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+  // PR1: Also sync topbar icon
+  if (_topbarPlayIcon) {
+    _topbarPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+  }
 }
 
 /** Detiene el SoloPlayer sin liberar los GifPlayers. */
@@ -160,6 +183,10 @@ export function clearNormalMode(): void {
   mapState.clearSeriesDataA();
   if (_chartDiv) Plotly.purge(_chartDiv as HTMLDivElement);
   hidePlayerControls();
+  // PR1: Hide topbar and date label when animation is cleared
+  document.body.classList.remove('animation-loaded');
+  const dateLabel = document.getElementById('animation-date-label');
+  if (dateLabel) dateLabel.textContent = '';
   // Ocultar chart container en modo normal
   const chartContainer = document.getElementById('ndvi-chart-container');
   chartContainer?.classList.add('hidden');
@@ -346,7 +373,14 @@ export async function requestGifAndSeries(
       _playerSlider.max = String(player.frameCount - 1);
       _playerSlider.value = '0';
     }
+    // PR1: Also initialize topbar slider
+    if (_topbarSlider) {
+      _topbarSlider.max = String(player.frameCount - 1);
+      _topbarSlider.value = '0';
+    }
     showPlayerControls();
+    // PR1: Show topbar via body class
+    document.body.classList.add('animation-loaded');
     syncPlayPauseIcon();
 
     // Renderizar gráfica si hay datos de serie temporal
