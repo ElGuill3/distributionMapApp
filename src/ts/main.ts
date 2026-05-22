@@ -800,20 +800,12 @@ function toggleFloodLayer(show: boolean): void {
   if (topbarLayerFlood) syncLayerButtonState(topbarLayerFlood, show);
 }
 
-topbarLayerFlood?.addEventListener('click', () => {
-  toggleFloodLayer(!layerVisibility.flood);
-});
-
 topbarLayerGif?.addEventListener('click', () => {
   toggleGifLayer(!layerVisibility.gif);
 });
 
 topbarLayerStations?.addEventListener('click', () => {
   toggleStationsLayer(!layerVisibility.stations);
-});
-
-topbarLayerFlood?.addEventListener('click', () => {
-  void toggleFloodLayer(!layerVisibility.flood);
 });
 
 // ---------------------------------------------------------------------------

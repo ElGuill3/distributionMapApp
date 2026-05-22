@@ -738,6 +738,45 @@ body.animation-loaded .animation-date-label {
   display: block;
 }
 
+/* Leaflet draw tooltip — match app design tokens */
+.leaflet-draw-tooltip {
+  background: var(--gray-800) !important;
+  background: rgba(31, 41, 51, 0.95) !important;
+  border: 1px solid var(--gray-600) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--gray-0) !important;
+  font: 12px/18px system-ui, sans-serif !important;
+  padding: 4px 8px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.leaflet-draw-tooltip:before {
+  border-right-color: var(--gray-600) !important;
+}
+
+.leaflet-error-draw-tooltip {
+  background-color: #7f1d1d !important;
+  border-color: #991b1b !important;
+  color: #fecaca !important;
+}
+
+.leaflet-error-draw-tooltip:before {
+  border-right-color: #991b1b !important;
+}
+
+/* Leaflet draw actions (edit/delete buttons after drawing) */
+.leaflet-draw-actions a {
+  background-color: var(--gray-600) !important;
+  border-left: 1px solid var(--gray-500) !important;
+  color: var(--gray-0) !important;
+  font: 11px/19px system-ui, sans-serif !important;
+  height: 28px !important;
+}
+
+.leaflet-draw-actions a:hover {
+  background-color: var(--gray-500) !important;
+}
+
 /* Leaflet draw toolbar overrides — match app design */
 .leaflet-draw-toolbar a {
   /* PR1: Override leaflet-draw buttons to match app button sizing */
@@ -758,6 +797,11 @@ body.animation-loaded .animation-date-label {
 .leaflet-draw-toolbar a:focus {
   outline: 2px solid var(--btn-primary-bg);
   outline-offset: 1px;
+}
+
+.leaflet-draw-toolbar a.leaflet-disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
 }
 
 /* Dark mode for topbar */
@@ -799,6 +843,36 @@ body.animation-loaded .animation-date-label {
   .leaflet-draw-toolbar a:hover {
     background: var(--gray-700) !important;
   }
+
+  .leaflet-draw-tooltip {
+    background: var(--gray-900) !important;
+    border-color: var(--gray-700) !important;
+    color: var(--gray-200) !important;
+  }
+
+  .leaflet-draw-tooltip:before {
+    border-right-color: var(--gray-700) !important;
+  }
+
+  .leaflet-draw-actions a {
+    background-color: var(--gray-600) !important;
+    color: var(--gray-200) !important;
+  }
+
+  .leaflet-draw-actions a:hover {
+    background-color: var(--gray-500) !important;
+  }
+
+  .leaflet-draw-toolbar a.leaflet-disabled {
+    background: var(--gray-700) !important;
+    border-color: var(--gray-600) !important;
+    opacity: 0.4 !important;
+  }
+}
+
+/* PR3: Hide old #player-controls when new topbar is active */
+body.animation-loaded #player-controls {
+  display: none !important;
 }
 
 /* Player controls: barra fija al fondo del área de mapas */
