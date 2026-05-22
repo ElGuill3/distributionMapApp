@@ -30,6 +30,8 @@ import {
 } from '../ui/progress.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SoloPlayer } from '../ui/gifPlayer.js';
+import type { AnimationFrameInfo } from '../state/mapState.js';
+import type { Season } from '../types.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
 declare const L: typeof import('leaflet');
@@ -69,6 +71,9 @@ let _topbarPlayIcon: HTMLSpanElement | null = null;
 /** Callback invocado cuando la gráfica se renderiza con datos (para sync de UI). */
 let _onChartRendered: (() => void) | undefined = undefined;
 
+/** PR2: Callback para actualizar la etiqueta de fecha en el overlay del mapa. */
+let _onDateLabelUpdate: ((frameIdx: number) => void) | undefined = undefined;
+
 /**
  * Inicializa las referencias del módulo al DOM y al mapa.
  * Debe llamarse desde main.ts antes de usar cualquier otra función.
@@ -85,6 +90,7 @@ export function initNormalMode(domRefs: {
   topbarFrameLabel?: HTMLSpanElement | null;
   topbarPlayIcon?: HTMLSpanElement | null;
   onChartRendered?: () => void;
+  onDateLabelUpdate?: (frameIdx: number) => void;
 }): void {
   _mapRef = domRefs.map;
   _chartDiv = domRefs.chartDiv;
@@ -97,6 +103,7 @@ export function initNormalMode(domRefs: {
   _topbarFrameLabel = domRefs.topbarFrameLabel ?? null;
   _topbarPlayIcon = domRefs.topbarPlayIcon ?? null;
   _onChartRendered = domRefs.onChartRendered;
+  _onDateLabelUpdate = domRefs.onDateLabelUpdate ?? undefined;
 }
 
 /** Intervalo de frame seleccionado (en ms). */
@@ -132,6 +139,8 @@ function onPlayerFrameChange(current: number, total: number): void {
   if (_topbarFrameLabel) {
     _topbarFrameLabel.textContent = `${current + 1} / ${total}`;
   }
+  // PR2: Update date label with current frame's season/year
+  _onDateLabelUpdate?.(current);
 }
 
 function syncPlayPauseIcon(): void {
@@ -178,6 +187,7 @@ export function clearNormalMode(): void {
   mapState.setGifPlayerA(null);
   mapState.setOverlayA(null);
   mapState.setActiveGifPathA(null);
+  mapState.setFrameDateLabels([]);
   removeActiveOverlay(_mapRef!);
   switchColorbar(_mapRef!, null);
   mapState.clearSeriesDataA();
@@ -187,6 +197,8 @@ export function clearNormalMode(): void {
   document.body.classList.remove('animation-loaded');
   const dateLabel = document.getElementById('animation-date-label');
   if (dateLabel) dateLabel.textContent = '';
+  const dateLabelB = document.getElementById('animation-date-label-b');
+  if (dateLabelB) dateLabelB.textContent = '';
   // Ocultar chart container en modo normal
   const chartContainer = document.getElementById('ndvi-chart-container');
   chartContainer?.classList.add('hidden');
@@ -359,6 +371,10 @@ export async function requestGifAndSeries(
     mapState.setOverlayA(overlay);
     mapState.setActiveGifPathA(gifData.gifUrl);
 
+    // PR2: Build frame date labels array and store in mapState
+    const frameDateLabels = _buildFrameDateLabels(gifData.dates, variable);
+    mapState.setFrameDateLabels(frameDateLabels);
+
     // Iniciar reproducción
     const soloPlayer = new SoloPlayer();
     soloPlayer.frameIntervalMs = _selectedInterval();
@@ -476,4 +492,40 @@ export function updateStationMarkersVisibility(
     }
   }
   // stationMarkersMapB would be handled separately when mapB is present
+}
+
+// PR2: Build frame date labels from GIF dates
+function _buildFrameDateLabels(
+  dates: string[],
+  variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>
+): AnimationFrameInfo[] {
+  const SEASON_LABELS: Record<string, string> = {
+    verano: 'Verano',
+    invierno: 'Invierno',
+    primavera: 'Primavera',
+    otono: 'Otoño',
+    anual: 'Anual',
+  };
+
+  const result: AnimationFrameInfo[] = [];
+  for (const dateStr of dates) {
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    // Determine season from date
+    const month = date.getMonth() + 1; // 1-indexed
+    let season: Season;
+    if (month >= 6 && month <= 8) {
+      season = 'verano';
+    } else if (month >= 9 && month <= 11) {
+      season = 'otono';
+    } else if (month >= 3 && month <= 5) {
+      season = 'primavera';
+    } else {
+      // Dec, Jan, Feb -> invierno
+      season = 'invierno';
+    }
+    const label = `${SEASON_LABELS[season]} ${year}`;
+    result.push({ year, season, label });
+  }
+  return result;
 }

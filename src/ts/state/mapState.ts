@@ -11,7 +11,18 @@
 
 import type { BBox, VariableKey, SeriesData } from '../types.js';
 import type { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
+import type { Season } from '../types.js';
 import type L from 'leaflet';
+
+// ---------------------------------------------------------------------------
+// Animation frame metadata for date label overlay
+// ---------------------------------------------------------------------------
+
+export interface AnimationFrameInfo {
+  year: number;
+  season: Season;
+  label: string;
+}
 
 // ---------------------------------------------------------------------------
 // Tipos del estado
@@ -70,6 +81,9 @@ export interface AppState {
   // GIF paths — para exportar (originales, no blob URLs)
   activeGifPathA: string | null;
   activeGifPathB: string | null;
+
+  // PR2: Animation frame date labels for date label overlay
+  frameDateLabels: AnimationFrameInfo[];
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +107,8 @@ export const initialState: AppState = {
   mapB: null,
   activeGifPathA: null,
   activeGifPathB: null,
+  // PR2: Animation frame date labels for date label overlay
+  frameDateLabels: [],
   // PR1: Task flow initial state
   taskFlow: {
     currentStep: 'area',
@@ -208,6 +224,15 @@ export function setActiveGifPathA(path: string | null): void {
 
 export function setActiveGifPathB(path: string | null): void {
   state = { ...state, activeGifPathB: path };
+}
+
+// PR2: Frame date labels for date label overlay
+export function getFrameDateLabels(): AnimationFrameInfo[] {
+  return state.frameDateLabels;
+}
+
+export function setFrameDateLabels(labels: AnimationFrameInfo[]): void {
+  state = { ...state, frameDateLabels: labels };
 }
 
 // ---------------------------------------------------------------------------
@@ -421,6 +446,7 @@ export function clearPanelA(): void {
     syncPlayer: null,
     overlayA: null,
     seriesDataA: {},
+    frameDateLabels: [],
   };
 }
 
