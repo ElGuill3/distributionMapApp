@@ -295,7 +295,64 @@
       <!-- Panel A: siempre visible -->
       <div class="map-panel" id="map-panel-a">
         <div class="panel-label" aria-hidden="true">Período A</div>
-        <div id="map" role="region" aria-label="Mapa principal (Período A)"></div>
+
+        <!-- PR1: Map overlay topbar — playback controls + layer toggles -->
+        <div id="map-overlay-topbar" class="map-overlay-topbar" role="group" aria-label="Controles de animación">
+          <div class="topbar-playback">
+            <button id="topbar-play-pause" type="button" class="topbar-btn topbar-play-btn" aria-label="Reproducir animación">
+              <span id="topbar-play-icon" aria-hidden="true">▶</span>
+            </button>
+            <input
+              id="topbar-slider"
+              type="range"
+              min="0"
+              max="0"
+              value="0"
+              step="1"
+              class="topbar-slider"
+              aria-label="Posición del frame"
+            />
+            <span id="topbar-frame-label" class="topbar-frame-label" aria-live="polite">0 / 0</span>
+            <select id="topbar-speed" class="topbar-speed-select" aria-label="Velocidad de reproducción" title="Velocidad">
+              <option value="4000">0.25x</option>
+              <option value="2000">0.5x</option>
+              <option value="1333">0.75x</option>
+              <option value="1000" selected>1x</option>
+              <option value="800">1.25x</option>
+              <option value="667">1.5x</option>
+              <option value="571">1.75x</option>
+              <option value="500">2x</option>
+            </select>
+          </div>
+          <div class="topbar-layer-toggles">
+            <button id="topbar-layer-gif" type="button" class="topbar-layer-btn topbar-layer-btn--active" data-layer="gif" aria-pressed="true" title="Mostrar/ocultar animación GIF">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
+                <rect x="2" y="3" width="20" height="18" rx="2"/>
+                <path d="M8 12h.01M12 12h.01M16 12h.01"/>
+              </svg>
+              <span>Animación</span>
+            </button>
+            <button id="topbar-layer-stations" type="button" class="topbar-layer-btn" data-layer="stations" aria-pressed="false" title="Mostrar/ocultar estaciones">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>Estaciones</span>
+            </button>
+            <button id="topbar-layer-flood" type="button" class="topbar-layer-btn" data-layer="flood" aria-pressed="false" title="Mostrar/ocultar riesgo de inundación">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
+                <path d="M3 12 Q6 8 9 12 Q12 16 15 12 Q18 8 21 12"/>
+                <path d="M3 17 Q6 13 9 17 Q12 21 15 17 Q18 13 21 17"/>
+              </svg>
+              <span>Inundación</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="map" role="region" aria-label="Mapa principal (Período A)">
+          <!-- PR1: Floating date label overlay -->
+          <span id="animation-date-label" class="animation-date-label" aria-live="polite"></span>
+        </div>
         <div id="ndvi-chart-container">
           <!-- Chart placeholder (shown when no data) -->
           <div id="chartPlaceholderA" class="chart-placeholder">
@@ -365,7 +422,50 @@
       <!-- Panel B: solo visible en modo comparativa -->
       <div class="map-panel" id="map-panel-b">
         <div class="panel-label" aria-hidden="true">Período B</div>
-        <div id="map-b" role="region" aria-label="Mapa comparativa (Período B)"></div>
+
+        <!-- PR1: Map overlay topbar for panel B (compare mode) -->
+        <div id="map-overlay-topbar-b" class="map-overlay-topbar" role="group" aria-label="Controles de animación panel B">
+          <div class="topbar-playback">
+            <button id="topbar-play-pause-b" type="button" class="topbar-btn topbar-play-btn" aria-label="Reproducir animación panel B">
+              <span id="topbar-play-icon-b" aria-hidden="true">▶</span>
+            </button>
+            <input
+              id="topbar-slider-b"
+              type="range"
+              min="0"
+              max="0"
+              value="0"
+              step="1"
+              class="topbar-slider"
+              aria-label="Posición del frame panel B"
+            />
+            <span id="topbar-frame-label-b" class="topbar-frame-label" aria-live="polite">0 / 0</span>
+            <select id="topbar-speed-b" class="topbar-speed-select" aria-label="Velocidad de reproducción panel B" title="Velocidad">
+              <option value="4000">0.25x</option>
+              <option value="2000">0.5x</option>
+              <option value="1333">0.75x</option>
+              <option value="1000" selected>1x</option>
+              <option value="800">1.25x</option>
+              <option value="667">1.5x</option>
+              <option value="571">1.75x</option>
+              <option value="500">2x</option>
+            </select>
+          </div>
+          <div class="topbar-layer-toggles">
+            <button id="topbar-layer-gif-b" type="button" class="topbar-layer-btn topbar-layer-btn--active" data-layer="gif-b" aria-pressed="true" title="Mostrar/ocultar animación GIF panel B">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
+                <rect x="2" y="3" width="20" height="18" rx="2"/>
+                <path d="M8 12h.01M12 12h.01M16 12h.01"/>
+              </svg>
+              <span>Animación</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="map-b" role="region" aria-label="Mapa comparativa (Período B)">
+          <!-- PR1: Floating date label overlay for map B -->
+          <span id="animation-date-label-b" class="animation-date-label" aria-live="polite"></span>
+        </div>
         <div id="chart-b-container" class="hidden">
           <!-- Chart placeholder for panel B -->
           <div id="chartPlaceholderB" class="chart-placeholder">
