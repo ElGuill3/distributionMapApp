@@ -27,6 +27,14 @@ export function setActiveOverlay(overlay: L.ImageOverlay | null): void {
 
 export const municipalFloodOverlays: Record<string, L.ImageOverlay> = {};
 
+/**
+ * Sets the opacity of the active GIF overlay.
+ * @param opacity - Value from 0 to 100 (slider input)
+ */
+export function setOverlayOpacity(opacity: number): void {
+  activeOverlay?.setOpacity(opacity / 100);
+}
+
 // ---------------------------------------------------------------------------
 // Colorbars
 // ---------------------------------------------------------------------------

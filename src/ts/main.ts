@@ -16,7 +16,13 @@ import {
   VARIABLE_YEARS,
   SEASONS,
 } from './config.js';
-import { buildColorbars, switchColorbar, removeActiveOverlay } from './map/overlays.js';
+import {
+  buildColorbars,
+  switchColorbar,
+  removeActiveOverlay,
+  municipalFloodOverlays,
+  setOverlayOpacity,
+} from './map/overlays.js';
 import {
   createProgressIndicator,
   updateProgressIndicator,
@@ -336,6 +342,42 @@ const playerSpeedSelect = document.getElementById(
   'playerSpeed'
 ) as HTMLSelectElement | null;
 
+// PR1: Topbar DOM references
+const topbarPlayPauseBtn = document.getElementById(
+  'topbar-play-pause'
+) as HTMLButtonElement | null;
+const topbarPlayIcon = document.getElementById(
+  'topbar-play-icon'
+) as HTMLSpanElement | null;
+const topbarSlider = document.getElementById(
+  'topbar-slider'
+) as HTMLInputElement | null;
+const topbarFrameLabel = document.getElementById(
+  'topbar-frame-label'
+) as HTMLSpanElement | null;
+const topbarSpeedSelect = document.getElementById(
+  'topbar-speed'
+) as HTMLSelectElement | null;
+
+// PR1: Topbar layer toggle buttons
+const topbarLayerGif = document.getElementById(
+  'topbar-layer-gif'
+) as HTMLButtonElement | null;
+const topbarLayerStations = document.getElementById(
+  'topbar-layer-stations'
+) as HTMLButtonElement | null;
+const topbarLayerFlood = document.getElementById(
+  'topbar-layer-flood'
+) as HTMLButtonElement | null;
+
+// PR2: Topbar opacity slider
+const topbarOpacitySlider = document.getElementById(
+  'topbar-opacity-slider'
+) as HTMLInputElement | null;
+const topbarOpacityValue = document.getElementById(
+  'topbar-opacity-value'
+) as HTMLSpanElement | null;
+
 /** Devuelve el intervalo de frame seleccionado actualmente (en ms). */
 function _selectedInterval(): number {
   return Number(playerSpeedSelect?.value ?? '1000') || 1000;
@@ -354,7 +396,11 @@ normalMode.initNormalMode({
   playerFrameLabel,
   playerPlayIcon,
   playerSpeedSelect,
+  topbarSlider,
+  topbarFrameLabel,
+  topbarPlayIcon,
   onChartRendered: syncExportButton,
+  onDateLabelUpdate: updateDateLabel,
 });
 
 // Phase D: inicializar compareMode con referencias al DOM y mapa
@@ -438,25 +484,26 @@ floodRiskMode.registerFloodRiskModeListeners(
 );
 
 // PR2: Initialize new sidebar task flow modules directly (no bridge)
-// These modules are plain JS browser modules — type declarations deferred to PR2
 if (typeof window !== 'undefined') {
   Promise.all([
-    // @ts-ignore - plain JS module, no types
+    // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/taskFlow.js'),
-    // @ts-ignore - plain JS module, no types
+    // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/variableSelector.js'),
-    // @ts-ignore - plain JS module, no types
+    // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/configPanel.js'),
-    // @ts-ignore - plain JS module, no types
+    // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/modoSection.js'),
-  ]).then(([taskFlow, variableSelector, configPanel, modoSection]) => {
-    taskFlow.init();
-    variableSelector.initChipContainer();
-    configPanel.init();
-    modoSection.init();
-  }).catch((err: Error) => {
-    console.warn('Failed to load sidebar modules:', err);
-  });
+  ])
+    .then(([taskFlow, variableSelector, configPanel, modoSection]) => {
+      taskFlow.init();
+      variableSelector.initChipContainer();
+      configPanel.init();
+      modoSection.init();
+    })
+    .catch((err: Error) => {
+      console.warn('Failed to load sidebar modules:', err);
+    });
 }
 
 // Phase C: delegated to normalMode
@@ -547,7 +594,9 @@ toggleCompareModeButton?.addEventListener('click', () => {
 // Listener: limpiar modo normal
 // ---------------------------------------------------------------------------
 
-const tflowClearBtn = document.getElementById('tflow-clear-btn') as HTMLButtonElement | null;
+const tflowClearBtn = document.getElementById(
+  'tflow-clear-btn'
+) as HTMLButtonElement | null;
 tflowClearBtn?.addEventListener('click', () => {
   normalMode.clearNormalMode();
   drawnItems.clearLayers();
@@ -597,6 +646,184 @@ playerSpeedSelect?.addEventListener('change', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PR1: Topbar playback controls — parallel wiring to existing player controls
+// ---------------------------------------------------------------------------
+
+function syncTopbarPlayPauseIcon(): void {
+  if (!topbarPlayIcon) return;
+  const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
+  topbarPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+}
+
+topbarPlayPauseBtn?.addEventListener('click', () => {
+  const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
+  if (!active) return;
+  if (active.isPlaying) {
+    active.pause();
+  } else {
+    active.play();
+  }
+  syncPlayPauseIcon();
+  syncTopbarPlayPauseIcon();
+});
+
+topbarSlider?.addEventListener('input', () => {
+  if (!topbarSlider) return;
+  const frame = Number(topbarSlider.value);
+  mapState.getSyncPlayer()?.goToFrame(frame);
+  mapState.getSoloPlayer()?.goToFrame(frame);
+});
+
+topbarSpeedSelect?.addEventListener('change', () => {
+  const ms = Number(topbarSpeedSelect?.value ?? '1000') || 1000;
+  const syncP = mapState.getSyncPlayer();
+  const soloP = mapState.getSoloPlayer();
+  if (syncP) syncP.frameIntervalMs = ms;
+  if (soloP) soloP.frameIntervalMs = ms;
+});
+
+// ---------------------------------------------------------------------------
+// PR2: Opacity slider
+// ---------------------------------------------------------------------------
+
+/**
+ * Capitalizes first letter of season name for Spanish display.
+ */
+function formatFrameLabel(season: string, year: number): string {
+  const SEASON_LABELS: Record<string, string> = {
+    verano: 'Verano',
+    invierno: 'Invierno',
+    primavera: 'Primavera',
+    otono: 'Otoño',
+    anual: 'Anual',
+  };
+  const label =
+    SEASON_LABELS[season] ?? season.charAt(0).toUpperCase() + season.slice(1);
+  return `${label} ${year}`;
+}
+
+/**
+ * Updates the date label DOM element with the formatted season/year for the current frame.
+ * Called from onPlayerFrameChange during playback.
+ * In compare mode, updates both panel A and panel B date labels (same frame index for both).
+ */
+function updateDateLabel(frameIdx: number): void {
+  const labels = mapState.getFrameDateLabels();
+  if (labels.length === 0) return;
+
+  // Update panel A date label
+  const dateLabelEl = document.getElementById('animation-date-label');
+  if (dateLabelEl) {
+    const info = labels[frameIdx];
+    if (info) {
+      dateLabelEl.textContent = formatFrameLabel(info.season, info.year);
+    } else {
+      dateLabelEl.textContent = '';
+    }
+  }
+
+  // Update panel B date label (compare mode - same frame index)
+  const dateLabelB = document.getElementById('animation-date-label-b');
+  if (dateLabelB) {
+    const info = labels[frameIdx];
+    if (info) {
+      dateLabelB.textContent = formatFrameLabel(info.season, info.year);
+    } else {
+      dateLabelB.textContent = '';
+    }
+  }
+}
+
+topbarOpacitySlider?.addEventListener('input', () => {
+  const opacity = Number(topbarOpacitySlider?.value ?? '100');
+  setOverlayOpacity(opacity);
+  if (topbarOpacityValue) {
+    topbarOpacityValue.textContent = `${opacity}%`;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PR1: Topbar layer toggles
+// ---------------------------------------------------------------------------
+
+/**
+ * Tracks visibility state of each layer controlled by topbar toggles.
+ * Initial states: GIF (visible=true since animation loaded), stations (true by default), flood (false).
+ */
+const layerVisibility: Record<'gif' | 'stations' | 'flood', boolean> = {
+  gif: true,
+  stations: true,
+  flood: false,
+};
+
+/**
+ * Updates the aria-pressed state and CSS class of a layer toggle button.
+ */
+function syncLayerButtonState(btn: HTMLButtonElement, isActive: boolean): void {
+  btn.setAttribute('aria-pressed', String(isActive));
+  btn.classList.toggle('topbar-layer-btn--active', isActive);
+}
+
+/**
+ * Shows or hides the active GIF overlay based on layer toggle state.
+ */
+function toggleGifLayer(show: boolean): void {
+  const overlay = mapState.getOverlayA();
+  if (!overlay) return;
+  if (show && !map.hasLayer(overlay)) {
+    overlay.addTo(map);
+  } else if (!show && map.hasLayer(overlay)) {
+    map.removeLayer(overlay);
+  }
+  layerVisibility.gif = show;
+  if (topbarLayerGif) syncLayerButtonState(topbarLayerGif, show);
+}
+
+/**
+ * Shows or hides the station markers based on layer toggle state.
+ */
+function toggleStationsLayer(show: boolean): void {
+  if (show) {
+    for (const m of stationMarkersMap) {
+      if (!map.hasLayer(m)) m.addTo(map);
+    }
+  } else {
+    for (const m of stationMarkersMap) {
+      if (map.hasLayer(m)) map.removeLayer(m);
+    }
+  }
+  layerVisibility.stations = show;
+  if (topbarLayerStations) syncLayerButtonState(topbarLayerStations, show);
+}
+
+/**
+ * Shows or hides the municipal flood overlays based on layer toggle state.
+ */
+function toggleFloodLayer(show: boolean): void {
+  for (const overlay of Object.values(municipalFloodOverlays)) {
+    if (show && !map.hasLayer(overlay)) {
+      overlay.addTo(map);
+    } else if (!show && map.hasLayer(overlay)) {
+      map.removeLayer(overlay);
+    }
+  }
+  layerVisibility.flood = show;
+  if (topbarLayerFlood) syncLayerButtonState(topbarLayerFlood, show);
+}
+
+topbarLayerGif?.addEventListener('click', () => {
+  toggleGifLayer(!layerVisibility.gif);
+});
+
+topbarLayerStations?.addEventListener('click', () => {
+  toggleStationsLayer(!layerVisibility.stations);
+});
+
+topbarLayerFlood?.addEventListener('click', () => {
+  toggleFloodLayer(!layerVisibility.flood);
+});
+
+// ---------------------------------------------------------------------------
 // SSE + petición GIF + serie temporal — modo NORMAL (panel A)
 // ---------------------------------------------------------------------------
 // Phase C: delegated to normalMode.requestGifAndSeries
@@ -624,19 +851,22 @@ async function requestGifAndSeries(
 document.addEventListener('tflowGenerateAnimation', (e: Event) => {
   const customEvent = e as CustomEvent;
   const { variable, year, season } = customEvent.detail || {};
-  
+
   if (!variable || !year || !season) {
     console.warn('[PR1] Missing generation parameters');
     return;
   }
-  
+
   const bbox = mapState.getBbox();
   if (!bbox) {
-    showErrorModal('Sin área seleccionada', 'Dibujá un rectángulo en el mapa antes de generar.');
+    showErrorModal(
+      'Sin área seleccionada',
+      'Dibujá un rectángulo en el mapa antes de generar.'
+    );
     document.dispatchEvent(new CustomEvent('generationComplete')); // Reset loading state
     return;
   }
-  
+
   const { start, end } = seasonToDates(year, season);
   void requestGifAndSeries(variable, start, end, bbox);
 });
@@ -675,14 +905,22 @@ async function requestLocalStationLevel(
 // Selectores DOM — estaciones locales (nuevos IDs tflow-)
 // ---------------------------------------------------------------------------
 
-const spYearSelect = document.getElementById('tflow-spYear') as HTMLSelectElement | null;
-const spSeasonSelect = document.getElementById('tflow-spSeason') as HTMLSelectElement | null;
+const spYearSelect = document.getElementById(
+  'tflow-spYear'
+) as HTMLSelectElement | null;
+const spSeasonSelect = document.getElementById(
+  'tflow-spSeason'
+) as HTMLSelectElement | null;
 const btnLocalSpLevel = document.getElementById(
   'tflow-btnLocalSpLevel'
 ) as HTMLButtonElement | null;
 
-const bdYearSelect = document.getElementById('tflow-bdYear') as HTMLSelectElement | null;
-const bdSeasonSelect = document.getElementById('tflow-bdSeason') as HTMLSelectElement | null;
+const bdYearSelect = document.getElementById(
+  'tflow-bdYear'
+) as HTMLSelectElement | null;
+const bdSeasonSelect = document.getElementById(
+  'tflow-bdSeason'
+) as HTMLSelectElement | null;
 const btnLocalBdLevel = document.getElementById(
   'tflow-btnLocalBdLevel'
 ) as HTMLButtonElement | null;

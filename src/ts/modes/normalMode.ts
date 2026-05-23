@@ -30,6 +30,8 @@ import {
 } from '../ui/progress.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SoloPlayer } from '../ui/gifPlayer.js';
+import type { AnimationFrameInfo } from '../state/mapState.js';
+import type { Season } from '../types.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
 declare const L: typeof import('leaflet');
@@ -61,8 +63,16 @@ let _playerFrameLabel: HTMLSpanElement | null = null;
 let _playerPlayIcon: HTMLSpanElement | null = null;
 let _playerSpeedSelect: HTMLSelectElement | null = null;
 
+/** PR1: Topbar controles del player (inyectados desde main.ts al inicializar). */
+let _topbarSlider: HTMLInputElement | null = null;
+let _topbarFrameLabel: HTMLSpanElement | null = null;
+let _topbarPlayIcon: HTMLSpanElement | null = null;
+
 /** Callback invocado cuando la gráfica se renderiza con datos (para sync de UI). */
 let _onChartRendered: (() => void) | undefined = undefined;
+
+/** PR2: Callback para actualizar la etiqueta de fecha en el overlay del mapa. */
+let _onDateLabelUpdate: ((frameIdx: number) => void) | undefined = undefined;
 
 /**
  * Inicializa las referencias del módulo al DOM y al mapa.
@@ -76,7 +86,11 @@ export function initNormalMode(domRefs: {
   playerFrameLabel: HTMLSpanElement | null;
   playerPlayIcon: HTMLSpanElement | null;
   playerSpeedSelect: HTMLSelectElement | null;
+  topbarSlider?: HTMLInputElement | null;
+  topbarFrameLabel?: HTMLSpanElement | null;
+  topbarPlayIcon?: HTMLSpanElement | null;
   onChartRendered?: () => void;
+  onDateLabelUpdate?: (frameIdx: number) => void;
 }): void {
   _mapRef = domRefs.map;
   _chartDiv = domRefs.chartDiv;
@@ -85,7 +99,11 @@ export function initNormalMode(domRefs: {
   _playerFrameLabel = domRefs.playerFrameLabel;
   _playerPlayIcon = domRefs.playerPlayIcon;
   _playerSpeedSelect = domRefs.playerSpeedSelect;
+  _topbarSlider = domRefs.topbarSlider ?? null;
+  _topbarFrameLabel = domRefs.topbarFrameLabel ?? null;
+  _topbarPlayIcon = domRefs.topbarPlayIcon ?? null;
   _onChartRendered = domRefs.onChartRendered;
+  _onDateLabelUpdate = domRefs.onDateLabelUpdate ?? undefined;
 }
 
 /** Intervalo de frame seleccionado (en ms). */
@@ -113,12 +131,26 @@ function onPlayerFrameChange(current: number, total: number): void {
   if (_playerFrameLabel) {
     _playerFrameLabel.textContent = `${current + 1} / ${total}`;
   }
+  // PR1: Also sync topbar controls
+  if (_topbarSlider) {
+    _topbarSlider.max = String(total - 1);
+    _topbarSlider.value = String(current);
+  }
+  if (_topbarFrameLabel) {
+    _topbarFrameLabel.textContent = `${current + 1} / ${total}`;
+  }
+  // PR2: Update date label with current frame's season/year
+  _onDateLabelUpdate?.(current);
 }
 
 function syncPlayPauseIcon(): void {
   if (!_playerPlayIcon) return;
   const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
   _playerPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+  // PR1: Also sync topbar icon
+  if (_topbarPlayIcon) {
+    _topbarPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+  }
 }
 
 /** Detiene el SoloPlayer sin liberar los GifPlayers. */
@@ -155,11 +187,18 @@ export function clearNormalMode(): void {
   mapState.setGifPlayerA(null);
   mapState.setOverlayA(null);
   mapState.setActiveGifPathA(null);
+  mapState.setFrameDateLabels([]);
   removeActiveOverlay(_mapRef!);
   switchColorbar(_mapRef!, null);
   mapState.clearSeriesDataA();
   if (_chartDiv) Plotly.purge(_chartDiv as HTMLDivElement);
   hidePlayerControls();
+  // PR1: Hide topbar and date label when animation is cleared
+  document.body.classList.remove('animation-loaded');
+  const dateLabel = document.getElementById('animation-date-label');
+  if (dateLabel) dateLabel.textContent = '';
+  const dateLabelB = document.getElementById('animation-date-label-b');
+  if (dateLabelB) dateLabelB.textContent = '';
   // Ocultar chart container en modo normal
   const chartContainer = document.getElementById('ndvi-chart-container');
   chartContainer?.classList.add('hidden');
@@ -332,6 +371,10 @@ export async function requestGifAndSeries(
     mapState.setOverlayA(overlay);
     mapState.setActiveGifPathA(gifData.gifUrl);
 
+    // PR2: Build frame date labels array and store in mapState
+    const frameDateLabels = _buildFrameDateLabels(gifData.dates);
+    mapState.setFrameDateLabels(frameDateLabels);
+
     // Iniciar reproducción
     const soloPlayer = new SoloPlayer();
     soloPlayer.frameIntervalMs = _selectedInterval();
@@ -346,7 +389,14 @@ export async function requestGifAndSeries(
       _playerSlider.max = String(player.frameCount - 1);
       _playerSlider.value = '0';
     }
+    // PR1: Also initialize topbar slider
+    if (_topbarSlider) {
+      _topbarSlider.max = String(player.frameCount - 1);
+      _topbarSlider.value = '0';
+    }
     showPlayerControls();
+    // PR1: Show topbar via body class
+    document.body.classList.add('animation-loaded');
     syncPlayPauseIcon();
 
     // Renderizar gráfica si hay datos de serie temporal
@@ -442,4 +492,37 @@ export function updateStationMarkersVisibility(
     }
   }
   // stationMarkersMapB would be handled separately when mapB is present
+}
+
+// PR2: Build frame date labels from GIF dates
+function _buildFrameDateLabels(dates: string[]): AnimationFrameInfo[] {
+  const SEASON_LABELS: Record<string, string> = {
+    verano: 'Verano',
+    invierno: 'Invierno',
+    primavera: 'Primavera',
+    otono: 'Otoño',
+    anual: 'Anual',
+  };
+
+  const result: AnimationFrameInfo[] = [];
+  for (const dateStr of dates) {
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    // Determine season from date
+    const month = date.getMonth() + 1; // 1-indexed
+    let season: Season;
+    if (month >= 6 && month <= 8) {
+      season = 'verano';
+    } else if (month >= 9 && month <= 11) {
+      season = 'otono';
+    } else if (month >= 3 && month <= 5) {
+      season = 'primavera';
+    } else {
+      // Dec, Jan, Feb -> invierno
+      season = 'invierno';
+    }
+    const label = `${SEASON_LABELS[season]} ${year}`;
+    result.push({ year, season, label });
+  }
+  return result;
 }

@@ -10,11 +10,11 @@ import { setCurrentVariable } from '../state/mapState.js';
 import { transitionTo } from './taskFlow.js';
 // Variable mapping
 const VARIABLE_MAP = {
-    'ndvi': 'NDVI',
-    'temp': 'Temperatura 2m',
-    'soil': 'Humedad del suelo',
-    'precip': 'Precipitación diaria',
-    'water': 'Cuerpos de agua',
+    ndvi: 'NDVI',
+    temp: 'Temperatura 2m',
+    soil: 'Humedad del suelo',
+    precip: 'Precipitación diaria',
+    water: 'Cuerpos de agua',
 };
 const VARIABLE_KEYS = Object.keys(VARIABLE_MAP);
 /**
@@ -75,7 +75,7 @@ class VariableSelector {
         this.populateYearSelect();
         // Dispatch custom event AFTER year select is populated
         document.dispatchEvent(new CustomEvent('variableSelected', {
-            detail: { variable }
+            detail: { variable },
         }));
         this.notifyListeners('change', { variable });
     }
@@ -122,7 +122,7 @@ class VariableSelector {
         yearSelect.value = '';
         // Dispatch event for config panel
         document.dispatchEvent(new CustomEvent('yearSelectPopulated', {
-            detail: { variable: this.activeVariable, years }
+            detail: { variable: this.activeVariable, years },
         }));
     }
     /**

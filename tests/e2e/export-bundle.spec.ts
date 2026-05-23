@@ -37,12 +37,20 @@ test.describe('export bundle — export-bundle', () => {
     await expect(exportBtn).toBeDisabled();
   });
 
-  test('export toolbar is visible in normal mode', async ({ page }) => {
+  test('export toolbar is hidden by default and visible when can-export is applied', async ({
+    page,
+  }) => {
     await page.goto('/templates/index.html');
     await page.waitForSelector('#map', { timeout: 15_000 });
     await page.waitForTimeout(1_000);
 
     const toolbar = page.locator('#export-toolbar');
+    await expect(toolbar).toBeHidden();
+
+    // Simular agregado de datos para que aparezca la barra
+    await page.evaluate(() => {
+      document.getElementById('export-toolbar')?.classList.add('can-export');
+    });
     await expect(toolbar).toBeVisible();
   });
 
