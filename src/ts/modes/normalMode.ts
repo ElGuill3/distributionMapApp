@@ -372,7 +372,7 @@ export async function requestGifAndSeries(
     mapState.setActiveGifPathA(gifData.gifUrl);
 
     // PR2: Build frame date labels array and store in mapState
-    const frameDateLabels = _buildFrameDateLabels(gifData.dates, variable);
+    const frameDateLabels = _buildFrameDateLabels(gifData.dates);
     mapState.setFrameDateLabels(frameDateLabels);
 
     // Iniciar reproducción
@@ -496,8 +496,7 @@ export function updateStationMarkersVisibility(
 
 // PR2: Build frame date labels from GIF dates
 function _buildFrameDateLabels(
-  dates: string[],
-  variable: Exclude<VariableKey, 'local_sp' | 'local_bd'>
+  dates: string[]
 ): AnimationFrameInfo[] {
   const SEASON_LABELS: Record<string, string> = {
     verano: 'Verano',

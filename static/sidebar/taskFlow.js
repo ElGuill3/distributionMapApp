@@ -116,6 +116,10 @@ class TaskFlowController {
     updateStepStatus(step, status) {
         if (!STEPS.includes(step))
             return;
+        // Validate status values
+        const validStatuses = Object.values(STEP_STATES);
+        if (!validStatuses.includes(status))
+            return;
         mapState.updateTaskFlowStepStatus(step, status);
         this.updateUI();
         this.notifyListeners('statusChange', { step, status });
