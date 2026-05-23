@@ -495,9 +495,7 @@ export function updateStationMarkersVisibility(
 }
 
 // PR2: Build frame date labels from GIF dates
-function _buildFrameDateLabels(
-  dates: string[]
-): AnimationFrameInfo[] {
+function _buildFrameDateLabels(dates: string[]): AnimationFrameInfo[] {
   const SEASON_LABELS: Record<string, string> = {
     verano: 'Verano',
     invierno: 'Invierno',

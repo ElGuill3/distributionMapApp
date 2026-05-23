@@ -166,6 +166,7 @@
     --gray-200: #374151;
     --gray-300: #6b7280;
     --gray-400: #9ca3af;
+    --gray-500: #d1d5db; /* Missing inversion added to fix label visibility */
     --gray-600: #f0f2f5;
     --gray-700: #ffffff;
 
@@ -183,21 +184,29 @@
     --colorbar-bg: rgba(17, 24, 39, 0.92);
     --colorbar-toggle-bg: rgba(31, 41, 51, 0.95);
     --colorbar-toggle-border: rgba(255, 255, 255, 0.15);
-    --colorbar-toggle-fg: var(--gray-100);
+    --colorbar-toggle-fg: var(--gray-600); /* fixed from var(--gray-100) */
 
     /* UI Interaction Flow Clarity dark mode overrides */
-    --sidebar-group-border: var(--gray-700);
+    --sidebar-group-border: var(--gray-200); /* fixed from var(--gray-700) (white) */
     --sidebar-group-header-fg: var(--gray-300);
-    --status-bar-bg: var(--gray-800);
-    --status-bar-fg: var(--gray-300);
-    --status-bar-border: var(--gray-700);
-    --chart-placeholder-bg: var(--gray-800);
-    --chart-placeholder-border: var(--gray-700);
-    --logo-container-bg: var(--gray-800);
+    --status-bar-bg: var(--gray-100); /* fixed from var(--gray-800) */
+    --status-bar-fg: var(--gray-500); /* resolves to #d1d5db (perfect contrast) */
+    --status-bar-border: var(--gray-200); /* fixed from var(--gray-700) (white) */
+    --chart-placeholder-bg: var(--gray-50); /* fixed from var(--gray-800) */
+    --chart-placeholder-border: var(--gray-200); /* fixed from var(--gray-700) (white) */
+    --logo-container-bg: var(--gray-100); /* fixed from var(--gray-800) */
 
     /* New token dark mode overrides */
-    --sidebar-group-header-bg: var(--gray-800);
+    --sidebar-group-header-bg: var(--gray-50); /* fixed from var(--gray-800) */
     --export-toolbar-bg: rgba(17, 24, 39, 0.85);
+
+    /* Destructive buttons in dark mode */
+    --btn-destructive-bg: #450a0a;
+    --btn-destructive-fg: #fecaca;
+    --btn-destructive-border: #991b1b;
+    --btn-destructive-hover-bg: #7f1d1d;
+    --btn-destructive-hover-border: #b91c1c;
+    --btn-destructive-hover-fg: #ffe4e6;
   }
 }
 
@@ -808,27 +817,7 @@ body.animation-loaded .animation-date-label {
 @media (prefers-color-scheme: dark) {
   .map-overlay-topbar {
     background: rgba(17, 24, 39, 0.92);
-    border-bottom-color: var(--gray-700);
-  }
-
-  .topbar-btn {
-    background: var(--gray-800);
-    border-color: var(--gray-600);
-  }
-
-  .topbar-btn:hover {
-    background: var(--gray-700);
-  }
-
-  .topbar-layer-btn {
-    background: var(--gray-800);
-    border-color: var(--gray-600);
-    color: var(--gray-300);
-  }
-
-  .topbar-layer-btn:hover {
-    background: var(--gray-700);
-    border-color: var(--gray-500);
+    border-bottom-color: var(--gray-200);
   }
 
   .animation-date-label {
@@ -1502,19 +1491,27 @@ body.sidebar-collapsed .leaflet-left {
    Modal CSS Classes (extracted from progress.ts)
    ========================================================================== */
 
+/* Loading Indicator Full Screen Backdrop */
+#loading-indicator {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  backdrop-filter: blur(2px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Modal Overlay Base */
 .modal-overlay {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--modal-backdrop);
-  color: var(--modal-fg);
+  background: var(--surface-bg);
+  color: var(--surface-fg);
   padding: 30px;
   border-radius: 12px;
-  z-index: 10000;
   min-width: 400px;
   box-shadow: var(--shadow-lg);
+  border: 1px solid var(--sidebar-border);
 }
 
 /* Progress Modal */
@@ -1526,12 +1523,13 @@ body.sidebar-collapsed .leaflet-left {
   font-size: 20px;
   margin-bottom: 15px;
   font-weight: bold;
+  color: var(--surface-fg);
 }
 
 .modal-progress-message {
   font-size: 14px;
   margin-bottom: 15px;
-  color: var(--gray-300);
+  color: var(--gray-400);
 }
 
 .modal-progress-bar-bg {
@@ -2104,18 +2102,6 @@ body:has(.mode-banner:not(.hidden)) #map-and-chart {
   margin-top: var(--space-2);
 }
 
-/* Export section in explore step */
-.tflow-export-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--sidebar-border);
-}
-
-.tflow-export-btn {
-  width: 100%;
-}
 
 /* MODO section */
 .tflow-modo-section {
@@ -2208,64 +2194,8 @@ body:not(.flood-risk-mode-active) .tflow-modo-section .flood-risk-mode-hint {
 
 /* Dark mode overrides for task flow */
 @media (prefers-color-scheme: dark) {
-  .tflow-step--pending {
-    border-left-color: var(--gray-600);
-  }
-
-  .tflow-step-number {
-    background: var(--gray-700);
-    color: var(--gray-300);
-  }
-
-  .tflow-step--active .tflow-step-number {
-    background: var(--sky-500);
-    color: var(--gray-0);
-  }
-
-  .tflow-step--complete .tflow-step-number {
-    background: var(--teal-400);
-    color: var(--gray-800);
-  }
-
-  .tflow-chip {
-    background: var(--gray-800);
-    border-color: var(--gray-600);
-    color: var(--gray-200);
-  }
-
-  .tflow-chip:hover:not(:disabled) {
-    background: var(--gray-700);
-    border-color: var(--gray-500);
-  }
-
-  .tflow-chip--active {
-    background: var(--sky-500);
-    border-color: var(--sky-500);
-    color: var(--gray-0);
-  }
-
-  .tflow-chip--active:hover {
-    background: var(--sky-600);
-    border-color: var(--sky-600);
-  }
-
   .tflow-modo-section {
     background: var(--gray-100);
-  }
-
-  .modo-toggle {
-    background: var(--gray-800);
-    border-color: var(--gray-600);
-    color: var(--gray-200);
-  }
-
-  .modo-toggle:hover {
-    background: var(--gray-700);
-    border-color: var(--gray-500);
-  }
-
-  .tflow-station-details {
-    border-color: var(--gray-600);
   }
 }
 

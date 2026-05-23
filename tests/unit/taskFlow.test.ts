@@ -8,8 +8,12 @@ function createMockElement(id) {
     id,
     classList: {
       classes: new Set(),
-      add(cls) { this.classes.add(cls); },
-      remove(cls) { this.classes.delete(cls); },
+      add(cls) {
+        this.classes.add(cls);
+      },
+      remove(cls) {
+        this.classes.delete(cls);
+      },
       toggle(cls, force) {
         if (force === undefined) {
           if (this.classes.has(cls)) this.classes.delete(cls);
@@ -20,7 +24,9 @@ function createMockElement(id) {
           this.classes.delete(cls);
         }
       },
-      contains(cls) { return this.classes.has(cls); },
+      contains(cls) {
+        return this.classes.has(cls);
+      },
     },
     className: '',
   };
@@ -32,7 +38,7 @@ function createMockElement(id) {
 global.document = {
   addEventListener: vi.fn(),
   dispatchEvent: vi.fn(),
-  getElementById: vi.fn((id) => mockElements.get(id) || createMockElement(id)),
+  getElementById: vi.fn(id => mockElements.get(id) || createMockElement(id)),
 };
 
 // Import mapState to reset it between tests

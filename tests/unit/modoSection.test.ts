@@ -14,8 +14,12 @@ function createMockToggle(id: string) {
     removeAttribute: vi.fn(),
     classList: {
       classes: new Set<string>(),
-      add(cls: string) { this.classes.add(cls); },
-      remove(cls: string) { this.classes.delete(cls); },
+      add(cls: string) {
+        this.classes.add(cls);
+      },
+      remove(cls: string) {
+        this.classes.delete(cls);
+      },
       toggle(cls: string, force?: boolean) {
         if (force === undefined) {
           if (this.classes.has(cls)) {
@@ -29,7 +33,9 @@ function createMockToggle(id: string) {
           this.classes.delete(cls);
         }
       },
-      contains(cls: string) { return this.classes.has(cls); },
+      contains(cls: string) {
+        return this.classes.has(cls);
+      },
     },
     addEventListener: vi.fn(),
   };
@@ -43,7 +49,10 @@ global.document = {
 } as unknown as Document;
 
 global.CustomEvent = class CustomEvent {
-  constructor(public type: string, public options?: { detail?: unknown }) {}
+  constructor(
+    public type: string,
+    public options?: { detail?: unknown }
+  ) {}
 } as unknown as typeof CustomEvent;
 
 describe('ModoSection', () => {
@@ -168,7 +177,9 @@ describe('ModoSection', () => {
 
       // Verify no events were dispatched for invalid modo
       const events = document.dispatchEvent.mock.calls.map(call => call[0]?.type);
-      expect(events.filter(e => e !== 'taskFlowDisabled' && e !== 'modoDeactivated')).toHaveLength(0);
+      expect(
+        events.filter(e => e !== 'taskFlowDisabled' && e !== 'modoDeactivated')
+      ).toHaveLength(0);
     });
   });
 

@@ -16,7 +16,13 @@ import {
   VARIABLE_YEARS,
   SEASONS,
 } from './config.js';
-import { buildColorbars, switchColorbar, removeActiveOverlay, municipalFloodOverlays, setOverlayOpacity } from './map/overlays.js';
+import {
+  buildColorbars,
+  switchColorbar,
+  removeActiveOverlay,
+  municipalFloodOverlays,
+  setOverlayOpacity,
+} from './map/overlays.js';
 import {
   createProgressIndicator,
   updateProgressIndicator,
@@ -488,14 +494,16 @@ if (typeof window !== 'undefined') {
     import('../../static/sidebar/configPanel.js'),
     // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/modoSection.js'),
-  ]).then(([taskFlow, variableSelector, configPanel, modoSection]) => {
-    taskFlow.init();
-    variableSelector.initChipContainer();
-    configPanel.init();
-    modoSection.init();
-  }).catch((err: Error) => {
-    console.warn('Failed to load sidebar modules:', err);
-  });
+  ])
+    .then(([taskFlow, variableSelector, configPanel, modoSection]) => {
+      taskFlow.init();
+      variableSelector.initChipContainer();
+      configPanel.init();
+      modoSection.init();
+    })
+    .catch((err: Error) => {
+      console.warn('Failed to load sidebar modules:', err);
+    });
 }
 
 // Phase C: delegated to normalMode
@@ -586,7 +594,9 @@ toggleCompareModeButton?.addEventListener('click', () => {
 // Listener: limpiar modo normal
 // ---------------------------------------------------------------------------
 
-const tflowClearBtn = document.getElementById('tflow-clear-btn') as HTMLButtonElement | null;
+const tflowClearBtn = document.getElementById(
+  'tflow-clear-btn'
+) as HTMLButtonElement | null;
 tflowClearBtn?.addEventListener('click', () => {
   normalMode.clearNormalMode();
   drawnItems.clearLayers();
@@ -687,7 +697,8 @@ function formatFrameLabel(season: string, year: number): string {
     otono: 'Otoño',
     anual: 'Anual',
   };
-  const label = SEASON_LABELS[season] ?? season.charAt(0).toUpperCase() + season.slice(1);
+  const label =
+    SEASON_LABELS[season] ?? season.charAt(0).toUpperCase() + season.slice(1);
   return `${label} ${year}`;
 }
 
@@ -840,19 +851,22 @@ async function requestGifAndSeries(
 document.addEventListener('tflowGenerateAnimation', (e: Event) => {
   const customEvent = e as CustomEvent;
   const { variable, year, season } = customEvent.detail || {};
-  
+
   if (!variable || !year || !season) {
     console.warn('[PR1] Missing generation parameters');
     return;
   }
-  
+
   const bbox = mapState.getBbox();
   if (!bbox) {
-    showErrorModal('Sin área seleccionada', 'Dibujá un rectángulo en el mapa antes de generar.');
+    showErrorModal(
+      'Sin área seleccionada',
+      'Dibujá un rectángulo en el mapa antes de generar.'
+    );
     document.dispatchEvent(new CustomEvent('generationComplete')); // Reset loading state
     return;
   }
-  
+
   const { start, end } = seasonToDates(year, season);
   void requestGifAndSeries(variable, start, end, bbox);
 });
@@ -891,14 +905,22 @@ async function requestLocalStationLevel(
 // Selectores DOM — estaciones locales (nuevos IDs tflow-)
 // ---------------------------------------------------------------------------
 
-const spYearSelect = document.getElementById('tflow-spYear') as HTMLSelectElement | null;
-const spSeasonSelect = document.getElementById('tflow-spSeason') as HTMLSelectElement | null;
+const spYearSelect = document.getElementById(
+  'tflow-spYear'
+) as HTMLSelectElement | null;
+const spSeasonSelect = document.getElementById(
+  'tflow-spSeason'
+) as HTMLSelectElement | null;
 const btnLocalSpLevel = document.getElementById(
   'tflow-btnLocalSpLevel'
 ) as HTMLButtonElement | null;
 
-const bdYearSelect = document.getElementById('tflow-bdYear') as HTMLSelectElement | null;
-const bdSeasonSelect = document.getElementById('tflow-bdSeason') as HTMLSelectElement | null;
+const bdYearSelect = document.getElementById(
+  'tflow-bdYear'
+) as HTMLSelectElement | null;
+const bdSeasonSelect = document.getElementById(
+  'tflow-bdSeason'
+) as HTMLSelectElement | null;
 const btnLocalBdLevel = document.getElementById(
   'tflow-btnLocalBdLevel'
 ) as HTMLButtonElement | null;

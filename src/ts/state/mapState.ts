@@ -304,7 +304,10 @@ export function setTaskFlowStep(step: TaskFlowState['currentStep']): void {
 }
 
 export function updateTaskFlowStepValidity(step: string, isValid: boolean): void {
-  const currentStep = state.taskFlow.steps[step] || { status: 'pending', isValid: false };
+  const currentStep = state.taskFlow.steps[step] || {
+    status: 'pending',
+    isValid: false,
+  };
   state = {
     ...state,
     taskFlow: {
@@ -321,7 +324,10 @@ export function updateTaskFlowStepValidity(step: string, isValid: boolean): void
 }
 
 export function updateTaskFlowStepStatus(step: string, status: StepStatus): void {
-  const currentStep = state.taskFlow.steps[step] || { status: 'pending', isValid: false };
+  const currentStep = state.taskFlow.steps[step] || {
+    status: 'pending',
+    isValid: false,
+  };
   state = {
     ...state,
     taskFlow: {

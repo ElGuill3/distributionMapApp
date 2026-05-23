@@ -40,8 +40,12 @@ class ModoSection {
    */
   init(): void {
     this.modoSection = document.getElementById('tflow-modo-section');
-    this.compareToggle = document.getElementById('toggleCompareMode') as HTMLButtonElement | null;
-    this.floodToggle = document.getElementById('toggleFloodRiskMode') as HTMLButtonElement | null;
+    this.compareToggle = document.getElementById(
+      'toggleCompareMode'
+    ) as HTMLButtonElement | null;
+    this.floodToggle = document.getElementById(
+      'toggleFloodRiskMode'
+    ) as HTMLButtonElement | null;
 
     if (!this.modoSection || !this.compareToggle || !this.floodToggle) {
       console.warn('[ModoSection] Required elements not found');
@@ -152,9 +156,11 @@ class ModoSection {
       document.dispatchEvent(new CustomEvent('floodRiskModeDeactivated'));
     }
 
-    document.dispatchEvent(new CustomEvent('modoDeactivated', {
-      detail: { previousModo },
-    }));
+    document.dispatchEvent(
+      new CustomEvent('modoDeactivated', {
+        detail: { previousModo },
+      })
+    );
 
     this.notifyListeners('deactivate', { previousModo });
   }
@@ -172,9 +178,11 @@ class ModoSection {
     });
 
     // Dispatch to task flow controller
-    document.dispatchEvent(new CustomEvent('taskFlowDisabled', {
-      detail: { disabled: true },
-    }));
+    document.dispatchEvent(
+      new CustomEvent('taskFlowDisabled', {
+        detail: { disabled: true },
+      })
+    );
   }
 
   /**
@@ -190,9 +198,11 @@ class ModoSection {
     });
 
     // Dispatch to task flow controller
-    document.dispatchEvent(new CustomEvent('taskFlowDisabled', {
-      detail: { disabled: false },
-    }));
+    document.dispatchEvent(
+      new CustomEvent('taskFlowDisabled', {
+        detail: { disabled: false },
+      })
+    );
   }
 
   /**
@@ -253,7 +263,8 @@ export const activateModo = (modo: ModoType): void => modoSection.activateModo(m
 export const deactivateAll = (): void => modoSection.deactivateAll();
 export const getActiveModo = (): ModoType | null => modoSection.getActiveModo();
 export const isModoActive = (modo: ModoType): boolean => modoSection.isModoActive(modo);
-export const addListener = (listener: ModoChangeListener): void => modoSection.addListener(listener);
+export const addListener = (listener: ModoChangeListener): void =>
+  modoSection.addListener(listener);
 export const removeListener = (listener: ModoChangeListener): void =>
   modoSection.removeListener(listener);
 export { ModoSection };
