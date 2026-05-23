@@ -48,10 +48,12 @@ describe('VariableSelector', () => {
 
     it('should warn when chip container not found', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      
+
       variableSelector.initChipContainer();
-      
-      expect(consoleSpy).toHaveBeenCalledWith('[VariableSelector] Chip container not found');
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[VariableSelector] Chip container not found'
+      );
       consoleSpy.mockRestore();
     });
   });
@@ -65,11 +67,11 @@ describe('VariableSelector', () => {
         remove: vi.fn(),
         appendChild: vi.fn(),
       };
-      global.document.getElementById = vi.fn((id) => {
+      global.document.getElementById = vi.fn(id => {
         if (id === 'tflow-year-select') return mockYearSelect;
         return null;
       });
-      
+
       variableSelector.setActiveChip('temp');
       expect(variableSelector.getActiveVariable()).toBe('temp');
     });
@@ -88,14 +90,14 @@ describe('VariableSelector', () => {
         remove: vi.fn(),
         appendChild: vi.fn(),
       };
-      global.document.getElementById = vi.fn((id) => {
+      global.document.getElementById = vi.fn(id => {
         if (id === 'tflow-year-select') return mockYearSelect;
         return null;
       });
-      
+
       const dispatchSpy = vi.spyOn(document, 'dispatchEvent');
       variableSelector.setActiveChip('temp');
-      
+
       expect(dispatchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'variableSelected',
@@ -111,15 +113,15 @@ describe('VariableSelector', () => {
         remove: vi.fn(),
         appendChild: vi.fn(),
       };
-      global.document.getElementById = vi.fn((id) => {
+      global.document.getElementById = vi.fn(id => {
         if (id === 'tflow-year-select') return mockYearSelect;
         return null;
       });
-      
+
       const listener = vi.fn();
       variableSelector.addListener(listener);
       variableSelector.setActiveChip('temp');
-      
+
       expect(listener).toHaveBeenCalledWith('change', { variable: 'temp' });
     });
   });
@@ -129,9 +131,9 @@ describe('VariableSelector', () => {
       const listener = vi.fn();
       variableSelector.addListener(listener);
       variableSelector.removeListener(listener);
-      
+
       variableSelector.notifyListeners('test', {});
-      
+
       expect(listener).not.toHaveBeenCalled();
     });
 
@@ -140,20 +142,22 @@ describe('VariableSelector', () => {
       const listener2 = vi.fn();
       variableSelector.addListener(listener1);
       variableSelector.addListener(listener2);
-      
+
       variableSelector.notifyListeners('test', { data: true });
-      
+
       expect(listener1).toHaveBeenCalledWith('test', { data: true });
       expect(listener2).toHaveBeenCalledWith('test', { data: true });
     });
 
     it('should handle listener errors gracefully', () => {
-      const errorListener = vi.fn(() => { throw new Error('Test error'); });
+      const errorListener = vi.fn(() => {
+        throw new Error('Test error');
+      });
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
+
       variableSelector.addListener(errorListener);
       variableSelector.notifyListeners('test', {});
-      
+
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -167,7 +171,7 @@ describe('VariableSelector', () => {
         remove: vi.fn(),
         appendChild: vi.fn(),
       };
-      global.document.getElementById = vi.fn((id) => {
+      global.document.getElementById = vi.fn(id => {
         if (id === 'tflow-year-select') return mockYearSelect;
         return null;
       });
@@ -190,7 +194,7 @@ describe('VariableSelector', () => {
         remove: vi.fn(),
         appendChild: vi.fn(),
       };
-      global.document.getElementById = vi.fn((id) => {
+      global.document.getElementById = vi.fn(id => {
         if (id === 'tflow-year-select') return mockYearSelect;
         return null;
       });
@@ -217,14 +221,14 @@ describe('VariableSelector', () => {
         remove: vi.fn(),
         appendChild: vi.fn(),
       };
-      global.document.getElementById = vi.fn((id) => {
+      global.document.getElementById = vi.fn(id => {
         if (id === 'tflow-year-select') return mockYearSelect;
         return null;
       });
-      
+
       variableSelector.setActiveChip('temp');
       variableSelector.reset();
-      
+
       expect(variableSelector.getActiveVariable()).toBe('ndvi');
     });
   });
@@ -232,7 +236,7 @@ describe('VariableSelector', () => {
   describe('Year Select Population', () => {
     it('should handle missing year select gracefully', () => {
       global.document.getElementById = vi.fn(() => null);
-      
+
       expect(() => variableSelector.populateYearSelect()).not.toThrow();
     });
   });

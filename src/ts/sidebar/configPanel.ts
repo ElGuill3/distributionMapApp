@@ -49,9 +49,15 @@ class ConfigPanel {
    * Initialize the config panel
    */
   init(): void {
-    this.yearSelect = document.getElementById('tflow-year-select') as HTMLSelectElement | null;
-    this.seasonSelect = document.getElementById('tflow-season-select') as HTMLSelectElement | null;
-    this.generateBtn = document.getElementById('tflow-generate-btn') as HTMLButtonElement | null;
+    this.yearSelect = document.getElementById(
+      'tflow-year-select'
+    ) as HTMLSelectElement | null;
+    this.seasonSelect = document.getElementById(
+      'tflow-season-select'
+    ) as HTMLSelectElement | null;
+    this.generateBtn = document.getElementById(
+      'tflow-generate-btn'
+    ) as HTMLButtonElement | null;
 
     if (!this.yearSelect || !this.seasonSelect || !this.generateBtn) {
       console.warn('[ConfigPanel] Required elements not found');
@@ -107,13 +113,15 @@ class ConfigPanel {
       const year = Number(this.yearSelect.value);
       const season = this.seasonSelect.value;
 
-      document.dispatchEvent(new CustomEvent('tflowGenerateAnimation', {
-        detail: {
-          variable: this.currentVariable,
-          year,
-          season,
-        },
-      }));
+      document.dispatchEvent(
+        new CustomEvent('tflowGenerateAnimation', {
+          detail: {
+            variable: this.currentVariable,
+            year,
+            season,
+          },
+        })
+      );
     });
 
     // Listen for variable changes
@@ -205,9 +213,11 @@ class ConfigPanel {
     updateStepValidity('config', isValid);
 
     // Keep event for backward compatibility with other listeners
-    document.dispatchEvent(new CustomEvent('configValidityChanged', {
-      detail: { isValid },
-    }));
+    document.dispatchEvent(
+      new CustomEvent('configValidityChanged', {
+        detail: { isValid },
+      })
+    );
   }
 
   /**
@@ -289,7 +299,8 @@ export const populateYearSelect = (variable: VariableKey): void =>
 export const populateSeasonSelect = (): void => configPanel.populateSeasonSelect();
 export const updateGenerateButton = (): void => configPanel.updateGenerateButton();
 export const getConfig = (): Config => configPanel.getConfig();
-export const setLoading = (isLoading: boolean): void => configPanel.setLoading(isLoading);
+export const setLoading = (isLoading: boolean): void =>
+  configPanel.setLoading(isLoading);
 export const addListener = (listener: ConfigChangeListener): void =>
   configPanel.addListener(listener);
 export const removeListener = (listener: ConfigChangeListener): void =>

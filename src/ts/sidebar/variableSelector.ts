@@ -13,11 +13,11 @@ import { transitionTo } from './taskFlow.js';
 
 // Variable mapping
 const VARIABLE_MAP: Record<string, string> = {
-  'ndvi': 'NDVI',
-  'temp': 'Temperatura 2m',
-  'soil': 'Humedad del suelo',
-  'precip': 'Precipitación diaria',
-  'water': 'Cuerpos de agua',
+  ndvi: 'NDVI',
+  temp: 'Temperatura 2m',
+  soil: 'Humedad del suelo',
+  precip: 'Precipitación diaria',
+  water: 'Cuerpos de agua',
 };
 
 const VARIABLE_KEYS = Object.keys(VARIABLE_MAP) as VariableKey[];
@@ -40,7 +40,9 @@ class VariableSelector {
    * Initialize the chip container
    */
   initChipContainer(): void {
-    this.chipContainer = document.getElementById('tflow-chip-container') as HTMLElement | null;
+    this.chipContainer = document.getElementById(
+      'tflow-chip-container'
+    ) as HTMLElement | null;
     if (!this.chipContainer) {
       console.warn('[VariableSelector] Chip container not found');
       return;
@@ -91,9 +93,11 @@ class VariableSelector {
     this.populateYearSelect();
 
     // Dispatch custom event AFTER year select is populated
-    document.dispatchEvent(new CustomEvent('variableSelected', {
-      detail: { variable }
-    }));
+    document.dispatchEvent(
+      new CustomEvent('variableSelected', {
+        detail: { variable },
+      })
+    );
 
     this.notifyListeners('change', { variable });
   }
@@ -123,7 +127,9 @@ class VariableSelector {
    * Populate the year select based on active variable
    */
   populateYearSelect(): void {
-    const yearSelect = document.getElementById('tflow-year-select') as HTMLSelectElement | null;
+    const yearSelect = document.getElementById(
+      'tflow-year-select'
+    ) as HTMLSelectElement | null;
     if (!yearSelect) return;
 
     // Clear existing options except placeholder
@@ -146,9 +152,11 @@ class VariableSelector {
     yearSelect.value = '';
 
     // Dispatch event for config panel
-    document.dispatchEvent(new CustomEvent('yearSelectPopulated', {
-      detail: { variable: this.activeVariable, years }
-    }));
+    document.dispatchEvent(
+      new CustomEvent('yearSelectPopulated', {
+        detail: { variable: this.activeVariable, years },
+      })
+    );
   }
 
   /**
@@ -197,12 +205,14 @@ export const variableSelector = new VariableSelector();
 
 // Convenience exports
 export const initChipContainer = (): void => variableSelector.initChipContainer();
-export const setActiveChip = (variable: string): void => variableSelector.setActiveChip(variable);
+export const setActiveChip = (variable: string): void =>
+  variableSelector.setActiveChip(variable);
 export const getActiveVariable = (): string => variableSelector.getActiveVariable();
 export const populateYearSelect = (): void => variableSelector.populateYearSelect();
 export const addListener = (listener: (event: string, data?: unknown) => void): void =>
   variableSelector.addListener(listener);
-export const removeListener = (listener: (event: string, data?: unknown) => void): void =>
-  variableSelector.removeListener(listener);
+export const removeListener = (
+  listener: (event: string, data?: unknown) => void
+): void => variableSelector.removeListener(listener);
 export const reset = (): void => variableSelector.reset();
 export { VariableSelector };

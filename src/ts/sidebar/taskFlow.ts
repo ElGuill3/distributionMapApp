@@ -298,7 +298,8 @@ export const taskFlowController = new TaskFlowController();
 
 // Convenience exports
 export const init = (): void => taskFlowController.init();
-export const transitionTo = (step: StepName): void => taskFlowController.transitionTo(step);
+export const transitionTo = (step: StepName): void =>
+  taskFlowController.transitionTo(step);
 export const updateStepStatus = (step: StepName, status: StepStatus): void =>
   taskFlowController.updateStepStatus(step, status);
 export const updateStepValidity = (step: StepName, isValid: boolean): void =>
@@ -309,10 +310,12 @@ export const setStepsDisabled = (disabled: boolean): void =>
   taskFlowController.setStepsDisabled(disabled);
 export const getCurrentStep = (): TaskFlowState['currentStep'] =>
   taskFlowController.getCurrentStep();
-export const getStepStates = (): Record<StepName, string> => taskFlowController.getStepStates();
+export const getStepStates = (): Record<StepName, string> =>
+  taskFlowController.getStepStates();
 export const reset = (): void => taskFlowController.reset();
 export const addListener = (listener: (event: string, data?: unknown) => void): void =>
   taskFlowController.addListener(listener);
-export const removeListener = (listener: (event: string, data?: unknown) => void): void =>
-  taskFlowController.removeListener(listener);
+export const removeListener = (
+  listener: (event: string, data?: unknown) => void
+): void => taskFlowController.removeListener(listener);
 export { TaskFlowController };

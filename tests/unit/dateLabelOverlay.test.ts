@@ -13,7 +13,8 @@ function formatFrameLabel(season: string, year: number): string {
     otono: 'Otoño',
     anual: 'Anual',
   };
-  const label = SEASON_LABELS[season] ?? season.charAt(0).toUpperCase() + season.slice(1);
+  const label =
+    SEASON_LABELS[season] ?? season.charAt(0).toUpperCase() + season.slice(1);
   return `${label} ${year}`;
 }
 
@@ -111,17 +112,13 @@ describe('date label overlay', () => {
     });
 
     it('should not throw when frame index is out of range', () => {
-      const labels = [
-        { year: 2022, season: 'verano' as Season, label: 'Verano 2022' },
-      ];
+      const labels = [{ year: 2022, season: 'verano' as Season, label: 'Verano 2022' }];
       expect(() => updateDateLabel(5, labels, 'animation-date-label')).not.toThrow();
       expect(mockDateLabel.textContent).toBe('');
     });
 
     it('should update animation-date-label-b for compare mode', () => {
-      const labels = [
-        { year: 2022, season: 'verano' as Season, label: 'Verano 2022' },
-      ];
+      const labels = [{ year: 2022, season: 'verano' as Season, label: 'Verano 2022' }];
 
       updateDateLabel(0, labels, 'animation-date-label-b');
       expect(mockDateLabelB.textContent).toBe('Verano 2022');
