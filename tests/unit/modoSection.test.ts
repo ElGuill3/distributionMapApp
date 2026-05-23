@@ -18,7 +18,11 @@ function createMockToggle(id: string) {
       remove(cls: string) { this.classes.delete(cls); },
       toggle(cls: string, force?: boolean) {
         if (force === undefined) {
-          this.classes.has(cls) ? this.classes.delete(cls) : this.classes.add(cls);
+          if (this.classes.has(cls)) {
+            this.classes.delete(cls);
+          } else {
+            this.classes.add(cls);
+          }
         } else if (force) {
           this.classes.add(cls);
         } else {

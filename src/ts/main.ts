@@ -480,13 +480,13 @@ floodRiskMode.registerFloodRiskModeListeners(
 // PR2: Initialize new sidebar task flow modules directly (no bridge)
 if (typeof window !== 'undefined') {
   Promise.all([
-    // @ts-ignore - plain JS module, no types
+    // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/taskFlow.js'),
-    // @ts-ignore - plain JS module, no types
+    // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/variableSelector.js'),
-    // @ts-ignore - plain JS module, no types
+    // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/configPanel.js'),
-    // @ts-ignore - plain JS module, no types
+    // @ts-expect-error - plain JS module, no types
     import('../../static/sidebar/modoSection.js'),
   ]).then(([taskFlow, variableSelector, configPanel, modoSection]) => {
     taskFlow.init();
@@ -806,6 +806,10 @@ topbarLayerGif?.addEventListener('click', () => {
 
 topbarLayerStations?.addEventListener('click', () => {
   toggleStationsLayer(!layerVisibility.stations);
+});
+
+topbarLayerFlood?.addEventListener('click', () => {
+  toggleFloodLayer(!layerVisibility.flood);
 });
 
 // ---------------------------------------------------------------------------
