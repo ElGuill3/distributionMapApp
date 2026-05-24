@@ -157,7 +157,57 @@
 /* ==========================================================================
    Dark Mode Overrides
    ========================================================================== */
-:root[data-theme="dark"],
+:root[data-theme="dark"] {
+  /* Raw palette inversion */
+  --gray-0: #0b0f19;
+  --gray-50: #111827;
+  --gray-100: #1f2933;
+  --gray-200: #374151;
+  --gray-300: #6b7280;
+  --gray-400: #9ca3af;
+  --gray-500: #d1d5db; /* Missing inversion added to fix label visibility */
+  --gray-600: #f0f2f5;
+  --gray-700: #ffffff;
+
+  /* Shadows for dark backgrounds */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --modal-backdrop: rgba(0, 0, 0, 0.92);
+
+  /* Warning modal dark mode */
+  --warning-bg: #3a2f0f;
+  --warning-fg: #fde68a;
+  --warning-border: #b45309;
+
+  /* Colorbar dark mode */
+  --colorbar-bg: rgba(17, 24, 39, 0.92);
+  --colorbar-toggle-bg: rgba(31, 41, 51, 0.95);
+  --colorbar-toggle-border: rgba(255, 255, 255, 0.15);
+  --colorbar-toggle-fg: var(--gray-600); /* fixed from var(--gray-100) */
+
+  /* UI Interaction Flow Clarity dark mode overrides */
+  --sidebar-group-border: var(--gray-200); /* fixed from var(--gray-700) (white) */
+  --sidebar-group-header-fg: var(--gray-300);
+  --status-bar-bg: var(--gray-100); /* fixed from var(--gray-800) */
+  --status-bar-fg: var(--gray-500); /* resolves to #d1d5db (perfect contrast) */
+  --status-bar-border: var(--gray-200); /* fixed from var(--gray-700) (white) */
+  --chart-placeholder-bg: var(--gray-50); /* fixed from var(--gray-800) */
+  --chart-placeholder-border: var(--gray-200); /* fixed from var(--gray-700) (white) */
+  --logo-container-bg: var(--gray-100); /* fixed from var(--gray-800) */
+
+  /* New token dark mode overrides */
+  --sidebar-group-header-bg: var(--gray-50); /* fixed from var(--gray-800) */
+  --export-toolbar-bg: rgba(17, 24, 39, 0.85);
+
+  /* Destructive buttons in dark mode */
+  --btn-destructive-bg: #450a0a;
+  --btn-destructive-fg: #fecaca;
+  --btn-destructive-border: #991b1b;
+  --btn-destructive-hover-bg: #7f1d1d;
+  --btn-destructive-hover-border: #b91c1c;
+  --btn-destructive-hover-fg: #ffe4e6;
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     /* Raw palette inversion */
@@ -815,7 +865,10 @@ body.animation-loaded .animation-date-label {
 }
 
 /* Dark mode for topbar */
-:root[data-theme="dark"] .map-overlay-topbar,
+:root[data-theme="dark"] .map-overlay-topbar {
+  background: rgba(17, 24, 39, 0.92);
+  border-bottom-color: var(--gray-200);
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .map-overlay-topbar {
     background: rgba(17, 24, 39, 0.92);
@@ -823,14 +876,19 @@ body.animation-loaded .animation-date-label {
   }
 }
 
-:root[data-theme="dark"] .animation-date-label,
+:root[data-theme="dark"] .animation-date-label {
+  background: rgba(0, 0, 0, 0.65);
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .animation-date-label {
     background: rgba(0, 0, 0, 0.65);
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-toolbar a,
+:root[data-theme="dark"] .leaflet-draw-toolbar a {
+  background: var(--gray-800) !important;
+  border-color: var(--gray-600) !important;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .leaflet-draw-toolbar a {
     background: var(--gray-800) !important;
@@ -838,14 +896,20 @@ body.animation-loaded .animation-date-label {
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-toolbar a:hover,
+:root[data-theme="dark"] .leaflet-draw-toolbar a:hover {
+  background: var(--gray-700) !important;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .leaflet-draw-toolbar a:hover {
     background: var(--gray-700) !important;
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-tooltip,
+:root[data-theme="dark"] .leaflet-draw-tooltip {
+  background: var(--gray-900) !important;
+  border-color: var(--gray-700) !important;
+  color: var(--gray-200) !important;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .leaflet-draw-tooltip {
     background: var(--gray-900) !important;
@@ -854,14 +918,19 @@ body.animation-loaded .animation-date-label {
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-tooltip:before,
+:root[data-theme="dark"] .leaflet-draw-tooltip:before {
+  border-right-color: var(--gray-700) !important;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .leaflet-draw-tooltip:before {
     border-right-color: var(--gray-700) !important;
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-actions a,
+:root[data-theme="dark"] .leaflet-draw-actions a {
+  background-color: var(--gray-600) !important;
+  color: var(--gray-200) !important;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .leaflet-draw-actions a {
     background-color: var(--gray-600) !important;
@@ -869,14 +938,20 @@ body.animation-loaded .animation-date-label {
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-actions a:hover,
+:root[data-theme="dark"] .leaflet-draw-actions a:hover {
+  background-color: var(--gray-500) !important;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .leaflet-draw-actions a:hover {
     background-color: var(--gray-500) !important;
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-toolbar a.leaflet-disabled,
+:root[data-theme="dark"] .leaflet-draw-toolbar a.leaflet-disabled {
+  background: var(--gray-700) !important;
+  border-color: var(--gray-600) !important;
+  opacity: 0.4 !important;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .leaflet-draw-toolbar a.leaflet-disabled {
     background: var(--gray-700) !important;
@@ -2219,7 +2294,9 @@ body:not(.flood-risk-mode-active) .tflow-modo-section .flood-risk-mode-hint {
 }
 
 /* Dark mode overrides for task flow */
-:root[data-theme="dark"] .tflow-modo-section,
+:root[data-theme="dark"] .tflow-modo-section {
+  background: var(--gray-100);
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .tflow-modo-section {
     background: var(--gray-100);
