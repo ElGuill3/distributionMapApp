@@ -160,4 +160,4 @@ RATE_LIMITS = {
 # ---------------------------------------------------------------------------
 GIF_DOWNLOAD_TIMEOUT_S = 120  # Timeout para descarga de GIF desde GEE
 SSE_TASK_QUEUE_TIMEOUT_S = 60  # Timeout de la cola SSE en progress endpoint
-SSE_WAIT_ATTEMPTS = 20  # Intentos de espera para que el endpoint GIF registre su cola
+SSE_WAIT_ATTEMPTS = 100  # Intentos de espera para que el endpoint GIF registre su cola

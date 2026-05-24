@@ -176,17 +176,10 @@ export function registerFloodRiskModeListeners(
   onExit: () => void,
   _clearNormalMode: () => void
 ): void {
-  // _clearNormalMode is kept for API compatibility but not used in this implementation
+  // Kept for API compatibility
   void _clearNormalMode;
-  _toggleFloodRiskModeButton?.addEventListener('click', () => {
-    const newState = !mapState.getFloodRiskModeActive();
-
-    if (newState) {
-      onEnter();
-    } else {
-      onExit();
-    }
-  });
+  void onEnter;
+  void onExit;
 
   // Listeners de checkboxes de municipios
   document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => {

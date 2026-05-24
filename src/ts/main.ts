@@ -124,9 +124,48 @@ const rectangleDrawer = new L.Draw.Rectangle(map, {
   shapeOptions: { color: '#ff7800', weight: 2 },
 });
 
-const tflowDrawBtn = document.getElementById('tflow-draw-btn') as HTMLButtonElement | null;
+const tflowDrawBtn = document.getElementById(
+  'tflow-draw-btn'
+) as HTMLButtonElement | null;
+const tflowClearBtn = document.getElementById(
+  'tflow-clear-btn'
+) as HTMLButtonElement | null;
+const topbarDrawBtn = document.getElementById(
+  'topbar-draw-btn'
+) as HTMLButtonElement | null;
+const topbarClearBtn = document.getElementById(
+  'topbar-clear-btn'
+) as HTMLButtonElement | null;
+
 tflowDrawBtn?.addEventListener('click', () => {
   rectangleDrawer.enable();
+});
+topbarDrawBtn?.addEventListener('click', () => {
+  rectangleDrawer.enable();
+});
+topbarClearBtn?.addEventListener('click', () => {
+  tflowClearBtn?.click();
+});
+
+// Initial topbar buttons state based on mapState
+if (mapState.hasBbox()) {
+  topbarDrawBtn?.classList.add('hidden');
+  topbarClearBtn?.classList.remove('hidden');
+} else {
+  topbarDrawBtn?.classList.remove('hidden');
+  topbarClearBtn?.classList.add('hidden');
+}
+
+document.addEventListener('bboxChanged', (e: Event) => {
+  const detail = (e as CustomEvent).detail;
+  const { hasBbox } = detail || {};
+  if (hasBbox) {
+    topbarDrawBtn?.classList.add('hidden');
+    topbarClearBtn?.classList.remove('hidden');
+  } else {
+    topbarDrawBtn?.classList.remove('hidden');
+    topbarClearBtn?.classList.add('hidden');
+  }
 });
 
 map.on(L.Draw.Event.DRAWSTART, () => {
@@ -139,6 +178,15 @@ map.on(L.Draw.Event.DRAWSTART, () => {
       Dibujando en el mapa...
     `;
     drawBtn.disabled = true;
+  }
+  if (topbarDrawBtn) {
+    topbarDrawBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14" style="animation: pulse 1.5s infinite;">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+      </svg>
+      <span>Dibujando...</span>
+    `;
+    topbarDrawBtn.disabled = true;
   }
 });
 
@@ -153,6 +201,16 @@ map.on(L.Draw.Event.DRAWSTOP, () => {
       Dibujar área en el mapa
     `;
     drawBtn.disabled = false;
+  }
+  if (topbarDrawBtn) {
+    topbarDrawBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+      <span>Dibujar área</span>
+    `;
+    topbarDrawBtn.disabled = false;
   }
 });
 
@@ -197,7 +255,6 @@ map.on(L.Draw.Event.CREATED, e => {
 
   mapState.setBbox([squareWest, squareSouth, squareEast, squareNorth]);
   document.dispatchEvent(new CustomEvent('bboxChanged', { detail: { hasBbox: true } }));
-  updateBboxStatusBar('selected');
 
   removeActiveOverlay(map);
   switchColorbar(map, null);
@@ -268,11 +325,13 @@ const chartBContainer = document.getElementById(
 const chartBDiv = document.getElementById('chart-b') as HTMLDivElement | null;
 
 // ResizeObserver to handle auto-resizing of Plotly charts on layout/container size shifts
-const chartResizeObserver = new ResizeObserver((entries) => {
+const chartResizeObserver = new ResizeObserver(entries => {
   for (const entry of entries) {
     const target = entry.target;
-    const chartDiv = target.querySelector('#ndvi-chart, #chart-b') as HTMLElement | null;
-    if (chartDiv && (chartDiv as any).layout) {
+    const chartDiv = target.querySelector(
+      '#ndvi-chart, #chart-b'
+    ) as HTMLElement | null;
+    if (chartDiv && (chartDiv as unknown as { layout?: unknown }).layout) {
       const width = chartDiv.clientWidth;
       const height = chartDiv.clientHeight;
       if (width > 0 && height > 0) {
@@ -319,10 +378,6 @@ function hideChartBContainer(): void {
 
 // Phase B: gifPlayerA, gifPlayerB, syncPlayer, soloPlayer now managed via mapState
 
-// DOM: modo comparativa
-const toggleCompareModeButton = document.getElementById(
-  'toggleCompareMode'
-) as HTMLButtonElement | null;
 const compareControlsA = document.getElementById(
   'compare-controls-a'
 ) as HTMLDivElement | null;
@@ -353,7 +408,6 @@ const compareSeasonASelect = document.getElementById(
 const btnGenerateA = document.getElementById(
   'btnGenerateA'
 ) as HTMLButtonElement | null;
-const btnClearA = document.getElementById('btnClearA') as HTMLButtonElement | null;
 
 // DOM: selectores de comparativa — panel B
 const compareVarBSelect = document.getElementById(
@@ -368,7 +422,6 @@ const compareSeasonBSelect = document.getElementById(
 const btnGenerateB = document.getElementById(
   'btnGenerateB'
 ) as HTMLButtonElement | null;
-const btnClearB = document.getElementById('btnClearB') as HTMLButtonElement | null;
 
 // ---------------------------------------------------------------------------
 // Checkboxes de estaciones en modo comparativa
@@ -485,12 +538,10 @@ compareMode.initCompareMode({
   compareYearASelect,
   compareSeasonASelect,
   btnGenerateA,
-  btnClearA,
   compareVarBSelect,
   compareYearBSelect,
   compareSeasonBSelect,
   btnGenerateB,
-  btnClearB,
   chkStationSpA,
   chkStationBdA,
   chkStationSpB,
@@ -509,43 +560,23 @@ floodRiskMode.initFloodRiskMode({
 
 // Phase E: registrar listeners de modo riesgo
 floodRiskMode.registerFloodRiskModeListeners(
-  () => {
-    // Entrar al modo riesgo — delegar completamente a enterFloodRiskMode
-    // que maneja la coordinación de desactivación de compare mode internamente
-    floodRiskMode.enterFloodRiskMode(() => {
-      if (mapState.getCompareModeActive()) {
-        mapState.setCompareModeActive(false);
-        document.body.classList.remove('compare-mode-active');
-        toggleCompareModeButton?.setAttribute('aria-pressed', 'false');
-        compareMode.cleanupComparePanels();
-        mapState.clearSeriesData();
-        hidePlayerControls();
-        hideChartBContainer();
-        if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-        if (chartBDiv) Plotly.purge(chartBDiv);
-        switchColorbar(map, null, mapState.getMapB() ?? undefined);
-        drawnItems.clearLayers();
-        mapState.clearBbox();
-        document.dispatchEvent(new CustomEvent('bboxChanged', { detail: { hasBbox: false } }));
-        updateBboxStatusBar('draw');
-        compareControlsA?.classList.add('hidden');
-        compareModeHint?.classList.add('hidden');
-        toggleModeBanner('compare', false);
-        setTimeout(() => map.invalidateSize(), 350);
-      }
-      normalMode.clearNormalMode();
-    });
-    toggleModeBanner('flood-risk', true);
-  },
-  () => {
-    // Salir del modo riesgo
-    floodRiskMode.exitFloodRiskMode();
-    toggleModeBanner('flood-risk', false);
-  },
-  () => {
-    normalMode.clearNormalMode();
-  }
+  () => {},
+  () => {},
+  () => {}
 );
+
+document.addEventListener('floodRiskModeActivated', () => {
+  floodRiskMode.enterFloodRiskMode(() => {});
+  normalMode.clearNormalMode();
+  body.classList.remove('sidebar-collapsed');
+  syncSidebarState();
+  toggleModeBanner('flood-risk', true);
+});
+
+document.addEventListener('floodRiskModeDeactivated', () => {
+  floodRiskMode.exitFloodRiskMode();
+  toggleModeBanner('flood-risk', false);
+});
 
 // PR2: Initialize new sidebar task flow modules directly (no bridge)
 if (typeof window !== 'undefined') {
@@ -594,81 +625,93 @@ function syncPlayPauseIcon(): void {
 // vive en compareMode.ts y se registra vía compareMode.registerCompareModeListeners()
 
 // ---------------------------------------------------------------------------
-// Listener: toggle modo comparativa
+// Listeners para el modo comparativa coordinados por modoSection
 // ---------------------------------------------------------------------------
 
-toggleCompareModeButton?.addEventListener('click', () => {
-  const newState = !mapState.getCompareModeActive();
-  mapState.setCompareModeActive(newState);
-  document.body.classList.toggle('compare-mode-active', newState);
-  toggleCompareModeButton.setAttribute('aria-pressed', String(newState));
+document.addEventListener('compareModeActivated', () => {
+  mapState.setCompareModeActive(true);
+  document.body.classList.add('compare-mode-active');
 
-  if (newState) {
-    // Desactivar flood risk mode si estaba activo
-    floodRiskMode.exitFloodRiskMode();
+  // Limpiar estado previo
+  compareMode.cleanupComparePanels();
+  mapState.clearSeriesData();
+  if (ndviChartDiv) Plotly.purge(ndviChartDiv);
+  if (chartBDiv) Plotly.purge(chartBDiv);
+  hidePlayerControls();
 
-    // Limpiar estado previo
-    compareMode.cleanupComparePanels();
-    mapState.clearSeriesData();
-    if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-    if (chartBDiv) Plotly.purge(chartBDiv);
-    hidePlayerControls();
+  // Mostrar controles de comparativa y pistas
+  compareControlsA?.classList.remove('hidden');
+  showChartBContainer();
+  compareModeHint?.classList.remove('hidden');
+  body.classList.add('sidebar-collapsed');
+  syncSidebarState();
+  toggleModeBanner('compare', true);
 
-    // Mostrar controles de comparativa y pistas
-    compareControlsA?.classList.remove('hidden');
-    showChartBContainer();
-    compareModeHint?.classList.remove('hidden');
-    toggleModeBanner('compare', true);
+  // Poblar selectores de año/temporada según la variable seleccionada en cada panel
+  compareMode.initCompareSelects();
 
-    // Poblar selectores de año/temporada según la variable seleccionada en cada panel
-    compareMode.initCompareSelects();
+  compareMode.initMapB();
 
-    compareMode.initMapB();
-    setTimeout(() => {
-      map.invalidateSize();
-      mapState.getMapB()?.invalidateSize();
-    }, 350);
-  } else {
-    // Limpiar y restaurar modo normal
-    compareMode.cleanupComparePanels();
-    mapState.clearSeriesData();
-    hidePlayerControls();
-    hideChartBContainer();
-    if (ndviChartDiv) Plotly.purge(ndviChartDiv);
-    if (chartBDiv) Plotly.purge(chartBDiv);
-    hideChartContainer();
-
-    // Quitar colorbars de ambos mapas al salir de comparativa
-    switchColorbar(map, null, mapState.getMapB() ?? undefined);
-
-    // Limpiar bounding box
-    drawnItems.clearLayers();
-    mapState.clearBbox();
-    document.dispatchEvent(new CustomEvent('bboxChanged', { detail: { hasBbox: false } }));
-    updateBboxStatusBar('draw');
-
-    compareControlsA?.classList.add('hidden');
-    compareModeHint?.classList.add('hidden');
-    toggleModeBanner('compare', false);
-
-    setTimeout(() => map.invalidateSize(), 350);
+  // Activar automáticamente el dibujo de bounding box si no hay ninguno seleccionado
+  if (!mapState.getBbox()) {
+    rectangleDrawer.enable();
   }
+
+  setTimeout(() => {
+    map.invalidateSize();
+    mapState.getMapB()?.invalidateSize();
+  }, 350);
+});
+
+document.addEventListener('compareModeDeactivated', () => {
+  mapState.setCompareModeActive(false);
+  document.body.classList.remove('compare-mode-active');
+
+  // Limpiar y restaurar modo normal
+  compareMode.cleanupComparePanels();
+  mapState.clearSeriesData();
+  hidePlayerControls();
+  hideChartBContainer();
+  if (ndviChartDiv) Plotly.purge(ndviChartDiv);
+  if (chartBDiv) Plotly.purge(chartBDiv);
+  hideChartContainer();
+
+  // Quitar colorbars de ambos mapas al salir de comparativa
+  switchColorbar(map, null, mapState.getMapB() ?? undefined);
+
+  // Limpiar bounding box
+  drawnItems.clearLayers();
+  mapState.clearBbox();
+  document.dispatchEvent(
+    new CustomEvent('bboxChanged', { detail: { hasBbox: false } })
+  );
+
+  compareControlsA?.classList.add('hidden');
+  compareModeHint?.classList.add('hidden');
+  body.classList.remove('sidebar-collapsed');
+  syncSidebarState();
+  toggleModeBanner('compare', false);
+
+  setTimeout(() => map.invalidateSize(), 350);
 });
 
 // ---------------------------------------------------------------------------
 // Listener: limpiar modo normal
 // ---------------------------------------------------------------------------
 
-const tflowClearBtn = document.getElementById(
-  'tflow-clear-btn'
-) as HTMLButtonElement | null;
 tflowClearBtn?.addEventListener('click', () => {
-  normalMode.clearNormalMode();
+  if (mapState.getCompareModeActive()) {
+    compareMode.cleanupComparePanels();
+    compareMode.clearPanelA();
+    compareMode.clearPanelB();
+  } else {
+    normalMode.clearNormalMode();
+  }
   drawnItems.clearLayers();
   mapState.clearBbox();
-  document.dispatchEvent(new CustomEvent('bboxChanged', { detail: { hasBbox: false } }));
-  mapState.setCurrentVariable('ndvi');
-  updateBboxStatusBar('draw');
+  document.dispatchEvent(
+    new CustomEvent('bboxChanged', { detail: { hasBbox: false } })
+  );
 
   // Reset task flow via mapState
   mapState.updateTaskFlowStepStatus('area', 'active');
@@ -834,13 +877,26 @@ function syncLayerButtonState(btn: HTMLButtonElement, isActive: boolean): void {
  * Shows or hides the active GIF overlay based on layer toggle state.
  */
 function toggleGifLayer(show: boolean): void {
-  const overlay = mapState.getOverlayA();
-  if (!overlay) return;
-  if (show && !map.hasLayer(overlay)) {
-    overlay.addTo(map);
-  } else if (!show && map.hasLayer(overlay)) {
-    map.removeLayer(overlay);
+  const overlayA = mapState.getOverlayA();
+  if (overlayA) {
+    if (show && !map.hasLayer(overlayA)) {
+      overlayA.addTo(map);
+    } else if (!show && map.hasLayer(overlayA)) {
+      map.removeLayer(overlayA);
+    }
   }
+
+  // Also apply to Panel B overlay if in compare mode
+  const mapB = mapState.getMapB();
+  const overlayB = mapState.getOverlayB();
+  if (mapB && overlayB) {
+    if (show && !mapB.hasLayer(overlayB)) {
+      overlayB.addTo(mapB);
+    } else if (!show && mapB.hasLayer(overlayB)) {
+      mapB.removeLayer(overlayB);
+    }
+  }
+
   layerVisibility.gif = show;
   if (topbarLayerGif) syncLayerButtonState(topbarLayerGif, show);
 }
@@ -858,6 +914,21 @@ function toggleStationsLayer(show: boolean): void {
       if (map.hasLayer(m)) map.removeLayer(m);
     }
   }
+
+  // Also apply to Map B if in compare mode
+  const mapB = mapState.getMapB();
+  if (mapB) {
+    if (show) {
+      for (const m of stationMarkersMapB) {
+        if (!mapB.hasLayer(m)) m.addTo(mapB);
+      }
+    } else {
+      for (const m of stationMarkersMapB) {
+        if (mapB.hasLayer(m)) mapB.removeLayer(m);
+      }
+    }
+  }
+
   layerVisibility.stations = show;
   if (topbarLayerStations) syncLayerButtonState(topbarLayerStations, show);
 }
@@ -1054,47 +1125,12 @@ _wireLocalStation(bdYearSelect, bdSeasonSelect, btnLocalBdLevel, 'BDCTB', 'local
 // Bbox Status Bar Update
 // ---------------------------------------------------------------------------
 
-const sidebarStatusBar = document.getElementById(
-  'sidebarStatusBar'
-) as HTMLDivElement | null;
 const modeBannerCompare = document.getElementById(
   'modeBannerCompare'
 ) as HTMLDivElement | null;
 const modeBannerFloodRisk = document.getElementById(
   'modeBannerFloodRisk'
 ) as HTMLDivElement | null;
-
-/**
- * Updates the sidebar status bar based on bbox state and generation progress.
- * States: 'draw' (no bbox), 'selected' (bbox exists), 'generating' (animation in progress)
- */
-export function updateBboxStatusBar(
-  state: 'draw' | 'selected' | 'generating' = 'draw'
-): void {
-  if (!sidebarStatusBar) return;
-
-  // Remove all state classes
-  sidebarStatusBar.classList.remove(
-    'sidebar-status-bar--draw',
-    'sidebar-status-bar--selected',
-    'sidebar-status-bar--generating'
-  );
-
-  // Update text and class based on state
-  if (state === 'draw' || !mapState.hasBbox()) {
-    sidebarStatusBar.classList.add('sidebar-status-bar--draw');
-    sidebarStatusBar.textContent = 'Dibuja un rectángulo en el mapa';
-  } else if (state === 'generating') {
-    sidebarStatusBar.classList.add('sidebar-status-bar--generating');
-    sidebarStatusBar.textContent = 'Generando…';
-  } else {
-    sidebarStatusBar.classList.add('sidebar-status-bar--selected');
-    sidebarStatusBar.textContent = 'Área seleccionada';
-  }
-}
-
-// Initialize status bar
-updateBboxStatusBar(mapState.hasBbox() ? 'selected' : 'draw');
 
 // ---------------------------------------------------------------------------
 // Mode Banner Visibility Helpers
@@ -1134,64 +1170,55 @@ document.addEventListener('click', e => {
 // Sidebar colapsar/restaurar
 // ---------------------------------------------------------------------------
 
-const collapseButton = document.getElementById(
-  'sidebarToggle'
-) as HTMLButtonElement | null;
 const restoreButton = document.getElementById(
   'sidebarRestore'
 ) as HTMLButtonElement | null;
 const body = document.body;
 
-if (collapseButton && restoreButton) {
-  const collapseSr = collapseButton.querySelector('.sr-only') as HTMLElement | null;
+export function syncSidebarState(): void {
+  if (!restoreButton) return;
   const restoreSr = restoreButton.querySelector('.sr-only') as HTMLElement | null;
+  const isHidden = body.classList.contains('sidebar-collapsed');
+  restoreButton.setAttribute('aria-expanded', String(isHidden));
+  const label = isHidden ? 'Mostrar panel lateral' : 'Ocultar panel lateral';
+  if (restoreSr) restoreSr.textContent = label;
 
-  const syncState = () => {
-    const isHidden = body.classList.contains('sidebar-collapsed');
-    collapseButton.setAttribute('aria-expanded', String(!isHidden));
-    restoreButton.setAttribute('aria-expanded', String(isHidden));
-    const label = isHidden ? 'Mostrar panel lateral' : 'Ocultar panel lateral';
-    if (collapseSr) collapseSr.textContent = label;
-    if (restoreSr) restoreSr.textContent = label;
-    setTimeout(() => {
-      map.invalidateSize();
-      mapState.getMapB()?.invalidateSize();
+  setTimeout(() => {
+    map.invalidateSize();
+    mapState.getMapB()?.invalidateSize();
 
-      // Resize Plotly charts to fit their new container size
-      try {
-        if (ndviChartDiv && (ndviChartDiv as any).layout) {
-          const width = ndviChartDiv.clientWidth;
-          const height = ndviChartDiv.clientHeight;
-          if (width > 0 && height > 0) {
-            Plotly.relayout(ndviChartDiv, { width, height });
-          }
+    // Resize Plotly charts to fit their new container size
+    try {
+      if (ndviChartDiv && (ndviChartDiv as unknown as { layout?: unknown }).layout) {
+        const width = ndviChartDiv.clientWidth;
+        const height = ndviChartDiv.clientHeight;
+        if (width > 0 && height > 0) {
+          Plotly.relayout(ndviChartDiv, { width, height });
         }
-      } catch {
-        // Ignore errors if the chart isn't initialized yet
       }
+    } catch {
+      // Ignore errors if the chart isn't initialized yet
+    }
 
-      try {
-        if (chartBDiv && (chartBDiv as any).layout) {
-          const width = chartBDiv.clientWidth;
-          const height = chartBDiv.clientHeight;
-          if (width > 0 && height > 0) {
-            Plotly.relayout(chartBDiv, { width, height });
-          }
+    try {
+      if (chartBDiv && (chartBDiv as unknown as { layout?: unknown }).layout) {
+        const width = chartBDiv.clientWidth;
+        const height = chartBDiv.clientHeight;
+        if (width > 0 && height > 0) {
+          Plotly.relayout(chartBDiv, { width, height });
         }
-      } catch {
-        // Ignore errors if the chart isn't initialized yet
       }
-    }, 350);
-  };
+    } catch {
+      // Ignore errors if the chart isn't initialized yet
+    }
+  }, 350);
+}
 
-  syncState();
-  collapseButton.addEventListener('click', () => {
-    body.classList.add('sidebar-collapsed');
-    syncState();
-  });
+if (restoreButton) {
+  syncSidebarState();
   restoreButton.addEventListener('click', () => {
-    body.classList.remove('sidebar-collapsed');
-    syncState();
+    body.classList.toggle('sidebar-collapsed');
+    syncSidebarState();
   });
 }
 

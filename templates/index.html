@@ -54,36 +54,12 @@
                 <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
               </svg>
             </button>
-            <button
-              id="sidebarToggle"
-              type="button"
-              aria-controls="control-sidebar"
-              aria-expanded="true"
-              style="width: 36px; height: 36px;"
-            >
-              <svg
-                class="icon-close"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-              </svg>
-              <span class="sr-only">Ocultar panel lateral</span>
-            </button>
+
           </div>
         </div>
       </header>
 
-      <!-- Status bar for bbox/state feedback (legacy - kept for compatibility) -->
-      <div id="sidebarStatusBar" class="sidebar-status-bar sidebar-status-bar--draw">
-        Dibuja un rectángulo en el mapa
-      </div>
+
 
       <!-- NEW TASK FLOW STRUCTURE -->
       <div id="tflow-container" class="tflow-container">
@@ -281,6 +257,25 @@
           </button>
         </div>
 
+        <div class="municipios-grid">
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="balancan"> Balancán</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="cardenas"> Cárdenas</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="centla"> Centla</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="centro"> Centro</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="comalcalco"> Comalcalco</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="cunduacan"> Cunduacán</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="emiliano_zapata"> Emiliano Zapata</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="huimanguillo"> Huimanguillo</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="jalapa"> Jalapa</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="jalpa_de_mendez"> Jalpa de Méndez</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="jonuta"> Jonuta</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="macuspana"> Macuspana</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="nacajuca"> Nacajuca</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="paraiso"> Paraíso</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="tacotalpa"> Tacotalpa</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="tenosique"> Tenosique</label>
+        </div>
+
         <p class="hint compare-mode-hint hidden">
           En modo comparativa los controles de la izquierda están bloqueados.
           Usa los controles de variable, año y temporada que aparecen debajo de
@@ -302,15 +297,11 @@
       Modo riesgo de inundación activado — los controles de animación están bloqueados
     </div>
 
-    <!-- Contenedor vertical: mapas + gráficas -->
-    <div id="map-and-chart">
+    <!-- Contenedor principal del visor (mapas + controles + gráficas) -->
+    <div class="main-viewer-container">
 
-      <!-- Panel A: siempre visible -->
-      <div class="map-panel" id="map-panel-a">
-        <div class="panel-label" aria-hidden="true">Período A</div>
-
-        <!-- PR1: Map overlay topbar — playback controls + layer toggles -->
-        <div id="map-overlay-topbar" class="map-overlay-topbar" role="group" aria-label="Controles de animación">
+      <!-- PR1: Map overlay topbar — playback controls + layer toggles -->
+      <div id="map-overlay-topbar-a" class="map-overlay-topbar" role="group" aria-label="Controles de animación">
           <div class="topbar-playback">
             <button id="topbar-play-pause" type="button" class="topbar-btn topbar-play-btn" aria-label="Reproducir animación">
               <span id="topbar-play-icon" aria-hidden="true">▶</span>
@@ -374,10 +365,34 @@
               </svg>
               <span>Inundación</span>
             </button>
+            <div class="topbar-divider"></div>
+            <button id="topbar-draw-btn" type="button" class="topbar-layer-btn" title="Dibujar área de análisis en el mapa">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              <span>Dibujar área</span>
+            </button>
+            <button id="topbar-clear-btn" type="button" class="topbar-layer-btn destructive-btn hidden" title="Limpiar área seleccionada">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14H6L5 6"></path>
+                <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                <path d="M9 6V4h6v2"></path>
+              </svg>
+              <span>Limpiar área</span>
+            </button>
           </div>
-        </div>
+      </div>
 
-        <div id="map" role="region" aria-label="Mapa principal (Período A)">
+      <!-- Contenedor vertical: mapas + gráficas -->
+      <div id="map-and-chart">
+
+        <!-- Panel A: siempre visible -->
+        <div class="map-panel" id="map-panel-a">
+          <div class="panel-label" aria-hidden="true">Período A</div>
+
+          <div id="map" role="region" aria-label="Mapa principal (Período A)">
           <button
             id="sidebarRestore"
             type="button"
@@ -398,20 +413,25 @@
               <line x1="4" y1="12" x2="20" y2="12"></line>
               <line x1="4" y1="17" x2="20" y2="17"></line>
             </svg>
+            <svg
+              class="icon-close"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+            </svg>
             <span class="sr-only">Mostrar panel lateral</span>
           </button>
           <!-- PR1: Floating date label overlay -->
           <span id="animation-date-label" class="animation-date-label" aria-live="polite"></span>
         </div>
         <div id="ndvi-chart-container">
-          <!-- Chart placeholder (shown when no data) -->
-          <div id="chartPlaceholderA" class="chart-placeholder">
-            <div class="chart-placeholder-content">
-              <span class="chart-placeholder-icon">📊</span>
-              <p class="chart-placeholder-text">Dibuja un área y genera una animación para ver la gráfica</p>
-            </div>
-          </div>
-
           <!-- Controles de comparativa panel A (visibles solo en modo comparativa) -->
           <div id="compare-controls-a" class="compare-panel-controls hidden">
             <div class="compare-selects-row">
@@ -440,9 +460,6 @@
               <button id="btnGenerateA" class="primary-action compare-generate-btn" disabled>
                 Generar panel A
               </button>
-              <button id="btnClearA" type="button" class="destructive-btn">
-                Limpiar panel
-              </button>
             </div>
             <div class="compare-station-checks">
               <span class="compare-station-checks-label">Estaciones:</span>
@@ -450,6 +467,15 @@
               <label><input type="checkbox" id="chkStationBdA"> Boca del Cerro (BDCTB)</label>
             </div>
           </div>
+
+          <!-- Chart placeholder (shown when no data) -->
+          <div id="chartPlaceholderA" class="chart-placeholder">
+            <div class="chart-placeholder-content">
+              <span class="chart-placeholder-icon">📊</span>
+              <p class="chart-placeholder-text">Dibuja un área y genera una animación para ver la gráfica</p>
+            </div>
+          </div>
+
           <div id="export-toolbar">
             <div class="export-mode-toggle">
                 <label for="reportModeToggle" class="toggle-label">Modo:</label>
@@ -473,58 +499,13 @@
       <div class="map-panel" id="map-panel-b">
         <div class="panel-label" aria-hidden="true">Período B</div>
 
-        <!-- PR1: Map overlay topbar for panel B (compare mode) -->
-        <div id="map-overlay-topbar-b" class="map-overlay-topbar" role="group" aria-label="Controles de animación panel B">
-          <div class="topbar-playback">
-            <button id="topbar-play-pause-b" type="button" class="topbar-btn topbar-play-btn" aria-label="Reproducir animación panel B">
-              <span id="topbar-play-icon-b" aria-hidden="true">▶</span>
-            </button>
-            <input
-              id="topbar-slider-b"
-              type="range"
-              min="0"
-              max="0"
-              value="0"
-              step="1"
-              class="topbar-slider"
-              aria-label="Posición del frame panel B"
-            />
-            <span id="topbar-frame-label-b" class="topbar-frame-label" aria-live="polite">0 / 0</span>
-            <select id="topbar-speed-b" class="topbar-speed-select" aria-label="Velocidad de reproducción panel B" title="Velocidad">
-              <option value="4000">0.25x</option>
-              <option value="2000">0.5x</option>
-              <option value="1333">0.75x</option>
-              <option value="1000" selected>1x</option>
-              <option value="800">1.25x</option>
-              <option value="667">1.5x</option>
-              <option value="571">1.75x</option>
-              <option value="500">2x</option>
-            </select>
-          </div>
-          <div class="topbar-layer-toggles">
-            <button id="topbar-layer-gif-b" type="button" class="topbar-layer-btn topbar-layer-btn--active" data-layer="gif-b" aria-pressed="true" title="Mostrar/ocultar animación GIF panel B">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
-                <rect x="2" y="3" width="20" height="18" rx="2"/>
-                <path d="M8 12h.01M12 12h.01M16 12h.01"/>
-              </svg>
-              <span>Animación</span>
-            </button>
-          </div>
-        </div>
+
 
         <div id="map-b" role="region" aria-label="Mapa comparativa (Período B)">
           <!-- PR1: Floating date label overlay for map B -->
           <span id="animation-date-label-b" class="animation-date-label" aria-live="polite"></span>
         </div>
         <div id="chart-b-container" class="hidden">
-          <!-- Chart placeholder for panel B -->
-          <div id="chartPlaceholderB" class="chart-placeholder">
-            <div class="chart-placeholder-content">
-              <span class="chart-placeholder-icon">📊</span>
-              <p class="chart-placeholder-text">Genera una animación en el panel B para ver la gráfica</p>
-            </div>
-          </div>
-
           <!-- Controles de comparativa panel B -->
           <div id="compare-controls-b" class="compare-panel-controls">
             <div class="compare-selects-row">
@@ -553,9 +534,6 @@
               <button id="btnGenerateB" class="primary-action compare-generate-btn" disabled>
                 Generar panel B
               </button>
-              <button id="btnClearB" type="button" class="destructive-btn">
-                Limpiar panel
-              </button>
             </div>
             <div class="compare-station-checks">
               <span class="compare-station-checks-label">Estaciones:</span>
@@ -563,6 +541,15 @@
               <label><input type="checkbox" id="chkStationBdB"> Boca del Cerro (BDCTB)</label>
             </div>
           </div>
+
+          <!-- Chart placeholder for panel B -->
+          <div id="chartPlaceholderB" class="chart-placeholder">
+            <div class="chart-placeholder-content">
+              <span class="chart-placeholder-icon">📊</span>
+              <p class="chart-placeholder-text">Genera una animación en el panel B para ver la gráfica</p>
+            </div>
+          </div>
+
           <div id="chart-b"></div>
         </div>
       </div>
@@ -596,6 +583,7 @@
         </select>
       </div>
 
+    </div>
     </div>
   </div>
 
