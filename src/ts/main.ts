@@ -31,7 +31,7 @@ import {
 } from './ui/progress.js';
 import { showFieldError } from './ui/fieldErrors.js';
 import { translateBackendError } from './errorMap.js';
-import { plotAllSelectedSeries } from './ui/chart.js';
+import { plotAllSelectedSeries, isDarkModeActive } from './ui/chart.js';
 import { seasonToDates } from './utils/seasonDates.js';
 
 import {
@@ -1101,6 +1101,20 @@ if (collapseButton && restoreButton) {
   restoreButton.addEventListener('click', () => {
     body.classList.remove('sidebar-collapsed');
     syncState();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Theme Selector Toggle
+// ---------------------------------------------------------------------------
+
+const themeToggleBtn = document.getElementById('themeToggle');
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener('click', () => {
+    const isDark = isDarkModeActive();
+    const nextTheme = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    window.dispatchEvent(new Event('theme-change'));
   });
 }
 

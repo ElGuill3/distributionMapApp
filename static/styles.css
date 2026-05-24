@@ -157,8 +157,9 @@
 /* ==========================================================================
    Dark Mode Overrides
    ========================================================================== */
+:root[data-theme="dark"],
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     /* Raw palette inversion */
     --gray-0: #0b0f19;
     --gray-50: #111827;
@@ -814,45 +815,70 @@ body.animation-loaded .animation-date-label {
 }
 
 /* Dark mode for topbar */
+:root[data-theme="dark"] .map-overlay-topbar,
 @media (prefers-color-scheme: dark) {
-  .map-overlay-topbar {
+  :root:not([data-theme="light"]) .map-overlay-topbar {
     background: rgba(17, 24, 39, 0.92);
     border-bottom-color: var(--gray-200);
   }
+}
 
-  .animation-date-label {
+:root[data-theme="dark"] .animation-date-label,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .animation-date-label {
     background: rgba(0, 0, 0, 0.65);
   }
+}
 
-  .leaflet-draw-toolbar a {
+:root[data-theme="dark"] .leaflet-draw-toolbar a,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-draw-toolbar a {
     background: var(--gray-800) !important;
     border-color: var(--gray-600) !important;
   }
+}
 
-  .leaflet-draw-toolbar a:hover {
+:root[data-theme="dark"] .leaflet-draw-toolbar a:hover,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-draw-toolbar a:hover {
     background: var(--gray-700) !important;
   }
+}
 
-  .leaflet-draw-tooltip {
+:root[data-theme="dark"] .leaflet-draw-tooltip,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-draw-tooltip {
     background: var(--gray-900) !important;
     border-color: var(--gray-700) !important;
     color: var(--gray-200) !important;
   }
+}
 
-  .leaflet-draw-tooltip:before {
+:root[data-theme="dark"] .leaflet-draw-tooltip:before,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-draw-tooltip:before {
     border-right-color: var(--gray-700) !important;
   }
+}
 
-  .leaflet-draw-actions a {
+:root[data-theme="dark"] .leaflet-draw-actions a,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-draw-actions a {
     background-color: var(--gray-600) !important;
     color: var(--gray-200) !important;
   }
+}
 
-  .leaflet-draw-actions a:hover {
+:root[data-theme="dark"] .leaflet-draw-actions a:hover,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-draw-actions a:hover {
     background-color: var(--gray-500) !important;
   }
+}
 
-  .leaflet-draw-toolbar a.leaflet-disabled {
+:root[data-theme="dark"] .leaflet-draw-toolbar a.leaflet-disabled,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-draw-toolbar a.leaflet-disabled {
     background: var(--gray-700) !important;
     border-color: var(--gray-600) !important;
     opacity: 0.4 !important;
@@ -2193,8 +2219,9 @@ body:not(.flood-risk-mode-active) .tflow-modo-section .flood-risk-mode-hint {
 }
 
 /* Dark mode overrides for task flow */
+:root[data-theme="dark"] .tflow-modo-section,
 @media (prefers-color-scheme: dark) {
-  .tflow-modo-section {
+  :root:not([data-theme="light"]) .tflow-modo-section {
     background: var(--gray-100);
   }
 }
@@ -2202,4 +2229,59 @@ body:not(.flood-risk-mode-active) .tflow-modo-section .flood-risk-mode-hint {
 /* Utility class */
 .hidden {
   display: none !important;
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  color: var(--surface-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+.theme-toggle-btn:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-300);
+}
+.theme-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Visibility toggles based on theme state */
+:root:not([data-theme="dark"]) .theme-toggle-btn .icon-sun {
+  display: none !important;
+}
+:root:not([data-theme="dark"]) .theme-toggle-btn .icon-moon {
+  display: block !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle-btn .icon-sun {
+    display: block !important;
+  }
+  :root:not([data-theme="light"]) .theme-toggle-btn .icon-moon {
+    display: none !important;
+  }
+}
+
+:root[data-theme="dark"] .theme-toggle-btn .icon-sun {
+  display: block !important;
+}
+:root[data-theme="dark"] .theme-toggle-btn .icon-moon {
+  display: none !important;
+}
+
+:root[data-theme="light"] .theme-toggle-btn .icon-sun {
+  display: none !important;
+}
+:root[data-theme="light"] .theme-toggle-btn .icon-moon {
+  display: block !important;
 }

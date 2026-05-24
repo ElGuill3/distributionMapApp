@@ -14,42 +14,50 @@ import type { VariableKey, SeriesData } from '../types.js';
 
 interface VariableChartConfig {
   label: string;
-  lineColor: string;
+  lineColorLight: string;
+  lineColorDark: string;
   yRange?: (dataMin: number, dataMax: number, padding: number) => [number, number];
 }
 
 const VARIABLE_CHART_CONFIG: Record<VariableKey, VariableChartConfig> = {
   ndvi: {
     label: 'NDVI',
-    lineColor: '#006837',
+    lineColorLight: '#006837', // Verde oscuro rico
+    lineColorDark: '#34d399',  // Esmeralda brillante
     yRange: (min, max, pad) => [Math.max(0, min - pad), Math.min(1, max + pad)],
   },
   temp: {
     label: 'Temp (°C)',
-    lineColor: '#ff4f00',
+    lineColorLight: '#ef4444', // Rojo
+    lineColorDark: '#f97316',  // Naranja
   },
   soil: {
     label: 'Humedad suelo (%)',
-    lineColor: '#2b6cb0',
+    lineColorLight: '#1d4ed8', // Azul royal
+    lineColorDark: '#60a5fa',  // Azul cielo brillante
     yRange: () => [0, 100],
   },
   precip: {
     label: 'Precipitación diaria (mm/día)',
-    lineColor: '#0044aa',
+    lineColorLight: '#0369a1', // Azul profundo
+    lineColorDark: '#38bdf8',  // Celeste vibrante
     yRange: (min, max, pad) => [Math.max(0, min - pad), max + pad],
   },
   water: {
     label: 'Superficie agua (ha)',
-    lineColor: '#0000ff',
+    lineColorLight: '#0f766e', // Teal oscuro
+    lineColorDark: '#2dd4bf',  // Turquesa brillante
     yRange: (_min, max, pad) => [0, max + pad],
   },
   local_sp: {
     label: 'Nivel San Pedro (m)',
-    lineColor: '#8b5cf6',
+    lineColorLight: '#6d28d9', // Violeta
+    lineColorDark: '#c084fc',  // Lavanda pastel
   },
   local_bd: {
     label: 'Nivel Boca del Cerro (m)',
-    lineColor: '#ec4899',
+    lineColorLight: '#be185d', // Rosa profundo
+    lineColorDark: '#f472b6',  // Rosa pastel brillante
   },
 };
 
@@ -64,6 +72,24 @@ interface TraceConfig {
   dates: string[];
   values: number[];
   yRange: [number, number];
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getThemeColor(varName: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return val || fallback;
+}
+
+function hexToRgba(hex: string, opacity: number): string {
+  const cleanHex = hex.replace('#', '');
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,10 +114,13 @@ export function buildTrace(
     ? cfg.yRange(dataMin, dataMax, padding)
     : [dataMin - padding, dataMax + padding];
 
+  const isDark = isDarkModeActive();
+  const lineColor = isDark ? cfg.lineColorDark : cfg.lineColorLight;
+
   return {
     variable,
     label: cfg.label,
-    lineColor: cfg.lineColor,
+    lineColor,
     dates,
     values,
     yRange,
@@ -105,7 +134,6 @@ export function buildTrace(
  * @returns Blob de la imagen PNG.
  */
 export async function plotChartAsPng(chartDiv: HTMLDivElement): Promise<Blob> {
-  // Plotly.toImage devuelve una string data URL (data:image/png;base64,...)
   const dataUrl = await Plotly.toImage(chartDiv, {
     format: 'png',
     width: 1200,
@@ -113,20 +141,50 @@ export async function plotChartAsPng(chartDiv: HTMLDivElement): Promise<Blob> {
     scale: 2,
   } as Record<string, unknown>);
 
-  // Convertir data URL a Blob
   const response = await fetch(dataUrl);
   return response.blob();
 }
 
+// Registro de gráficas activas para el repintado ante cambio de tema
+interface LastPlotState {
+  allSeries: Partial<Record<VariableKey, SeriesData | undefined>>;
+  onShow: () => void;
+  onHide: () => void;
+  onShowPlaceholder?: () => void;
+  onHidePlaceholder?: () => void;
+}
+
+const activeCharts = new Map<HTMLDivElement, LastPlotState>();
+
+export function isDarkModeActive(): boolean {
+  if (typeof window === 'undefined') return false;
+  const theme = document.documentElement.getAttribute('data-theme');
+  if (theme === 'dark') return true;
+  if (theme === 'light') return false;
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+if (typeof window !== 'undefined') {
+  const redraw = () => {
+    for (const [chartDiv, state] of activeCharts.entries()) {
+      plotAllSelectedSeries(
+        chartDiv,
+        state.allSeries,
+        state.onShow,
+        state.onHide,
+        state.onShowPlaceholder,
+        state.onHidePlaceholder
+      );
+    }
+  };
+  if (typeof window.matchMedia === 'function') {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw);
+  }
+  window.addEventListener('theme-change', redraw);
+}
+
 /**
  * Renderiza todas las series activas en la gráfica Plotly.
- *
- * @param chartDiv    - Elemento DOM donde se monta Plotly.
- * @param allSeries   - Mapa con los datos de cada variable activa.
- * @param onShow      - Callback llamado cuando la gráfica tiene al menos una serie.
- * @param onHide      - Callback llamado cuando no hay ninguna serie.
- * @param onShowPlaceholder - Callback llamado para mostrar el placeholder (cuando no hay datos).
- * @param onHidePlaceholder - Callback llamado para ocultar el placeholder (cuando hay datos).
  */
 export function plotAllSelectedSeries(
   chartDiv: HTMLDivElement,
@@ -155,6 +213,7 @@ export function plotAllSelectedSeries(
 
   if (seriesReady.length === 0) {
     Plotly.purge(chartDiv);
+    activeCharts.delete(chartDiv);
     onHide();
     if (onShowPlaceholder) onShowPlaceholder();
     return;
@@ -162,6 +221,22 @@ export function plotAllSelectedSeries(
 
   onShow();
   if (onHidePlaceholder) onHidePlaceholder();
+
+  // Guardar estado de la gráfica activa
+  const state: LastPlotState = {
+    allSeries,
+    onShow,
+    onHide,
+  };
+  if (onShowPlaceholder !== undefined) state.onShowPlaceholder = onShowPlaceholder;
+  if (onHidePlaceholder !== undefined) state.onHidePlaceholder = onHidePlaceholder;
+  activeCharts.set(chartDiv, state);
+
+  const isDark = isDarkModeActive();
+  const fgColor = getThemeColor('--surface-fg', '#374151');
+  const gridColor = getThemeColor('--gray-200', '#dce1e7');
+  const zeroLineColor = getThemeColor('--gray-300', '#b0b8c4');
+  const textColor = getThemeColor('--gray-400', '#6b7280');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const traces: any[] = [];
@@ -173,10 +248,18 @@ export function plotAllSelectedSeries(
     const axisKey = idx === 0 ? 'yaxis' : `yaxis${idx + 1}`;
 
     yAxesConfig[axisKey] = {
-      title: s.label,
+      title: {
+        text: s.label,
+        font: { family: 'system-ui, sans-serif', size: 11, color: fgColor }
+      },
       range: s.yRange,
       side: idx === 0 ? 'left' : 'right',
       overlaying: idx === 0 ? undefined : 'y',
+      gridcolor: gridColor,
+      zeroline: true,
+      zerolinecolor: zeroLineColor,
+      tickfont: { family: 'system-ui, sans-serif', size: 10, color: textColor },
+      showline: false,
     };
 
     traces.push({
@@ -185,8 +268,15 @@ export function plotAllSelectedSeries(
       type: 'scatter',
       mode: 'lines',
       name: s.label,
-      line: { color: s.lineColor, width: 2 },
+      line: { color: s.lineColor, width: 3, shape: 'spline' },
+      fill: 'tozeroy',
+      fillcolor: hexToRgba(s.lineColor, 0.08),
       hovertemplate: `Fecha: %{x}<br>${s.label}: %{y:.2f}<extra></extra>`,
+      hoverlabel: {
+        bgcolor: isDark ? '#1f2933' : '#ffffff',
+        bordercolor: s.lineColor,
+        font: { family: 'system-ui, sans-serif', size: 12, color: fgColor }
+      },
       yaxis: axisName,
     });
   });
@@ -200,8 +290,35 @@ export function plotAllSelectedSeries(
       margin: { l: 60, r: 60, t: 30, b: 50 },
       width,
       height,
-      xaxis: { title: 'Fecha', type: 'date' },
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      xaxis: {
+        title: {
+          text: 'Fecha',
+          font: { family: 'system-ui, sans-serif', size: 12, color: textColor }
+        },
+        type: 'date',
+        tickfont: { family: 'system-ui, sans-serif', size: 10, color: textColor },
+        showgrid: false,
+        zeroline: false,
+        showline: true,
+        linecolor: gridColor,
+        showspikes: true,
+        spikemode: 'across',
+        spikedash: 'dash',
+        spikethickness: 1,
+        spikecolor: zeroLineColor
+      },
       showlegend: true,
+      legend: {
+        font: { family: 'system-ui, sans-serif', size: 10, color: fgColor },
+        orientation: 'h',
+        yanchor: 'bottom',
+        y: 1.02,
+        xanchor: 'right',
+        x: 1,
+        bgcolor: 'rgba(0,0,0,0)'
+      },
       ...yAxesConfig,
     };
 
