@@ -267,6 +267,28 @@ const chartBContainer = document.getElementById(
 ) as HTMLDivElement | null;
 const chartBDiv = document.getElementById('chart-b') as HTMLDivElement | null;
 
+// ResizeObserver to handle auto-resizing of Plotly charts on layout/container size shifts
+const chartResizeObserver = new ResizeObserver((entries) => {
+  for (const entry of entries) {
+    const target = entry.target;
+    const chartDiv = target.querySelector('#ndvi-chart, #chart-b');
+    if (chartDiv) {
+      try {
+        Plotly.Plots.resize(chartDiv);
+      } catch {
+        // Ignore if not initialized
+      }
+    }
+  }
+});
+
+if (ndviChartContainer) {
+  chartResizeObserver.observe(ndviChartContainer);
+}
+if (chartBContainer) {
+  chartResizeObserver.observe(chartBContainer);
+}
+
 // Phase B: allSeriesDataB now managed via mapState (seriesDataB)
 
 function showChartBContainer(): void {
