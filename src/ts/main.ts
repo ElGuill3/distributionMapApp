@@ -1130,6 +1130,19 @@ if (collapseButton && restoreButton) {
     setTimeout(() => {
       map.invalidateSize();
       mapState.getMapB()?.invalidateSize();
+
+      // Resize Plotly charts to fit their new container size
+      try {
+        if (ndviChartDiv) Plotly.Plots.resize(ndviChartDiv);
+      } catch {
+        // Ignore errors if the chart isn't initialized yet
+      }
+
+      try {
+        if (chartBDiv) Plotly.Plots.resize(chartBDiv);
+      } catch {
+        // Ignore errors if the chart isn't initialized yet
+      }
     }, 350);
   };
 
