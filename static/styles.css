@@ -308,23 +308,28 @@ body.sidebar-collapsed .sidebar {
 
 .sidebar-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sidebar-header-gap);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
   margin-bottom: 0.5rem;
 }
 
 .sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
 }
 
-.sidebar-brand img {
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
+.sidebar-header-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.sidebar-header-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
 }
 
 .sidebar h1 {
@@ -1975,10 +1980,13 @@ body:has(.mode-banner:not(.hidden)) #map-and-chart {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: var(--logo-container-bg);
-  border-radius: var(--logo-container-radius);
+  width: 100%;
+  height: 60px;
+  background: #ffffff;
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
   overflow: hidden;
 }

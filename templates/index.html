@@ -52,53 +52,54 @@
         <div class="sidebar-brand">
           <div class="sidebar-brand-logo-container">
             <img
-              src="/static/assets/branding/logo-icon.webp"
-              alt="Logo"
-              width="40"
-              height="44"
-              style="object-fit: contain;"
+              src="/static/assets/branding/logo.webp"
+              alt="Logo Cómputo Distribuido"
             />
           </div>
-          <h1 style="font-weight: 600;">Visor meteorológico</h1>
         </div>
-        <button
-          id="themeToggle"
-          type="button"
-          class="theme-toggle-btn"
-          aria-label="Alternar modo claro u oscuro"
-          title="Alternar modo claro u oscuro"
-          style="width: 36px; height: 36px;"
-        >
-          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
-            <circle cx="12" cy="12" r="4"/>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-          </svg>
-          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
-          </svg>
-        </button>
-        <button
-          id="sidebarToggle"
-          type="button"
-          aria-controls="control-sidebar"
-          aria-expanded="true"
-          style="width: 36px; height: 36px;"
-        >
-          <svg
-            class="icon-close"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-          </svg>
-          <span class="sr-only">Ocultar panel lateral</span>
-        </button>
+        <div class="sidebar-header-bottom-row">
+          <h1 style="font-weight: 600;">Visor meteorológico</h1>
+          <div class="sidebar-header-actions">
+            <button
+              id="themeToggle"
+              type="button"
+              class="theme-toggle-btn"
+              aria-label="Alternar modo claro u oscuro"
+              title="Alternar modo claro u oscuro"
+              style="width: 36px; height: 36px;"
+            >
+              <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+              </svg>
+              <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+              </svg>
+            </button>
+            <button
+              id="sidebarToggle"
+              type="button"
+              aria-controls="control-sidebar"
+              aria-expanded="true"
+              style="width: 36px; height: 36px;"
+            >
+              <svg
+                class="icon-close"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+              </svg>
+              <span class="sr-only">Ocultar panel lateral</span>
+            </button>
+          </div>
+        </div>
       </header>
 
       <!-- Status bar for bbox/state feedback (legacy - kept for compatibility) -->
