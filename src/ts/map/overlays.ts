@@ -14,6 +14,7 @@
  */
 
 import type { VariableKey } from '../types.js';
+import * as mapState from '../state/mapState.js';
 
 // ---------------------------------------------------------------------------
 // Estado de overlays
@@ -32,7 +33,12 @@ export const municipalFloodOverlays: Record<string, L.ImageOverlay> = {};
  * @param opacity - Value from 0 to 100 (slider input)
  */
 export function setOverlayOpacity(opacity: number): void {
-  activeOverlay?.setOpacity(opacity / 100);
+  if (mapState.getCompareModeActive()) {
+    mapState.getOverlayA()?.setOpacity(opacity / 100);
+    mapState.getOverlayB()?.setOpacity(opacity / 100);
+  } else {
+    activeOverlay?.setOpacity(opacity / 100);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +100,9 @@ export function removeActiveOverlay(map: L.Map): void {
 // Helpers privados
 // ---------------------------------------------------------------------------
 
+const CHEVRON_UP_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
+const CHEVRON_DOWN_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
 function _makeColorbar(cssClass: string, innerHtml: string): L.Control {
   const ctrl = new L.Control({ position: 'topright' });
   ctrl.onAdd = () => {
@@ -108,14 +117,14 @@ function _makeColorbar(cssClass: string, innerHtml: string): L.Control {
     ) as HTMLButtonElement;
     toggleBtn.type = 'button';
     toggleBtn.title = 'Ocultar leyenda';
-    toggleBtn.textContent = '◀';
+    toggleBtn.innerHTML = CHEVRON_UP_SVG;
 
     const content = L.DomUtil.create('div', cssClass, wrapper);
     content.innerHTML = innerHtml;
 
     toggleBtn.addEventListener('click', () => {
       const hidden = content.classList.toggle('colorbar-content-hidden');
-      toggleBtn.textContent = hidden ? '▶' : '◀';
+      toggleBtn.innerHTML = hidden ? CHEVRON_DOWN_SVG : CHEVRON_UP_SVG;
       toggleBtn.title = hidden ? 'Mostrar leyenda' : 'Ocultar leyenda';
     });
 
@@ -128,11 +137,11 @@ function _ndviHtml(): string {
   return `
     <div class="ndvi-colorbar-scale"></div>
     <div class="ndvi-colorbar-labels">
-      <span class="ndvi-max">0.5-0.8 Vegetación densa, salud vegetal alta.</span>
-      <span class="ndvi-max">0.3-0.5 Vegetación moderada, agricultura.</span>
-      <span class="ndvi-max">0.2-0.3 Vegetación escasa, pastos secos.</span>
-      <span class="ndvi-mid">0.1-0.2 Poca vegetación, zonas áridas.</span>
-      <span class="ndvi-min">0.0-0.1 Suelo desnudo, roca, nieve, agua.</span>
+      <span class="colorbar-label-item" data-tooltip="Vegetación densa, salud vegetal alta.">0.5 – 0.8</span>
+      <span class="colorbar-label-item" data-tooltip="Vegetación moderada, agricultura.">0.3 – 0.5</span>
+      <span class="colorbar-label-item" data-tooltip="Vegetación escasa, pastos secos.">0.2 – 0.3</span>
+      <span class="colorbar-label-item" data-tooltip="Poca vegetación, zonas áridas.">0.1 – 0.2</span>
+      <span class="colorbar-label-item" data-tooltip="Suelo desnudo, roca, nieve, agua.">0.0 – 0.1</span>
     </div>`;
 }
 
@@ -140,9 +149,14 @@ function _tempHtml(): string {
   return `
     <div class="temp-colorbar-scale"></div>
     <div class="temp-colorbar-labels">
-      <span>≥ 35 °C</span><span>30–35 °C</span><span>25–30 °C</span>
-      <span>20–25 °C</span><span>15–20 °C</span><span>10–15 °C</span>
-      <span>5–10 °C</span><span>0–5 °C</span>
+      <span class="colorbar-label-item">≥ 35 °C</span>
+      <span class="colorbar-label-item">30–35 °C</span>
+      <span class="colorbar-label-item">25–30 °C</span>
+      <span class="colorbar-label-item">20–25 °C</span>
+      <span class="colorbar-label-item">15–20 °C</span>
+      <span class="colorbar-label-item">10–15 °C</span>
+      <span class="colorbar-label-item">5–10 °C</span>
+      <span class="colorbar-label-item">0–5 °C</span>
     </div>`;
 }
 
@@ -150,9 +164,13 @@ function _soilHtml(): string {
   return `
     <div class="soil-colorbar-scale"></div>
     <div class="soil-colorbar-labels">
-      <span>≥ 60 %</span><span>50–60 %</span><span>40–50 %</span>
-      <span>30–40 %</span><span>20–30 %</span><span>10–20 %</span>
-      <span>0–10 %</span>
+      <span class="colorbar-label-item">≥ 60 %</span>
+      <span class="colorbar-label-item">50–60 %</span>
+      <span class="colorbar-label-item">40–50 %</span>
+      <span class="colorbar-label-item">30–40 %</span>
+      <span class="colorbar-label-item">20–30 %</span>
+      <span class="colorbar-label-item">10–20 %</span>
+      <span class="colorbar-label-item">0–10 %</span>
     </div>`;
 }
 
@@ -160,10 +178,13 @@ function _precipHtml(): string {
   return `
     <div class="precip-colorbar-scale"></div>
     <div class="precip-colorbar-labels">
-      <span>≥ 80 mm/día</span><span>60–80 mm/día</span>
-      <span>40–60 mm/día</span><span>20–40 mm/día</span>
-      <span>10–20 mm/día</span><span>1–10 mm/día</span>
-      <span>0–1 mm/día</span>
+      <span class="colorbar-label-item">≥ 80 mm/día</span>
+      <span class="colorbar-label-item">60–80 mm/día</span>
+      <span class="colorbar-label-item">40–60 mm/día</span>
+      <span class="colorbar-label-item">20–40 mm/día</span>
+      <span class="colorbar-label-item">10–20 mm/día</span>
+      <span class="colorbar-label-item">1–10 mm/día</span>
+      <span class="colorbar-label-item">0–1 mm/día</span>
     </div>`;
 }
 
@@ -172,7 +193,9 @@ function _waterHtml(): string {
     <div class="precip-colorbar-scale"
          style="background: linear-gradient(to top, #00000000 0%, #0000ff 100%);"></div>
     <div class="precip-colorbar-labels">
-      <span>100 % agua</span><span>50 % agua</span><span>0 % agua</span>
+      <span class="colorbar-label-item">100 % agua</span>
+      <span class="colorbar-label-item">50 % agua</span>
+      <span class="colorbar-label-item">0 % agua</span>
     </div>`;
 }
 
@@ -180,8 +203,10 @@ function _floodHtml(): string {
   return `
     <div class="flood-risk-colorbar-scale"></div>
     <div class="flood-risk-colorbar-labels">
-      <span>80–100 Crítico</span><span>60–80  Muy alto</span>
-      <span>40–60  Alto</span><span>20–40  Moderado</span>
-      <span>0–20   Bajo</span>
+      <span class="colorbar-label-item" data-tooltip="Crítico">80 – 100</span>
+      <span class="colorbar-label-item" data-tooltip="Muy alto">60 – 80</span>
+      <span class="colorbar-label-item" data-tooltip="Alto">40 – 60</span>
+      <span class="colorbar-label-item" data-tooltip="Moderado">20 – 40</span>
+      <span class="colorbar-label-item" data-tooltip="Bajo">0 – 20</span>
     </div>`;
 }

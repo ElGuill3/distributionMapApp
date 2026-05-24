@@ -70,14 +70,12 @@ let _compareVarASelect: HTMLSelectElement | null = null;
 let _compareYearASelect: HTMLSelectElement | null = null;
 let _compareSeasonASelect: HTMLSelectElement | null = null;
 let _btnGenerateA: HTMLButtonElement | null = null;
-let _btnClearA: HTMLButtonElement | null = null;
 
 /** Selectores de comparativa — panel B. */
 let _compareVarBSelect: HTMLSelectElement | null = null;
 let _compareYearBSelect: HTMLSelectElement | null = null;
 let _compareSeasonBSelect: HTMLSelectElement | null = null;
 let _btnGenerateB: HTMLButtonElement | null = null;
-let _btnClearB: HTMLButtonElement | null = null;
 
 /** Checkboxes de estaciones en modo comparativa. */
 let _chkStationSpA: HTMLInputElement | null = null;
@@ -110,12 +108,10 @@ export interface CompareModeDomRefs {
   compareYearASelect: HTMLSelectElement | null;
   compareSeasonASelect: HTMLSelectElement | null;
   btnGenerateA: HTMLButtonElement | null;
-  btnClearA: HTMLButtonElement | null;
   compareVarBSelect: HTMLSelectElement | null;
   compareYearBSelect: HTMLSelectElement | null;
   compareSeasonBSelect: HTMLSelectElement | null;
   btnGenerateB: HTMLButtonElement | null;
-  btnClearB: HTMLButtonElement | null;
   chkStationSpA: HTMLInputElement | null;
   chkStationBdA: HTMLInputElement | null;
   chkStationSpB: HTMLInputElement | null;
@@ -147,12 +143,10 @@ export function initCompareMode(domRefs: CompareModeDomRefs): void {
   _compareYearASelect = domRefs.compareYearASelect;
   _compareSeasonASelect = domRefs.compareSeasonASelect;
   _btnGenerateA = domRefs.btnGenerateA;
-  _btnClearA = domRefs.btnClearA;
   _compareVarBSelect = domRefs.compareVarBSelect;
   _compareYearBSelect = domRefs.compareYearBSelect;
   _compareSeasonBSelect = domRefs.compareSeasonBSelect;
   _btnGenerateB = domRefs.btnGenerateB;
-  _btnClearB = domRefs.btnClearB;
   _chkStationSpA = domRefs.chkStationSpA;
   _chkStationBdA = domRefs.chkStationBdA;
   _chkStationSpB = domRefs.chkStationSpB;
@@ -517,12 +511,6 @@ export function registerCompareModeListeners(): void {
   });
 
   // Botones limpiar
-  _btnClearA?.addEventListener('click', () => {
-    clearPanelA();
-  });
-  _btnClearB?.addEventListener('click', () => {
-    clearPanelB();
-  });
 
   // Station checkboxes
   _wireCompareStationCheck(

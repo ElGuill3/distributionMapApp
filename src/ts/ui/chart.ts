@@ -23,41 +23,41 @@ const VARIABLE_CHART_CONFIG: Record<VariableKey, VariableChartConfig> = {
   ndvi: {
     label: 'NDVI',
     lineColorLight: '#006837', // Verde oscuro rico
-    lineColorDark: '#34d399',  // Esmeralda brillante
+    lineColorDark: '#34d399', // Esmeralda brillante
     yRange: (min, max, pad) => [Math.max(0, min - pad), Math.min(1, max + pad)],
   },
   temp: {
     label: 'Temp (°C)',
     lineColorLight: '#ef4444', // Rojo
-    lineColorDark: '#f97316',  // Naranja
+    lineColorDark: '#f97316', // Naranja
   },
   soil: {
     label: 'Humedad suelo (%)',
     lineColorLight: '#1d4ed8', // Azul royal
-    lineColorDark: '#60a5fa',  // Azul cielo brillante
+    lineColorDark: '#60a5fa', // Azul cielo brillante
     yRange: () => [0, 100],
   },
   precip: {
     label: 'Precipitación diaria (mm/día)',
     lineColorLight: '#0369a1', // Azul profundo
-    lineColorDark: '#38bdf8',  // Celeste vibrante
+    lineColorDark: '#38bdf8', // Celeste vibrante
     yRange: (min, max, pad) => [Math.max(0, min - pad), max + pad],
   },
   water: {
     label: 'Superficie agua (ha)',
     lineColorLight: '#0f766e', // Teal oscuro
-    lineColorDark: '#2dd4bf',  // Turquesa brillante
+    lineColorDark: '#2dd4bf', // Turquesa brillante
     yRange: (_min, max, pad) => [0, max + pad],
   },
   local_sp: {
     label: 'Nivel San Pedro (m)',
     lineColorLight: '#6d28d9', // Violeta
-    lineColorDark: '#c084fc',  // Lavanda pastel
+    lineColorDark: '#c084fc', // Lavanda pastel
   },
   local_bd: {
     label: 'Nivel Boca del Cerro (m)',
     lineColorLight: '#be185d', // Rosa profundo
-    lineColorDark: '#f472b6',  // Rosa pastel brillante
+    lineColorDark: '#f472b6', // Rosa pastel brillante
   },
 };
 
@@ -80,7 +80,9 @@ interface TraceConfig {
 
 function getThemeColor(varName: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback;
-  const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  const val = getComputedStyle(document.documentElement)
+    .getPropertyValue(varName)
+    .trim();
   return val || fallback;
 }
 
@@ -161,7 +163,10 @@ export function isDarkModeActive(): boolean {
   const theme = document.documentElement.getAttribute('data-theme');
   if (theme === 'dark') return true;
   if (theme === 'light') return false;
-  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
 }
 
 if (typeof window !== 'undefined') {
@@ -178,7 +183,9 @@ if (typeof window !== 'undefined') {
     }
   };
   if (typeof window.matchMedia === 'function') {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw);
+    window
+      .matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', redraw);
   }
   window.addEventListener('theme-change', redraw);
 }
@@ -250,7 +257,7 @@ export function plotAllSelectedSeries(
     yAxesConfig[axisKey] = {
       title: {
         text: s.label,
-        font: { family: 'system-ui, sans-serif', size: 11, color: fgColor }
+        font: { family: 'system-ui, sans-serif', size: 11, color: fgColor },
       },
       range: s.yRange,
       side: idx === 0 ? 'left' : 'right',
@@ -275,7 +282,7 @@ export function plotAllSelectedSeries(
       hoverlabel: {
         bgcolor: isDark ? '#1f2933' : '#ffffff',
         bordercolor: s.lineColor,
-        font: { family: 'system-ui, sans-serif', size: 12, color: fgColor }
+        font: { family: 'system-ui, sans-serif', size: 12, color: fgColor },
       },
       yaxis: axisName,
     });
@@ -295,7 +302,7 @@ export function plotAllSelectedSeries(
       xaxis: {
         title: {
           text: 'Fecha',
-          font: { family: 'system-ui, sans-serif', size: 12, color: textColor }
+          font: { family: 'system-ui, sans-serif', size: 12, color: textColor },
         },
         type: 'date',
         tickfont: { family: 'system-ui, sans-serif', size: 10, color: textColor },
@@ -307,7 +314,7 @@ export function plotAllSelectedSeries(
         spikemode: 'across',
         spikedash: 'dash',
         spikethickness: 1,
-        spikecolor: zeroLineColor
+        spikecolor: zeroLineColor,
       },
       showlegend: true,
       legend: {
@@ -317,7 +324,7 @@ export function plotAllSelectedSeries(
         y: 1.02,
         xanchor: 'right',
         x: 1,
-        bgcolor: 'rgba(0,0,0,0)'
+        bgcolor: 'rgba(0,0,0,0)',
       },
       ...yAxesConfig,
     };

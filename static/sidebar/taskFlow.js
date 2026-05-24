@@ -46,13 +46,28 @@ class TaskFlowController {
             this.updateStepValidity('area', Boolean(hasBbox));
             if (hasBbox) {
                 this.transitionTo('variable');
+                // Automatically validate variable and config steps if they already have valid selections in the UI
+                const currentVar = mapState.getCurrentVariable();
+                if (currentVar) {
+                    this.updateStepValidity('variable', true);
+                    this.transitionTo('config');
+                    const yearSelect = document.getElementById('tflow-year-select');
+                    const seasonSelect = document.getElementById('tflow-season-select');
+                    if ((yearSelect === null || yearSelect === void 0 ? void 0 : yearSelect.value) && (seasonSelect === null || seasonSelect === void 0 ? void 0 : seasonSelect.value)) {
+                        this.updateStepValidity('config', true);
+                        this.transitionTo('explore');
+                    }
+                }
             }
             else {
                 this.transitionTo('area');
                 // Reset subsequent steps
                 mapState.updateTaskFlowStepStatus('variable', STEP_STATES.PENDING);
+                mapState.updateTaskFlowStepValidity('variable', false);
                 mapState.updateTaskFlowStepStatus('config', STEP_STATES.PENDING);
+                mapState.updateTaskFlowStepValidity('config', false);
                 mapState.updateTaskFlowStepStatus('explore', STEP_STATES.PENDING);
+                mapState.updateTaskFlowStepValidity('explore', false);
                 this.updateUI();
             }
         });

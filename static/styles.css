@@ -95,6 +95,7 @@
 
   /* Legacy tokens for backward compatibility */
   --accent: #f4f4f4;
+  --text-primary: var(--surface-fg);
 
   /* ==========================================================================
      UI Interaction Flow Clarity Tokens (C2)
@@ -554,7 +555,7 @@ body.flood-risk-mode-active .municipios-grid {
   background-color: var(--surface-bg);
   color: var(--text-primary);
   border-radius: var(--radius-md);
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
@@ -572,8 +573,20 @@ body.flood-risk-mode-active .municipios-grid {
   height: 18px;
 }
 
-body.sidebar-collapsed #sidebarRestore {
-  display: flex;
+#sidebarRestore .icon-menu {
+  display: none;
+}
+
+#sidebarRestore .icon-close {
+  display: block;
+}
+
+body.sidebar-collapsed #sidebarRestore .icon-menu {
+  display: block;
+}
+
+body.sidebar-collapsed #sidebarRestore .icon-close {
+  display: none;
 }
 
 .sr-only {
@@ -588,13 +601,23 @@ body.sidebar-collapsed #sidebarRestore {
   border: 0;
 }
 
+/* Contenedor principal del visor (mapas + controles + gráficas) */
+.main-viewer-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}
+
 /* Contenedor de mapas + gráficas */
 #map-and-chart {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: row;
-  height: 100%;
+  min-height: 0;
   overflow: hidden;
   position: relative;
 }
@@ -728,6 +751,14 @@ body.animation-loaded .map-overlay-topbar {
   flex-wrap: wrap;
 }
 
+.topbar-divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--sidebar-border);
+  margin: 0 4px;
+  align-self: center;
+}
+
 /* PR2: Opacity slider row in topbar */
 .topbar-opacity-row {
   display: flex;
@@ -795,15 +826,17 @@ body.animation-loaded .map-overlay-topbar {
   left: 50%;
   transform: translateX(-50%);
   z-index: 600;
-  padding: 0.2rem 0.6rem;
-  background: rgba(0, 0, 0, 0.55);
-  color: var(--gray-0);
+  padding: 0.3rem 0.8rem;
+  background: var(--surface-bg);
+  color: var(--surface-fg);
+  border: 1px solid var(--sidebar-border);
   border-radius: var(--radius-md);
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.82rem;
+  font-weight: 600;
   pointer-events: none;
   white-space: nowrap;
   display: none;
+  box-shadow: var(--shadow-sm);
 }
 
 body.animation-loaded .animation-date-label {
@@ -931,14 +964,7 @@ body.animation-loaded .animation-date-label {
   }
 }
 
-:root[data-theme="dark"] .animation-date-label {
-  background: rgba(0, 0, 0, 0.65);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .animation-date-label {
-    background: rgba(0, 0, 0, 0.65);
-  }
-}
+
 
 :root[data-theme="dark"] .leaflet-draw-toolbar a {
   background: var(--gray-800) !important;
@@ -1329,14 +1355,17 @@ body.compare-mode-active #map-panel-b {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Ajuste del control Leaflet cuando se colapsa la sidebar */
+/* Ajuste del control Leaflet para alineación con el botón de sidebar */
 .leaflet-left {
-  margin-left: 0.75rem;
-  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-left: 0;
 }
 
-body.sidebar-collapsed .leaflet-left {
-  margin-left: 3.5rem;
+.leaflet-left .leaflet-control {
+  margin-left: 12px;
+}
+
+.leaflet-left .leaflet-control-zoom {
+  margin-top: 52px;
 }
 
 @media (max-width: 768px) {
@@ -1499,6 +1528,68 @@ body.sidebar-collapsed .leaflet-left {
   align-items: center;
   gap: 0.25rem;
   color: var(--sidebar-fg);
+}
+
+/* Styling for colorbar labels and tooltip */
+.colorbar-label-item {
+  position: relative;
+  cursor: help;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm, 3px);
+  transition: background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.colorbar-label-item:hover {
+  background-color: var(--gray-100);
+  color: var(--btn-primary-bg);
+}
+
+/* Tooltip container */
+.colorbar-label-item[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) scale(0.92);
+  background-color: rgba(15, 23, 42, 0.95);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: var(--radius-md, 6px);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* Tooltip arrow */
+.colorbar-label-item[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 0 6px 6px;
+  border-style: solid;
+  border-color: transparent transparent transparent rgba(15, 23, 42, 0.95);
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.colorbar-label-item[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.colorbar-label-item[data-tooltip]:hover::before {
+  opacity: 1;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1877,43 +1968,7 @@ body.sidebar-collapsed .leaflet-left {
 }
 
 /* Status bar */
-.sidebar-status-bar {
-  padding: var(--space-2) var(--space-3);
-  margin: 0 calc(-1 * var(--space-3)) var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  background: var(--status-bar-bg);
-  border-left: var(--details-active-accent-width) solid var(--status-bar-border);
-  color: var(--status-bar-fg);
-  transition: all 0.2s ease;
-}
 
-.sidebar-status-bar--draw {
-  border-left-color: var(--status-bar-border);
-}
-
-.sidebar-status-bar--selected {
-  border-left-color: var(--status-bar-accent);
-  background: transparent;
-  color: transparent;
-  font-size: 0;
-  padding: 0;
-  margin: 0 calc(-1 * var(--space-3)) var(--space-2);
-  height: 3px;
-  min-height: 3px;
-  overflow: hidden;
-}
-
-.sidebar-status-bar--generating {
-  border-left-color: var(--status-bar-generating-fg);
-  color: var(--status-bar-generating-fg);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
 
 /* Chart placeholder */
 .chart-placeholder {
@@ -1989,7 +2044,7 @@ body.sidebar-collapsed .mode-banner {
 }
 
 /* Adjust map container when banner is visible */
-body:has(.mode-banner:not(.hidden)) #map-and-chart {
+body:has(.mode-banner:not(.hidden)) .main-viewer-container {
   padding-top: 40px;
 }
 
@@ -2307,17 +2362,9 @@ body:has(.mode-banner:not(.hidden)) #map-and-chart {
   flex-shrink: 0;
 }
 
-/* Compare mode deactivation of task flow steps */
-body.compare-mode-active .tflow-step[data-step="area"],
-body.compare-mode-active .tflow-step[data-step="variable"] {
-  opacity: 0.45;
-  pointer-events: none;
-  user-select: none;
-}
-
-/* Flood risk mode deactivation of task flow steps */
-body.flood-risk-mode-active .tflow-step[data-step="area"],
-body.flood-risk-mode-active .tflow-step[data-step="variable"] {
+/* Deactivation of all task flow steps in compare and flood risk modes */
+body.compare-mode-active #tflow-container,
+body.flood-risk-mode-active #tflow-container {
   opacity: 0.45;
   pointer-events: none;
   user-select: none;
@@ -2332,6 +2379,28 @@ body.flood-risk-mode-active .tflow-modo-section .flood-risk-mode-hint {
 body:not(.compare-mode-active) .tflow-modo-section .compare-mode-hint,
 body:not(.flood-risk-mode-active) .tflow-modo-section .flood-risk-mode-hint {
   display: none;
+}
+
+/* Compare mode visibility overrides for topbar */
+body.compare-mode-active #map-overlay-topbar-a {
+  display: flex !important;
+}
+
+body.compare-mode-active #map-overlay-topbar-a .topbar-playback {
+  display: none !important;
+}
+
+/* Compare mode layout overrides to allocate more vertical space to charts */
+body.compare-mode-active #map,
+body.compare-mode-active #map-b {
+  flex: 4.8;
+}
+
+body.compare-mode-active #ndvi-chart-container,
+body.compare-mode-active #chart-b-container {
+  flex: 5.2;
+  min-height: 360px;
+  padding-bottom: 55px; /* Clear the absolute player controls bar */
 }
 
 /* Dark mode overrides for task flow */
