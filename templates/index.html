@@ -19,28 +19,6 @@
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-  <button
-    id="sidebarRestore"
-    type="button"
-    aria-controls="control-sidebar"
-    aria-expanded="false"
-  >
-    <svg
-      class="icon-menu"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <line x1="4" y1="7" x2="20" y2="7"></line>
-      <line x1="4" y1="12" x2="20" y2="12"></line>
-      <line x1="4" y1="17" x2="20" y2="17"></line>
-    </svg>
-    <span class="sr-only">Mostrar panel lateral</span>
-  </button>
 
   <div class="layout">
     <aside
@@ -400,6 +378,28 @@
         </div>
 
         <div id="map" role="region" aria-label="Mapa principal (Período A)">
+          <button
+            id="sidebarRestore"
+            type="button"
+            aria-controls="control-sidebar"
+            aria-expanded="false"
+          >
+            <svg
+              class="icon-menu"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="4" y1="7" x2="20" y2="7"></line>
+              <line x1="4" y1="12" x2="20" y2="12"></line>
+              <line x1="4" y1="17" x2="20" y2="17"></line>
+            </svg>
+            <span class="sr-only">Mostrar panel lateral</span>
+          </button>
           <!-- PR1: Floating date label overlay -->
           <span id="animation-date-label" class="animation-date-label" aria-live="polite"></span>
         </div>
