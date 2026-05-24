@@ -805,18 +805,22 @@ body.animation-loaded .animation-date-label {
 
 /* Leaflet draw tooltip — match app design tokens */
 .leaflet-draw-tooltip {
-  background: var(--gray-800) !important;
-  background: rgba(31, 41, 51, 0.95) !important;
-  border: 1px solid var(--gray-600) !important;
+  background: rgba(15, 23, 42, 0.95) !important; /* Premium dark slate background */
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: var(--radius-md) !important;
-  color: var(--gray-0) !important;
+  color: #ffffff !important;
   font: 12px/18px system-ui, sans-serif !important;
   padding: 4px 8px !important;
   box-shadow: var(--shadow-sm) !important;
 }
 
+.leaflet-draw-tooltip span,
+.leaflet-draw-tooltip-subtext {
+  color: #ffffff !important;
+}
+
 .leaflet-draw-tooltip:before {
-  border-right-color: var(--gray-600) !important;
+  border-right-color: rgba(15, 23, 42, 0.95) !important;
 }
 
 .leaflet-error-draw-tooltip {
@@ -847,15 +851,30 @@ body.animation-loaded .animation-date-label {
   display: none !important;
 }
 
-/* Theme standard Leaflet zoom controls for light/dark mode compatibility */
-.leaflet-control-zoom a {
-  background-color: var(--surface-bg) !important;
-  color: var(--text-primary) !important;
+/* Unified Leaflet zoom controls styling matching the application theme */
+.leaflet-bar {
+  box-shadow: var(--shadow-sm) !important;
   border: 1px solid var(--sidebar-border) !important;
-  transition: background 0.15s ease, color 0.15s ease !important;
+  background-color: var(--surface-bg) !important;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
 }
 
-.leaflet-control-zoom a:hover {
+.leaflet-bar a {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.leaflet-bar a:first-child {
+  border-bottom: 1px solid var(--sidebar-border) !important;
+}
+
+.leaflet-bar a:hover {
   background-color: var(--gray-100) !important;
   color: var(--text-primary) !important;
 }
@@ -914,51 +933,25 @@ body.animation-loaded .animation-date-label {
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-toolbar a,
-:root[data-theme="dark"] .leaflet-control-zoom a {
+:root[data-theme="dark"] .leaflet-draw-toolbar a {
   background: var(--gray-800) !important;
   border-color: var(--gray-600) !important;
   color: var(--text-primary) !important;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .leaflet-draw-toolbar a,
-  :root:not([data-theme="light"]) .leaflet-control-zoom a {
+  :root:not([data-theme="light"]) .leaflet-draw-toolbar a {
     background: var(--gray-800) !important;
     border-color: var(--gray-600) !important;
     color: var(--text-primary) !important;
   }
 }
 
-:root[data-theme="dark"] .leaflet-draw-toolbar a:hover,
-:root[data-theme="dark"] .leaflet-control-zoom a:hover {
+:root[data-theme="dark"] .leaflet-draw-toolbar a:hover {
   background: var(--gray-700) !important;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .leaflet-draw-toolbar a:hover,
-  :root:not([data-theme="light"]) .leaflet-control-zoom a:hover {
+  :root:not([data-theme="light"]) .leaflet-draw-toolbar a:hover {
     background: var(--gray-700) !important;
-  }
-}
-
-:root[data-theme="dark"] .leaflet-draw-tooltip {
-  background: var(--gray-900) !important;
-  border-color: var(--gray-700) !important;
-  color: var(--gray-200) !important;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .leaflet-draw-tooltip {
-    background: var(--gray-900) !important;
-    border-color: var(--gray-700) !important;
-    color: var(--gray-200) !important;
-  }
-}
-
-:root[data-theme="dark"] .leaflet-draw-tooltip:before {
-  border-right-color: var(--gray-700) !important;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .leaflet-draw-tooltip:before {
-    border-right-color: var(--gray-700) !important;
   }
 }
 
