@@ -271,12 +271,16 @@ const chartBDiv = document.getElementById('chart-b') as HTMLDivElement | null;
 const chartResizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) {
     const target = entry.target;
-    const chartDiv = target.querySelector('#ndvi-chart, #chart-b');
-    if (chartDiv) {
-      try {
-        Plotly.Plots.resize(chartDiv);
-      } catch {
-        // Ignore if not initialized
+    const chartDiv = target.querySelector('#ndvi-chart, #chart-b') as HTMLElement | null;
+    if (chartDiv && (chartDiv as any).layout) {
+      const width = chartDiv.clientWidth;
+      const height = chartDiv.clientHeight;
+      if (width > 0 && height > 0) {
+        try {
+          Plotly.relayout(chartDiv, { width, height });
+        } catch {
+          // Ignore if not initialized
+        }
       }
     }
   }
@@ -1155,13 +1159,25 @@ if (collapseButton && restoreButton) {
 
       // Resize Plotly charts to fit their new container size
       try {
-        if (ndviChartDiv) Plotly.Plots.resize(ndviChartDiv);
+        if (ndviChartDiv && (ndviChartDiv as any).layout) {
+          const width = ndviChartDiv.clientWidth;
+          const height = ndviChartDiv.clientHeight;
+          if (width > 0 && height > 0) {
+            Plotly.relayout(ndviChartDiv, { width, height });
+          }
+        }
       } catch {
         // Ignore errors if the chart isn't initialized yet
       }
 
       try {
-        if (chartBDiv) Plotly.Plots.resize(chartBDiv);
+        if (chartBDiv && (chartBDiv as any).layout) {
+          const width = chartBDiv.clientWidth;
+          const height = chartBDiv.clientHeight;
+          if (width > 0 && height > 0) {
+            Plotly.relayout(chartBDiv, { width, height });
+          }
+        }
       } catch {
         // Ignore errors if the chart isn't initialized yet
       }
