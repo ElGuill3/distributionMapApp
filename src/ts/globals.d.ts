@@ -37,6 +37,11 @@ declare module 'leaflet' {
   }
 
   namespace Draw {
+    class Rectangle {
+      constructor(map: Map, options?: { shapeOptions?: { color?: string; weight?: number } });
+      enable(): void;
+      disable(): void;
+    }
     namespace Event {
       const CREATED:   string;
       const EDITED:    string;

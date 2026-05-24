@@ -120,6 +120,42 @@ const drawControl = new L.Control.Draw({
 });
 map.addControl(drawControl);
 
+const rectangleDrawer = new L.Draw.Rectangle(map, {
+  shapeOptions: { color: '#ff7800', weight: 2 },
+});
+
+const tflowDrawBtn = document.getElementById('tflow-draw-btn') as HTMLButtonElement | null;
+tflowDrawBtn?.addEventListener('click', () => {
+  rectangleDrawer.enable();
+});
+
+map.on(L.Draw.Event.DRAWSTART, () => {
+  const drawBtn = document.getElementById('tflow-draw-btn') as HTMLButtonElement | null;
+  if (drawBtn) {
+    drawBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:16px;height:16px;flex-shrink:0;animation: pulse 1.5s infinite;">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+      </svg>
+      Dibujando en el mapa...
+    `;
+    drawBtn.disabled = true;
+  }
+});
+
+map.on(L.Draw.Event.DRAWSTOP, () => {
+  const drawBtn = document.getElementById('tflow-draw-btn') as HTMLButtonElement | null;
+  if (drawBtn) {
+    drawBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:16px;height:16px;flex-shrink:0;">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+      Dibujar área en el mapa
+    `;
+    drawBtn.disabled = false;
+  }
+});
+
 // Phase B: bbox now managed via mapState.getBbox() / mapState.setBbox()
 
 map.on(L.Draw.Event.CREATED, e => {
@@ -160,6 +196,7 @@ map.on(L.Draw.Event.CREATED, e => {
   drawnItems.addLayer(layer);
 
   mapState.setBbox([squareWest, squareSouth, squareEast, squareNorth]);
+  document.dispatchEvent(new CustomEvent('bboxChanged', { detail: { hasBbox: true } }));
   updateBboxStatusBar('selected');
 
   removeActiveOverlay(map);
@@ -463,6 +500,7 @@ floodRiskMode.registerFloodRiskModeListeners(
         switchColorbar(map, null, mapState.getMapB() ?? undefined);
         drawnItems.clearLayers();
         mapState.clearBbox();
+        document.dispatchEvent(new CustomEvent('bboxChanged', { detail: { hasBbox: false } }));
         updateBboxStatusBar('draw');
         compareControlsA?.classList.add('hidden');
         compareModeHint?.classList.add('hidden');
@@ -580,6 +618,7 @@ toggleCompareModeButton?.addEventListener('click', () => {
     // Limpiar bounding box
     drawnItems.clearLayers();
     mapState.clearBbox();
+    document.dispatchEvent(new CustomEvent('bboxChanged', { detail: { hasBbox: false } }));
     updateBboxStatusBar('draw');
 
     compareControlsA?.classList.add('hidden');
@@ -601,6 +640,7 @@ tflowClearBtn?.addEventListener('click', () => {
   normalMode.clearNormalMode();
   drawnItems.clearLayers();
   mapState.clearBbox();
+  document.dispatchEvent(new CustomEvent('bboxChanged', { detail: { hasBbox: false } }));
   mapState.setCurrentVariable('ndvi');
   updateBboxStatusBar('draw');
 

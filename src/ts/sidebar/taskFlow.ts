@@ -155,12 +155,17 @@ class TaskFlowController {
 
     mapState.updateTaskFlowStepValidity(step, isValid);
 
-    // Update UI elements based on validity
     if (step === 'area') {
       const hintEl = document.getElementById('tflow-hint');
+      const drawContainer = document.getElementById('tflow-draw-container');
       const statusEl = document.getElementById('tflow-area-status');
-      if (hintEl && statusEl) {
+      if (hintEl) {
         hintEl.classList.toggle('hidden', isValid);
+      }
+      if (drawContainer) {
+        drawContainer.classList.toggle('hidden', isValid);
+      }
+      if (statusEl) {
         statusEl.classList.toggle('hidden', !isValid);
       }
     }
@@ -282,9 +287,15 @@ class TaskFlowController {
 
     // Reset hint visibility
     const hintEl = document.getElementById('tflow-hint');
+    const drawContainer = document.getElementById('tflow-draw-container');
     const statusEl = document.getElementById('tflow-area-status');
-    if (hintEl && statusEl) {
+    if (hintEl) {
       hintEl.classList.remove('hidden');
+    }
+    if (drawContainer) {
+      drawContainer.classList.remove('hidden');
+    }
+    if (statusEl) {
       statusEl.classList.add('hidden');
     }
 
