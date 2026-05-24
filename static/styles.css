@@ -2203,6 +2203,12 @@ body:has(.mode-banner:not(.hidden)) #map-and-chart {
   margin-top: var(--space-2);
 }
 
+.tflow-station-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 
 /* MODO section */
 .tflow-modo-section {
