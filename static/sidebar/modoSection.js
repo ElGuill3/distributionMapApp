@@ -13,7 +13,8 @@ class ModoSection {
         this.modoSection = null;
         this.compareToggle = null;
         this.floodToggle = null;
-        this.activeModo = null; // 'compare' | 'flood' | null
+        this.inundacionesToggle = null;
+        this.activeModo = null; // 'compare' | 'flood' | 'inundaciones' | null
         this.listeners = [];
     }
     /**
@@ -23,7 +24,8 @@ class ModoSection {
         this.modoSection = document.getElementById('tflow-modo-section');
         this.compareToggle = document.getElementById('toggleCompareMode');
         this.floodToggle = document.getElementById('toggleFloodRiskMode');
-        if (!this.modoSection || !this.compareToggle || !this.floodToggle) {
+        this.inundacionesToggle = document.getElementById('toggleInundacionesMode');
+        if (!this.modoSection || !this.compareToggle || !this.floodToggle || !this.inundacionesToggle) {
             console.warn('[ModoSection] Required elements not found');
             return;
         }
@@ -33,7 +35,7 @@ class ModoSection {
      * Setup event listeners
      */
     setupEventListeners() {
-        if (!this.compareToggle || !this.floodToggle)
+        if (!this.compareToggle || !this.floodToggle || !this.inundacionesToggle)
             return;
         // Compare mode toggle
         this.compareToggle.addEventListener('click', () => {
@@ -59,13 +61,25 @@ class ModoSection {
                 this.activateModo('flood');
             }
         });
+        // Inundaciones toggle
+        this.inundacionesToggle.addEventListener('click', () => {
+            if (!this.inundacionesToggle)
+                return;
+            const isActive = this.inundacionesToggle.getAttribute('aria-pressed') === 'true';
+            if (isActive) {
+                this.deactivateAll();
+            }
+            else {
+                this.activateModo('inundaciones');
+            }
+        });
     }
     /**
      * Activate a specific modo
      * @param modo - 'compare' or 'flood'
      */
     activateModo(modo) {
-        if (modo !== 'compare' && modo !== 'flood') {
+        if (modo !== 'compare' && modo !== 'flood' && modo !== 'inundaciones') {
             console.warn(`[ModoSection] Invalid modo: ${modo}`);
             return;
         }
@@ -92,6 +106,16 @@ class ModoSection {
             // Dispatch event
             document.dispatchEvent(new CustomEvent('floodRiskModeActivated'));
         }
+        else if (modo === 'inundaciones') {
+            if (this.inundacionesToggle) {
+                this.inundacionesToggle.setAttribute('aria-pressed', 'true');
+                this.inundacionesToggle.classList.add('modo-toggle--active');
+            }
+            // Disable task flow steps 1-2
+            this.disableTaskFlowSteps();
+            // Dispatch event
+            document.dispatchEvent(new CustomEvent('inundacionesModeActivated'));
+        }
         this.notifyListeners('activate', { modo });
     }
     /**
@@ -108,6 +132,10 @@ class ModoSection {
             this.floodToggle.setAttribute('aria-pressed', 'false');
             this.floodToggle.classList.remove('modo-toggle--active');
         }
+        if (this.inundacionesToggle) {
+            this.inundacionesToggle.setAttribute('aria-pressed', 'false');
+            this.inundacionesToggle.classList.remove('modo-toggle--active');
+        }
         // Re-enable task flow steps
         this.enableTaskFlowSteps();
         // Dispatch event
@@ -116,6 +144,9 @@ class ModoSection {
         }
         else if (previousModo === 'flood') {
             document.dispatchEvent(new CustomEvent('floodRiskModeDeactivated'));
+        }
+        else if (previousModo === 'inundaciones') {
+            document.dispatchEvent(new CustomEvent('inundacionesModeDeactivated'));
         }
         document.dispatchEvent(new CustomEvent('modoDeactivated', {
             detail: { previousModo },
