@@ -363,15 +363,12 @@ export async function requestGifAndSeries(
   }, 15000);
 
   try {
-    const satellite = (document.querySelector('input[name="water-satellite"]:checked') as HTMLInputElement)?.value || 'landsat';
-
     const { gifData, tsData } = await fetchGifAndSeries({
       variable,
       start,
       end,
       bbox,
       taskId,
-      satellite,
     });
 
     clearTimeout(connectionWatchdog);

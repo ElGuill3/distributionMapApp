@@ -31,8 +31,7 @@ function buildGifUrl(
   start: string,
   end: string,
   bbox: BBox,
-  taskId: string,
-  satellite?: string
+  taskId: string
 ): string {
   const bboxJson = JSON.stringify(bbox);
   let url = (
@@ -41,9 +40,6 @@ function buildGifUrl(
     `&bbox=${encodeURIComponent(bboxJson)}` +
     `&task_id=${encodeURIComponent(taskId)}`
   );
-  if (variable === 'water' && satellite) {
-    url += `&satellite=${encodeURIComponent(satellite)}`;
-  }
   return url;
 }
 
@@ -52,8 +48,7 @@ function buildTsUrl(
   variable: string,
   start: string,
   end: string,
-  bbox: BBox,
-  satellite?: string
+  bbox: BBox
 ): string {
   const bboxJson = JSON.stringify(bbox);
   let url = (
@@ -61,9 +56,6 @@ function buildTsUrl(
     `&end=${encodeURIComponent(end)}` +
     `&bbox=${encodeURIComponent(bboxJson)}`
   );
-  if (variable === 'water' && satellite) {
-    url += `&satellite=${encodeURIComponent(satellite)}`;
-  }
   return url;
 }
 
@@ -119,7 +111,6 @@ export interface FetchGifAndSeriesOptions {
   bbox: BBox;
   /** Genera un taskId nuevo si no se provee */
   taskId?: string;
-  satellite?: string | undefined;
 }
 
 /**
@@ -132,13 +123,13 @@ export interface FetchGifAndSeriesOptions {
 export async function fetchGifAndSeries(
   options: FetchGifAndSeriesOptions
 ): Promise<FetchGifAndSeriesResult> {
-  const { variable, start, end, bbox, satellite } = options;
+  const { variable, start, end, bbox } = options;
   const taskId =
     options.taskId ??
     `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-  const gifUrl = buildGifUrl(variable, start, end, bbox, taskId, satellite);
-  const tsUrl = buildTsUrl(variable, start, end, bbox, satellite);
+  const gifUrl = buildGifUrl(variable, start, end, bbox, taskId);
+  const tsUrl = buildTsUrl(variable, start, end, bbox);
 
   // Nota: el manejo de progress indicator queda a cargo del llamador
   // (createProgressIndicator / updateProgressIndicator / removeProgressIndicator)

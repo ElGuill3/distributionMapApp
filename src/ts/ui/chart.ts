@@ -43,12 +43,6 @@ const VARIABLE_CHART_CONFIG: Record<VariableKey, VariableChartConfig> = {
     lineColorDark: '#38bdf8', // Celeste vibrante
     yRange: (min, max, pad) => [Math.max(0, min - pad), max + pad],
   },
-  water: {
-    label: 'Superficie agua (ha)',
-    lineColorLight: '#0f766e', // Teal oscuro
-    lineColorDark: '#2dd4bf', // Turquesa brillante
-    yRange: (_min, max, pad) => [0, max + pad],
-  },
   local_sp: {
     label: 'Nivel San Pedro (m)',
     lineColorLight: '#6d28d9', // Violeta

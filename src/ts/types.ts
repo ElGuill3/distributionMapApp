@@ -21,7 +21,6 @@ export type VariableKey =
   | 'temp'
   | 'soil'
   | 'precip'
-  | 'water'
   | 'local_sp'
   | 'local_bd';
 
@@ -42,8 +41,6 @@ export interface GifResponse {
   soil_pct?: number[];
   /** Precipitación en mm */
   precip_mm?: number[];
-  /** Superficie de agua en ha */
-  water_ha?: number[];
 }
 
 /** Respuesta de los endpoints *-timeseries-bbox */
@@ -54,7 +51,6 @@ export interface TimeseriesResponse {
   temp?: number[];
   soil_pct?: number[];
   precip_mm?: number[];
-  water_ha?: number[];
 }
 
 /** Respuesta de /api/local-station-level-range */
@@ -102,7 +98,6 @@ export const VARIABLE_DATA_KEY: Readonly<
   temp: 'temp',
   soil: 'soil_pct',
   precip: 'precip_mm',
-  water: 'water_ha',
   local_sp: 'ndvi',
   local_bd: 'ndvi',
 } as const;

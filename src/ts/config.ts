@@ -19,7 +19,6 @@ export const VARIABLE_YEARS: Record<VariableKey, number[]> = {
   temp: _yearsRange(2000, 2024),
   soil: _yearsRange(2000, 2024),
   precip: _yearsRange(2000, 2024),
-  water: _yearsRange(2000, 2024),
   local_sp: _yearsRange(2000, 2024),
   local_bd: _yearsRange(2000, 2024),
 };
@@ -55,7 +54,6 @@ export const GIF_ENDPOINT: Record<
   temp: '/api/era5-temp-gif-bbox',
   soil: '/api/era5-soil-gif-bbox',
   precip: '/api/imerg-precip-gif-bbox',
-  water: '/api/water-gif-bbox',
 };
 
 /** Mapa de VariableKey → URL base del endpoint timeseries-bbox */
@@ -67,5 +65,4 @@ export const TS_ENDPOINT: Record<
   temp: '/api/era5-temp-timeseries-bbox',
   soil: '/api/era5-soil-timeseries-bbox',
   precip: '/api/imerg-precip-timeseries-bbox',
-  water: '/api/water-timeseries-bbox',
 };
