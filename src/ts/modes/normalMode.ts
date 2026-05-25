@@ -318,11 +318,14 @@ export async function requestGifAndSeries(
   const eventSource = createProgressEventSource(
     taskId,
     (progress, message) => {
-      updateProgressIndicator(progress, message);
+      // Mapear el progreso del servidor (0-100) a 0-90% para reservar el último 10%
+      const mappedProgress = progress >= 0 ? Math.min(90, Math.round(progress * 0.9)) : -1;
+      updateProgressIndicator(mappedProgress, message);
       if (progress === 100 || progress === -1) {
         eventSource.close();
-        if (progress === 100) removeProgressIndicator(1000);
-        else removeProgressIndicator(3000);
+        if (progress === -1) {
+          removeProgressIndicator(3000);
+        }
       }
     },
     () => {
@@ -340,8 +343,11 @@ export async function requestGifAndSeries(
     });
 
     if (gifData.error) {
+      removeProgressIndicator(0);
       return { success: false, error: gifData.error ?? 'Error generando animación.' };
     }
+
+    updateProgressIndicator(93, 'Descargando y decodificando animación...');
 
     const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
     const overlayBounds = L.latLngBounds(
@@ -359,6 +365,8 @@ export async function requestGifAndSeries(
     // Crear GIF player y overlay
     const player = new GifPlayer();
     await player.load(gifData.gifUrl);
+
+    updateProgressIndicator(97, 'Renderizando mapa y gráfica...');
 
     const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, {
       opacity: 0.8,
@@ -410,9 +418,13 @@ export async function requestGifAndSeries(
       console.warn('Error en serie temporal.');
     }
 
+    updateProgressIndicator(100, '¡Listo!');
+    removeProgressIndicator(500);
+
     return { success: true };
   } catch (err) {
     console.error(err);
+    removeProgressIndicator(0);
     return {
       success: false,
       error: 'Error de red al generar animación / serie temporal.',

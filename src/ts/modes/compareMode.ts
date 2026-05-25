@@ -784,11 +784,14 @@ export async function requestGifAndSeriesForPanel(
   const eventSource = createProgressEventSource(
     taskId,
     (progress, message) => {
-      updateProgressIndicator(progress, message);
+      // Mapear el progreso del servidor (0-100) a 0-90% para reservar el último 10%
+      const mappedProgress = progress >= 0 ? Math.min(90, Math.round(progress * 0.9)) : -1;
+      updateProgressIndicator(mappedProgress, message);
       if (progress === 100 || progress === -1) {
         eventSource.close();
-        if (progress === 100) removeProgressIndicator(1000);
-        else removeProgressIndicator(3000);
+        if (progress === -1) {
+          removeProgressIndicator(3000);
+        }
       }
     },
     () => {
@@ -806,10 +809,13 @@ export async function requestGifAndSeriesForPanel(
     });
 
     if (gifData.error) {
+      removeProgressIndicator(0);
       const uxError = translateBackendError(gifData.error);
       showErrorModal(uxError.title, uxError.message);
       return;
     }
+
+    updateProgressIndicator(93, `Descargando y decodificando animación (panel ${panel})...`);
 
     const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
     const overlayBounds = L.latLngBounds(
@@ -831,6 +837,8 @@ export async function requestGifAndSeriesForPanel(
 
       const player = new GifPlayer();
       await player.load(gifData.gifUrl);
+
+      updateProgressIndicator(97, 'Renderizando panel A...');
 
       const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, {
         opacity: 0.8,
@@ -880,6 +888,8 @@ export async function requestGifAndSeriesForPanel(
       const player = new GifPlayer();
       await player.load(gifData.gifUrl);
 
+      updateProgressIndicator(97, 'Renderizando panel B...');
+
       const mapB = mapState.getMapB()!;
       const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, {
         opacity: 0.8,
@@ -913,14 +923,16 @@ export async function requestGifAndSeriesForPanel(
 
     // Si ambos paneles tienen GIF → sincronizar
     trySyncBothPanels();
+
+    updateProgressIndicator(100, '¡Listo!');
+    removeProgressIndicator(500);
   } catch (err) {
     console.error(err);
+    removeProgressIndicator(0);
     showErrorModal(
       'Error de red',
       `No se pudo generar la animación / serie temporal (panel ${panel}). Verificá tu conexión.`
     );
-    updateProgressIndicator(-1, 'Error de red');
-    removeProgressIndicator(3000);
   } finally {
     eventSource.close();
   }
