@@ -121,7 +121,7 @@ async function handleProcessFlood(): Promise<void> {
 
   // Mostrar modal de progreso blocking
   createProgressIndicator();
-  updateProgressIndicator(30, 'Procesando imágenes en Google Earth Engine (esto puede tardar unos segundos)...');
+  updateProgressIndicator(0, 'Procesando imágenes en Google Earth Engine (esto puede tardar unos segundos)...');
 
   // Limpiar capas previas
   clearLayers();
