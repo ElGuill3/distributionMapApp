@@ -440,14 +440,16 @@ def detect_floods_bbox(
     if flood_mask is None or vis_params is None or bg_img is None:
         return None
 
+    import ee
+    region = ee.Geometry.Rectangle(bbox)
     flood_vis = {"palette": ["00FFFF"]}  # Cian
 
     # Retorna las URLs de mapa para Leaflet
     return {
         "satellite": satellite,
         "computed_threshold": round(final_thresh, 4),
-        "background_layer": bg_img.getMapId(vis_params)["tile_fetcher"].url_format,
-        "water_layer": flood_mask.updateMask(flood_mask).getMapId(flood_vis)["tile_fetcher"].url_format,
+        "background_layer": bg_img.clip(region).getMapId(vis_params)["tile_fetcher"].url_format,
+        "water_layer": flood_mask.clip(region).updateMask(flood_mask).getMapId(flood_vis)["tile_fetcher"].url_format,
     }
 
 
