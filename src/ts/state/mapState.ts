@@ -53,6 +53,7 @@ export interface AppState {
   // mode flags
   compareModeActive: boolean;
   floodRiskModeActive: boolean;
+  inundacionesModeActive: boolean;
   mapBSyncLock: boolean;
 
   // variable activa
@@ -94,6 +95,7 @@ export const initialState: AppState = {
   bbox: null,
   compareModeActive: false,
   floodRiskModeActive: false,
+  inundacionesModeActive: false,
   mapBSyncLock: false,
   currentVariable: 'ndvi',
   seriesDataA: {},
@@ -151,6 +153,10 @@ export function getCompareModeActive(): boolean {
 
 export function getFloodRiskModeActive(): boolean {
   return state.floodRiskModeActive;
+}
+
+export function getInundacionesModeActive(): boolean {
+  return state.inundacionesModeActive;
 }
 
 export function getMapBSyncLock(): boolean {
@@ -271,6 +277,10 @@ export function setCompareModeActive(active: boolean): void {
 
 export function setFloodRiskModeActive(active: boolean): void {
   state = { ...state, floodRiskModeActive: active };
+}
+
+export function setInundacionesModeActive(active: boolean): void {
+  state = { ...state, inundacionesModeActive: active };
 }
 
 export function setMapBSyncLock(locked: boolean): void {
