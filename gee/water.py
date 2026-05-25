@@ -323,3 +323,162 @@ def build_water_timeseries_bbox(
             out_vals.append(float(v))
 
     return out_dates, out_vals
+
+
+def _get_flood_mask_and_visualizations(
+    start: str,
+    end: str,
+    bbox: list[float],
+    satellite: str = "sentinel1",
+    use_auto_threshold: bool = True,
+    threshold: float = -18.0,
+) -> tuple[ee.Image | None, float, dict | None, ee.Image | None]:
+    """
+    Helper interno para clasificar la inundación y preparar los parámetros de visualización.
+    Retorna (flood_mask, final_thresh, vis_params, background_img).
+    """
+    validate_bbox(bbox, max_span=MAX_SPAN_DEG_S2)
+    region = ee.Geometry.Rectangle(bbox)
+
+    # Máscara de pendientes (evita sombras de montañas)
+    dem = ee.Image("USGS/SRTMGL1_003").clip(region)
+    slope_mask = ee.Terrain.slope(dem).lt(5)
+
+    # Máscara de agua permanente (JRC occurrence > 50)
+    jrc = ee.Image("JRC/GSW1_4/GlobalSurfaceWater").clip(region)
+    perm_water_mask = jrc.select("occurrence").gt(50)
+
+    if satellite == "sentinel1":
+        col = _get_s1_collection(bbox, start, end)
+        if col.size().getInfo() == 0:
+            return None, -18.0, None, None
+
+        # Reducir a mediana temporal y aplicar filtro focal
+        s1_img = col.median().select(["VV", "VH"]).focalMedian(50, "circle", "meters")
+
+        if use_auto_threshold:
+            stats = s1_img.select("VH").reduceRegion(
+                reducer=ee.Reducer.percentile([15]),
+                geometry=region,
+                scale=60,
+                maxPixels=1e9,
+                bestEffort=True,
+            )
+            stats_dict = stats.getInfo()
+            vh_val = stats_dict.get("VH") if stats_dict else None
+            if vh_val is None:
+                vh_val = -18.0
+            final_thresh = float(vh_val)
+        else:
+            final_thresh = threshold
+
+        # Detección
+        water = s1_img.select("VH").lt(final_thresh).updateMask(slope_mask)
+        water = water.focal_mode(radius=1, units="pixels").selfMask()
+        connected = water.connectedPixelCount(maxSize=100, eightConnected=True)
+        water_clean = water.updateMask(connected.gte(_MIN_CONNECTED_PX))
+        flood_mask = water_clean.updateMask(perm_water_mask.Not()).rename("flood")
+
+        sar_vis = {"min": -30, "max": 0, "palette": ["black", "white"]}
+        return flood_mask, final_thresh, sar_vis, s1_img.select("VH")
+
+    else:  # landsat
+        col = _get_landsat_collection(bbox, start, end)
+        if col.size().getInfo() == 0:
+            return None, 0.0, None, None
+
+        img = col.median()
+        img = _scale_landsat(img)
+        img = _compute_mndwi(img)
+
+        mndwi = img.select("MNDWI")
+        nir = img.select("NIR")
+
+        if use_auto_threshold:
+            stats = mndwi.reduceRegion(
+                reducer=ee.Reducer.percentile([85]),
+                geometry=region,
+                scale=60,
+                maxPixels=1e9,
+                bestEffort=True,
+            )
+            stats_dict = stats.getInfo()
+            mndwi_val = stats_dict.get("MNDWI") if stats_dict else None
+            if mndwi_val is None:
+                mndwi_val = 0.0
+            final_thresh = max(0.0, float(mndwi_val))
+        else:
+            final_thresh = threshold
+
+        # Detección
+        water = mndwi.gt(final_thresh).And(nir.lt(0.15)).updateMask(slope_mask)
+        water = water.focal_mode(radius=1, units="pixels").selfMask()
+        connected = water.connectedPixelCount(maxSize=100, eightConnected=True)
+        water_clean = water.updateMask(connected.gte(_MIN_CONNECTED_PX))
+        flood_mask = water_clean.updateMask(perm_water_mask.Not()).rename("flood")
+
+        landsat_vis_params = {"bands": ["SWIR1", "NIR", "Green"], "min": 0.0, "max": 0.4}
+        return flood_mask, final_thresh, landsat_vis_params, img
+
+
+def detect_floods_bbox(
+    start: str,
+    end: str,
+    bbox: list[float],
+    satellite: str = "sentinel1",
+    use_auto_threshold: bool = True,
+    threshold: float = -18.0,
+) -> dict | None:
+    """
+    Detecta áreas inundadas en un bbox y un rango de fechas.
+    Retorna la URL de teselas de la inundación, imagen de fondo y umbral.
+    """
+    flood_mask, final_thresh, vis_params, bg_img = _get_flood_mask_and_visualizations(
+        start, end, bbox, satellite, use_auto_threshold, threshold
+    )
+
+    if flood_mask is None or vis_params is None or bg_img is None:
+        return None
+
+    flood_vis = {"palette": ["00FFFF"]}  # Cian
+
+    # Retorna las URLs de mapa para Leaflet
+    return {
+        "satellite": satellite,
+        "computed_threshold": round(final_thresh, 4),
+        "background_layer": bg_img.getMapId(vis_params)["tile_fetcher"].url_format,
+        "water_layer": flood_mask.updateMask(flood_mask).getMapId(flood_vis)["tile_fetcher"].url_format,
+    }
+
+
+def calculate_flood_area(
+    start: str,
+    end: str,
+    bbox: list[float],
+    satellite: str = "sentinel1",
+    use_auto_threshold: bool = True,
+    threshold: float = -18.0,
+) -> float:
+    """
+    Calculates the flooded area in hectares.
+    """
+    region = ee.Geometry.Rectangle(bbox)
+    flood_mask, _, _, _ = _get_flood_mask_and_visualizations(
+        start, end, bbox, satellite, use_auto_threshold, threshold
+    )
+
+    if flood_mask is None:
+        return 0.0
+
+    area_img = ee.Image.pixelArea().multiply(flood_mask.unmask(0)).rename("area")
+    stats_area = area_img.reduceRegion(
+        reducer=ee.Reducer.sum(),
+        geometry=region,
+        scale=30,  # 30m para calcular área
+        maxPixels=1e10,
+        bestEffort=True,
+    )
+    area_info = stats_area.getInfo()
+    total_ha = (area_info.get("area", 0.0) or 0.0) / 10000.0
+    return float(total_ha)
+
