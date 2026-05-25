@@ -59,6 +59,7 @@ describe('ModoSection', () => {
   let modoSection: any;
   let compareToggle: any;
   let floodToggle: any;
+  let inundacionesToggle: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -68,9 +69,11 @@ describe('ModoSection', () => {
     const modoSectionEl = createMockToggle('tflow-modo-section');
     compareToggle = createMockToggle('toggleCompareMode');
     floodToggle = createMockToggle('toggleFloodRiskMode');
+    inundacionesToggle = createMockToggle('toggleInundacionesMode');
     mockElements.set('tflow-modo-section', modoSectionEl);
     mockElements.set('toggleCompareMode', compareToggle);
     mockElements.set('toggleFloodRiskMode', floodToggle);
+    mockElements.set('toggleInundacionesMode', inundacionesToggle);
 
     // Import the module
     const module = await import('../../static/sidebar/modoSection.js');
@@ -167,6 +170,43 @@ describe('ModoSection', () => {
     });
   });
 
+  describe('Click Inundaciones Toggle', () => {
+    it('click inundaciones toggle activates inundaciones mode', () => {
+      inundacionesToggle.getAttribute = vi.fn(() => 'false');
+
+      const clickHandler = inundacionesToggle.addEventListener.mock.calls.find(
+        (call: unknown[]) => call[0] === 'click'
+      )?.[1] as () => void;
+
+      expect(clickHandler).toBeDefined();
+
+      // Act
+      clickHandler();
+
+      // Assert: inundaciones mode should be active
+      expect(modoSection.activeModo).toBe('inundaciones');
+      expect(inundacionesToggle.setAttribute).toHaveBeenCalledWith('aria-pressed', 'true');
+      expect(inundacionesToggle.classList.classes.has('modo-toggle--active')).toBe(true);
+    });
+
+    it('click active inundaciones toggle deactivates all', () => {
+      modoSection.activeModo = 'inundaciones';
+      inundacionesToggle.getAttribute = vi.fn(() => 'true');
+
+      const clickHandler = inundacionesToggle.addEventListener.mock.calls.find(
+        (call: unknown[]) => call[0] === 'click'
+      )?.[1] as () => void;
+
+      expect(clickHandler).toBeDefined();
+
+      // Act
+      clickHandler();
+
+      // Assert
+      expect(modoSection.activeModo).toBe(null);
+    });
+  });
+
   describe('Invalid Modo String', () => {
     it('invalid modo string is silently ignored', () => {
       // Call activateModo with invalid string directly
@@ -176,9 +216,9 @@ describe('ModoSection', () => {
       expect(modoSection.activeModo).toBe(null);
 
       // Verify no events were dispatched for invalid modo
-      const events = document.dispatchEvent.mock.calls.map(call => call[0]?.type);
+      const events = (document.dispatchEvent as any).mock.calls.map((call: any) => call[0]?.type);
       expect(
-        events.filter(e => e !== 'taskFlowDisabled' && e !== 'modoDeactivated')
+        events.filter((e: string) => e !== 'taskFlowDisabled' && e !== 'modoDeactivated')
       ).toHaveLength(0);
     });
   });
@@ -195,6 +235,7 @@ describe('ModoSection', () => {
         (call: unknown[]) => call[0] === 'click'
       )?.[1] as () => void;
 
+      expect(clickHandler).toBeDefined();
       clickHandler();
 
       expect(modoSection.getActiveModo()).toBe('compare');
