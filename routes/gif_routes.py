@@ -121,6 +121,7 @@ def _gif_pipeline(
     bbox_parsed: list[float] | None = None,
     start_parsed: str | None = None,
     end_parsed: str | None = None,
+    satellite: str | None = None,
 ) -> Response:
     """
     Implementación genérica del pipeline GIF:
@@ -139,6 +140,7 @@ def _gif_pipeline(
                          provee, saltea validación.
         end_parsed     : fecha fin pre-validada (YYYY-MM-DD) — si se provee,
                          saltea validación.
+        satellite      : identificador de satélite ('landsat' o 'sentinel1') opcional.
     """
     # ratio_str y task_id siempre vienen de request.args (no se pre-validan).
     ratio_str = request.args.get("ratio")
@@ -173,13 +175,18 @@ def _gif_pipeline(
 
     # --- Cache hit check: computar clave ANTES de llamar a GEE ---
     bbox_hash = hashlib.md5(str(bbox).encode()).hexdigest()[:8]
-    output_filename = f"{variable_prefix}_{start}_{end}_{bbox_hash}.gif"
+    sat_suffix = f"_{satellite}" if satellite else ""
+    output_filename = f"{variable_prefix}{sat_suffix}_{start}_{end}_{bbox_hash}.gif"
     output_path = GIFS_DIR / output_filename
+
+    kwargs = {}
+    if satellite:
+        kwargs["satellite"] = satellite
 
     # Si el GIF ya existe y tiene tamaño > 0, es cache HIT
     if output_path.exists() and output_path.stat().st_size > 0:
         try:
-            dates, vals = build_ts_fn(start, end, bbox)
+            dates, vals = build_ts_fn(start, end, bbox, **kwargs)
             if dates:
                 logger.info("GIF cache HIT: %s", output_filename)
                 return jsonify(
@@ -209,14 +216,14 @@ def _gif_pipeline(
         if pq:
             pq.put({"progress": 0, "message": start_message})
 
-        ee_gif_url = build_gif_fn(start, end, bbox, ratio)
+        ee_gif_url = build_gif_fn(start, end, bbox, ratio, **kwargs)
         if not ee_gif_url:
             _signal_error(pq, f"No hay datos de {variable_prefix}")
             return jsonify(
                 {"error": f"No hay datos de {variable_prefix} para ese rango/región."}
             ), 400
 
-        dates, vals = build_ts_fn(start, end, bbox)
+        dates, vals = build_ts_fn(start, end, bbox, **kwargs)
         if not dates:
             _signal_error(pq, "No se pudieron obtener fechas")
             return jsonify({"error": "No se pudieron obtener las fechas."}), 400
@@ -354,7 +361,11 @@ def imerg_precip_gif_bbox() -> Response:
 @limiter.limit("30/minute")
 @gif_bp.get("/api/water-gif-bbox")
 def water_gif_bbox() -> Response:
-    """Genera el GIF animado de cuerpos de agua (Sentinel-2) para el bbox."""
+    """Genera la imagen/GIF de detección de cuerpos de agua (Landsat/Sentinel-1) para el bbox."""
+    satellite = request.args.get("satellite", "landsat")
+    if satellite not in ["landsat", "sentinel1"]:
+        return jsonify({"error": "satellite debe ser 'landsat' o 'sentinel1'."}), 400
+
     return _gif_pipeline(
         variable_prefix="water",
         build_gif_fn=build_water_gif_bbox,
@@ -362,4 +373,5 @@ def water_gif_bbox() -> Response:
         ts_key="water_ha",
         font_size=10,
         start_message="Iniciando generación de cuerpos de agua...",
+        satellite=satellite,
     )

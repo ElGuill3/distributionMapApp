@@ -42,15 +42,17 @@ def gif_progress(task_id: str) -> Response:
 
         while True:
             try:
-                message = task_queue.get(timeout=SSE_TASK_QUEUE_TIMEOUT_S)
+                # Esperar mensajes de progreso con un timeout de 10 segundos
+                message = task_queue.get(timeout=10)
                 if message is None:
                     break
                 yield f"data: {json.dumps(message)}\n\n"
                 if message.get("progress") in (100, -1):
                     break
             except q_module.Empty:
-                yield f"data: {json.dumps({'progress': 0, 'message': 'timeout'})}\n\n"
-                break
+                # Enviar un comentario (keep-alive) para evitar que proxies o navegadores
+                # cierren la conexión por inactividad.
+                yield ": keep-alive\n\n"
 
         remove_progress_queue(task_id)
 

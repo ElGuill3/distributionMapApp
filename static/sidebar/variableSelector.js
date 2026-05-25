@@ -26,9 +26,6 @@ class VariableSelector {
         this.listeners = [];
         this.chipContainer = null;
     }
-    /**
-     * Initialize the chip container
-     */
     initChipContainer() {
         this.chipContainer = document.getElementById('tflow-chip-container');
         if (!this.chipContainer) {
@@ -39,6 +36,24 @@ class VariableSelector {
         this.updateChipVisuals();
         // PR2 fix: populate year select on init so it's ready before first chip click
         this.populateYearSelect();
+        // Setup listener for water-satellite radios
+        const satRadios = document.querySelectorAll('input[name="water-satellite"]');
+        satRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                var _a;
+                this.populateYearSelect();
+                const note = document.getElementById('water-satellite-note');
+                if (note) {
+                    const selectedSat = (_a = document.querySelector('input[name="water-satellite"]:checked')) === null || _a === void 0 ? void 0 : _a.value;
+                    if (selectedSat === 'sentinel1') {
+                        note.textContent = 'Sentinel-1 (Radar): Datos 2015–2024. Inmune a nubes. Alta precisión local.';
+                    }
+                    else {
+                        note.textContent = 'Landsat (Óptico): Datos 2000–2024. Sujeto a nubosidad estacional. Resolución media (30m).';
+                    }
+                }
+            });
+        });
     }
     /**
      * Setup click listeners on chips
@@ -57,10 +72,6 @@ class VariableSelector {
             }
         });
     }
-    /**
-     * Set the active variable chip
-     * @param variable - Variable key ('ndvi', 'temp', 'soil', 'precip', 'water')
-     */
     setActiveChip(variable) {
         if (!VARIABLE_KEYS.includes(variable)) {
             console.warn(`[VariableSelector] Invalid variable: ${variable}`);
@@ -68,6 +79,16 @@ class VariableSelector {
         }
         this.activeVariable = variable;
         this.updateChipVisuals();
+        // Toggle satellite container visibility
+        const satContainer = document.getElementById('water-satellite-container');
+        if (satContainer) {
+            if (variable === 'water') {
+                satContainer.classList.remove('hidden');
+            }
+            else {
+                satContainer.classList.add('hidden');
+            }
+        }
         // PR2: Single source of truth — update mapState and taskFlow directly
         setCurrentVariable(variable);
         transitionTo('config');
@@ -98,19 +119,26 @@ class VariableSelector {
             chip.classList.toggle('tflow-chip--active', isActive);
         });
     }
-    /**
-     * Populate the year select based on active variable
-     */
     populateYearSelect() {
+        var _a;
         const yearSelect = document.getElementById('tflow-year-select');
         if (!yearSelect)
             return;
+        // Save previous value if possible
+        const prevValue = yearSelect.value;
         // Clear existing options except placeholder
         while (yearSelect.options.length > 1) {
             yearSelect.remove(1);
         }
         // Get years for active variable
-        const years = VARIABLE_YEARS[this.activeVariable] || [];
+        let years = VARIABLE_YEARS[this.activeVariable] || [];
+        // Filter years for water variable if Sentinel-1 is chosen
+        if (this.activeVariable === 'water') {
+            const selectedSat = ((_a = document.querySelector('input[name="water-satellite"]:checked')) === null || _a === void 0 ? void 0 : _a.value) || 'landsat';
+            if (selectedSat === 'sentinel1') {
+                years = years.filter(y => y >= 2015);
+            }
+        }
         // Populate options
         years.forEach((year) => {
             const option = document.createElement('option');
@@ -118,8 +146,13 @@ class VariableSelector {
             option.textContent = String(year);
             yearSelect.appendChild(option);
         });
-        // Reset to placeholder
-        yearSelect.value = '';
+        // Reset to placeholder or keep if still valid
+        if (prevValue && years.includes(Number(prevValue))) {
+            yearSelect.value = prevValue;
+        }
+        else {
+            yearSelect.value = '';
+        }
         // Dispatch event for config panel
         document.dispatchEvent(new CustomEvent('yearSelectPopulated', {
             detail: { variable: this.activeVariable, years },
@@ -160,6 +193,19 @@ class VariableSelector {
     reset() {
         this.activeVariable = 'ndvi';
         this.updateChipVisuals();
+        // Toggle satellite container visibility
+        const satContainer = document.getElementById('water-satellite-container');
+        if (satContainer) {
+            satContainer.classList.add('hidden');
+        }
+        // Reset radio selection to landsat
+        const landsatRadio = document.querySelector('input[name="water-satellite"][value="landsat"]');
+        if (landsatRadio)
+            landsatRadio.checked = true;
+        const note = document.getElementById('water-satellite-note');
+        if (note) {
+            note.textContent = 'Landsat (Óptico): Datos 2000–2024. Sujeto a nubosidad estacional. Resolución media (30m).';
+        }
         this.populateYearSelect();
     }
 }

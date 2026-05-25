@@ -143,6 +143,22 @@
             <span class="tflow-step-label">Configurar</span>
           </div>
           <div class="tflow-step-content">
+            <!-- Configuración satelital (visible solo si variable es "water") -->
+            <div id="water-satellite-container" class="hidden" style="margin-top: var(--space-1); margin-bottom: var(--space-3);">
+              <span class="tflow-label" style="display: block; margin-bottom: var(--space-1);">Satélite</span>
+              <div class="satellite-options" style="display: flex; gap: var(--space-3); margin-bottom: var(--space-2);">
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.88rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="radio" name="water-satellite" value="landsat" checked> Landsat (Óptico)
+                </label>
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.88rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="radio" name="water-satellite" value="sentinel1"> Sentinel-1 (Radar)
+                </label>
+              </div>
+              <p id="water-satellite-note" class="hint" style="font-size: 0.78rem; margin: 0; line-height: 1.4; color: var(--gray-400);">
+                Landsat (Óptico): Datos 2000–2024. Sujeto a nubosidad estacional. Resolución media (30m).
+              </p>
+            </div>
+
             <label for="tflow-year-select" class="tflow-label">Año</label>
             <select id="tflow-year-select" class="tflow-year-select">
               <option value="">-- Año --</option>
@@ -445,6 +461,13 @@
                   <option value="water">Cuerpos de agua</option>
                 </select>
               </div>
+              <div id="compareSatGroupA" class="compare-select-group hidden">
+                <label for="compareSatA">Satélite A</label>
+                <select id="compareSatA">
+                  <option value="landsat">Landsat (Óptico)</option>
+                  <option value="sentinel1">Sentinel-1 (Radar)</option>
+                </select>
+              </div>
               <div class="compare-select-group">
                 <label for="compareYearA">Año A</label>
                 <select id="compareYearA">
@@ -517,6 +540,13 @@
                   <option value="soil">Humedad del suelo</option>
                   <option value="precip">Precipitación</option>
                   <option value="water">Cuerpos de agua</option>
+                </select>
+              </div>
+              <div id="compareSatGroupB" class="compare-select-group hidden">
+                <label for="compareSatB">Satélite B</label>
+                <select id="compareSatB">
+                  <option value="landsat">Landsat (Óptico)</option>
+                  <option value="sentinel1">Sentinel-1 (Radar)</option>
                 </select>
               </div>
               <div class="compare-select-group">
