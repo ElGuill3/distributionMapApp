@@ -9,6 +9,7 @@ import * as mapState from './state/mapState.js';
 import * as normalMode from './modes/normalMode.js';
 import * as compareMode from './modes/compareMode.js';
 import * as floodRiskMode from './modes/floodRiskMode.js';
+import * as inundacionesMode from './modes/inundacionesMode.js';
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
@@ -393,6 +394,14 @@ const floodRiskModeHint = document.querySelector(
   '.flood-risk-mode-hint'
 ) as HTMLElement | null;
 
+// DOM: modo inundaciones
+const toggleInundacionesModeButton = document.getElementById(
+  'toggleInundacionesMode'
+) as HTMLButtonElement | null;
+const inundacionesModeHint = document.getElementById(
+  'modeBannerInundaciones'
+) as HTMLElement | null;
+
 // Phase B: floodRiskModeActive now managed via mapState
 
 // DOM: selectores de comparativa — panel A
@@ -576,6 +585,26 @@ document.addEventListener('floodRiskModeActivated', () => {
 document.addEventListener('floodRiskModeDeactivated', () => {
   floodRiskMode.exitFloodRiskMode();
   toggleModeBanner('flood-risk', false);
+});
+
+// Inicializar inundacionesMode
+inundacionesMode.initInundacionesMode({
+  map,
+  toggleInundacionesModeButton,
+  inundacionesModeHint,
+});
+
+document.addEventListener('inundacionesModeActivated', () => {
+  inundacionesMode.enterInundacionesMode();
+  normalMode.clearNormalMode();
+  body.classList.remove('sidebar-collapsed');
+  syncSidebarState();
+  toggleModeBanner('inundaciones', true);
+});
+
+document.addEventListener('inundacionesModeDeactivated', () => {
+  inundacionesMode.exitInundacionesMode();
+  toggleModeBanner('inundaciones', false);
 });
 
 // PR2: Initialize new sidebar task flow modules directly (no bridge)
@@ -1131,6 +1160,9 @@ const modeBannerCompare = document.getElementById(
 const modeBannerFloodRisk = document.getElementById(
   'modeBannerFloodRisk'
 ) as HTMLDivElement | null;
+const modeBannerInundaciones = document.getElementById(
+  'modeBannerInundaciones'
+) as HTMLDivElement | null;
 
 // ---------------------------------------------------------------------------
 // Mode Banner Visibility Helpers
@@ -1142,10 +1174,17 @@ const modeBannerFloodRisk = document.getElementById(
  * @param visible - true to show, false to hide
  */
 export function toggleModeBanner(
-  mode: 'compare' | 'flood-risk',
+  mode: 'compare' | 'flood-risk' | 'inundaciones',
   visible: boolean
 ): void {
-  const banner = mode === 'compare' ? modeBannerCompare : modeBannerFloodRisk;
+  let banner = null;
+  if (mode === 'compare') {
+    banner = modeBannerCompare;
+  } else if (mode === 'flood-risk') {
+    banner = modeBannerFloodRisk;
+  } else if (mode === 'inundaciones') {
+    banner = modeBannerInundaciones;
+  }
   if (banner) {
     banner.classList.toggle('hidden', !visible);
   }
