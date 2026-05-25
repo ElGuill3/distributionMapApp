@@ -394,6 +394,11 @@ body.sidebar-collapsed .sidebar {
   color: var(--sidebar-fg);
 }
 
+.sidebar select option {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+}
+
 .sidebar select:disabled,
 .sidebar input[type="date"]:disabled {
   background: var(--btn-disabled-bg);
