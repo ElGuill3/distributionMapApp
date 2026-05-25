@@ -57,7 +57,6 @@ export function buildColorbars(): void {
     temp: _makeColorbar('temp-colorbar', _tempHtml()),
     soil: _makeColorbar('soil-colorbar', _soilHtml()),
     precip: _makeColorbar('precip-colorbar', _precipHtml()),
-    water: _makeColorbar('precip-colorbar', _waterHtml()),
     flood: _makeColorbar('flood-risk-colorbar', _floodHtml()),
   };
 }
@@ -185,17 +184,6 @@ function _precipHtml(): string {
       <span class="colorbar-label-item">10–20 mm/día</span>
       <span class="colorbar-label-item">1–10 mm/día</span>
       <span class="colorbar-label-item">0–1 mm/día</span>
-    </div>`;
-}
-
-function _waterHtml(): string {
-  return `
-    <div class="precip-colorbar-scale"
-         style="background: linear-gradient(to top, #00000000 0%, #0000ff 100%);"></div>
-    <div class="precip-colorbar-labels">
-      <span class="colorbar-label-item">100 % agua</span>
-      <span class="colorbar-label-item">50 % agua</span>
-      <span class="colorbar-label-item">0 % agua</span>
     </div>`;
 }
 
