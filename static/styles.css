@@ -1519,7 +1519,6 @@ body.compare-mode-active #map-panel-b {
 }
 
 .municipios-grid {
-  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 0.3rem 0.5rem;
   font-size: 0.9rem;
