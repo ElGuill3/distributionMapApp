@@ -54,6 +54,23 @@ test.describe('export bundle — export-bundle', () => {
     await expect(toolbar).toBeVisible();
   });
 
+  test('export toolbar stays hidden in compare mode even if can-export is applied', async ({
+    page,
+  }) => {
+    await page.goto('/templates/index.html');
+    await page.waitForSelector('#map', { timeout: 15_000 });
+    await page.waitForTimeout(1_000);
+
+    const toolbar = page.locator('#export-toolbar');
+
+    await page.evaluate(() => {
+      document.body.classList.add('compare-mode-active');
+      document.getElementById('export-toolbar')?.classList.add('can-export');
+    });
+
+    await expect(toolbar).toBeHidden();
+  });
+
   test('export button has correct label', async ({ page }) => {
     await page.goto('/templates/index.html');
     await page.waitForSelector('#map', { timeout: 15_000 });

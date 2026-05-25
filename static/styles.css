@@ -427,15 +427,16 @@ details > summary::-webkit-details-marker {
   display: none;
 }
 
-details > summary::before {
-  content: '▶';
-  font-size: 0.7rem;
-  transition: transform 0.2s ease;
+details > summary .summary-chevron {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease, color 0.2s ease;
   color: var(--gray-400);
   flex-shrink: 0;
 }
 
-details[open] > summary::before {
+details[open] > summary .summary-chevron {
   transform: rotate(90deg);
 }
 
@@ -443,7 +444,7 @@ details > summary:hover {
   color: var(--btn-primary-bg);
 }
 
-details > summary:hover::before {
+details > summary:hover .summary-chevron {
   color: var(--btn-primary-bg);
 }
 
@@ -717,9 +718,30 @@ body.animation-loaded .map-overlay-topbar {
   background: var(--gray-100);
 }
 
+.topbar-btn svg,
+.topbar-layer-btn svg,
+.player-btn svg,
+#tflow-draw-btn svg,
+.tflow-clear-btn svg,
+.theme-toggle-btn svg,
+#sidebarRestore svg {
+  flex-shrink: 0;
+  display: block;
+}
+
+.topbar-btn svg,
+.player-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.topbar-layer-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 .topbar-play-btn {
   color: var(--btn-primary-bg);
-  font-size: 0.8rem;
 }
 
 .topbar-slider {
@@ -1069,6 +1091,11 @@ body.animation-loaded #player-controls {
 
 .player-btn:hover {
   background: var(--gray-100);
+}
+
+.player-step-btn svg {
+  width: 15px;
+  height: 15px;
 }
 
 .player-slider {
@@ -1983,11 +2010,12 @@ body.compare-mode-active #map-panel-b {
   justify-content: center;
   flex: 1;
   min-height: var(--chart-placeholder-min-height);
-  background: var(--chart-placeholder-bg);
-  border: var(--chart-placeholder-border-width) dashed var(--chart-placeholder-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--chart-placeholder-bg) 92%, white), var(--chart-placeholder-bg));
+  border: 1px solid color-mix(in srgb, var(--chart-placeholder-border) 70%, var(--sidebar-fg));
   border-radius: var(--radius-md);
   margin: var(--space-4);
   text-align: center;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chart-placeholder-border) 35%, transparent);
 }
 
 .chart-placeholder--hidden {
@@ -1998,21 +2026,42 @@ body.compare-mode-active #map-panel-b {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  max-width: 360px;
 }
 
 .chart-placeholder-icon {
-  font-size: var(--chart-placeholder-icon-size);
-  opacity: 0.6;
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 1.05rem;
+  border-radius: 999px;
+  color: var(--btn-primary-bg);
+  background: color-mix(in srgb, var(--btn-primary-bg) 10%, white);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--btn-primary-bg) 12%, transparent);
+}
+
+.chart-placeholder-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.chart-placeholder-title {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--surface-fg);
+  margin: 0;
 }
 
 .chart-placeholder-text {
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   color: var(--chart-placeholder-fg);
-  max-width: 280px;
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.3;
+  max-width: 300px;
 }
 
 /* Mode banners */
@@ -2061,6 +2110,11 @@ body:has(.mode-banner:not(.hidden)) .main-viewer-container {
 
 #export-toolbar.can-export {
   display: flex;
+}
+
+/* In compare mode, export actions must stay hidden regardless of data state */
+body.compare-mode-active #export-toolbar {
+  display: none !important;
 }
 
 /* Logo container */
@@ -2558,4 +2612,3 @@ body.inundaciones-mode-active .inundaciones-panel {
   gap: var(--space-2);
   cursor: pointer;
 }
-

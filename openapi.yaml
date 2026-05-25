@@ -1253,25 +1253,17 @@ components:
 
         gifPaths: rutas relativas a STATIC_DIR ej: ["gifs/ndvi_abc123.gif"]
 
-        panel: panel activo ''A'' o ''B''
-
         seriesData: dict con dates (lista de YYYY-MM-DD) y variables (keyed por nombre)
 
         bbox: [minLon, minLat, maxLon, maxLat]
 
-        metadata: variableKeys y panel'
+        metadata: variableKeys'
       properties:
         gifPaths:
           items:
             type: string
           title: Gifpaths
           type: array
-        panel:
-          enum:
-          - A
-          - B
-          title: Panel
-          type: string
         seriesData:
           $ref: '#/components/schemas/SeriesDataSchema'
         bbox:
@@ -1285,32 +1277,24 @@ components:
           title: Bbox
           type: array
         metadata:
-          $ref: '#/components/schemas/ExportMetadataSchema'
+          $ref: '#/components/schemas/ExportBundleMetadataSchema'
       required:
-      - panel
       - seriesData
       - bbox
       - metadata
       title: ExportRequestSchema
       type: object
-    ExportMetadataSchema:
-      description: Schema para metadatos de exportación.
+    ExportBundleMetadataSchema:
+      description: Schema para metadatos específicos del export ZIP.
       properties:
         variableKeys:
           items:
             type: string
           title: Variablekeys
           type: array
-        panel:
-          enum:
-          - A
-          - B
-          title: Panel
-          type: string
       required:
       - variableKeys
-      - panel
-      title: ExportMetadataSchema
+      title: ExportBundleMetadataSchema
       type: object
     SeriesDataSchema:
       description: Schema para datos de series temporales en petición de exportación.
@@ -1333,6 +1317,18 @@ components:
       required:
       - dates
       title: SeriesDataSchema
+      type: object
+    ExportMetadataSchema:
+      description: Schema para metadatos de exportación.
+      properties:
+        variableKeys:
+          items:
+            type: string
+          title: Variablekeys
+          type: array
+      required:
+      - variableKeys
+      title: ExportMetadataSchema
       type: object
     ErrorResponse:
       type: object

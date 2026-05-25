@@ -154,6 +154,16 @@ export class SyncPlayer {
     this.showFrame(this.currentFrame);
   }
 
+  /** Devuelve el frame actual (útil para controles de paso manual). */
+  get currentFrameIndex(): number {
+    return this.currentFrame;
+  }
+
+  /** Devuelve la cantidad total de frames animables. */
+  get totalFrameCount(): number {
+    return this.totalFrames;
+  }
+
   /** Arranca o reanuda la reproducción. */
   play(): void {
     if (this._isPlaying) return;
@@ -253,6 +263,11 @@ export class SoloPlayer {
   }
   get frameCount(): number {
     return this.player?.frameCount ?? 0;
+  }
+
+  /** Devuelve el frame actual (útil para controles de paso manual). */
+  get currentFrameIndex(): number {
+    return this.currentFrame;
   }
 
   start(player: GifPlayer, overlay: L.ImageOverlay): void {

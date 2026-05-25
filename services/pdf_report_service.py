@@ -132,6 +132,7 @@ class AnomalyEvent:
     duration_days: int
     description: str
     chart_annotation: bool = True
+    variable_key: str = ""
 
 
 @dataclass
@@ -246,6 +247,7 @@ def identify_events(z_scores: list[float], dates: list[str]) -> list[AnomalyEven
                         duration_days=run_length,
                         description="",
                         chart_annotation=True,
+                        variable_key="",
                     )
                 )
                 i += run_length
@@ -263,6 +265,7 @@ def identify_events(z_scores: list[float], dates: list[str]) -> list[AnomalyEven
                     duration_days=1,
                     description="",
                     chart_annotation=True,
+                    variable_key="",
                 )
             )
         elif z_i < -Z_THRESHOLD:
@@ -276,6 +279,7 @@ def identify_events(z_scores: list[float], dates: list[str]) -> list[AnomalyEven
                     duration_days=1,
                     description="",
                     chart_annotation=True,
+                    variable_key="",
                 )
             )
 
@@ -296,7 +300,7 @@ def merge_consecutive_events(events: list[AnomalyEvent]) -> list[AnomalyEvent]:
     current = events[0]
 
     for next_event in events[1:]:
-        if next_event.type == current.type:
+        if next_event.type == current.type and next_event.variable_key == current.variable_key:
             # Extend the run
             current = AnomalyEvent(
                 start_date=current.start_date,
@@ -307,6 +311,7 @@ def merge_consecutive_events(events: list[AnomalyEvent]) -> list[AnomalyEvent]:
                 duration_days=current.duration_days + 1,
                 description="",
                 chart_annotation=True,
+                variable_key=current.variable_key,
             )
         else:
             merged.append(current)
@@ -361,94 +366,51 @@ def generate_event_description(event: AnomalyEvent) -> str:
     """Generate templated description for an anomaly event."""
     if event.type == "spike":
         return (
-            f"Significant increase detected on {event.start_date} — "
-            f"value was {event.magnitude:.1f}σ above normal"
+            f"Se observó un aumento inusual el {event.start_date}. "
+            f"El valor subió bastante por encima de lo esperado."
         )
     elif event.type == "drop":
         return (
-            f"Significant decrease detected on {event.start_date} — "
-            f"value was {event.magnitude:.1f}σ below normal"
+            f"Se observó una caída inusual el {event.start_date}. "
+            f"El valor bajó bastante por debajo de lo esperado."
         )
     else:  # sustained_shift
         return (
-            f"Sustained anomaly from {event.start_date} to {event.end_date} — "
-            f"max deviation {event.magnitude:.1f}σ"
+            f"Se observó un cambio sostenido entre {event.start_date} y {event.end_date}. "
+            f"El comportamiento se mantuvo distinto a lo habitual durante varios días."
         )
 
 
-def detect_anomalies(series_data: dict, dates: list) -> AnomalyResult:
+def _detect_anomalies_for_variable(
+    var_key: str, raw_values: list[Any], dates: list[str]
+) -> tuple[list[AnomalyEvent], str | None]:
     """
-    Detect anomalies in a time series. Pure function.
+    Detect anomalies for a single variable.
 
-    Fallback conditions:
-    - insufficient_observations: valid obs < 10
-    - zero_variance: max - min < 1e-6
-    - no_anomalies_above_threshold: no events with |z| >= 2.5
-
-    Returns AnomalyResult with effective_report_type="summary" on fallback,
-    "anomaly" otherwise.
+    Returns:
+        (events, fallback_reason)
     """
-    if not series_data or not dates:
-        return AnomalyResult(
-            events=[],
-            fallback_reason="insufficient_observations",
-            effective_report_type="summary",
-        )
-
-    var_key = list(series_data.keys())[0]
-    raw_values = series_data[var_key]
-
-    # Filter valid values
     valid_pairs = [(d, v) for d, v in zip(dates, raw_values) if v is not None]
     valid_values = [v for _, v in valid_pairs]
 
-    # Fallback 1: insufficient observations
     if len(valid_values) < 10:
-        return AnomalyResult(
-            events=[],
-            fallback_reason="insufficient_observations",
-            effective_report_type="summary",
-        )
+        return [], "insufficient_observations"
 
-    # Fallback 2: zero variance
     if max(valid_values) - min(valid_values) < 1e-6:
-        return AnomalyResult(
-            events=[],
-            fallback_reason="zero_variance",
-            effective_report_type="summary",
-        )
+        return [], "zero_variance"
 
-    # Compute z-scores
-    z_scores = rolling_z_scores(series_data, dates)
-    valid_dates = [d for d, v in zip(dates, series_data[var_key]) if v is not None]
+    z_scores = rolling_z_scores({var_key: raw_values}, dates)
+    valid_dates = [d for d, v in zip(dates, raw_values) if v is not None]
 
-    # Identify events
     events = identify_events(z_scores, valid_dates)
-
-    # Merge consecutive events
     events = merge_consecutive_events(events)
-
-    # Rank and truncate
     events = rank_and_truncate_events(events)
 
-    # Fallback 3: no anomalies above threshold
     if not events:
-        return AnomalyResult(
-            events=[],
-            fallback_reason="no_anomalies_above_threshold",
-            effective_report_type="summary",
-        )
-
-    # Compute severity and description for each event
-    # Build a mapping from date to z-score for adjacency checks
-    date_to_z: dict[str, float] = {}
-    for d, z in zip(valid_dates, z_scores):
-        if not math.isnan(z):
-            date_to_z[d] = z
+        return [], "no_anomalies_above_threshold"
 
     final_events: list[AnomalyEvent] = []
     for event in events:
-        # Find the index in valid_dates for adjacency
         try:
             event_idx = valid_dates.index(event.start_date)
         except ValueError:
@@ -469,11 +431,63 @@ def detect_anomalies(series_data: dict, dates: list) -> AnomalyResult:
                 duration_days=event.duration_days,
                 description=description,
                 chart_annotation=True,
+                variable_key=var_key,
             )
         )
 
+    return final_events, None
+
+
+def detect_anomalies(series_data: dict, dates: list) -> AnomalyResult:
+    """
+    Detect anomalies in a time series. Pure function.
+
+    Fallback conditions:
+    - insufficient_observations: valid obs < 10
+    - zero_variance: max - min < 1e-6
+    - no_anomalies_above_threshold: no events with |z| >= 2.5
+
+    Returns AnomalyResult with effective_report_type="summary" on fallback,
+    "anomaly" otherwise.
+    """
+    if not series_data or not dates:
+        return AnomalyResult(
+            events=[],
+            fallback_reason="insufficient_observations",
+            effective_report_type="summary",
+        )
+    all_events: list[AnomalyEvent] = []
+    fallback_reasons: list[str] = []
+
+    for var_key, raw_values in series_data.items():
+        events, fallback_reason = _detect_anomalies_for_variable(
+            var_key, raw_values, dates
+        )
+        all_events.extend(events)
+        if fallback_reason:
+            fallback_reasons.append(fallback_reason)
+
+    if not all_events:
+        if fallback_reasons and all(
+            reason == "insufficient_observations" for reason in fallback_reasons
+        ):
+            fallback_reason = "insufficient_observations"
+        elif fallback_reasons and all(reason == "zero_variance" for reason in fallback_reasons):
+            fallback_reason = "zero_variance"
+        else:
+            fallback_reason = "no_anomalies_above_threshold"
+
+        return AnomalyResult(
+            events=[],
+            fallback_reason=fallback_reason,
+            effective_report_type="summary",
+        )
+
+    # Rank and truncate globally across all variables
+    all_events = rank_and_truncate_events(all_events)
+
     return AnomalyResult(
-        events=final_events,
+        events=all_events,
         fallback_reason=None,
         effective_report_type="anomaly",
     )
@@ -659,7 +673,7 @@ def build_pdf_context(
         chart_blob: PNG base64 del chart
         gif_frame_path: ruta absoluta al PNG del frame del GIF (o None)
         bbox: [minLon, minLat, maxLon, maxLat]
-        metadata: {variableKeys, panel}
+        metadata: {variableKeys}
         anomaly_result: resultado del detector de anomalías (always passed now)
 
     Returns:
@@ -669,11 +683,8 @@ def build_pdf_context(
 
     variable_keys = metadata.get("variableKeys", [])
 
-    # Primera variable como principal (MVP single-variable)
-    primary_var = variable_keys[0] if variable_keys else list(series_data.keys())[0]
-
     # Etiquetas legibles de variables
-    VARIABLE_LABELS = {  # noqa: N806
+    variable_labels = {  # noqa: N806
         "ndvi": "NDVI (Índice de Vegetación)",
         "temp": "Temperatura (°C)",
         "soil": "Humedad del suelo (%)",
@@ -683,7 +694,18 @@ def build_pdf_context(
         "local_bd": "Nivel Boca del Cerro (m)",
     }
 
-    label = VARIABLE_LABELS.get(primary_var, primary_var)
+    active_variable_keys = variable_keys or list(series_data.keys()) or ["ndvi"]
+    labeled_variables = [variable_labels.get(key, key) for key in active_variable_keys]
+
+    if anomaly_result is None:
+        anomaly_result = AnomalyResult(events=[], fallback_reason=None)
+
+    primary_var = (
+        anomaly_result.events[0].variable_key
+        if anomaly_result and anomaly_result.events and anomaly_result.events[0].variable_key
+        else active_variable_keys[0]
+    )
+    label = variable_labels.get(primary_var, primary_var)
 
     # Rango de fechas
     if dates:
@@ -693,8 +715,8 @@ def build_pdf_context(
 
     # Trend interpretation
     trend_map = {
-        "↑": "Tendencia al alza",
-        "↓": "Tendencia a la baja",
+        "↑": "Va en aumento",
+        "↓": "Va a la baja",
         "→": "Estable",
     }
     primary_stats = stats.get(primary_var, {})
@@ -703,29 +725,24 @@ def build_pdf_context(
     # Interpretation text per variable
     INTERPRETATIONS = {  # noqa: N806
         "ndvi": (
-            "El NDVI mide la salud de la vegetación. Valores positivos "
-            "indican vegetación densa y saludable."
+            "Esta variable ayuda a ver si la vegetación está sana o si muestra señales de cambio."
         ),
         "temp": (
-            "La temperatura superficial influencia procesos de "
-            "evapotranspiración y desarrollo de cultivos."
+            "Esta variable muestra si la temperatura estuvo subiendo o bajando durante el período."
         ),
         "soil": (
-            "La humedad del suelo es crítica para el estrés hídrico de "
-            "cultivos y la infiltración."
+            "Esta variable ayuda a saber si el suelo estuvo más seco o más húmedo de lo normal."
         ),
         "precip": (
-            "La precipitación diaria determina la recarga de acuíferos "
-            "y el riesgo de inundación."
+            "Esta variable permite ver si hubo más o menos lluvia de lo habitual."
         ),
         "water": (
-            "La superficie de agua indica la disponibilidad hídrica y "
-            "cambios en cuerpos de agua."
+            "Esta variable indica si aumentó o disminuyó la presencia de agua en la zona."
         ),
-        "local_sp": "Nivel medido en la estación San Pedro (Balancán).",
-        "local_bd": "Nivel medido en la estación Boca del Cerro (Tenosique).",
+        "local_sp": "Nivel observado en la estación San Pedro (Balancán).",
+        "local_bd": "Nivel observado en la estación Boca del Cerro (Tenosique).",
     }
-    interpretation = INTERPRETATIONS.get(primary_var, "Datos geoespacialesanalizados.")
+    interpretation = INTERPRETATIONS.get(primary_var, "Datos geoespaciales analizados.")
 
     context: dict[str, Any] = {
         "variable_label": label,
@@ -739,13 +756,13 @@ def build_pdf_context(
         "trend_str": trend_str,
         "interpretation": interpretation,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "panel": metadata.get("panel", "A"),
+        "report_objective": (
+            "Explicar de forma sencilla cuáles fueron los eventos principales "
+            "detectados en las variables activas y qué tan relevantes pueden ser para su revisión."
+        ),
+        "variable_labels": variable_labels,
+        "labeled_variables": labeled_variables,
     }
-
-    # Anomaly context injection — anomaly_result is always passed (never None now)
-    # but we guard for backward compatibility with unit tests
-    if anomaly_result is None:
-        anomaly_result = AnomalyResult(events=[], fallback_reason=None)
 
     context["fallback_reason"] = anomaly_result.fallback_reason
 
@@ -765,9 +782,16 @@ def build_pdf_context(
                 "type": e.type,
                 "magnitude": e.magnitude,
                 "severity": e.severity,
+                "severity_label": {
+                    "Alta": "Muy importante",
+                    "Media": "Importante",
+                    "Baja": "Moderado",
+                }.get(e.severity, e.severity),
+                "variable_label": variable_labels.get(e.variable_key, e.variable_key),
                 "duration_days": e.duration_days,
                 "description": e.description,
                 "chart_annotation": e.chart_annotation,
+                "variable_key": e.variable_key,
             }
             for e in anomaly_result.events
         ]

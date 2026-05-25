@@ -82,6 +82,8 @@ export interface AppState {
   // GIF paths — para exportar (originales, no blob URLs)
   activeGifPathA: string | null;
   activeGifPathB: string | null;
+  gifPathsA: Partial<Record<VariableKey, string | undefined>>;
+  gifPathsB: Partial<Record<VariableKey, string | undefined>>;
 
   // PR2: Animation frame date labels for date label overlay
   frameDateLabels: AnimationFrameInfo[];
@@ -109,6 +111,8 @@ export const initialState: AppState = {
   mapB: null,
   activeGifPathA: null,
   activeGifPathB: null,
+  gifPathsA: {},
+  gifPathsB: {},
   // PR2: Animation frame date labels for date label overlay
   frameDateLabels: [],
   // PR1: Task flow initial state
@@ -230,6 +234,65 @@ export function setActiveGifPathA(path: string | null): void {
 
 export function setActiveGifPathB(path: string | null): void {
   state = { ...state, activeGifPathB: path };
+}
+
+export function getGifPathsA(): Partial<Record<VariableKey, string | undefined>> {
+  return state.gifPathsA;
+}
+
+export function getGifPathsB(): Partial<Record<VariableKey, string | undefined>> {
+  return state.gifPathsB;
+}
+
+export function getGifPathForVariable(
+  panel: 'A' | 'B',
+  variable: VariableKey
+): string | undefined {
+  return panel === 'A' ? state.gifPathsA[variable] : state.gifPathsB[variable];
+}
+
+export function setGifPathForVariable(
+  panel: 'A' | 'B',
+  variable: VariableKey,
+  path: string | null
+): void {
+  if (panel === 'A') {
+    state = {
+      ...state,
+      gifPathsA: {
+        ...state.gifPathsA,
+        [variable]: path ?? undefined,
+      },
+    };
+  } else {
+    state = {
+      ...state,
+      gifPathsB: {
+        ...state.gifPathsB,
+        [variable]: path ?? undefined,
+      },
+    };
+  }
+}
+
+export function deleteGifPathForVariable(panel: 'A' | 'B', variable: VariableKey): void {
+  if (panel === 'A') {
+    const { [variable]: _removed, ...restA } = state.gifPathsA;
+    void _removed;
+    state = { ...state, gifPathsA: restA };
+  } else {
+    const { [variable]: _removed, ...restB } = state.gifPathsB;
+    void _removed;
+    state = { ...state, gifPathsB: restB };
+  }
+}
+
+export function clearGifPathsA(): void {
+  state = { ...state, gifPathsA: {} };
+}
+
+export function clearGifPathsB(): void {
+  state = { ...state, gifPathsB: {} };
 }
 
 // PR2: Frame date labels for date label overlay
@@ -462,6 +525,7 @@ export function clearPanelA(): void {
     syncPlayer: null,
     overlayA: null,
     seriesDataA: {},
+    gifPathsA: {},
     frameDateLabels: [],
   };
 }
@@ -478,6 +542,7 @@ export function clearPanelB(): void {
     soloPlayer: null,
     overlayB: null,
     seriesDataB: {},
+    gifPathsB: {},
   };
 }
 
@@ -498,6 +563,8 @@ export function cleanupComparePanels(): void {
     seriesDataB: {},
     activeGifPathA: null,
     activeGifPathB: null,
+    gifPathsA: {},
+    gifPathsB: {},
   };
 }
 

@@ -382,6 +382,24 @@ class TestDetectAnomaliesSuccess:
             assert event.description != ""
             assert "2020-01" in event.description
 
+    def test_detects_events_across_multiple_variables(self) -> None:
+        """
+        GIVEN two active variables with anomalies
+        WHEN detect_anomalies is called
+        THEN events from both variables can be returned
+        """
+        series_data = {
+            "ndvi": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 10.0, 0.5, 0.5, 0.5, 0.5, 0.5],
+            "temp": [28.0, 28.1, 28.0, 27.9, 28.0, 28.1, 35.5, 28.0, 28.0, 28.1, 28.0, 28.0],
+        }
+        dates = [f"2020-01-{i:02d}" for i in range(1, 13)]
+
+        result = detect_anomalies(series_data, dates)
+
+        assert result.effective_report_type == "anomaly"
+        assert any(event.variable_key == "ndvi" for event in result.events)
+        assert any(event.variable_key == "temp" for event in result.events)
+
 
 # ---------------------------------------------------------------------------
 # Severity computation (tested directly via compute_severity)

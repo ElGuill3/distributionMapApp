@@ -190,7 +190,7 @@ class TestCreateExportZip:
         zip_bytes = create_export_zip(
             csv_content=csv,
             gif_paths=[],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            metadata={"variableKeys": ["ndvi"]},
         )
         # Verificar que es un ZIP válido
         buffer = BytesIO(zip_bytes)
@@ -207,7 +207,7 @@ class TestCreateExportZip:
         zip_bytes = create_export_zip(
             csv_content=csv,
             gif_paths=[],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            metadata={"variableKeys": ["ndvi"]},
         )
         buffer = BytesIO(zip_bytes)
         with zipfile.ZipFile(buffer, "r") as zf:
@@ -217,20 +217,22 @@ class TestCreateExportZip:
 
     def test_zip_contains_metadata_json(self) -> None:
         """
-        GIVEN metadata con variableKeys y panel
+        GIVEN metadata con variableKeys
         WHEN create_export_zip es llamada
         THEN ZIP contiene metadata.json con los datos correctos
         """
         zip_bytes = create_export_zip(
             csv_content="date,ndvi\n2020-03-01,0.45\n",
             gif_paths=[],
-            metadata={"variableKeys": ["ndvi"], "panel": "A", "bbox": [-92.5, 17.0, -91.0, 18.0]},
+            metadata={"variableKeys": ["ndvi"], "bbox": [-92.5, 17.0, -91.0, 18.0]},
         )
         buffer = BytesIO(zip_bytes)
         with zipfile.ZipFile(buffer, "r") as zf:
             metadata = json.loads(zf.read("metadata.json").decode())
             assert metadata["variableKeys"] == ["ndvi"]
-            assert metadata["panel"] == "A"
+            assert metadata["exportedVariables"] == ["ndvi"]
+            assert metadata["variablesWithGif"] == []
+            assert metadata["variablesWithoutGif"] == ["ndvi"]
             assert metadata["bbox"] == [-92.5, 17.0, -91.0, 18.0]
             assert metadata["gifAvailable"] is False
 
@@ -253,7 +255,7 @@ class TestCreateExportZip:
         zip_bytes = create_export_zip(
             csv_content=csv,
             gif_paths=["gifs/ndvi_test.gif"],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            metadata={"variableKeys": ["ndvi"]},
         )
         buffer = BytesIO(zip_bytes)
         with zipfile.ZipFile(buffer, "r") as zf:
@@ -269,20 +271,22 @@ class TestCreateExportZip:
         """
         gif_dir = tmp_path / "gifs"
         gif_dir.mkdir()
-        gif_file = gif_dir / "test.gif"
+        gif_file = gif_dir / "ndvi_test.gif"
         gif_file.write_bytes(b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x02\x00\x00\x00b!\xf9\x04\x01\x05\x00\x01\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00;\x00")
 
         monkeypatch.setattr("services.export_service.STATIC_DIR", tmp_path)
 
         zip_bytes = create_export_zip(
             csv_content="date,ndvi\n",
-            gif_paths=["gifs/test.gif"],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            gif_paths=["gifs/ndvi_test.gif"],
+            metadata={"variableKeys": ["ndvi"]},
         )
         buffer = BytesIO(zip_bytes)
         with zipfile.ZipFile(buffer, "r") as zf:
             metadata = json.loads(zf.read("metadata.json").decode())
             assert metadata["gifAvailable"] is True
+            assert metadata["exportedVariables"] == ["ndvi"]
+            assert metadata["variablesWithGif"] == ["ndvi"]
 
     def test_missing_gif_raises_file_not_found_error(self, tmp_path) -> None:
         """
@@ -294,5 +298,5 @@ class TestCreateExportZip:
             create_export_zip(
                 csv_content="date,ndvi\n",
                 gif_paths=["gifs/nonexistent.gif"],
-                metadata={"variableKeys": ["ndvi"], "panel": "A"},
+                metadata={"variableKeys": ["ndvi"]},
             )

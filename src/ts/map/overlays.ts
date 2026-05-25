@@ -15,6 +15,7 @@
 
 import type { VariableKey } from '../types.js';
 import * as mapState from '../state/mapState.js';
+import { initLucideIcons } from '../ui/icons.js';
 
 // ---------------------------------------------------------------------------
 // Estado de overlays
@@ -99,8 +100,8 @@ export function removeActiveOverlay(map: L.Map): void {
 // Helpers privados
 // ---------------------------------------------------------------------------
 
-const CHEVRON_UP_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
-const CHEVRON_DOWN_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+const CHEVRON_UP_ICON = `<span data-lucide="chevron-up" aria-hidden="true"></span>`;
+const CHEVRON_DOWN_ICON = `<span data-lucide="chevron-down" aria-hidden="true"></span>`;
 
 function _makeColorbar(cssClass: string, innerHtml: string): L.Control {
   const ctrl = new L.Control({ position: 'topright' });
@@ -116,14 +117,16 @@ function _makeColorbar(cssClass: string, innerHtml: string): L.Control {
     ) as HTMLButtonElement;
     toggleBtn.type = 'button';
     toggleBtn.title = 'Ocultar leyenda';
-    toggleBtn.innerHTML = CHEVRON_UP_SVG;
+    toggleBtn.innerHTML = CHEVRON_UP_ICON;
+    initLucideIcons(toggleBtn);
 
     const content = L.DomUtil.create('div', cssClass, wrapper);
     content.innerHTML = innerHtml;
 
     toggleBtn.addEventListener('click', () => {
       const hidden = content.classList.toggle('colorbar-content-hidden');
-      toggleBtn.innerHTML = hidden ? CHEVRON_DOWN_SVG : CHEVRON_UP_SVG;
+      toggleBtn.innerHTML = hidden ? CHEVRON_DOWN_ICON : CHEVRON_UP_ICON;
+      initLucideIcons(toggleBtn);
       toggleBtn.title = hidden ? 'Mostrar leyenda' : 'Ocultar leyenda';
     });
 

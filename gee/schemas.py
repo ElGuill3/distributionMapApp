@@ -154,7 +154,12 @@ class ExportMetadataSchema(BaseModel):
     model_config = {"populate_by_name": True}
 
     variableKeys: list[str]  # noqa: N815
-    panel: Literal["A", "B"]
+
+
+class ExportBundleMetadataSchema(BaseModel):
+    """Schema para metadatos específicos del export ZIP."""
+
+    variableKeys: list[str]  # noqa: N815
 
 
 class PdfReportRequestSchema(BaseModel):
@@ -165,7 +170,7 @@ class PdfReportRequestSchema(BaseModel):
     gif_path: ruta relativa al GIF animado, ej "gifs/ndvi_2020_abc123.gif".
     series_data: datos de series temporales con dates y variables.
     bbox: [minLon, minLat, maxLon, maxLat].
-    metadata: variableKeys y panel.
+    metadata: variableKeys.
     """
 
     model_config = {"populate_by_name": True}
@@ -201,17 +206,15 @@ class ExportRequestSchema(BaseModel):
     Schema para validar peticiones al endpoint de export bundle.
 
     gifPaths: rutas relativas a STATIC_DIR ej: ["gifs/ndvi_abc123.gif"]
-    panel: panel activo 'A' o 'B'
     seriesData: dict con dates (lista de YYYY-MM-DD) y variables (keyed por nombre)
     bbox: [minLon, minLat, maxLon, maxLat]
-    metadata: variableKeys y panel
+    metadata: variableKeys
     """
 
     gifPaths: list[str] = Field(default_factory=list)  # noqa: N815
-    panel: Literal["A", "B"]
     seriesData: SeriesDataSchema  # noqa: N815
     bbox: list[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
-    metadata: ExportMetadataSchema
+    metadata: ExportBundleMetadataSchema
 
 
 def _parse_bbox_str(bbox_str: str) -> list[float]:
