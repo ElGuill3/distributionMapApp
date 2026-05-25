@@ -30,7 +30,6 @@ from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
 from gee.soil import build_era5_soil_gif_bbox, build_era5_soil_timeseries_bbox
 from gee.temperature import build_era5_temp_gif_bbox, build_era5_temp_timeseries_bbox
 from gee.utils import check_max_10_years, season_to_dates
-from gee.water import build_water_gif_bbox, build_water_timeseries_bbox
 from services.gif_service import (
     add_dates_to_gif,
     progress_queues,
@@ -357,21 +356,3 @@ def imerg_precip_gif_bbox() -> Response:
         start_message="Iniciando generación de precipitación...",
     )
 
-
-@limiter.limit("30/minute")
-@gif_bp.get("/api/water-gif-bbox")
-def water_gif_bbox() -> Response:
-    """Genera la imagen/GIF de detección de cuerpos de agua (Landsat/Sentinel-1) para el bbox."""
-    satellite = request.args.get("satellite", "landsat")
-    if satellite not in ["landsat", "sentinel1"]:
-        return jsonify({"error": "satellite debe ser 'landsat' o 'sentinel1'."}), 400
-
-    return _gif_pipeline(
-        variable_prefix="water",
-        build_gif_fn=build_water_gif_bbox,
-        build_ts_fn=build_water_timeseries_bbox,
-        ts_key="water_ha",
-        font_size=10,
-        start_message="Iniciando generación de cuerpos de agua...",
-        satellite=satellite,
-    )
