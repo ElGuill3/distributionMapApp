@@ -123,8 +123,8 @@ class ModoSection {
         this.compareToggle.classList.add('modo-toggle--active');
       }
 
-      // Disable task flow steps 1-2
-      this.disableTaskFlowSteps();
+      // Disable all task flow steps on the left
+      this.disableTaskFlowSteps(['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore']);
 
       // Dispatch event
       document.dispatchEvent(new CustomEvent('compareModeActivated'));
@@ -134,8 +134,8 @@ class ModoSection {
         this.floodToggle.classList.add('modo-toggle--active');
       }
 
-      // Disable task flow steps 1-2
-      this.disableTaskFlowSteps();
+      // Disable all task flow steps on the left
+      this.disableTaskFlowSteps(['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore']);
 
       // Dispatch event
       document.dispatchEvent(new CustomEvent('floodRiskModeActivated'));
@@ -145,8 +145,8 @@ class ModoSection {
         this.inundacionesToggle.classList.add('modo-toggle--active');
       }
 
-      // Disable task flow steps 1-2
-      this.disableTaskFlowSteps();
+      // Disable variable, config, and explore steps (keep area active for drawing bbox)
+      this.disableTaskFlowSteps(['tflow-variable', 'tflow-config', 'tflow-explore']);
 
       // Dispatch event
       document.dispatchEvent(new CustomEvent('inundacionesModeActivated'));
@@ -202,8 +202,7 @@ class ModoSection {
   /**
    * Disable task flow steps (for special modes)
    */
-  private disableTaskFlowSteps(): void {
-    const steps = ['tflow-area', 'tflow-variable'];
+  private disableTaskFlowSteps(steps = ['tflow-area', 'tflow-variable']): void {
     steps.forEach(id => {
       const step = document.getElementById(id);
       if (step) {
@@ -223,7 +222,7 @@ class ModoSection {
    * Enable task flow steps
    */
   private enableTaskFlowSteps(): void {
-    const steps = ['tflow-area', 'tflow-variable'];
+    const steps = ['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore'];
     steps.forEach(id => {
       const step = document.getElementById(id);
       if (step) {

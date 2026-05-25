@@ -91,8 +91,8 @@ class ModoSection {
                 this.compareToggle.setAttribute('aria-pressed', 'true');
                 this.compareToggle.classList.add('modo-toggle--active');
             }
-            // Disable task flow steps 1-2
-            this.disableTaskFlowSteps();
+            // Disable all task flow steps on the left
+            this.disableTaskFlowSteps(['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore']);
             // Dispatch event
             document.dispatchEvent(new CustomEvent('compareModeActivated'));
         }
@@ -101,8 +101,8 @@ class ModoSection {
                 this.floodToggle.setAttribute('aria-pressed', 'true');
                 this.floodToggle.classList.add('modo-toggle--active');
             }
-            // Disable task flow steps 1-2
-            this.disableTaskFlowSteps();
+            // Disable all task flow steps on the left
+            this.disableTaskFlowSteps(['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore']);
             // Dispatch event
             document.dispatchEvent(new CustomEvent('floodRiskModeActivated'));
         }
@@ -111,8 +111,8 @@ class ModoSection {
                 this.inundacionesToggle.setAttribute('aria-pressed', 'true');
                 this.inundacionesToggle.classList.add('modo-toggle--active');
             }
-            // Disable task flow steps 1-2
-            this.disableTaskFlowSteps();
+            // Disable variable, config, and explore steps (keep area active for drawing bbox)
+            this.disableTaskFlowSteps(['tflow-variable', 'tflow-config', 'tflow-explore']);
             // Dispatch event
             document.dispatchEvent(new CustomEvent('inundacionesModeActivated'));
         }
@@ -156,8 +156,7 @@ class ModoSection {
     /**
      * Disable task flow steps (for special modes)
      */
-    disableTaskFlowSteps() {
-        const steps = ['tflow-area', 'tflow-variable'];
+    disableTaskFlowSteps(steps = ['tflow-area', 'tflow-variable']) {
         steps.forEach(id => {
             const step = document.getElementById(id);
             if (step) {
@@ -173,7 +172,7 @@ class ModoSection {
      * Enable task flow steps
      */
     enableTaskFlowSteps() {
-        const steps = ['tflow-area', 'tflow-variable'];
+        const steps = ['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore'];
         steps.forEach(id => {
             const step = document.getElementById(id);
             if (step) {
