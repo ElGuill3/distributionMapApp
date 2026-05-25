@@ -131,7 +131,6 @@
               <button type="button" class="tflow-chip" data-variable="temp">Temp 2m</button>
               <button type="button" class="tflow-chip" data-variable="soil">Suelo</button>
               <button type="button" class="tflow-chip" data-variable="precip">Precip</button>
-              <button type="button" class="tflow-chip" data-variable="water">Agua</button>
             </div>
           </div>
         </div>
@@ -143,21 +142,7 @@
             <span class="tflow-step-label">Configurar</span>
           </div>
           <div class="tflow-step-content">
-            <!-- Configuración satelital (visible solo si variable es "water") -->
-            <div id="water-satellite-container" class="hidden" style="margin-top: var(--space-1); margin-bottom: var(--space-3);">
-              <span class="tflow-label" style="display: block; margin-bottom: var(--space-1);">Satélite</span>
-              <div class="satellite-options" style="display: flex; gap: var(--space-3); margin-bottom: var(--space-2);">
-                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.88rem; cursor: pointer; color: var(--text-primary);">
-                  <input type="radio" name="water-satellite" value="landsat" checked> Landsat (Óptico)
-                </label>
-                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.88rem; cursor: pointer; color: var(--text-primary);">
-                  <input type="radio" name="water-satellite" value="sentinel1"> Sentinel-1 (Radar)
-                </label>
-              </div>
-              <p id="water-satellite-note" class="hint" style="font-size: 0.78rem; margin: 0; line-height: 1.4; color: var(--gray-400);">
-                Landsat (Óptico): Datos 2000–2024. Sujeto a nubosidad estacional. Resolución media (30m).
-              </p>
-            </div>
+
 
             <label for="tflow-year-select" class="tflow-label">Año</label>
             <select id="tflow-year-select" class="tflow-year-select">
@@ -271,6 +256,26 @@
             </svg>
             <span>Mapa de riesgo</span>
           </button>
+
+          <button
+            id="toggleInundacionesMode"
+            type="button"
+            class="modo-toggle"
+            aria-pressed="false"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            <span>Inundaciones</span>
+          </button>
         </div>
 
         <div class="municipios-grid">
@@ -301,6 +306,48 @@
           En modo riesgo los controles de animación están bloqueados.
           Activa los municipios para visualizar su riesgo de inundación.
         </p>
+
+        <!-- Panel de Inundaciones -->
+        <div id="inundaciones-panel" class="inundaciones-panel hidden" style="margin-top: var(--space-3);">
+          <div style="margin-bottom: var(--space-3);">
+            <label for="inund-satellite" class="tflow-label">Satélite</label>
+            <select id="inund-satellite" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+              <option value="sentinel1" selected>Sentinel-1 (Radar, 10m, 2015-2024)</option>
+              <option value="landsat">Landsat (Óptico, 30m, 2000-2024)</option>
+            </select>
+            <p id="inund-satellite-hint" class="hint" style="margin-top: var(--space-1); font-size: 0.78rem; color: var(--gray-400);">
+              Sentinel-1 (Radar): Cobertura 2015–2024. Inmune a nubes.
+            </p>
+          </div>
+
+          <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-3);">
+            <div style="flex: 1;">
+              <label for="inund-start" class="tflow-label" style="font-size: 0.82rem;">Fecha Inicio</label>
+              <input type="date" id="inund-start" value="2020-01-01" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 0.82rem;">
+            </div>
+            <div style="flex: 1;">
+              <label for="inund-end" class="tflow-label" style="font-size: 0.82rem;">Fecha Fin</label>
+              <input type="date" id="inund-end" value="2020-01-15" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 0.82rem;">
+            </div>
+          </div>
+
+          <div style="margin-bottom: var(--space-3);">
+            <label for="inund-threshold-mode" class="tflow-label">Modo de Umbral</label>
+            <select id="inund-threshold-mode" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+              <option value="auto" selected>Automático (Percentil dinámico)</option>
+              <option value="manual">Manual</option>
+            </select>
+          </div>
+
+          <div id="inund-threshold-manual-group" class="hidden" style="margin-bottom: var(--space-3);">
+            <label for="inund-threshold-value" class="tflow-label">Valor de Umbral</label>
+            <input type="number" id="inund-threshold-value" step="0.1" value="-18.0" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+          </div>
+
+          <button id="inund-btn-process" type="button" class="primary-action" style="width: 100%;">
+            Visualizar Inundación
+          </button>
+        </div>
       </div>
 
     </aside>
@@ -311,6 +358,9 @@
     </div>
     <div id="modeBannerFloodRisk" class="mode-banner mode-banner--flood-risk hidden">
       Modo riesgo de inundación activado — los controles de animación están bloqueados
+    </div>
+    <div id="modeBannerInundaciones" class="mode-banner mode-banner--inundaciones hidden">
+      Modo inundaciones activado — los controles de la izquierda están bloqueados
     </div>
 
     <!-- Contenedor principal del visor (mapas + controles + gráficas) -->

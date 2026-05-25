@@ -127,6 +127,8 @@
   --mode-banner-compare-fg: var(--gray-0);
   --mode-banner-flood-bg: var(--teal-600);
   --mode-banner-flood-fg: var(--gray-0);
+  --mode-banner-inundaciones-bg: #1e40af;
+  --mode-banner-inundaciones-fg: var(--gray-0);
 
   /* Export toolbar */
   --export-toolbar-bg: var(--surface-bg);
@@ -2472,3 +2474,84 @@ body.compare-mode-active #chart-b-container {
 :root[data-theme="light"] .theme-toggle-btn .icon-moon {
   display: block !important;
 }
+
+/* ------------------------------------------------------------------ */
+/* Modo Inundaciones                                                  */
+/* ------------------------------------------------------------------ */
+
+body.inundaciones-mode-active #map-overlay-topbar-a {
+  display: none !important;
+}
+
+body.inundaciones-mode-active #tflow-config .tflow-generate-btn {
+  display: none;
+}
+
+.inundaciones-panel {
+  display: none;
+}
+
+body.inundaciones-mode-active .inundaciones-panel {
+  display: block;
+}
+
+.mode-banner--inundaciones {
+  background: var(--mode-banner-inundaciones-bg);
+  color: var(--mode-banner-inundaciones-fg);
+}
+
+/* Floating Legend Card for Inundaciones mode */
+.inund-legend-card {
+  background: var(--colorbar-bg);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  font-family: inherit;
+  color: var(--text-primary);
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inund-legend-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--space-1);
+}
+
+.inund-legend-item {
+  font-size: var(--text-sm);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.inund-legend-item span:first-child {
+  color: var(--gray-400);
+}
+
+.inund-legend-item span:last-child {
+  font-weight: 500;
+}
+
+.inund-legend-toggles {
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inund-legend-toggles label {
+  font-size: var(--text-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
