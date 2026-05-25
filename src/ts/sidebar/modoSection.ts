@@ -9,7 +9,7 @@
 /**
  * Valid modo types
  */
-export type ModoType = 'compare' | 'flood';
+export type ModoType = 'compare' | 'flood' | 'inundaciones';
 
 /**
  * Listener callback for modo section events
@@ -32,7 +32,8 @@ class ModoSection {
   modoSection: HTMLElement | null = null;
   compareToggle: HTMLButtonElement | null = null;
   floodToggle: HTMLButtonElement | null = null;
-  activeModo: ModoType | null = null; // 'compare' | 'flood' | null
+  inundacionesToggle: HTMLButtonElement | null = null;
+  activeModo: ModoType | null = null; // 'compare' | 'flood' | 'inundaciones' | null
   private listeners: ModoChangeListener[] = [];
 
   /**
@@ -46,8 +47,11 @@ class ModoSection {
     this.floodToggle = document.getElementById(
       'toggleFloodRiskMode'
     ) as HTMLButtonElement | null;
+    this.inundacionesToggle = document.getElementById(
+      'toggleInundacionesMode'
+    ) as HTMLButtonElement | null;
 
-    if (!this.modoSection || !this.compareToggle || !this.floodToggle) {
+    if (!this.modoSection || !this.compareToggle || !this.floodToggle || !this.inundacionesToggle) {
       console.warn('[ModoSection] Required elements not found');
       return;
     }
@@ -59,7 +63,7 @@ class ModoSection {
    * Setup event listeners
    */
   private setupEventListeners(): void {
-    if (!this.compareToggle || !this.floodToggle) return;
+    if (!this.compareToggle || !this.floodToggle || !this.inundacionesToggle) return;
 
     // Compare mode toggle
     this.compareToggle.addEventListener('click', () => {
@@ -84,6 +88,18 @@ class ModoSection {
         this.activateModo('flood');
       }
     });
+
+    // Inundaciones toggle
+    this.inundacionesToggle.addEventListener('click', () => {
+      if (!this.inundacionesToggle) return;
+      const isActive = this.inundacionesToggle.getAttribute('aria-pressed') === 'true';
+
+      if (isActive) {
+        this.deactivateAll();
+      } else {
+        this.activateModo('inundaciones');
+      }
+    });
   }
 
   /**
@@ -91,7 +107,7 @@ class ModoSection {
    * @param modo - 'compare' or 'flood'
    */
   activateModo(modo: ModoType): void {
-    if (modo !== 'compare' && modo !== 'flood') {
+    if (modo !== 'compare' && modo !== 'flood' && modo !== 'inundaciones') {
       console.warn(`[ModoSection] Invalid modo: ${modo}`);
       return;
     }
@@ -123,6 +139,17 @@ class ModoSection {
 
       // Dispatch event
       document.dispatchEvent(new CustomEvent('floodRiskModeActivated'));
+    } else if (modo === 'inundaciones') {
+      if (this.inundacionesToggle) {
+        this.inundacionesToggle.setAttribute('aria-pressed', 'true');
+        this.inundacionesToggle.classList.add('modo-toggle--active');
+      }
+
+      // Disable task flow steps 1-2
+      this.disableTaskFlowSteps();
+
+      // Dispatch event
+      document.dispatchEvent(new CustomEvent('inundacionesModeActivated'));
     }
 
     this.notifyListeners('activate', { modo });
@@ -146,6 +173,11 @@ class ModoSection {
       this.floodToggle.classList.remove('modo-toggle--active');
     }
 
+    if (this.inundacionesToggle) {
+      this.inundacionesToggle.setAttribute('aria-pressed', 'false');
+      this.inundacionesToggle.classList.remove('modo-toggle--active');
+    }
+
     // Re-enable task flow steps
     this.enableTaskFlowSteps();
 
@@ -154,6 +186,8 @@ class ModoSection {
       document.dispatchEvent(new CustomEvent('compareModeDeactivated'));
     } else if (previousModo === 'flood') {
       document.dispatchEvent(new CustomEvent('floodRiskModeDeactivated'));
+    } else if (previousModo === 'inundaciones') {
+      document.dispatchEvent(new CustomEvent('inundacionesModeDeactivated'));
     }
 
     document.dispatchEvent(
