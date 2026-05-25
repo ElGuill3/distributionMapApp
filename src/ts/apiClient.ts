@@ -31,25 +31,40 @@ function buildGifUrl(
   start: string,
   end: string,
   bbox: BBox,
-  taskId: string
+  taskId: string,
+  satellite?: string
 ): string {
   const bboxJson = JSON.stringify(bbox);
-  return (
+  let url = (
     `${GIF_ENDPOINT[variable as keyof typeof GIF_ENDPOINT]}?start=${encodeURIComponent(start)}` +
     `&end=${encodeURIComponent(end)}` +
     `&bbox=${encodeURIComponent(bboxJson)}` +
     `&task_id=${encodeURIComponent(taskId)}`
   );
+  if (variable === 'water' && satellite) {
+    url += `&satellite=${encodeURIComponent(satellite)}`;
+  }
+  return url;
 }
 
 /** Construye la URL completa para una petición de serie temporal. */
-function buildTsUrl(variable: string, start: string, end: string, bbox: BBox): string {
+function buildTsUrl(
+  variable: string,
+  start: string,
+  end: string,
+  bbox: BBox,
+  satellite?: string
+): string {
   const bboxJson = JSON.stringify(bbox);
-  return (
+  let url = (
     `${TS_ENDPOINT[variable as keyof typeof TS_ENDPOINT]}?start=${encodeURIComponent(start)}` +
     `&end=${encodeURIComponent(end)}` +
     `&bbox=${encodeURIComponent(bboxJson)}`
   );
+  if (variable === 'water' && satellite) {
+    url += `&satellite=${encodeURIComponent(satellite)}`;
+  }
+  return url;
 }
 
 /** Tipo para los datos de progreso SSE */
@@ -104,6 +119,7 @@ export interface FetchGifAndSeriesOptions {
   bbox: BBox;
   /** Genera un taskId nuevo si no se provee */
   taskId?: string;
+  satellite?: string | undefined;
 }
 
 /**
@@ -116,13 +132,13 @@ export interface FetchGifAndSeriesOptions {
 export async function fetchGifAndSeries(
   options: FetchGifAndSeriesOptions
 ): Promise<FetchGifAndSeriesResult> {
-  const { variable, start, end, bbox } = options;
+  const { variable, start, end, bbox, satellite } = options;
   const taskId =
     options.taskId ??
     `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-  const gifUrl = buildGifUrl(variable, start, end, bbox, taskId);
-  const tsUrl = buildTsUrl(variable, start, end, bbox);
+  const gifUrl = buildGifUrl(variable, start, end, bbox, taskId, satellite);
+  const tsUrl = buildTsUrl(variable, start, end, bbox, satellite);
 
   // Nota: el manejo de progress indicator queda a cargo del llamador
   // (createProgressIndicator / updateProgressIndicator / removeProgressIndicator)

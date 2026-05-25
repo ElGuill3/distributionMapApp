@@ -19,7 +19,7 @@ export const VARIABLE_YEARS: Record<VariableKey, number[]> = {
   temp: _yearsRange(2000, 2024),
   soil: _yearsRange(2000, 2024),
   precip: _yearsRange(2000, 2024),
-  water: _yearsRange(2015, 2024),
+  water: _yearsRange(2000, 2024),
   local_sp: _yearsRange(2000, 2024),
   local_bd: _yearsRange(2000, 2024),
 };

@@ -7,6 +7,8 @@ global.document = {
   dispatchEvent: vi.fn(),
   getElementById: vi.fn(() => null),
   createElement: vi.fn(() => ({ value: '', textContent: '' })),
+  querySelector: vi.fn(() => null),
+  querySelectorAll: vi.fn(() => []),
 };
 
 global.CustomEvent = class CustomEvent {

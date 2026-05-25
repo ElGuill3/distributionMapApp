@@ -29,6 +29,8 @@ import {
   updateProgressIndicator,
   removeProgressIndicator,
   showErrorModal,
+  showWarningModal,
+  closeWarningModal,
 } from '../ui/progress.js';
 import { showFieldError } from '../ui/fieldErrors.js';
 import { translateBackendError } from '../errorMap.js';
@@ -335,6 +337,10 @@ export function clearPanelA(): void {
     _compareSeasonASelect.value = '';
     _compareSeasonASelect.disabled = true;
   }
+  const satASelect = document.getElementById('compareSatA') as HTMLSelectElement | null;
+  if (satASelect) satASelect.value = 'landsat';
+  const satGroupA = document.getElementById('compareSatGroupA');
+  if (satGroupA) satGroupA.classList.add('hidden');
   if (_btnGenerateA) _btnGenerateA.disabled = true;
   if (_chkStationSpA) _chkStationSpA.checked = false;
   if (_chkStationBdA) _chkStationBdA.checked = false;
@@ -360,6 +366,10 @@ export function clearPanelB(): void {
     _compareSeasonBSelect.value = '';
     _compareSeasonBSelect.disabled = true;
   }
+  const satBSelect = document.getElementById('compareSatB') as HTMLSelectElement | null;
+  if (satBSelect) satBSelect.value = 'landsat';
+  const satGroupB = document.getElementById('compareSatGroupB');
+  if (satGroupB) satGroupB.classList.add('hidden');
   if (_btnGenerateB) _btnGenerateB.disabled = true;
   if (_chkStationSpB) _chkStationSpB.checked = false;
   if (_chkStationBdB) _chkStationBdB.checked = false;
@@ -400,8 +410,44 @@ export function initCompareSelects(): void {
     VariableKey,
     'local_sp' | 'local_bd'
   >;
-  _populateYearSelect(_compareYearASelect, VARIABLE_YEARS[varA]);
-  _populateYearSelect(_compareYearBSelect, VARIABLE_YEARS[varB]);
+
+  // Toggle SatGroup A
+  const satGroupA = document.getElementById('compareSatGroupA');
+  if (satGroupA) {
+    if (varA === 'water') {
+      satGroupA.classList.remove('hidden');
+    } else {
+      satGroupA.classList.add('hidden');
+    }
+  }
+  // Toggle SatGroup B
+  const satGroupB = document.getElementById('compareSatGroupB');
+  if (satGroupB) {
+    if (varB === 'water') {
+      satGroupB.classList.remove('hidden');
+    } else {
+      satGroupB.classList.add('hidden');
+    }
+  }
+
+  let yearsA = VARIABLE_YEARS[varA];
+  if (varA === 'water') {
+    const satA = (document.getElementById('compareSatA') as HTMLSelectElement)?.value || 'landsat';
+    if (satA === 'sentinel1') {
+      yearsA = yearsA.filter(y => y >= 2015);
+    }
+  }
+  _populateYearSelect(_compareYearASelect, yearsA);
+
+  let yearsB = VARIABLE_YEARS[varB];
+  if (varB === 'water') {
+    const satB = (document.getElementById('compareSatB') as HTMLSelectElement)?.value || 'landsat';
+    if (satB === 'sentinel1') {
+      yearsB = yearsB.filter(y => y >= 2015);
+    }
+  }
+  _populateYearSelect(_compareYearBSelect, yearsB);
+
   _ensureSeasonOptions(_compareSeasonASelect);
   _ensureSeasonOptions(_compareSeasonBSelect);
 }
@@ -443,7 +489,25 @@ export function registerCompareModeListeners(): void {
   _compareVarASelect?.addEventListener('change', () => {
     const sel = _compareVarASelect as HTMLSelectElement;
     const v = (sel.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-    _populateYearSelect(_compareYearASelect, VARIABLE_YEARS[v]);
+    
+    const satGroup = document.getElementById('compareSatGroupA');
+    if (satGroup) {
+      if (v === 'water') {
+        satGroup.classList.remove('hidden');
+      } else {
+        satGroup.classList.add('hidden');
+      }
+    }
+
+    let years = VARIABLE_YEARS[v];
+    if (v === 'water') {
+      const sat = (document.getElementById('compareSatA') as HTMLSelectElement)?.value || 'landsat';
+      if (sat === 'sentinel1') {
+        years = years.filter(y => y >= 2015);
+      }
+    }
+
+    _populateYearSelect(_compareYearASelect, years);
     if (_compareYearASelect) _compareYearASelect.value = '';
     if (_compareSeasonASelect) {
       _compareSeasonASelect.value = '';
@@ -455,13 +519,78 @@ export function registerCompareModeListeners(): void {
   _compareVarBSelect?.addEventListener('change', () => {
     const sel = _compareVarBSelect as HTMLSelectElement;
     const v = (sel.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-    _populateYearSelect(_compareYearBSelect, VARIABLE_YEARS[v]);
+
+    const satGroup = document.getElementById('compareSatGroupB');
+    if (satGroup) {
+      if (v === 'water') {
+        satGroup.classList.remove('hidden');
+      } else {
+        satGroup.classList.add('hidden');
+      }
+    }
+
+    let years = VARIABLE_YEARS[v];
+    if (v === 'water') {
+      const sat = (document.getElementById('compareSatB') as HTMLSelectElement)?.value || 'landsat';
+      if (sat === 'sentinel1') {
+        years = years.filter(y => y >= 2015);
+      }
+    }
+
+    _populateYearSelect(_compareYearBSelect, years);
     if (_compareYearBSelect) _compareYearBSelect.value = '';
     if (_compareSeasonBSelect) {
       _compareSeasonBSelect.value = '';
       _compareSeasonBSelect.disabled = true;
     }
     if (_btnGenerateB) _btnGenerateB.disabled = true;
+  });
+
+  // Satellite selectors change listeners
+  const compareSatA = document.getElementById('compareSatA') as HTMLSelectElement | null;
+  compareSatA?.addEventListener('change', () => {
+    const sat = compareSatA.value;
+    let years = VARIABLE_YEARS.water;
+    if (sat === 'sentinel1') {
+      years = years.filter(y => y >= 2015);
+    }
+    const prevVal = _compareYearASelect?.value;
+    _populateYearSelect(_compareYearASelect, years);
+    if (_compareYearASelect) {
+      if (prevVal && years.includes(Number(prevVal))) {
+        _compareYearASelect.value = prevVal;
+      } else {
+        _compareYearASelect.value = '';
+        if (_compareSeasonASelect) {
+          _compareSeasonASelect.value = '';
+          _compareSeasonASelect.disabled = true;
+        }
+        if (_btnGenerateA) _btnGenerateA.disabled = true;
+      }
+    }
+  });
+
+  const compareSatB = document.getElementById('compareSatB') as HTMLSelectElement | null;
+  compareSatB?.addEventListener('change', () => {
+    const sat = compareSatB.value;
+    let years = VARIABLE_YEARS.water;
+    if (sat === 'sentinel1') {
+      years = years.filter(y => y >= 2015);
+    }
+    const prevVal = _compareYearBSelect?.value;
+    _populateYearSelect(_compareYearBSelect, years);
+    if (_compareYearBSelect) {
+      if (prevVal && years.includes(Number(prevVal))) {
+        _compareYearBSelect.value = prevVal;
+      } else {
+        _compareYearBSelect.value = '';
+        if (_compareSeasonBSelect) {
+          _compareSeasonBSelect.value = '';
+          _compareSeasonBSelect.disabled = true;
+        }
+        if (_btnGenerateB) _btnGenerateB.disabled = true;
+      }
+    }
   });
 
   // Panel A — botón generar
@@ -781,9 +910,15 @@ export async function requestGifAndSeriesForPanel(
 
   createProgressIndicator();
 
+  let sseMessagesReceived = 0;
+
   const eventSource = createProgressEventSource(
     taskId,
     (progress, message) => {
+      sseMessagesReceived++;
+      if (progress > 0) {
+        closeWarningModal();
+      }
       // Mapear el progreso del servidor (0-100) a 0-90% para reservar el último 10%
       const mappedProgress = progress >= 0 ? Math.min(90, Math.round(progress * 0.9)) : -1;
       updateProgressIndicator(mappedProgress, message);
@@ -795,18 +930,54 @@ export async function requestGifAndSeriesForPanel(
       }
     },
     () => {
+      closeWarningModal();
       eventSource.close();
     }
   );
 
+  // Watchdog timer para detectar conexión lenta o procesamiento largo
+  const connectionWatchdog = setTimeout(() => {
+    if (!navigator.onLine) {
+      showWarningModal(
+        'Sin conexión',
+        'La conexión a internet parece estar inactiva. Verificá tu red.'
+      );
+    } else if (eventSource.readyState === 0) {
+      showWarningModal(
+        'Conexión lenta',
+        'La conexión con el servidor está tardando más de lo normal. Esperando respuesta...'
+      );
+    } else if (eventSource.readyState === 1 && sseMessagesReceived <= 1) {
+      showWarningModal(
+        'Procesando en GEE',
+        'El servidor está procesando la solicitud en Google Earth Engine (esto puede demorar en variables complejas).'
+      );
+    }
+  }, 15000);
+
   try {
+    let satellite: string | undefined = undefined;
+    if (variable === 'water') {
+      if (panel === 'A') {
+        const satASelect = document.getElementById('compareSatA') as HTMLSelectElement | null;
+        satellite = satASelect?.value || 'landsat';
+      } else {
+        const satBSelect = document.getElementById('compareSatB') as HTMLSelectElement | null;
+        satellite = satBSelect?.value || 'landsat';
+      }
+    }
+
     const { gifData, tsData } = await fetchGifAndSeriesForPanel({
       variable,
       start,
       end,
       bbox,
       taskId,
+      satellite,
     });
+
+    clearTimeout(connectionWatchdog);
+    closeWarningModal();
 
     if (gifData.error) {
       removeProgressIndicator(0);
@@ -934,6 +1105,8 @@ export async function requestGifAndSeriesForPanel(
       `No se pudo generar la animación / serie temporal (panel ${panel}). Verificá tu conexión.`
     );
   } finally {
+    clearTimeout(connectionWatchdog);
+    closeWarningModal();
     eventSource.close();
   }
 }

@@ -27,6 +27,8 @@ import {
   createProgressIndicator,
   updateProgressIndicator,
   removeProgressIndicator,
+  showWarningModal,
+  closeWarningModal,
 } from '../ui/progress.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SoloPlayer } from '../ui/gifPlayer.js';
@@ -314,10 +316,16 @@ export async function requestGifAndSeries(
 
   createProgressIndicator();
 
+  let sseMessagesReceived = 0;
+
   // SSE para seguimiento de progreso
   const eventSource = createProgressEventSource(
     taskId,
     (progress, message) => {
+      sseMessagesReceived++;
+      if (progress > 0) {
+        closeWarningModal();
+      }
       // Mapear el progreso del servidor (0-100) a 0-90% para reservar el último 10%
       const mappedProgress = progress >= 0 ? Math.min(90, Math.round(progress * 0.9)) : -1;
       updateProgressIndicator(mappedProgress, message);
@@ -329,18 +337,45 @@ export async function requestGifAndSeries(
       }
     },
     () => {
+      closeWarningModal();
       eventSource.close();
     }
   );
 
+  // Watchdog timer para detectar conexión lenta o procesamiento largo
+  const connectionWatchdog = setTimeout(() => {
+    if (!navigator.onLine) {
+      showWarningModal(
+        'Sin conexión',
+        'La conexión a internet parece estar inactiva. Verificá tu red.'
+      );
+    } else if (eventSource.readyState === 0) {
+      showWarningModal(
+        'Conexión lenta',
+        'La conexión con el servidor está tardando más de lo normal. Esperando respuesta...'
+      );
+    } else if (eventSource.readyState === 1 && sseMessagesReceived <= 1) {
+      showWarningModal(
+        'Procesando en GEE',
+        'El servidor está procesando la solicitud en Google Earth Engine (esto puede demorar en variables complejas).'
+      );
+    }
+  }, 15000);
+
   try {
+    const satellite = (document.querySelector('input[name="water-satellite"]:checked') as HTMLInputElement)?.value || 'landsat';
+
     const { gifData, tsData } = await fetchGifAndSeries({
       variable,
       start,
       end,
       bbox,
       taskId,
+      satellite,
     });
+
+    clearTimeout(connectionWatchdog);
+    closeWarningModal();
 
     if (gifData.error) {
       removeProgressIndicator(0);
@@ -430,6 +465,8 @@ export async function requestGifAndSeries(
       error: 'Error de red al generar animación / serie temporal.',
     };
   } finally {
+    clearTimeout(connectionWatchdog);
+    closeWarningModal();
     eventSource.close();
   }
 }

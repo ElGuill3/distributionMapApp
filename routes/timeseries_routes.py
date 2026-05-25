@@ -33,6 +33,7 @@ def _timeseries_pipeline(
     bbox_parsed: list[float] | None = None,
     start_parsed: str | None = None,
     end_parsed: str | None = None,
+    satellite: str | None = None,
 ) -> Response:
     """
     Implementación genérica para endpoints de serie temporal.
@@ -51,6 +52,7 @@ def _timeseries_pipeline(
                          provee, usa valor directo.
         end_parsed     : fecha fin pre-validada (YYYY-MM-DD) — si se provee,
                          usa valor directo.
+        satellite      : identificador de satélite ('landsat' o 'sentinel1') opcional.
     """
     if bbox_parsed is not None:
         # Ruta de validación externa: params ya validados con Pydantic.
@@ -88,8 +90,12 @@ def _timeseries_pipeline(
                 {"error": "bbox debe ser un JSON [minLon,minLat,maxLon,maxLat]."}
             ), 400
 
+    kwargs = {}
+    if satellite:
+        kwargs["satellite"] = satellite
+
     try:
-        dates, vals = build_ts_fn(start, end, bbox)
+        dates, vals = build_ts_fn(start, end, bbox, **kwargs)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
@@ -179,9 +185,14 @@ def imerg_precip_timeseries_bbox() -> Response:
 @limiter.limit("60/minute")
 @ts_bp.get("/api/water-timeseries-bbox")
 def water_timeseries_bbox() -> Response:
-    """Serie temporal de área de agua superficial (Sentinel-2, ha)."""
+    """Serie temporal de área de agua superficial (Landsat/Sentinel-1, ha)."""
+    satellite = request.args.get("satellite", "landsat")
+    if satellite not in ["landsat", "sentinel1"]:
+        return jsonify({"error": "satellite debe ser 'landsat' o 'sentinel1'."}), 400
+
     return _timeseries_pipeline(
         build_ts_fn=build_water_timeseries_bbox,
         ts_key="water_ha",
-        empty_error="No hay observaciones de agua Sentinel-2 para ese rango / región.",
+        empty_error="No hay observaciones de agua para ese rango / región.",
+        satellite=satellite,
     )
