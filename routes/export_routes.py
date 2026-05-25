@@ -41,10 +41,9 @@ def export_bundle() -> Response:
 
     Request body (JSON):
         gifPaths   : list[str] — rutas relativas a static/ ej ["gifs/ndvi_abc123.gif"]
-        panel      : "A" | "B"
         seriesData : { dates: list[str], variables: dict<string, list<float|null>> }
         bbox       : list[float]
-        metadata   : { variableKeys: list[str], panel: "A"|"B" }
+        metadata   : { variableKeys: list[str] }
 
     Returns:
         ZIP file (application/zip) con Content-Disposition para descarga.
@@ -95,7 +94,6 @@ def export_bundle() -> Response:
     # 5. Construir metadata
     metadata = {
         "variableKeys": payload.metadata.variableKeys,
-        "panel": payload.metadata.panel,
         "bbox": payload.bbox,
     }
 
@@ -147,7 +145,7 @@ def export_pdf_report() -> Response:
         gif_path   : str — ruta relativa al GIF, ej "gifs/ndvi_abc123.gif"
         seriesData : { dates: list[str], variables: dict<string, list<float|null>> }
         bbox       : list[float]
-        metadata   : { variableKeys: list[str], panel: "A"|"B" }
+        metadata   : { variableKeys: list[str] }
 
     Returns:
         PDF binary (application/pdf) con Content-Disposition para descarga.

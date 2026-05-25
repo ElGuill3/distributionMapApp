@@ -261,10 +261,8 @@ export type SeriesDataMap = Partial<Record<VariableKey, SeriesData | undefined>>
 
 export interface ExportBundleOptions {
   gifPaths: string[];
-  seriesDataA: SeriesDataMap;
-  seriesDataB: SeriesDataMap | null;
+  seriesData: SeriesDataMap;
   bbox: BBox;
-  panel: 'A' | 'B';
 }
 
 /**
@@ -273,38 +271,31 @@ export interface ExportBundleOptions {
  * @returns Blob con el ZIP del servidor (contiene timeseries.csv, GIFs, metadata.json)
  */
 export async function exportBundle(options: ExportBundleOptions): Promise<Blob> {
-  const { gifPaths, seriesDataA, seriesDataB, bbox, panel } = options;
+  const { gifPaths, seriesData, bbox } = options;
 
-  // Construir seriesData con el formato que espera ExportRequestSchema
-  const allDates: string[] = [];
+  // Unimos por fecha para soportar variables con distintas frecuencias
+  // (p. ej. NDVI quincenal + estaciones locales diarias).
+  const allDates = Array.from(
+    new Set(
+      Object.values(seriesData).flatMap(data => data?.dates ?? [])
+    )
+  ).sort();
+
   const allVariables: Record<string, (number | null)[]> = {};
 
-  // Recopilar todas las fechas y valores de panel A
-  for (const [key, data] of Object.entries(seriesDataA)) {
+  for (const [key, data] of Object.entries(seriesData)) {
     if (!data) continue;
-    if (allDates.length === 0) {
-      allDates.push(...data.dates);
+    const byDate = new Map<string, number | null>();
+    for (let i = 0; i < data.dates.length; i += 1) {
+      byDate.set(data.dates[i]!, data.values[i] ?? null);
     }
-    allVariables[key] = [...data.values];
-  }
-
-  // Agregar datos del panel B si existe
-  if (seriesDataB) {
-    for (const [key, data] of Object.entries(seriesDataB)) {
-      if (!data) continue;
-      if (!(key in allVariables)) {
-        // Nueva variable solo en B — completar A con nulls
-        allVariables[key] = new Array(allDates.length).fill(null);
-      }
-      allVariables[key]!.push(...data.values);
-    }
+    allVariables[key] = allDates.map(date => byDate.get(date) ?? null);
   }
 
   const variableKeys = Object.keys(allVariables);
 
   const payload = {
     gifPaths,
-    panel,
     seriesData: {
       dates: allDates,
       variables: allVariables,
@@ -312,7 +303,6 @@ export async function exportBundle(options: ExportBundleOptions): Promise<Blob> 
     bbox,
     metadata: {
       variableKeys,
-      panel,
     },
   };
 
@@ -345,7 +335,7 @@ export interface ExportPdfReportOptions {
   gifPath: string;
   seriesData: { dates: string[]; variables: Record<string, (number | null)[]> };
   bbox: [number, number, number, number];
-  metadata: { variableKeys: string[]; panel: string };
+  metadata: { variableKeys: string[] };
 }
 
 export async function exportPdfReport(options: ExportPdfReportOptions): Promise<Blob> {

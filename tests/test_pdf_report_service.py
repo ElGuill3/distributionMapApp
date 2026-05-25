@@ -241,7 +241,7 @@ class TestBuildPdfContext:
             chart_blob="base64pngdata",
             gif_frame_path="/path/to/frame.png",
             bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            metadata={"variableKeys": ["ndvi"]},
         )
 
         assert "variable_label" in context
@@ -253,8 +253,10 @@ class TestBuildPdfContext:
         assert "trend_str" in context
         assert "interpretation" in context
         assert "generated_at" in context
-        assert context["panel"] == "A"
-
+        assert "report_objective" in context
+        assert "variable_labels" in context
+        assert "labeled_variables" in context
+        
     def test_date_range_format(self) -> None:
         """
         GIVEN dates con formato YYYY-MM-DD
@@ -268,7 +270,7 @@ class TestBuildPdfContext:
             chart_blob="",
             gif_frame_path=None,
             bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            metadata={"variableKeys": ["ndvi"]},
         )
 
         assert "2020-01-15 → 2020-06-20" in context["date_range"]
@@ -277,7 +279,7 @@ class TestBuildPdfContext:
         """
         GIVEN stats con trend ↑
         WHEN build_pdf_context es llamada
-        THEN trend_str = "Tendencia al alza"
+        THEN trend_str = "Va en aumento"
         """
         context = build_pdf_context(
             series_data={"ndvi": [0.3, 0.4]},
@@ -286,10 +288,10 @@ class TestBuildPdfContext:
             chart_blob="",
             gif_frame_path=None,
             bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            metadata={"variableKeys": ["ndvi"]},
         )
 
-        assert context["trend_str"] == "Tendencia al alza"
+        assert context["trend_str"] == "Va en aumento"
 
     def test_interpretation_per_variable(self) -> None:
         """
@@ -304,7 +306,7 @@ class TestBuildPdfContext:
             chart_blob="",
             gif_frame_path=None,
             bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["temp"], "panel": "A"},
+            metadata={"variableKeys": ["temp"]},
         )
 
         assert "temperatura" in context["interpretation"].lower()
@@ -335,7 +337,17 @@ class TestRenderPdfReport:
             "trend_str": "Estable",
             "interpretation": "Test.",
             "generated_at": "2025-01-01 10:00",
-            "panel": "A",
+            "report_objective": "Objetivo de prueba.",
+            "variable_labels": {"ndvi": "NDVI (Índice de Vegetación)"},
+            "labeled_variables": ["NDVI (Índice de Vegetación)"],
+            "summary_text": "Resumen de prueba.",
+            "spatial_caption": "Vista del período analizado",
+            "anomaly_events": [],
+            "no_anomalies": True,
+            "top_event_type": "",
+            "top_event_date": "",
+            "top_event_severity": "",
+            "fallback_reason": None,
         }
 
         # Patch weasyprint import to raise ImportError
@@ -552,7 +564,7 @@ class TestBuildPdfContextNoAnomalies:
             chart_blob="base64pngdata",
             gif_frame_path="/path/to/frame.png",
             bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            metadata={"variableKeys": ["ndvi"]},
             anomaly_result=AnomalyResult(events=[], fallback_reason="zero_variance"),
         )
 
@@ -581,7 +593,7 @@ class TestBuildPdfContextNoAnomalies:
             magnitude=3.5,
             severity="Alta",
             duration_days=1,
-            description="Significant increase",
+            description="Se detectó un aumento significativo.",
         )
 
         context = build_pdf_context(
@@ -591,7 +603,7 @@ class TestBuildPdfContextNoAnomalies:
             chart_blob="base64pngdata",
             gif_frame_path="/path/to/frame.png",
             bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["ndvi"], "panel": "A"},
+            metadata={"variableKeys": ["ndvi"]},
             anomaly_result=AnomalyResult(events=[event], fallback_reason=None),
         )
 
@@ -603,3 +615,4 @@ class TestBuildPdfContextNoAnomalies:
         assert context["top_event_type"] == "spike"
         assert context["top_event_date"] == "2020-06-15"
         assert context["top_event_severity"] == "Alta"
+        assert "eventos principales" in context["report_objective"].lower()

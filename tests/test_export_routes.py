@@ -10,7 +10,6 @@ Patrón: Arrange → Act → Assert.
 import json
 import zipfile
 from io import BytesIO
-from unittest.mock import patch
 
 import pytest
 from flask import Flask
@@ -47,7 +46,6 @@ class TestExportBundleEndpoint:
         """
         payload = {
             "gifPaths": [],
-            "panel": "A",
             "seriesData": {
                 "dates": ["2020-03-01", "2020-03-17"],
                 "variables": {
@@ -57,7 +55,6 @@ class TestExportBundleEndpoint:
             "bbox": [-92.5, 17.0, -91.0, 18.0],
             "metadata": {
                 "variableKeys": ["ndvi"],
-                "panel": "A",
             },
         }
         response = client.post(
@@ -77,13 +74,12 @@ class TestExportBundleEndpoint:
         """
         payload = {
             "gifPaths": [],
-            "panel": "A",
             "seriesData": {
                 "dates": ["2020-03-01", "2020-03-17"],
                 "variables": {"ndvi": [0.45, 0.52]},
             },
             "bbox": [-92.5, 17.0, -91.0, 18.0],
-            "metadata": {"variableKeys": ["ndvi"], "panel": "A"},
+            "metadata": {"variableKeys": ["ndvi"]},
         }
         response = client.post("/api/export/bundle", json=payload)
         zip_bytes = response.data
@@ -92,6 +88,10 @@ class TestExportBundleEndpoint:
             names = zf.namelist()
             assert "timeseries.csv" in names
             assert "metadata.json" in names
+            metadata = json.loads(zf.read("metadata.json").decode())
+            assert metadata["exportedVariables"] == ["ndvi"]
+            assert metadata["variablesWithGif"] == []
+            assert metadata["variablesWithoutGif"] == ["ndvi"]
 
     def test_content_disposition_header_contains_filename(self, client: FlaskClient) -> None:
         """
@@ -101,13 +101,12 @@ class TestExportBundleEndpoint:
         """
         payload = {
             "gifPaths": [],
-            "panel": "A",
             "seriesData": {
                 "dates": ["2020-03-01"],
                 "variables": {"ndvi": [0.45]},
             },
             "bbox": [-92.5, 17.0, -91.0, 18.0],
-            "metadata": {"variableKeys": ["ndvi"], "panel": "A"},
+            "metadata": {"variableKeys": ["ndvi"]},
         }
         response = client.post("/api/export/bundle", json=payload)
         assert "attachment" in response.headers.get("Content-Disposition", "")
@@ -144,29 +143,9 @@ class TestExportBundleEndpoint:
         """
         payload = {
             "gifPaths": [],
-            "panel": "A",
             # falta seriesData
             "bbox": [-92.5, 17.0, -91.0, 18.0],
-            "metadata": {"variableKeys": ["ndvi"], "panel": "A"},
-        }
-        response = client.post("/api/export/bundle", json=payload)
-        assert response.status_code == 400
-
-    def test_invalid_panel_value_returns_400(self, client: FlaskClient) -> None:
-        """
-        GIVEN panel no es 'A' ni 'B'
-        WHEN POST /api/export/bundle es llamado
-        THEN respuesta es 400
-        """
-        payload = {
-            "gifPaths": [],
-            "panel": "C",  # inválido
-            "seriesData": {
-                "dates": ["2020-03-01"],
-                "variables": {"ndvi": [0.45]},
-            },
-            "bbox": [-92.5, 17.0, -91.0, 18.0],
-            "metadata": {"variableKeys": ["ndvi"], "panel": "C"},
+            "metadata": {"variableKeys": ["ndvi"]},
         }
         response = client.post("/api/export/bundle", json=payload)
         assert response.status_code == 400
@@ -180,13 +159,12 @@ class TestExportBundleEndpoint:
         """
         payload = {
             "gifPaths": ["gifs/nonexistent_abc123.gif"],
-            "panel": "A",
             "seriesData": {
                 "dates": ["2020-03-01"],
                 "variables": {"ndvi": [0.45]},
             },
             "bbox": [-92.5, 17.0, -91.0, 18.0],
-            "metadata": {"variableKeys": ["ndvi"], "panel": "A"},
+            "metadata": {"variableKeys": ["ndvi"]},
         }
         response = client.post("/api/export/bundle", json=payload)
         assert response.status_code == 404
@@ -202,13 +180,12 @@ class TestExportBundleEndpoint:
         """
         payload = {
             "gifPaths": [],
-            "panel": "A",
             "seriesData": {
                 "dates": [],
                 "variables": {},
             },
             "bbox": [-92.5, 17.0, -91.0, 18.0],
-            "metadata": {"variableKeys": [], "panel": "A"},
+            "metadata": {"variableKeys": []},
         }
         response = client.post("/api/export/bundle", json=payload)
         assert response.status_code == 400
@@ -221,7 +198,6 @@ class TestExportBundleEndpoint:
         """
         payload = {
             "gifPaths": [],
-            "panel": "A",
             "seriesData": {
                 "dates": ["2020-03-01", "2020-03-17"],
                 "variables": {
@@ -230,7 +206,7 @@ class TestExportBundleEndpoint:
                 },
             },
             "bbox": [-92.5, 17.0, -91.0, 18.0],
-            "metadata": {"variableKeys": ["ndvi", "temp"], "panel": "A"},
+            "metadata": {"variableKeys": ["ndvi", "temp"]},
         }
         response = client.post("/api/export/bundle", json=payload)
         zip_bytes = response.data

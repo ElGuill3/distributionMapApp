@@ -54,7 +54,6 @@ def _make_payload(
     variables: dict | None = None,
     bbox: list[float] | None = None,
     variable_keys: list[str] | None = None,
-    panel: str = "A",
 ) -> dict:
     """Build a valid PDF report payload."""
     return {
@@ -67,7 +66,6 @@ def _make_payload(
         "bbox": bbox or [-92.5, 17.0, -91.0, 18.0],
         "metadata": {
             "variableKeys": variable_keys or ["ndvi"],
-            "panel": panel,
         },
     }
 

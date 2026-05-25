@@ -18,6 +18,16 @@ from config import STATIC_DIR
 logger = logging.getLogger(__name__)
 
 
+def _infer_variable_from_gif_path(gif_path: str) -> str:
+    """
+    Infiere el nombre de la variable a partir del nombre del GIF.
+
+    Convención esperada: <variable>_<timestamp>_<bboxhash>.gif
+    """
+    stem = Path(gif_path).stem
+    return stem.split("_", 1)[0]
+
+
 def serialize_series_to_csv(
     series_data: dict[str, Any],
     dates: list[str],
@@ -91,7 +101,7 @@ def create_export_zip(
     Args:
         csv_content: contenido CSV serializado (string)
         gif_paths: rutas relativas a STATIC_DIR ej: ["gifs/ndvi_abc123.gif"]
-        metadata: dict con variableKeys, panel, bbox y gifAvailable
+        metadata: dict con variableKeys, bbox y gifAvailable
 
     Returns:
         Bytes del archivo ZIP (no se guarda a disco)
@@ -118,8 +128,25 @@ def create_export_zip(
             logger.debug("Agregado al ZIP: %s", arcname)
 
         # 3. Agregar metadata.json
+        exported_variables = list(metadata.get("variableKeys", []))
+        gif_variables: list[str] = []
+        for gif_path in gif_paths:
+            variable = _infer_variable_from_gif_path(gif_path)
+            if variable not in gif_variables:
+                gif_variables.append(variable)
+
+        if not exported_variables:
+            exported_variables = gif_variables[:]
+
+        variables_without_gif = [
+            variable for variable in exported_variables if variable not in gif_variables
+        ]
+
         metadata_json = {
             **metadata,
+            "exportedVariables": exported_variables,
+            "variablesWithGif": gif_variables,
+            "variablesWithoutGif": variables_without_gif,
             "gifAvailable": metadata_gif_available,
         }
         zf.writestr("metadata.json", json.dumps(metadata_json, indent=2))

@@ -32,6 +32,7 @@ import {
 } from '../ui/progress.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SoloPlayer } from '../ui/gifPlayer.js';
+import { setLucideIcon } from '../ui/icons.js';
 import type { AnimationFrameInfo } from '../state/mapState.js';
 import type { Season } from '../types.js';
 
@@ -62,13 +63,13 @@ let _chartDiv: HTMLElement | null = null;
 let _playerControlsDiv: HTMLElement | null = null;
 let _playerSlider: HTMLInputElement | null = null;
 let _playerFrameLabel: HTMLSpanElement | null = null;
-let _playerPlayIcon: HTMLSpanElement | null = null;
+let _playerPlayIcon: Element | null = null;
 let _playerSpeedSelect: HTMLSelectElement | null = null;
 
 /** PR1: Topbar controles del player (inyectados desde main.ts al inicializar). */
 let _topbarSlider: HTMLInputElement | null = null;
 let _topbarFrameLabel: HTMLSpanElement | null = null;
-let _topbarPlayIcon: HTMLSpanElement | null = null;
+let _topbarPlayIcon: Element | null = null;
 
 /** Callback invocado cuando la gráfica se renderiza con datos (para sync de UI). */
 let _onChartRendered: (() => void) | undefined = undefined;
@@ -86,11 +87,11 @@ export function initNormalMode(domRefs: {
   playerControlsDiv: HTMLElement | null;
   playerSlider: HTMLInputElement | null;
   playerFrameLabel: HTMLSpanElement | null;
-  playerPlayIcon: HTMLSpanElement | null;
+  playerPlayIcon: Element | null;
   playerSpeedSelect: HTMLSelectElement | null;
   topbarSlider?: HTMLInputElement | null;
   topbarFrameLabel?: HTMLSpanElement | null;
-  topbarPlayIcon?: HTMLSpanElement | null;
+  topbarPlayIcon?: Element | null;
   onChartRendered?: () => void;
   onDateLabelUpdate?: (frameIdx: number) => void;
 }): void {
@@ -146,13 +147,16 @@ function onPlayerFrameChange(current: number, total: number): void {
 }
 
 function syncPlayPauseIcon(): void {
-  if (!_playerPlayIcon) return;
   const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
-  _playerPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+  const playerIcon = _playerPlayIcon?.id
+    ? document.getElementById(_playerPlayIcon.id)
+    : _playerPlayIcon;
+  const topbarIcon = _topbarPlayIcon?.id
+    ? document.getElementById(_topbarPlayIcon.id)
+    : _topbarPlayIcon;
+  setLucideIcon(playerIcon, active?.isPlaying ? 'pause' : 'play');
   // PR1: Also sync topbar icon
-  if (_topbarPlayIcon) {
-    _topbarPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
-  }
+  setLucideIcon(topbarIcon, active?.isPlaying ? 'pause' : 'play');
 }
 
 /** Detiene el SoloPlayer sin liberar los GifPlayers. */
@@ -193,6 +197,8 @@ export function clearNormalMode(): void {
   removeActiveOverlay(_mapRef!);
   switchColorbar(_mapRef!, null);
   mapState.clearSeriesDataA();
+  mapState.clearGifPathsA();
+  mapState.clearGifPathsB();
   if (_chartDiv) Plotly.purge(_chartDiv as HTMLDivElement);
   hidePlayerControls();
   // PR1: Hide topbar and date label when animation is cleared
@@ -201,9 +207,9 @@ export function clearNormalMode(): void {
   if (dateLabel) dateLabel.textContent = '';
   const dateLabelB = document.getElementById('animation-date-label-b');
   if (dateLabelB) dateLabelB.textContent = '';
-  // Ocultar chart container en modo normal
-  const chartContainer = document.getElementById('ndvi-chart-container');
-  chartContainer?.classList.add('hidden');
+  // Mantener el panel de gráfica visible y mostrar el placeholder
+  showChartContainer();
+  showChartPlaceholderA();
 }
 
 // ---------------------------------------------------------------------------
@@ -260,10 +266,8 @@ function showChartContainer(): void {
 }
 
 function hideChartContainer(): void {
-  if (!mapState.getCompareModeActive()) {
-    const container = document.getElementById('ndvi-chart-container');
-    container?.classList.add('hidden');
-  }
+  const container = document.getElementById('ndvi-chart-container');
+  container?.classList.remove('hidden');
 }
 
 function showChartPlaceholderA(): void {
@@ -410,6 +414,7 @@ export async function requestGifAndSeries(
     mapState.setGifPlayerA(player);
     mapState.setOverlayA(overlay);
     mapState.setActiveGifPathA(gifData.gifUrl);
+    mapState.setGifPathForVariable('A', variable, gifData.gifUrl);
 
     // PR2: Build frame date labels array and store in mapState
     const frameDateLabels = _buildFrameDateLabels(gifData.dates);

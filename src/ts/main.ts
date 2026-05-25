@@ -33,6 +33,7 @@ import {
 import { showFieldError } from './ui/fieldErrors.js';
 import { translateBackendError } from './errorMap.js';
 import { plotAllSelectedSeries, isDarkModeActive } from './ui/chart.js';
+import { initLucideIcons, setLucideIcon } from './ui/icons.js';
 import { seasonToDates } from './utils/seasonDates.js';
 
 import {
@@ -173,20 +174,18 @@ map.on(L.Draw.Event.DRAWSTART, () => {
   const drawBtn = document.getElementById('tflow-draw-btn') as HTMLButtonElement | null;
   if (drawBtn) {
     drawBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:16px;height:16px;flex-shrink:0;animation: pulse 1.5s infinite;">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-      </svg>
+      <span class="tflow-draw-icon" data-lucide="loader-2" aria-hidden="true"></span>
       Dibujando en el mapa...
     `;
+    initLucideIcons(drawBtn);
     drawBtn.disabled = true;
   }
   if (topbarDrawBtn) {
     topbarDrawBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14" style="animation: pulse 1.5s infinite;">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-      </svg>
+      <span class="topbar-draw-icon" data-lucide="loader-2" aria-hidden="true"></span>
       <span>Dibujando...</span>
     `;
+    initLucideIcons(topbarDrawBtn);
     topbarDrawBtn.disabled = true;
   }
 });
@@ -195,22 +194,18 @@ map.on(L.Draw.Event.DRAWSTOP, () => {
   const drawBtn = document.getElementById('tflow-draw-btn') as HTMLButtonElement | null;
   if (drawBtn) {
     drawBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:16px;height:16px;flex-shrink:0;">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-        <line x1="9" y1="9" x2="15" y2="15"></line>
-      </svg>
+      <span class="tflow-draw-icon" data-lucide="square-pen" aria-hidden="true"></span>
       Dibujar área en el mapa
     `;
+    initLucideIcons(drawBtn);
     drawBtn.disabled = false;
   }
   if (topbarDrawBtn) {
     topbarDrawBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-        <line x1="9" y1="9" x2="15" y2="15"></line>
-      </svg>
+      <span class="topbar-draw-icon" data-lucide="square-pen" aria-hidden="true"></span>
       <span>Dibujar área</span>
     `;
+    initLucideIcons(topbarDrawBtn);
     topbarDrawBtn.disabled = false;
   }
 });
@@ -259,8 +254,9 @@ map.on(L.Draw.Event.CREATED, e => {
 
   removeActiveOverlay(map);
   switchColorbar(map, null);
-  hideChartContainer();
   if (ndviChartDiv) Plotly.purge(ndviChartDiv);
+  showChartContainer();
+  showChartPlaceholderA();
 
   mapState.clearSeriesData();
   compareMode.cleanupComparePanels();
@@ -290,9 +286,9 @@ function showChartContainer(): void {
   }
 }
 function hideChartContainer(): void {
-  if (!mapState.getCompareModeActive()) {
-    ndviChartContainer?.classList.add('hidden');
-  }
+  // En modo normal el panel de gráfica debe permanecer visible.
+  // La limpieza solo vacía el contenido y muestra el placeholder.
+  ndviChartContainer?.classList.remove('hidden');
 }
 
 function showChartPlaceholderA(): void {
@@ -456,13 +452,19 @@ const playerControlsDiv = document.getElementById(
 const playerPlayPauseBtn = document.getElementById(
   'playerPlayPause'
 ) as HTMLButtonElement | null;
+const playerStepPrevBtn = document.getElementById(
+  'playerStepPrev'
+) as HTMLButtonElement | null;
+const playerStepNextBtn = document.getElementById(
+  'playerStepNext'
+) as HTMLButtonElement | null;
 const playerSlider = document.getElementById('playerSlider') as HTMLInputElement | null;
 const playerFrameLabel = document.getElementById(
   'playerFrameLabel'
 ) as HTMLSpanElement | null;
-const playerPlayIcon = document.getElementById(
+let playerPlayIcon = document.getElementById(
   'playerPlayIcon'
-) as HTMLSpanElement | null;
+) as Element | null;
 const playerSpeedSelect = document.getElementById(
   'playerSpeed'
 ) as HTMLSelectElement | null;
@@ -471,9 +473,15 @@ const playerSpeedSelect = document.getElementById(
 const topbarPlayPauseBtn = document.getElementById(
   'topbar-play-pause'
 ) as HTMLButtonElement | null;
-const topbarPlayIcon = document.getElementById(
+const topbarStepPrevBtn = document.getElementById(
+  'topbar-step-prev'
+) as HTMLButtonElement | null;
+const topbarStepNextBtn = document.getElementById(
+  'topbar-step-next'
+) as HTMLButtonElement | null;
+let topbarPlayIcon = document.getElementById(
   'topbar-play-icon'
-) as HTMLSpanElement | null;
+) as Element | null;
 const topbarSlider = document.getElementById(
   'topbar-slider'
 ) as HTMLInputElement | null;
@@ -503,6 +511,12 @@ const topbarOpacityValue = document.getElementById(
   'topbar-opacity-value'
 ) as HTMLSpanElement | null;
 
+// Inicializar iconos Lucide del DOM antes de pasar referencias a los módulos
+initLucideIcons(document);
+
+playerPlayIcon = document.getElementById('playerPlayIcon');
+topbarPlayIcon = document.getElementById('topbar-play-icon');
+
 /** Devuelve el intervalo de frame seleccionado actualmente (en ms). */
 function _selectedInterval(): number {
   return Number(playerSpeedSelect?.value ?? '1000') || 1000;
@@ -510,6 +524,34 @@ function _selectedInterval(): number {
 
 function hidePlayerControls(): void {
   playerControlsDiv?.classList.add('hidden');
+}
+
+function getActivePlayer():
+  | { isPlaying: boolean; pause(): void; play(): void; goToFrame(n: number): void; currentFrameIndex: number; frameCount?: number; totalFrameCount?: number }
+  | null {
+  return (mapState.getSyncPlayer() ?? mapState.getSoloPlayer()) as
+    | { isPlaying: boolean; pause(): void; play(): void; goToFrame(n: number): void; currentFrameIndex: number; frameCount?: number; totalFrameCount?: number }
+    | null;
+}
+
+function getActivePlayerTotalFrames(player: ReturnType<typeof getActivePlayer>): number {
+  if (!player) return 0;
+  return player.totalFrameCount ?? player.frameCount ?? 0;
+}
+
+function stepActivePlayer(delta: number): void {
+  const active = getActivePlayer();
+  if (!active) return;
+
+  const total = getActivePlayerTotalFrames(active);
+  if (total <= 0) return;
+
+  const current = active.currentFrameIndex ?? 0;
+  const next = Math.max(0, Math.min(current + delta, total - 1));
+  active.goToFrame(next);
+
+  syncPlayPauseIcon();
+  syncTopbarPlayPauseIcon();
 }
 
 // Phase C: inicializar normalMode con referencias al DOM y mapa
@@ -577,6 +619,7 @@ floodRiskMode.registerFloodRiskModeListeners(
 document.addEventListener('floodRiskModeActivated', () => {
   floodRiskMode.enterFloodRiskMode(() => {});
   normalMode.clearNormalMode();
+  ndviChartContainer?.classList.add('hidden');
   body.classList.remove('sidebar-collapsed');
   syncSidebarState();
   toggleModeBanner('flood-risk', true);
@@ -584,6 +627,8 @@ document.addEventListener('floodRiskModeActivated', () => {
 
 document.addEventListener('floodRiskModeDeactivated', () => {
   floodRiskMode.exitFloodRiskMode();
+  ndviChartContainer?.classList.remove('hidden');
+  showChartPlaceholderA();
   toggleModeBanner('flood-risk', false);
 });
 
@@ -597,6 +642,7 @@ inundacionesMode.initInundacionesMode({
 document.addEventListener('inundacionesModeActivated', () => {
   inundacionesMode.enterInundacionesMode();
   normalMode.clearNormalMode();
+  ndviChartContainer?.classList.add('hidden');
   body.classList.remove('sidebar-collapsed');
   syncSidebarState();
   toggleModeBanner('inundaciones', true);
@@ -604,6 +650,8 @@ document.addEventListener('inundacionesModeActivated', () => {
 
 document.addEventListener('inundacionesModeDeactivated', () => {
   inundacionesMode.exitInundacionesMode();
+  ndviChartContainer?.classList.remove('hidden');
+  showChartPlaceholderA();
   toggleModeBanner('inundaciones', false);
 });
 
@@ -638,9 +686,9 @@ if (typeof window !== 'undefined') {
 // Phase C: delegated to normalMode.clearNormalMode()
 
 function syncPlayPauseIcon(): void {
-  if (!playerPlayIcon) return;
   const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
-  playerPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+  const icon = document.getElementById('playerPlayIcon');
+  setLucideIcon(icon, active?.isPlaying ? 'pause' : 'play');
 }
 
 // Phase D: trySyncBothPanels ahora vive en compareMode.ts
@@ -758,7 +806,7 @@ tflowClearBtn?.addEventListener('click', () => {
 // ---------------------------------------------------------------------------
 
 playerPlayPauseBtn?.addEventListener('click', () => {
-  const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
+  const active = getActivePlayer();
   if (!active) return;
   if (active.isPlaying) {
     active.pause();
@@ -766,6 +814,14 @@ playerPlayPauseBtn?.addEventListener('click', () => {
     active.play();
   }
   syncPlayPauseIcon();
+});
+
+playerStepPrevBtn?.addEventListener('click', () => {
+  stepActivePlayer(-1);
+});
+
+playerStepNextBtn?.addEventListener('click', () => {
+  stepActivePlayer(1);
 });
 
 playerSlider?.addEventListener('input', () => {
@@ -788,13 +844,13 @@ playerSpeedSelect?.addEventListener('change', () => {
 // ---------------------------------------------------------------------------
 
 function syncTopbarPlayPauseIcon(): void {
-  if (!topbarPlayIcon) return;
   const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
-  topbarPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+  const icon = document.getElementById('topbar-play-icon');
+  setLucideIcon(icon, active?.isPlaying ? 'pause' : 'play');
 }
 
 topbarPlayPauseBtn?.addEventListener('click', () => {
-  const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
+  const active = getActivePlayer();
   if (!active) return;
   if (active.isPlaying) {
     active.pause();
@@ -803,6 +859,14 @@ topbarPlayPauseBtn?.addEventListener('click', () => {
   }
   syncPlayPauseIcon();
   syncTopbarPlayPauseIcon();
+});
+
+topbarStepPrevBtn?.addEventListener('click', () => {
+  stepActivePlayer(-1);
+});
+
+topbarStepNextBtn?.addEventListener('click', () => {
+  stepActivePlayer(1);
 });
 
 topbarSlider?.addEventListener('input', () => {
@@ -1291,14 +1355,23 @@ const btnExportPdfReport = document.getElementById(
  */
 function canExport(): boolean {
   const seriesA = mapState.getSeriesDataA();
-  const seriesB = mapState.getSeriesDataB();
   const hasSeriesA = Object.keys(seriesA).some(
     k => (seriesA[k as VariableKey]?.values?.length ?? 0) > 0
   );
-  const hasSeriesB = Object.keys(seriesB).some(
-    k => (seriesB[k as VariableKey]?.values?.length ?? 0) > 0
-  );
-  return hasSeriesA || hasSeriesB;
+  return hasSeriesA;
+}
+
+function collectGifPathsForNormalMode(): string[] {
+  const series = mapState.getSeriesDataA();
+  const gifPathsByVariable = mapState.getGifPathsA();
+
+  const gifPaths: string[] = [];
+  for (const key of Object.keys(series) as VariableKey[]) {
+    if (!series[key] || series[key]!.values.length === 0) continue;
+    const gifPath = gifPathsByVariable[key];
+    if (gifPath) gifPaths.push(gifPath);
+  }
+  return gifPaths;
 }
 
 /**
@@ -1356,16 +1429,10 @@ btnExportAnalysis?.addEventListener('click', async () => {
     return;
   }
 
-  const panel: 'A' | 'B' = mapState.getCompareModeActive() ? 'B' : 'A';
-  const seriesDataA = mapState.getSeriesDataA();
-  const seriesDataB = mapState.getSeriesDataB();
+  const seriesData = mapState.getSeriesDataA();
 
-  // Recopilar rutas de GIFs activos
-  const gifPaths: string[] = [];
-  const pathA = mapState.getActiveGifPathA();
-  if (pathA) gifPaths.push(pathA);
-  const pathB = mapState.getActiveGifPathB();
-  if (pathB) gifPaths.push(pathB);
+  // Recopilar rutas de GIFs activos del panel normal
+  const gifPaths = collectGifPathsForNormalMode();
 
   createProgressIndicator();
   updateProgressIndicator(10, 'Generando exportación...');
@@ -1374,10 +1441,8 @@ btnExportAnalysis?.addEventListener('click', async () => {
     updateProgressIndicator(30, 'Obteniendo ZIP del servidor...');
     const zipBlob = await exportBundle({
       gifPaths,
-      seriesDataA,
-      seriesDataB,
+      seriesData,
       bbox,
-      panel,
     });
 
     updateProgressIndicator(60, 'Capturando gráfica como PNG...');
@@ -1420,7 +1485,6 @@ btnExportPdfReport?.addEventListener('click', async () => {
   }
 
   const seriesDataA = mapState.getSeriesDataA();
-  const panel: 'A' | 'B' = mapState.getCompareModeActive() ? 'B' : 'A';
 
   // Recopilar datos
   const allDates: string[] = [];
@@ -1460,7 +1524,7 @@ btnExportPdfReport?.addEventListener('click', async () => {
       gifPath,
       seriesData: { dates: allDates, variables: allVariables },
       bbox,
-      metadata: { variableKeys, panel },
+      metadata: { variableKeys },
     });
 
     updateProgressIndicator(80, 'Descargando PDF...');

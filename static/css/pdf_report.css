@@ -66,6 +66,35 @@ body {
     margin-top: 6px;
 }
 
+/* Report objective */
+.report-objective,
+.variables-section {
+    margin-bottom: 16px;
+}
+
+.report-objective p {
+    font-size: 10pt;
+    color: #333;
+    line-height: 1.5;
+    margin-top: 6px;
+}
+
+.variable-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.variable-chip {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #e8f0ec;
+    color: #2c6e49;
+    font-size: 8.5pt;
+    font-weight: 600;
+}
+
 /* Chart section */
 .chart-section {
     margin-bottom: 20px;
@@ -162,6 +191,15 @@ body {
     font-weight: bold;
     font-size: 10.5pt;
     color: #222;
+}
+
+.anomaly-variable {
+    font-size: 9pt;
+    color: #2c6e49;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: #e8f0ec;
 }
 
 .anomaly-date {

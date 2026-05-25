@@ -36,6 +36,7 @@ import { showFieldError } from '../ui/fieldErrors.js';
 import { translateBackendError } from '../errorMap.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
+import { setLucideIcon } from '../ui/icons.js';
 import * as normalMode from './normalMode.js';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
 
@@ -57,7 +58,7 @@ let _stationMarkersMapB: L.Marker[] = [];
 let _playerControlsDiv: HTMLElement | null = null;
 let _playerSlider: HTMLInputElement | null = null;
 let _playerFrameLabel: HTMLSpanElement | null = null;
-let _playerPlayIcon: HTMLSpanElement | null = null;
+let _playerPlayIcon: Element | null = null;
 let _playerSpeedSelect: HTMLSelectElement | null = null;
 
 /** Divs de gráficas (panel A normal y panel B comparativa). */
@@ -99,7 +100,7 @@ export interface CompareModeDomRefs {
   playerControlsDiv: HTMLElement | null;
   playerSlider: HTMLInputElement | null;
   playerFrameLabel: HTMLSpanElement | null;
-  playerPlayIcon: HTMLSpanElement | null;
+  playerPlayIcon: Element | null;
   playerSpeedSelect: HTMLSelectElement | null;
   ndviChartDiv: HTMLElement | null;
   chartBDiv: HTMLElement | null;
@@ -181,9 +182,11 @@ function onPlayerFrameChange(current: number, total: number): void {
 }
 
 function syncPlayPauseIcon(): void {
-  if (!_playerPlayIcon) return;
   const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
-  _playerPlayIcon.textContent = active?.isPlaying ? '⏸' : '▶';
+  const playerIcon = _playerPlayIcon?.id
+    ? document.getElementById(_playerPlayIcon.id)
+    : _playerPlayIcon;
+  setLucideIcon(playerIcon, active?.isPlaying ? 'pause' : 'play');
 }
 
 function _selectedInterval(): number {
@@ -313,6 +316,8 @@ export function cleanupComparePanels(): void {
   mapState.setOverlayA(null);
   mapState.setActiveGifPathA(null);
   mapState.setActiveGifPathB(null);
+  mapState.clearGifPathsA();
+  mapState.clearGifPathsB();
   removeActiveOverlay(_mapRef!);
   clearMapBOverlay();
   _updateStationMarkersVisibility();
@@ -330,6 +335,7 @@ export function clearPanelA(): void {
   removeActiveOverlay(_mapRef!);
   switchColorbar(_mapRef!, null, mapState.getMapB() ?? undefined);
   mapState.clearSeriesDataA();
+  mapState.clearGifPathsA();
   if (_ndviChartDiv) Plotly.purge(_ndviChartDiv as HTMLDivElement);
   hidePlayerControls();
   if (_compareYearASelect) _compareYearASelect.value = '';
@@ -355,6 +361,7 @@ export function clearPanelB(): void {
   clearMapBOverlay();
   switchColorbar(_mapRef!, null, mapState.getMapB() ?? undefined);
   mapState.clearSeriesDataB();
+  mapState.clearGifPathsB();
   if (_chartBDiv) Plotly.purge(_chartBDiv as HTMLDivElement);
   hidePlayerControls();
   if (_compareYearBSelect) _compareYearBSelect.value = '';
@@ -895,6 +902,7 @@ export async function requestGifAndSeriesForPanel(
       mapState.setGifPlayerA(player);
       mapState.setOverlayA(overlay);
       mapState.setActiveGifPathA(gifData.gifUrl);
+      mapState.setGifPathForVariable('A', variable, gifData.gifUrl);
       _updateStationMarkersVisibility();
 
       // Animar panel A de forma independiente hasta que llegue el panel B
@@ -950,6 +958,7 @@ export async function requestGifAndSeriesForPanel(
 
       mapState.setGifPlayerB(player);
       mapState.setActiveGifPathB(gifData.gifUrl);
+      mapState.setGifPathForVariable('B', variable, gifData.gifUrl);
 
       if (tsData) {
         const extractedB = extractTimeseriesValues(tsData, variable);

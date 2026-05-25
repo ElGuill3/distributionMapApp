@@ -121,7 +121,7 @@ class TestSchemaDrift:
 
         # Compare just the schemas that generate_schemas.py is expected to generate
         # (BBoxSchema, DateRangeSchema, StationQuerySchema, MuniQuerySchema,
-        #  ExportRequestSchema, SeriesDataSchema, ExportMetadataSchema)
+        #  ExportRequestSchema, SeriesDataSchema, ExportBundleMetadataSchema)
         expected_keys = [
             "BBoxSchema",
             "DateRangeSchema",
@@ -129,7 +129,7 @@ class TestSchemaDrift:
             "MuniQuerySchema",
             "ExportRequestSchema",
             "SeriesDataSchema",
-            "ExportMetadataSchema",
+            "ExportBundleMetadataSchema",
         ]
 
         for key in expected_keys:
