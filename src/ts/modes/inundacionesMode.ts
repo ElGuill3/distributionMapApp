@@ -10,7 +10,12 @@
  */
 
 import * as mapState from '../state/mapState.js';
-import { showErrorModal } from '../ui/progress.js';
+import {
+  showErrorModal,
+  createProgressIndicator,
+  updateProgressIndicator,
+  removeProgressIndicator,
+} from '../ui/progress.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
 declare const L: typeof import('leaflet');
@@ -85,6 +90,7 @@ function setupDomListeners(): void {
 async function handleProcessFlood(): Promise<void> {
   if (!_mapRef) return;
 
+  const processBtn = document.getElementById('inund-btn-process') as HTMLButtonElement | null;
   const satSelect = document.getElementById('inund-satellite') as HTMLSelectElement | null;
   const startInput = document.getElementById('inund-start') as HTMLInputElement | null;
   const endInput = document.getElementById('inund-end') as HTMLInputElement | null;
@@ -109,6 +115,13 @@ async function handleProcessFlood(): Promise<void> {
     showErrorModal('Sin región seleccionada', 'Por favor, dibujá un área en el mapa antes de visualizar.');
     return;
   }
+
+  // Deshabilitar botón para evitar múltiples clics concurrentes
+  if (processBtn) processBtn.disabled = true;
+
+  // Mostrar modal de progreso blocking
+  createProgressIndicator();
+  updateProgressIndicator(30, 'Procesando imágenes en Google Earth Engine (esto puede tardar unos segundos)...');
 
   // Limpiar capas previas
   clearLayers();
@@ -142,9 +155,12 @@ async function handleProcessFlood(): Promise<void> {
       period: `${start} a ${end}`,
       threshold: data.computed_threshold,
       total_ha: 'Calculando...',
+      bgLayer: backgroundLayer,
+      floodLayer: floodLayer,
     });
 
     // Consultar el área en hectáreas de forma asíncrona
+    updateProgressIndicator(80, 'Cargando capas de mapa y calculando hectáreas inundadas...');
     const statsUrl = `/api/flood-stats?start=${start}&end=${end}&bbox=${encodeURIComponent(bboxStr)}&satellite=${satellite}&auto=${auto}&threshold=${threshold}`;
     void fetch(statsUrl)
       .then(res => res.json())
@@ -160,11 +176,17 @@ async function handleProcessFlood(): Promise<void> {
         updateLegendArea('Error');
       });
 
+    // Ocultar modal de progreso de forma exitosa
+    removeProgressIndicator(200);
+
   } catch (err: any) {
     console.error(err);
+    // Eliminar modal de progreso en caso de error
+    removeProgressIndicator();
     showErrorModal('Error en detección', err.message || 'No se pudieron recuperar los datos de inundación.');
   } finally {
     document.getElementById('map')?.classList.remove('map-loading');
+    if (processBtn) processBtn.disabled = false;
   }
 }
 
@@ -190,7 +212,14 @@ function clearLayers(): void {
 /**
  * Crea e inyecta la leyenda interactiva flotante en el mapa Leaflet
  */
-function createLegendControl(info: { satellite: string; period: string; threshold: number; total_ha: string }): void {
+function createLegendControl(info: {
+  satellite: string;
+  period: string;
+  threshold: number;
+  total_ha: string;
+  bgLayer: L.TileLayer;
+  floodLayer: L.TileLayer;
+}): void {
   if (!_mapRef) return;
 
   inundationsLegendCtrl = new L.Control({ position: 'topright' });
@@ -234,20 +263,20 @@ function createLegendControl(info: { satellite: string; period: string; threshol
     const bgChk = div.querySelector('#chk-toggle-bg-layer') as HTMLInputElement | null;
 
     floodChk?.addEventListener('change', () => {
-      if (!floodLayer || !_mapRef) return;
+      if (!_mapRef) return;
       if (floodChk.checked) {
-        floodLayer.addTo(_mapRef);
+        info.floodLayer.addTo(_mapRef);
       } else {
-        _mapRef.removeLayer(floodLayer);
+        _mapRef.removeLayer(info.floodLayer);
       }
     });
 
     bgChk?.addEventListener('change', () => {
-      if (!backgroundLayer || !_mapRef) return;
+      if (!_mapRef) return;
       if (bgChk.checked) {
-        backgroundLayer.addTo(_mapRef);
+        info.bgLayer.addTo(_mapRef);
       } else {
-        _mapRef.removeLayer(backgroundLayer);
+        _mapRef.removeLayer(info.bgLayer);
       }
     });
 
