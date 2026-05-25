@@ -13,7 +13,6 @@ from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
 from gee.soil import build_era5_soil_timeseries_bbox
 from gee.temperature import build_era5_temp_timeseries_bbox
 from gee.utils import check_max_10_years, season_to_dates
-from gee.water import build_water_timeseries_bbox
 
 ts_bp = Blueprint("ts", __name__)
 
@@ -181,18 +180,3 @@ def imerg_precip_timeseries_bbox() -> Response:
         empty_error="No hay datos de precipitación CHIRPS para ese rango / región.",
     )
 
-
-@limiter.limit("60/minute")
-@ts_bp.get("/api/water-timeseries-bbox")
-def water_timeseries_bbox() -> Response:
-    """Serie temporal de área de agua superficial (Landsat/Sentinel-1, ha)."""
-    satellite = request.args.get("satellite", "landsat")
-    if satellite not in ["landsat", "sentinel1"]:
-        return jsonify({"error": "satellite debe ser 'landsat' o 'sentinel1'."}), 400
-
-    return _timeseries_pipeline(
-        build_ts_fn=build_water_timeseries_bbox,
-        ts_key="water_ha",
-        empty_error="No hay observaciones de agua para ese rango / región.",
-        satellite=satellite,
-    )
