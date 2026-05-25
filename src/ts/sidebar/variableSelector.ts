@@ -17,7 +17,6 @@ const VARIABLE_MAP: Record<string, string> = {
   temp: 'Temperatura 2m',
   soil: 'Humedad del suelo',
   precip: 'Precipitación diaria',
-  water: 'Cuerpos de agua',
 };
 
 const VARIABLE_KEYS = Object.keys(VARIABLE_MAP) as VariableKey[];
@@ -50,22 +49,7 @@ class VariableSelector {
     // PR2 fix: populate year select on init so it's ready before first chip click
     this.populateYearSelect();
 
-    // Setup listener for water-satellite radios
-    const satRadios = document.querySelectorAll('input[name="water-satellite"]');
-    satRadios.forEach(radio => {
-      radio.addEventListener('change', () => {
-        this.populateYearSelect();
-        const note = document.getElementById('water-satellite-note');
-        if (note) {
-          const selectedSat = (document.querySelector('input[name="water-satellite"]:checked') as HTMLInputElement)?.value;
-          if (selectedSat === 'sentinel1') {
-            note.textContent = 'Sentinel-1 (Radar): Datos 2015–2024. Inmune a nubes. Alta precisión local.';
-          } else {
-            note.textContent = 'Landsat (Óptico): Datos 2000–2024. Sujeto a nubosidad estacional. Resolución media (30m).';
-          }
-        }
-      });
-    });
+
   }
 
   /**
@@ -95,15 +79,7 @@ class VariableSelector {
     this.activeVariable = variable;
     this.updateChipVisuals();
 
-    // Toggle satellite container visibility
-    const satContainer = document.getElementById('water-satellite-container');
-    if (satContainer) {
-      if (variable === 'water') {
-        satContainer.classList.remove('hidden');
-      } else {
-        satContainer.classList.add('hidden');
-      }
-    }
+
 
     // PR2: Single source of truth — update mapState and taskFlow directly
     setCurrentVariable(variable as VariableKey);
@@ -160,13 +136,7 @@ class VariableSelector {
     // Get years for active variable
     let years = VARIABLE_YEARS[this.activeVariable as VariableKey] || [];
 
-    // Filter years for water variable if Sentinel-1 is chosen
-    if (this.activeVariable === 'water') {
-      const selectedSat = (document.querySelector('input[name="water-satellite"]:checked') as HTMLInputElement)?.value || 'landsat';
-      if (selectedSat === 'sentinel1') {
-        years = years.filter(y => y >= 2015);
-      }
-    }
+
 
     // Populate options
     years.forEach((year: number) => {
@@ -229,19 +199,7 @@ class VariableSelector {
     this.activeVariable = 'ndvi';
     this.updateChipVisuals();
 
-    // Toggle satellite container visibility
-    const satContainer = document.getElementById('water-satellite-container');
-    if (satContainer) {
-      satContainer.classList.add('hidden');
-    }
 
-    // Reset radio selection to landsat
-    const landsatRadio = document.querySelector('input[name="water-satellite"][value="landsat"]') as HTMLInputElement | null;
-    if (landsatRadio) landsatRadio.checked = true;
-    const note = document.getElementById('water-satellite-note');
-    if (note) {
-      note.textContent = 'Landsat (Óptico): Datos 2000–2024. Sujeto a nubosidad estacional. Resolución media (30m).';
-    }
 
     this.populateYearSelect();
   }
