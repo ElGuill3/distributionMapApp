@@ -799,6 +799,8 @@ tflowClearBtn?.addEventListener('click', () => {
   mapState.updateTaskFlowStepValidity('config', false);
   mapState.updateTaskFlowStepStatus('explore', 'pending');
   mapState.updateTaskFlowStepValidity('explore', false);
+
+  syncExportButton();
 });
 
 // ---------------------------------------------------------------------------
@@ -1330,12 +1332,27 @@ if (restoreButton) {
 // ---------------------------------------------------------------------------
 
 const themeToggleBtn = document.getElementById('themeToggle');
+let themeTransitionTimer: number | null = null;
 if (themeToggleBtn) {
   themeToggleBtn.addEventListener('click', () => {
     const isDark = isDarkModeActive();
     const nextTheme = isDark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', nextTheme);
-    window.dispatchEvent(new Event('theme-change'));
+    const root = document.documentElement;
+    root.classList.add('theme-transitioning');
+    root.setAttribute('data-theme', nextTheme);
+
+    if (themeTransitionTimer !== null) {
+      window.clearTimeout(themeTransitionTimer);
+    }
+
+    window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('theme-change'));
+    });
+
+    themeTransitionTimer = window.setTimeout(() => {
+      root.classList.remove('theme-transitioning');
+      themeTransitionTimer = null;
+    }, 320);
   });
 }
 
