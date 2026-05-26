@@ -268,6 +268,21 @@
   box-sizing: border-box;
 }
 
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition-duration: 220ms !important;
+  transition-timing-function: ease !important;
+}
+
+html.theme-transitioning .map-overlay-topbar,
+html.theme-transitioning #ndvi-chart-container,
+html.theme-transitioning #chart-b-container,
+html.theme-transitioning .chart-placeholder,
+html.theme-transitioning .chart-placeholder-icon {
+  transition-duration: 220ms !important;
+}
+
 html {
   height: 100%;
 }
@@ -365,8 +380,8 @@ body.sidebar-collapsed .sidebar {
 }
 
 .sidebar-header button svg {
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
 }
 
 .sidebar section {
@@ -577,8 +592,8 @@ body.flood-risk-mode-active .municipios-grid {
 }
 
 #sidebarRestore svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 #sidebarRestore .icon-menu {
@@ -686,6 +701,11 @@ body.compare-mode-active .panel-label {
   color: var(--sidebar-fg);
   flex-shrink: 0;
   z-index: 400;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    color 220ms ease;
 }
 
 /* Show topbar when animation is loaded */
@@ -707,6 +727,7 @@ body.animation-loaded .map-overlay-topbar {
   border-radius: 50%;
   border: 1px solid var(--sidebar-border);
   background: var(--surface-bg);
+  color: var(--btn-primary-bg);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -723,6 +744,8 @@ body.animation-loaded .map-overlay-topbar {
 .player-btn svg,
 #tflow-draw-btn svg,
 .tflow-clear-btn svg,
+.topbar-draw-icon,
+.tflow-draw-icon,
 .theme-toggle-btn svg,
 #sidebarRestore svg {
   flex-shrink: 0;
@@ -731,13 +754,23 @@ body.animation-loaded .map-overlay-topbar {
 
 .topbar-btn svg,
 .player-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 16px !important;
+  height: 16px !important;
 }
 
 .topbar-layer-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+#tflow-draw-btn svg,
+.tflow-clear-btn svg,
+.topbar-draw-icon,
+.tflow-draw-icon,
+.theme-toggle-btn svg,
+#sidebarRestore svg {
+  width: 16px !important;
+  height: 16px !important;
 }
 
 .topbar-play-btn {
@@ -1145,6 +1178,10 @@ body.animation-loaded #player-controls {
   background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease;
 }
 
 /* En modo comparativa siempre mostramos el chart-container A (para los controles) */
@@ -1312,6 +1349,13 @@ body.compare-mode-active #map-panel-b {
   width: 100%;
   flex: 1;
   min-height: 0;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+html.theme-transitioning #ndvi-chart,
+html.theme-transitioning #chart-b {
+  opacity: 0.97;
+  transform: translateY(0);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1425,6 +1469,11 @@ body.compare-mode-active #map-panel-b {
   box-shadow: var(--shadow-sm);
   font-size: 12px;
   margin-right: 8px;
+  transition:
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease;
 }
 
 .ndvi-colorbar-scale {
@@ -1569,7 +1618,7 @@ body.compare-mode-active #map-panel-b {
   cursor: help;
   padding: 1px 4px;
   border-radius: var(--radius-sm, 3px);
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 220ms ease, color 220ms ease;
   white-space: nowrap;
 }
 
@@ -1649,7 +1698,12 @@ body.compare-mode-active #map-panel-b {
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-sm);
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -1697,6 +1751,16 @@ body.compare-mode-active #map-panel-b {
   backdrop-filter: var(--export-toolbar-blur);
   box-shadow: var(--export-toolbar-shadow);
   flex-shrink: 0;
+  overflow: hidden;
+  max-height: 96px;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    max-height 0.25s ease,
+    padding 0.25s ease,
+    margin 0.25s ease;
 }
 
 .export-mode-toggle {
@@ -2016,6 +2080,13 @@ body.compare-mode-active #map-panel-b {
   margin: var(--space-4);
   text-align: center;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chart-placeholder-border) 35%, transparent);
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    box-shadow 220ms ease,
+    opacity 220ms ease,
+    transform 220ms ease;
 }
 
 .chart-placeholder--hidden {
@@ -2041,6 +2112,12 @@ body.compare-mode-active #map-panel-b {
   color: var(--btn-primary-bg);
   background: color-mix(in srgb, var(--btn-primary-bg) 10%, white);
   box-shadow: 0 3px 10px color-mix(in srgb, var(--btn-primary-bg) 12%, transparent);
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    box-shadow 220ms ease,
+    opacity 220ms ease,
+    transform 220ms ease;
 }
 
 .chart-placeholder-copy {
@@ -2105,11 +2182,22 @@ body:has(.mode-banner:not(.hidden)) .main-viewer-container {
 
 /* Export toolbar - hidden by default, visible with can-export */
 #export-toolbar {
-  display: none;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 #export-toolbar.can-export {
   display: flex;
+  max-height: 96px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 /* In compare mode, export actions must stay hidden regardless of data state */
@@ -2252,6 +2340,10 @@ body.compare-mode-active #export-toolbar {
 }
 
 .tflow-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   align-self: flex-start;
 }
 
@@ -2402,7 +2494,12 @@ body.compare-mode-active #export-toolbar {
   font-size: var(--text-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
 }
 
 .modo-toggle:hover {
@@ -2420,6 +2517,19 @@ body.compare-mode-active #export-toolbar {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+  transition: color 220ms ease, opacity 220ms ease, transform 220ms ease;
+}
+
+html.theme-transitioning .ndvi-colorbar,
+html.theme-transitioning .temp-colorbar,
+html.theme-transitioning .soil-colorbar,
+html.theme-transitioning .precip-colorbar,
+html.theme-transitioning .flood-risk-colorbar,
+html.theme-transitioning .colorbar-toggle-btn,
+html.theme-transitioning .modo-toggle,
+html.theme-transitioning .modo-toggle svg,
+html.theme-transitioning .colorbar-label-item {
+  transition-duration: 220ms !important;
 }
 
 /* Deactivation of all task flow steps in compare and flood risk modes */
@@ -2498,8 +2608,8 @@ body.compare-mode-active #chart-b-container {
   border-color: var(--gray-300);
 }
 .theme-toggle-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Visibility toggles based on theme state */
