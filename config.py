@@ -13,6 +13,9 @@ Variables de entorno (todas con valores por defecto):
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def _env_bool(key: str, default: str = "false") -> bool:
@@ -28,11 +31,21 @@ def _env_int(key: str, default: int) -> int:
         return default
 
 
+def _env_list(key: str, default: str = "") -> list[str]:
+    """Lee una lista de strings separada por comas desde variables de entorno."""
+    val = os.getenv(key, default).strip()
+    if not val:
+        return []
+    return [s.strip() for s in val.split(",") if s.strip()]
+
+
 # ---------------------------------------------------------------------------
 # Variables de entorno
 # ---------------------------------------------------------------------------
 DEBUG = _env_bool("FLASK_DEBUG", "false")
 GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-proyecto")
+CONAGUA_HIDROS_STATIONS = _env_list("CONAGUA_HIDROS_STATIONS", "BDCTB,SPTTB")
+CONAGUA_CLIMAS_STATIONS = _env_list("CONAGUA_CLIMAS_STATIONS", "")
 
 # ---------------------------------------------------------------------------
 # Rutas del proyecto

@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    volumes:
+      - data_stations:/app/data/stations
+    restart: always
+
+  scraper:
+    build:
+      context: .
+      target: scraper
+    env_file:
+      - .env
+    volumes:
+      - data_stations:/app/data/stations
+    restart: always
+
+volumes:
+  data_stations:

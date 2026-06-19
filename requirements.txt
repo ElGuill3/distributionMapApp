@@ -12,3 +12,6 @@ Jinja2>=3.0
 pytest
 pydantic>=2.0
 PyYAML
+apscheduler
+python-dotenv
+beautifulsoup4
