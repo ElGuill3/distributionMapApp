@@ -80,10 +80,10 @@ FLOOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)
 # sobrescribiría la variable de entorno y confundiría despliegues.
 
 # Colecciones GEE
-MODIS_NDVI = "MODIS/061/MOD13Q1"
-ERA5_LAND_DAILY = "ECMWF/ERA5_LAND/DAILY_AGGR"
-CHIRPS_DAILY = "UCSB-CHG/CHIRPS/DAILY"
-S2_SR = "COPERNICUS/S2_SR_HARMONIZED"
+MODIS_NDVI = os.getenv("GEE_MODIS_NDVI", "MODIS/061/MOD13Q1")
+ERA5_LAND_DAILY = os.getenv("GEE_ERA5_LAND_DAILY", "ECMWF/ERA5_LAND/DAILY_AGGR")
+CHIRPS_DAILY = os.getenv("GEE_CHIRPS_DAILY", "UCSB-CHG/CHIRPS/DAILY")
+S2_SR = os.getenv("GEE_S2_SR", "COPERNICUS/S2_SR_HARMONIZED")
 
 # ---------------------------------------------------------------------------
 # Límites de procesamiento
@@ -214,17 +214,17 @@ RATE_LIMIT_ENABLED = _env_bool("RATE_LIMIT_ENABLED", "true")
 
 # Límites por categoría de endpoint (request por minuto por IP)
 RATE_LIMITS = {
-    "gif": "30/minute",  # Endpoints *-gif-bbox (costosos: llaman GEE)
-    "timeseries": "60/minute",  # Endpoints *-timeseries-bbox
-    "export": "10/minute",  # Endpoint /api/export/bundle (POST, genera ZIP)
-    "pdf-export": "10/minute",  # Endpoint /api/export/pdf-report (POST, genera PDF)
-    "flood": "60/minute",  # Endpoint /api/flood-risk-municipio
-    "station": "60/minute",  # Endpoint /api/local-station-level-range
+    "gif": os.getenv("RATE_LIMIT_GIF", "30/minute"),  # Endpoints *-gif-bbox (costosos: llaman GEE)
+    "timeseries": os.getenv("RATE_LIMIT_TIMESERIES", "60/minute"),  # Endpoints *-timeseries-bbox
+    "export": os.getenv("RATE_LIMIT_EXPORT", "10/minute"),  # Endpoint /api/export/bundle (POST, genera ZIP)
+    "pdf-export": os.getenv("RATE_LIMIT_PDF_EXPORT", "10/minute"),  # Endpoint /api/export/pdf-report (POST, genera PDF)
+    "flood": os.getenv("RATE_LIMIT_FLOOD", "60/minute"),  # Endpoint /api/flood-risk-municipio
+    "station": os.getenv("RATE_LIMIT_STATION", "60/minute"),  # Endpoint /api/local-station-level-range
 }
 
 # ---------------------------------------------------------------------------
 # Timeouts y parámetros de red
 # ---------------------------------------------------------------------------
-GIF_DOWNLOAD_TIMEOUT_S = 120  # Timeout para descarga de GIF desde GEE
-SSE_TASK_QUEUE_TIMEOUT_S = 60  # Timeout de la cola SSE en progress endpoint
-SSE_WAIT_ATTEMPTS = 100  # Intentos de espera para que el endpoint GIF registre su cola
+GIF_DOWNLOAD_TIMEOUT_S = _env_int("GIF_DOWNLOAD_TIMEOUT_S", 120)  # Timeout para descarga de GIF desde GEE
+SSE_TASK_QUEUE_TIMEOUT_S = _env_int("SSE_TASK_QUEUE_TIMEOUT_S", 60)  # Timeout de la cola SSE en progress endpoint
+SSE_WAIT_ATTEMPTS = _env_int("SSE_WAIT_ATTEMPTS", 100)  # Intentos de espera para que el endpoint GIF registre su cola
