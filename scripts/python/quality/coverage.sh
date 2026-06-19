@@ -11,10 +11,11 @@ echo "Packages: app, routes, services, gee, config, extensions"
 echo "Scope: Unit tests only (excludes integration tests with external deps)"
 echo ""
 
-# Check if we're in the expected conda environment
-if [ "$CONDA_DEFAULT_ENV" != "gee" ]; then
-    echo "WARNING: Expected conda environment 'gee' is not active (current: ${CONDA_DEFAULT_ENV:-none})."
-    echo "Activate it with: conda activate gee"
+# Check if we are running within an active virtual environment
+if [ -z "$VIRTUAL_ENV" ] && [ -z "$CONDA_DEFAULT_ENV" ]; then
+    echo "WARNING: No active virtual environment detected."
+    echo "Run this script using uv:"
+    echo "  uv run scripts/python/quality/coverage.sh"
     echo ""
 fi
 
@@ -36,7 +37,7 @@ fi
 
 if [ -n "$MISSING_DEPS" ]; then
     echo "WARNING: Missing required dependencies:$MISSING_DEPS"
-    echo "Install all runtime dependencies with: pip install -r requirements.txt"
+    echo "Install all runtime dependencies with: uv sync"
     echo ""
     echo "Coverage check requires runtime dependencies to import and collect tests."
     echo ""
