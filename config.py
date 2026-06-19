@@ -31,6 +31,14 @@ def _env_int(key: str, default: int) -> int:
         return default
 
 
+def _env_float(key: str, default: float) -> float:
+    """Lee un flotante de variable de entorno con fallback seguro."""
+    try:
+        return float(os.getenv(key, str(default)))
+    except (ValueError, TypeError):
+        return default
+
+
 def _env_list(key: str, default: str = "") -> list[str]:
     """Lee una lista de strings separada por comas desde variables de entorno."""
     val = os.getenv(key, default).strip()
@@ -80,13 +88,13 @@ S2_SR = "COPERNICUS/S2_SR_HARMONIZED"
 # ---------------------------------------------------------------------------
 # Límites de procesamiento
 # ---------------------------------------------------------------------------
-MAX_SPAN_DEG = 8.0  # Máxima extensión permitida por lado (grados)
-MAX_YEARS_RANGE = 10.0  # Máximo rango de fechas permitido en años (series temporales)
-MAX_SPAN_DEG_S2 = 4.0  # Límite más restrictivo para Sentinel-2
-MAX_TOTAL_PIXELS = 26_000_000
-BASE_PIXELS_PER_FRAME = 768 * 768
-BASE_PIXELS_S2 = 512 * 512  # Base más baja para Sentinel-2 (mayor resolución)
-MIN_GIF_DIM = 256
+MAX_SPAN_DEG = _env_float("MAX_SPAN_DEG", 8.0)  # Máxima extensión permitida por lado (grados)
+MAX_YEARS_RANGE = _env_float("MAX_YEARS_RANGE", 10.0)  # Máximo rango de fechas permitido en años
+MAX_SPAN_DEG_S2 = _env_float("MAX_SPAN_DEG_S2", 4.0)  # Límite restrictivo para Sentinel-2
+MAX_TOTAL_PIXELS = _env_int("MAX_TOTAL_PIXELS", 26_000_000)
+BASE_PIXELS_PER_FRAME = _env_int("BASE_PIXELS_PER_FRAME", 768 * 768)
+BASE_PIXELS_S2 = _env_int("BASE_PIXELS_S2", 512 * 512)  # Base Sentinel-2
+MIN_GIF_DIM = _env_int("MIN_GIF_DIM", 256)
 
 # ---------------------------------------------------------------------------
 # GeoTIFFs de riesgo por municipio
