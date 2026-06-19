@@ -45,8 +45,29 @@ Cada variable genera:
 
 - **San Pedro — SPTTB** (lat 17.79°, lon −91.16°): estación del río San Pedro, Balancán.
 - **Boca del Cerro — BDCTB** (lat 17.43°, lon −91.48°): estación del río Usumacinta, Tenosique.
-- Los datos provienen de archivos CSV con frecuencia diaria; la aplicación aplica interpolación temporal para huecos de hasta 7 días.
+- Los datos se actualizan dinámicamente mediante el servicio daemon de scrapers o se leen desde archivos CSV locales. Se aplica interpolación temporal para huecos de hasta 7 días.
 - Sus marcadores aparecen en el mapa cuando no hay animación activa; al pulsar sobre ellos se puede cargar su serie completa (2000–2024).
+
+### Servicio Daemon de Scrapers
+
+El proyecto incluye un módulo para automatizar la obtención de datos locales directamente de los servidores de CONAGUA y SMN:
+- **Descargas FTP automáticas**: Se conecta al servidor FTP de CONAGUA (`sih.conagua.gob.mx`) para descargar los datos de nivel de las estaciones configuradas en formato CSV.
+- **Planificador de Tareas**: Utiliza `APScheduler` para ejecutar descargas automáticas:
+  - Datos de CONAGUA Hidros: Todos los lunes a las 02:00 AM.
+  - Datos de CONAGUA Climas: Todos los lunes a las 02:30 AM.
+  - Datos del SMN (Stub): Cada hora.
+- **Ejecución al inicio (Bootstrap)**: Corre inmediatamente todos los scrapers configurados al iniciar el contenedor para asegurar que los datos estén al día.
+- **Escritura Atómica**: Las descargas FTP se guardan de forma atómica para evitar corrupción de datos si la conexión se interrumpe.
+
+### Exportación de Datos y Reportes PDF
+
+Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
+- **ZIP de Análisis**: Exporta un paquete ZIP con los datos de las series temporales activas en formato CSV, junto a los GIFs de animación y metadatos del análisis.
+- **Reporte en PDF**: Genera reportes PDF estilizados de nivel profesional utilizando `WeasyPrint`. El reporte incluye de forma automatizada:
+  - La gráfica temporal de Plotly exportada como imagen.
+  - Un fotograma (frame) del medio de la animación del GIF correspondiente.
+  - Estadísticas descriptivas de las variables (mínimo, máximo, media, desviación estándar).
+  - Detección automática de anomalías en las series temporales satelitales (cambios persistentes, picos inusuales, etc.).
 
 ### Modos de operación
 
@@ -79,21 +100,21 @@ Cada variable genera:
 ## Arquitectura técnica
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Navegador                        │
-│  TypeScript + Leaflet  │  Plotly.js  │  gifuct-js  │
-│  (mapa, controles UI, animación frame a frame)      │
-└────────────────────────┬────────────────────────────┘
-                         │ HTTP / SSE
-┌────────────────────────▼────────────────────────────┐
-│               Backend Flask (Python 3)              │
-│  routes/  →  gee/  →  services/                     │
-└────────────────────────┬────────────────────────────┘
-                         │ earthengine-api
-┌────────────────────────▼────────────────────────────┐
-│          Google Earth Engine (nube)                 │
-│  MODIS · ERA5-Land · CHIRPS · Sentinel-2            │
-└─────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                               Navegador                                │
+│    TypeScript + Leaflet  │  Plotly.js  │  gifuct-js  │  Scalar UI      │
+│    (mapa, controles UI, animación frame a frame, documentación API)    │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / SSE
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                       Backend Flask (Python 3)                         │
+│    routes/  →  gee/  →  services/ (incl. weasyprint para PDF)          │
+└─────────────┬──────────────────────────────────────────┬───────────────┘
+              │ earthengine-api                          │ Shared Volume
+┌─────────────▼─────────────┐              ┌─────────────▼───────────────┐
+│ Google Earth Engine (nube)│              │  Servicio Daemon de Scraper │
+│ MODIS · ERA5 · Sentinel-2 │              │  (APScheduler + FTP)        │
+└───────────────────────────┘              └─────────────────────────────┘
 ```
 
 **Flujo de una petición típica:**
@@ -202,6 +223,46 @@ uv run app.py
 
 ---
 
+### 3. Configurar variables de entorno
+
+Copiá el archivo `.env.example` a `.env` en la raíz del proyecto y configurá las variables según tus necesidades:
+
+```bash
+cp .env.example .env
+```
+
+| Variable de Entorno | Valor por Defecto | Descripción |
+|---|---|---|
+| `GEE_PROJECT` | `inundaciones-proyecto` | ID del proyecto de Google Cloud con la API de Earth Engine habilitada. |
+| `FLASK_DEBUG` | `false` | Activa el modo debug de Flask si se establece en `true`. |
+| `CONAGUA_HIDROS_STATIONS` | `BDCTB,SPTTB` | Claves de las estaciones hidrométricas a scrapear (separadas por comas). |
+| `CONAGUA_CLIMAS_STATIONS` | *(vacío)* | Claves de las estaciones climatológicas a scrapear (separadas por comas). |
+| `MAX_SPAN_DEG` | `8.0` | Extensión espacial máxima permitida en grados para peticiones GEE. |
+| `MAX_YEARS_RANGE` | `10.0` | Rango de fechas máximo permitido en años para peticiones GEE. |
+| `MAX_SPAN_DEG_S2` | `4.0` | Límite restrictivo en grados para Sentinel-2 (debido a alta resolución). |
+| `MAX_TOTAL_PIXELS` | `26000000` | Límite máximo de píxeles para procesamiento GEE. |
+| `BASE_PIXELS_PER_FRAME` | `589824` | Tamaño base de píxeles por frame de animación (768x768). |
+| `BASE_PIXELS_S2` | `262144` | Tamaño base de píxeles por frame para Sentinel-2 (512x512). |
+| `MIN_GIF_DIM` | `256` | Dimensión mínima en píxeles permitida para el GIF generado. |
+| `GIF_MAX_AGE_MINUTES` | `60` | Edad máxima en minutos de los GIFs en caché antes de ser eliminados. |
+| `GIF_CLEANUP_INTERVAL_S` | `600` | Intervalo del daemon de limpieza en segundos (por defecto 10 minutos). |
+| `GEE_MODIS_NDVI` | `MODIS/061/MOD13Q1` | ID del dataset de NDVI en Google Earth Engine. |
+| `GEE_ERA5_LAND_DAILY` | `ECMWF/ERA5_LAND/DAILY_AGGR` | ID del dataset de temperatura y humedad del suelo de ERA5-Land. |
+| `GEE_CHIRPS_DAILY` | `UCSB-CHG/CHIRPS/DAILY` | ID del dataset de precipitación CHIRPS. |
+| `GEE_S2_SR` | `COPERNICUS/S2_SR_HARMONIZED` | ID del dataset de Sentinel-2 SR Harmonized. |
+| `RATE_LIMIT_ENABLED` | `true` | Habilita o deshabilita el limitador de peticiones (rate limiter). |
+| `RATE_LIMIT_GIF` | `30/minute` | Límite de peticiones para generación de GIFs. |
+| `RATE_LIMIT_TIMESERIES` | `60/minute` | Límite de peticiones para descarga de series temporales. |
+| `RATE_LIMIT_EXPORT` | `10/minute` | Límite de peticiones para exportación de ZIPs. |
+| `RATE_LIMIT_PDF_EXPORT` | `10/minute` | Límite de peticiones para generación de reportes PDF. |
+| `RATE_LIMIT_FLOOD` | `60/minute` | Límite de peticiones para mapas de riesgo. |
+| `RATE_LIMIT_STATION` | `60/minute` | Límite de peticiones para datos de estaciones locales. |
+| `GIF_DOWNLOAD_TIMEOUT_S` | `120` | Timeout para la descarga de GIFs desde Earth Engine. |
+| `SSE_TASK_QUEUE_TIMEOUT_S` | `60` | Timeout de la cola SSE para el canal de progreso. |
+| `SSE_WAIT_ATTEMPTS` | `100` | Intentos de espera para registrar la cola en el progress endpoint. |
+
+---
+
 ### 4. Autenticar Google Earth Engine
 
 ```bash
@@ -214,12 +275,7 @@ Seguí las instrucciones en pantalla. Tras autenticarte, verificá que funcione:
 python -c "import ee; ee.Initialize(); print('GEE OK')"
 ```
 
-Editá `config.py` y configurá el nombre de tu proyecto de Google Cloud:
-
-```python
-# config.py
-GEE_PROJECT = "tu-proyecto-de-google-cloud"
-```
+Editá `.env` o `config.py` y configurá el nombre de tu proyecto de Google Cloud (`GEE_PROJECT`).
 
 > **¿No tenés proyecto GEE?** Ve a [console.cloud.google.com](https://console.cloud.google.com), creá un proyecto, habilitá la API *Earth Engine* y anotá el ID del proyecto.
 
@@ -277,6 +333,32 @@ BASE_URL=http://localhost:8080 npm run test:e2e
 
 # Tests E2E con interfaz visual
 BASE_URL=http://localhost:8080 npm run test:e2e:ui
+```
+
+---
+
+### 9. Ejecución con Docker (Recomendado para Producción)
+
+El proyecto está dockerizado usando una arquitectura multi-contenedor para separar el servidor web del servicio de scraping. Ambos contenedores comparten un volumen de datos (`data_stations`) para que el servidor web pueda acceder a los archivos de estaciones descargados en tiempo real.
+
+**Requisitos previos:**
+- Tener instalado **Docker** y **Docker Compose**.
+- Tener configuradas tus credenciales de Google Earth Engine en el entorno del host (o configurar el volumen del path de credenciales).
+
+**Levantar el entorno completo:**
+
+```bash
+docker compose up --build
+```
+
+Esto compilará y levantará:
+- El servicio `web` expuesto en el puerto `5000` (corriendo la app Flask).
+- El servicio `scraper` que ejecuta el orquestador de descargas semanal/horario.
+
+Para ejecutar los servicios en segundo plano:
+
+```bash
+docker compose up -d
 ```
 
 ---
@@ -347,11 +429,15 @@ distributionMapApp/
 │
 ├── app.py                    # Punto de entrada Flask: inicializa GEE, registra blueprints
 ├── config.py                 # Constantes globales: rutas, colecciones GEE, límites, estaciones
-├── requirements.txt          # Dependencias Python
+├── pyproject.toml            # Dependencias y metadata del proyecto Python (gestionado por uv)
+├── uv.lock                   # Lockfile de dependencias Python (gestionado por uv)
 ├── package.json              # Dependencias Node y scripts de compilación TS
 ├── tsconfig.json             # Configuración del compilador TypeScript
+├── openapi.yaml              # Especificación OpenAPI 3.1.0 de la API REST
+├── docker-compose.yml        # Configuración del entorno multi-contenedor
+├── Dockerfile                # Receta Docker multi-stage para web y scraper
 │
-├── tests/                    # Tests de unidad (pytest), p. ej. gee/utils
+├── tests/                    # Suite de pruebas unitarias, integración (Vitest/pytest) y E2E (Playwright)
 │
 ├── gee/                      # Módulos de procesamiento con Google Earth Engine
 │   ├── ndvi.py               # NDVI — MODIS MOD13Q1
@@ -362,21 +448,30 @@ distributionMapApp/
 │   ├── flood_risk.py         # Renderizado de mapas FHI desde GeoTIFFs locales
 │   └── utils.py              # Funciones compartidas: validación bbox, temporadas, dims GIF
 │
+├── scrapers/                 # Módulo de scrapers automáticos para datos locales
+│   ├── base.py               # Clase base abstracta de Scraper
+│   ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA
+│   ├── smn.py                # Scraper stub para datos de SMN
+│   └── runner.py             # Daemon planificador de tareas (APScheduler)
+│
 ├── routes/                   # Blueprints Flask — endpoints de la API REST
 │   ├── gif_routes.py         # GET /api/<var>-gif-bbox
 │   ├── timeseries_routes.py  # GET /api/<var>-timeseries-bbox
 │   ├── flood_routes.py       # GET /api/flood-risk-municipio
 │   ├── station_routes.py     # GET /api/local-station-level-range
-│   └── progress_routes.py   # GET /api/gif-progress/<task_id>  (SSE)
+│   ├── progress_routes.py    # GET /api/gif-progress/<task_id>  (SSE)
+│   └── export_routes.py      # POST /api/export/bundle y /api/export/pdf-report
 │
 ├── services/
 │   ├── gif_service.py        # Descarga GIF desde GEE, anotación con PIL, caché, limpieza
-│   └── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
+│   ├── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
+│   ├── export_service.py     # Generación de exportación ZIP (CSV + GIFs + metadatos)
+│   └── pdf_report_service.py # Generación de PDFs con WeasyPrint, estadísticas y anomalías
 │
 ├── data/
 │   ├── mapa_riesgo/
 │   │   └── municipios/       # GeoTIFFs FHI por municipio (fhi_<municipio>_100m.tif)
-│   └── stations/             # Series de nivel locales (BDCTB.csv, SPTTB.csv)
+│   └── stations/             # Series de nivel locales (descargadas por los scrapers)
 │
 ├── static/                   # Archivos servidos directamente al navegador
 │   ├── main.js               # JavaScript compilado desde TypeScript
@@ -405,24 +500,29 @@ distributionMapApp/
 │       └── variableListeners.ts  # Factory de listeners para controles de variables
 │
 └── templates/
-    └── index.html            # Template HTML principal (carga JS, CSS y librerías CDN)
+    ├── index.html            # Template HTML principal
+    └── scalar.html           # Plantilla interactiva de documentación interactiva API (Scalar UI)
 ```
 
 ---
 
 ## Endpoints de la API
 
-| Endpoint | Parámetros principales | Respuesta |
-|---|---|---|
-| `GET /api/ndvi-gif-bbox` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, ndvi[] }` |
-| `GET /api/era5-temp-gif-bbox` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, temp[] }` |
-| `GET /api/era5-soil-gif-bbox` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, soil_pct[] }` |
-| `GET /api/imerg-precip-gif-bbox` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, precip_mm[] }` |
-| `GET /api/water-gif-bbox` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, water_ha[] }` |
-| `GET /api/<var>-timeseries-bbox` | `start`, `end`, `bbox` | `{ dates, bbox, <valores>[] }` |
-| `GET /api/gif-progress/<task_id>` | — | SSE: `{ progress: 0–100, message }` |
-| `GET /api/flood-risk-municipio` | `muni` | `{ mapUrl, bbox }` |
-| `GET /api/local-station-level-range` | `station`, `start`, `end` | `{ station, dates, level_m[] }` |
+| Endpoint | Método | Parámetros principales | Respuesta |
+|---|---|---|---|
+| `GET /api/ndvi-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, ndvi[] }` |
+| `GET /api/era5-temp-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, temp[] }` |
+| `GET /api/era5-soil-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, soil_pct[] }` |
+| `GET /api/imerg-precip-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, precip_mm[] }` |
+| `GET /api/water-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, water_ha[] }` |
+| `GET /api/<var>-timeseries-bbox` | `GET` | `start`, `end`, `bbox` | `{ dates, bbox, <valores>[] }` |
+| `GET /api/gif-progress/<task_id>` | `GET` | — | SSE: `{ progress: 0–100, message }` |
+| `GET /api/flood-risk-municipio` | `GET` | `muni` | `{ mapUrl, bbox }` |
+| `GET /api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, dates, level_m[] }` |
+| `POST /api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | Archivo ZIP (datos CSV + GIFs + metadatos) |
+| `POST /api/export/pdf-report` | `POST` | `chart_blob`, `gif_path`, `seriesData`, `bbox`, `metadata` | Archivo PDF (reporte con estadísticas y anomalías) |
+| `GET /api/docs` | `GET` | — | Interfaz de Scalar UI con la documentación interactiva de la API |
+| `GET /api/docs/openapi.yaml` | `GET` | — | Especificación OpenAPI 3.1.0 del sistema en formato YAML |
 
 **Parámetros comunes:**
 - `start` / `end`: fechas en formato `YYYY-MM-DD`.
