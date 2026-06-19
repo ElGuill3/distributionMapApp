@@ -100,16 +100,62 @@ MUNICIPAL_TIFS = {
 # ---------------------------------------------------------------------------
 # Estaciones hidrometeorológicas locales
 # ---------------------------------------------------------------------------
-LOCAL_STATIONS = {
-    "SPTTB": {
-        "name": "San Pedro (Balancán)",
-        "csv_path": BASE_DIR / "SPTTB.csv",
-    },
-    "BDCTB": {
-        "name": "Boca del Cerro (Tenosique)",
-        "csv_path": BASE_DIR / "BDCTB.csv",
-    },
-}
+def _load_local_stations() -> dict[str, dict]:
+    stations = {}
+    stations_dir = BASE_DIR / "data" / "stations"
+    if not stations_dir.exists():
+        return stations
+
+    for csv_file in stations_dir.glob("*.csv"):
+        try:
+            # Intentar leer con UTF-8
+            with open(csv_file, "r", encoding="utf-8") as f:
+                lines = [f.readline().strip() for _ in range(6)]
+            
+            metadata = {}
+            for line in lines:
+                if ":" in line:
+                    parts = line.split(":", 1)
+                    metadata[parts[0].strip()] = parts[1].strip()
+            
+            station_key = metadata.get("Clave")
+            station_name = metadata.get("Estación")
+            municipio = metadata.get("Municipio")
+            
+            if station_key and station_name:
+                display_name = f"{station_name} ({municipio})" if municipio else station_name
+                stations[station_key] = {
+                    "name": display_name,
+                    "csv_path": csv_file,
+                }
+        except Exception:
+            # Fallback a Latin-1 por si falla la decodificación por caracteres con tilde
+            try:
+                with open(csv_file, "r", encoding="latin-1") as f:
+                    lines = [f.readline().strip() for _ in range(6)]
+                
+                metadata = {}
+                for line in lines:
+                    if ":" in line:
+                        parts = line.split(":", 1)
+                        metadata[parts[0].strip()] = parts[1].strip()
+                
+                station_key = metadata.get("Clave")
+                station_name = metadata.get("Estación")
+                municipio = metadata.get("Municipio")
+                
+                if station_key and station_name:
+                    display_name = f"{station_name} ({municipio})" if municipio else station_name
+                    stations[station_key] = {
+                        "name": display_name,
+                        "csv_path": csv_file,
+                    }
+            except Exception:
+                pass
+    return stations
+
+
+LOCAL_STATIONS = _load_local_stations()
 
 # ---------------------------------------------------------------------------
 # Limpieza automática de GIFs
