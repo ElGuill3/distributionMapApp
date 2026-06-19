@@ -1,0 +1,32 @@
+[project]
+name = "distributionmapapp"
+version = "0.1.0"
+description = "Web app and scraper for distribution mapping"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "Flask",
+    "Flask-Limiter",
+    "earthengine-api",
+    "pandas",
+    "numpy",
+    "rasterio",
+    "matplotlib",
+    "Pillow",
+    "requests",
+    "WeasyPrint>=60.0",
+    "Jinja2>=3.0",
+    "pytest",
+    "pydantic>=2.0",
+    "PyYAML",
+    "apscheduler",
+    "python-dotenv",
+    "beautifulsoup4",
+]
+
+[dependency-groups]
+dev = [
+    "openapi-spec-validator>=0.7.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+]

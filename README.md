@@ -141,30 +141,14 @@ src/ts/
 | Python | 3.11 |
 | Node.js | 18 |
 | npm | 9 |
-| Conda / micromamba | Opcional — para crear entorno con `conda create` |
-
-**Gestores de paquetes Python ( elegí uno):**
-- `venv` — incluido con Python, no requiere instalación extra
-- `conda` / `micromamba` — útil si ya usás Anaconda/Miniconda
+| uv | Última versión — gestor de paquetes Python recomendado |
 
 **Cuenta de Google Earth Engine:**
 - Necesitás una cuenta GEE aprobada y un proyecto de Google Cloud con la API de Earth Engine habilitada.
 - Más información: [earthengine.google.com](https://earthengine.google.com/)
 
-**Dependencias Python** (ver `requirements.txt`):
-
-```
-Flask
-earthengine-api
-pandas
-numpy
-rasterio
-matplotlib
-Pillow
-requests
-pytest
-pydantic>=2.0
-```
+**Dependencias Python** (ver `pyproject.toml`):
+- Administradas y sincronizadas automáticamente mediante `uv`.
 
 **Dependencias Node** (ver `package.json`):
 
@@ -188,53 +172,33 @@ cd distributionMapApp
 
 ---
 
-### 2. Crear el entorno virtual Python
+### 2. Configurar el entorno virtual y dependencias Python
 
-Tenés **dos opciones**: `venv` (viene con Python) o `conda`/`micromamba`. Elegí la que tengas disponible.
-
-#### Opción A — `venv` (cualquier sistema, sin instalar nada extra)
+Recomendamos usar **[uv](https://github.com/astral-sh/uv)** para gestionar el entorno y las dependencias de forma extremadamente veloz.
 
 ```bash
-# Crear entorno
-python -m venv venv
+# Sincronizar dependencias y crear el entorno virtual automáticamente
+uv sync
+```
 
-# Activarlo
+Esto creará un entorno virtual en la carpeta `.venv/` en la raíz del proyecto e instalará todas las dependencias del proyecto y de desarrollo de forma óptima.
+
+Para activar el entorno virtual en tu terminal:
+
+```bash
 # Linux / macOS:
-source venv/bin/activate
+source .venv/bin/activate
 # Windows (PowerShell):
-.\venv\Scripts\Activate
+.venv\Scripts\Activate
 # Windows (CMD):
-venv\Scripts\activate.bat
+.venv\Scripts\activate.bat
 ```
 
-#### Opción B — `conda` / `micromamba`
-
+O podés ejecutar directamente cualquier comando usando `uv run`:
 ```bash
-# Crear entorno con Python 3.11
-conda create -n distributionMapApp python=3.11 -y
-conda activate distributionMapApp
-
-# Con micromamba (más rápido):
-micromamba create -n distributionMapApp python=3.11 -c conda-forge
-micromamba activate distributionMapApp
+uv run app.py
 ```
 
----
-
-### 3. Instalar dependencias Python
-
-```bash
-pip install -r requirements.txt
-```
-
-> **En Windows**, si `rasterio` da error al instalar, probá:
-> ```bash
-> pip install rasterio --find-links https://pypi.win.wtf/geos-3.10.2-cp311-cp311-win_amd64.html
-> ```
-> O usá `conda-forge`:
-> ```bash
-> conda install rasterio -c conda-forge
-> ```
 
 ---
 
@@ -511,24 +475,21 @@ Los tests E2E verifican que ningún flujo de usuario dispara `window.alert` sin 
 
 ### Comandos de calidad
 
-Además del stack de testing, el proyecto ahora incluye comandos de calidad para Python y TypeScript. Para usarlos, instalá también las dependencias de desarrollo Python:
+Además del stack de testing, el proyecto ahora incluye comandos de calidad para Python y TypeScript. 
+
+**Python** — coverage, lint y format check con `pytest-cov` y Ruff. Al usar `uv sync`, las dependencias de desarrollo ya están instaladas en el entorno.
 
 ```bash
-pip install -r requirements-dev.txt
-```
-
-**Python** — coverage, lint y format check con `pytest-cov` y Ruff:
-
-```bash
-./scripts/python/quality/coverage.sh  # Ejecuta pytest con coverage
-./scripts/python/quality/lint.sh      # Ejecuta ruff check
-./scripts/python/quality/format.sh    # Ejecuta ruff format --check
+# Ejecutar los scripts a través de uv run:
+uv run scripts/python/quality/coverage.sh  # Ejecuta pytest con coverage
+uv run scripts/python/quality/lint.sh      # Ejecuta ruff check
+uv run scripts/python/quality/format.sh    # Ejecuta ruff format --check
 ```
 
 Notas:
 - Estos comandos están pensados como **guardrails** iniciales: reportan baseline, no corrigen el repo automáticamente.
 - La primera pasada excluye `static/`, `scripts/` y tests Python para evitar ruido de revisión.
-- Si faltan dependencias del entorno Flask, el comando de coverage puede fallar durante la recolección de tests.
+- Si usás `uv run`, `uv` se asegura de que el entorno esté levantado correctamente antes de correr el script.
 
 **TypeScript** — lint y format check con ESLint + Prettier:
 
