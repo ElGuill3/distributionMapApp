@@ -263,7 +263,7 @@ GEE_PROJECT = "tu-proyecto-de-google-cloud"
 
 ### 5. Datos de estaciones locales
 
-Los archivos `SPTTB.csv` y `BDCTB.csv` deben estar en la raíz del proyecto. El formato esperado:
+Los archivos `SPTTB.csv` y `BDCTB.csv` deben estar en la carpeta `data/stations/`. El formato esperado:
 
 ```
 <línea 1–6: metadatos (se omiten automáticamente)>
@@ -387,9 +387,6 @@ distributionMapApp/
 ├── package.json              # Dependencias Node y scripts de compilación TS
 ├── tsconfig.json             # Configuración del compilador TypeScript
 │
-├── SPTTB.csv                 # Serie de nivel — estación San Pedro (Balancán)
-├── BDCTB.csv                 # Serie de nivel — estación Boca del Cerro (Tenosique)
-│
 ├── tests/                    # Tests de unidad (pytest), p. ej. gee/utils
 │
 ├── gee/                      # Módulos de procesamiento con Google Earth Engine
@@ -413,8 +410,9 @@ distributionMapApp/
 │   └── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
 │
 ├── data/
-│   └── mapa_riesgo/
-│       └── municipios/       # GeoTIFFs FHI por municipio (fhi_<municipio>_100m.tif)
+│   ├── mapa_riesgo/
+│   │   └── municipios/       # GeoTIFFs FHI por municipio (fhi_<municipio>_100m.tif)
+│   └── stations/             # Series de nivel locales (BDCTB.csv, SPTTB.csv)
 │
 ├── static/                   # Archivos servidos directamente al navegador
 │   ├── main.js               # JavaScript compilado desde TypeScript
