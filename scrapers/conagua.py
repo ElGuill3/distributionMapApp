@@ -65,63 +65,68 @@ class ConaguaScraper(BaseScraper):
             return
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Iniciando descarga FTP desde {self.host} para {self.username}...")
+        
+        # 1. Intentar descargar por HTTPS primero (más rápido y menos bloqueos de red)
+        logger.info(f"Iniciando descarga de estaciones vía HTTPS para {self.username}...")
+        pending_stations = []
+        for station in self.stations:
+            success = self._download_via_https(station)
+            if not success:
+                pending_stations.append(station)
 
-        ftp_success = False
-        max_retries = 3
-        for attempt in range(1, max_retries + 1):
-            try:
-                with FTP(self.host, timeout=10) as ftp:
-                    ftp.login(self.username, self.password)
-                    logger.info(f"Conexión FTP exitosa como {self.username}.")
-                    
-                    # Listar archivos remotos
-                    files = ftp.nlst()
-                    file_map = {f.upper(): f for f in files}
-
-                    for station in self.stations:
-                        expected_filename = f"{station}.CSV"
-                        if expected_filename not in file_map:
-                            logger.warning(f"La estación {station} no se encontró en el servidor FTP ({expected_filename}).")
-                            continue
-
-                        remote_file = file_map[expected_filename]
-                        local_final_path = self.output_dir / f"{station}.csv"
+        # 2. Si alguna estación falló por HTTPS (ej. por WAF / Incapsula), intentar por FTP como fallback
+        if pending_stations:
+            logger.info(f"Las siguientes estaciones fallaron o fueron bloqueadas por HTTPS: {pending_stations}. Intentando fallback vía FTP...")
+            
+            ftp_success = False
+            max_retries = 3
+            for attempt in range(1, max_retries + 1):
+                try:
+                    with FTP(self.host, timeout=10) as ftp:
+                        ftp.login(self.username, self.password)
+                        logger.info(f"Conexión FTP de fallback exitosa como {self.username}.")
                         
-                        logger.info(f"Descargando {remote_file}...")
+                        # Listar archivos remotos
+                        files = ftp.nlst()
+                        file_map = {f.upper(): f for f in files}
 
-                        # Escritura atómica usando archivo temporal en el mismo directorio
-                        fd, temp_path_str = tempfile.mkstemp(dir=str(self.output_dir), suffix=".tmp")
-                        temp_path = Path(temp_path_str)
-                        
-                        try:
-                            with os.fdopen(fd, "wb") as local_file:
-                                ftp.retrbinary(f"RETR {remote_file}", local_file.write)
+                        for station in pending_stations:
+                            expected_filename = f"{station}.CSV"
+                            if expected_filename not in file_map:
+                                logger.warning(f"La estación {station} no se encontró en el servidor FTP ({expected_filename}).")
+                                continue
+
+                            remote_file = file_map[expected_filename]
+                            local_final_path = self.output_dir / f"{station}.csv"
                             
-                            # Reemplazo atómico a nivel de sistema operativo
-                            os.replace(temp_path, local_final_path)
-                            logger.info(f"Descarga de {station} finalizada exitosamente.")
-                        except Exception as e:
-                            logger.error(f"Error durante la descarga o escritura de {station}: {e}")
-                            if temp_path.exists():
-                                try:
-                                    os.unlink(temp_path)
-                                except OSError:
-                                    pass
-                    ftp_success = True
-                    break
-            except Exception as e:
-                logger.error(f"Fallo en la conexión FTP de {self.username} (intento {attempt}/{max_retries}): {e}")
-                if attempt < max_retries:
-                    sleep_time = 2 ** attempt
-                    logger.info(f"Reintentando en {sleep_time} segundos...")
-                    import time
-                    time.sleep(sleep_time)
-                else:
-                    logger.error(f"Se agotaron todos los reintentos FTP para {self.username}.")
+                            logger.info(f"Descargando {remote_file} vía FTP...")
 
-        # Si falló FTP, intentar vía HTTPS
-        if not ftp_success:
-            logger.info(f"FTP falló. Iniciando fallback de descarga vía HTTPS para {self.username}...")
-            for station in self.stations:
-                self._download_via_https(station)
+                            # Escritura atómica usando archivo temporal
+                            fd, temp_path_str = tempfile.mkstemp(dir=str(self.output_dir), suffix=".tmp")
+                            temp_path = Path(temp_path_str)
+                            
+                            try:
+                                with os.fdopen(fd, "wb") as local_file:
+                                    ftp.retrbinary(f"RETR {remote_file}", local_file.write)
+                                
+                                # Reemplazo atómico
+                                os.replace(temp_path, local_final_path)
+                                logger.info(f"Descarga de {station} vía FTP finalizada exitosamente.")
+                            except Exception as e:
+                                logger.error(f"Error durante la descarga o escritura de {station} vía FTP: {e}")
+                                if temp_path.exists():
+                                    try:
+                                        os.unlink(temp_path)
+                                    except OSError:
+                                        pass
+                        ftp_success = True
+                        break
+                except Exception as e:
+                    logger.error(f"Fallo en la conexión FTP de fallback (intento {attempt}/{max_retries}): {e}")
+                    if attempt < max_retries:
+                        sleep_time = 2 ** attempt
+                        logger.info(f"Reintentando FTP en {sleep_time} segundos...")
+                        import time
+                        time.sleep(sleep_time)
+                    else:
+                        logger.error(f"Se agotaron todos los reintentos FTP de fallback para {self.username}.")
