@@ -5,7 +5,10 @@ from pathlib import Path
 from scrapers.conagua import ConaguaScraper
 
 class TestConaguaScraper:
-    def test_conagua_scraper_successful_download(self, tmp_path: Path) -> None:
+    @patch("scrapers.conagua.requests.get")
+    def test_conagua_scraper_successful_download(self, mock_get, tmp_path: Path) -> None:
+        # Mock de requests.get para que falle y obligue a usar el fallback de FTP
+        mock_get.side_effect = Exception("Simulated connection error")
         stations = ["BDCTB"]
         output_dir = tmp_path / "stations"
         
@@ -27,7 +30,7 @@ class TestConaguaScraper:
             scraper.scrape()
             
             # Verificaciones
-            mock_ftp_class.assert_called_once_with("sih.conagua.gob.mx")
+            mock_ftp_class.assert_called_once_with("sih.conagua.gob.mx", timeout=10)
             mock_ftp_instance.login.assert_called_once_with("hidros", "hidros")
             mock_ftp_instance.nlst.assert_called_once()
             mock_ftp_instance.retrbinary.assert_called_once()
@@ -43,7 +46,10 @@ class TestConaguaScraper:
             temp_files = list(output_dir.glob("*.tmp"))
             assert len(temp_files) == 0
 
-    def test_conagua_scraper_station_not_found(self, tmp_path: Path) -> None:
+    @patch("scrapers.conagua.requests.get")
+    def test_conagua_scraper_station_not_found(self, mock_get, tmp_path: Path) -> None:
+        # Mock de requests.get para que falle y obligue a usar el fallback de FTP
+        mock_get.side_effect = Exception("Simulated connection error")
         stations = ["UNKNOWN"]
         output_dir = tmp_path / "stations"
         
@@ -59,3 +65,31 @@ class TestConaguaScraper:
             # No se debió llamar a retrbinary para una estación inexistente
             mock_ftp_instance.retrbinary.assert_not_called()
             assert not (output_dir / "UNKNOWN.csv").exists()
+
+    @patch("scrapers.conagua.requests.get")
+    def test_conagua_scraper_successful_download_https(self, mock_get, tmp_path: Path) -> None:
+        stations = ["BDCTB"]
+        output_dir = tmp_path / "stations"
+        
+        # Mock de la respuesta de requests.get para que sea exitosa
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = "Clave: BDCTB\nEstacion: Boca del Cerro (HTTPS)\n"
+        mock_get.return_value = mock_response
+
+        # Instanciar scraper y ejecutar descarga (no debería tocar FTP)
+        scraper = ConaguaScraper("hidros", stations, output_dir=output_dir)
+        scraper.scrape()
+        
+        # Verificaciones
+        mock_get.assert_called_once()
+        
+        target_file = output_dir / "BDCTB.csv"
+        assert target_file.exists()
+        with open(target_file, "r") as f:
+            content = f.read()
+        assert "Boca del Cerro (HTTPS)" in content
+        
+        # No deben quedar temporales
+        temp_files = list(output_dir.glob("*.tmp"))
+        assert len(temp_files) == 0

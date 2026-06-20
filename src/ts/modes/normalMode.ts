@@ -331,7 +331,8 @@ export async function requestGifAndSeries(
         closeWarningModal();
       }
       // Mapear el progreso del servidor (0-100) a 0-90% para reservar el último 10%
-      const mappedProgress = progress >= 0 ? Math.min(90, Math.round(progress * 0.9)) : -1;
+      const mappedProgress =
+        progress >= 0 ? Math.min(90, Math.round(progress * 0.9)) : -1;
       updateProgressIndicator(mappedProgress, message);
       if (progress === 100 || progress === -1) {
         eventSource.close();

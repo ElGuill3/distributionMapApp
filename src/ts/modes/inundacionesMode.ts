@@ -49,12 +49,22 @@ export function initInundacionesMode(domRefs: InundacionesModeDomRefs): void {
  * Configura los event listeners para el panel de inundaciones
  */
 function setupDomListeners(): void {
-  const satSelect = document.getElementById('inund-satellite') as HTMLSelectElement | null;
+  const satSelect = document.getElementById(
+    'inund-satellite'
+  ) as HTMLSelectElement | null;
   const satHint = document.getElementById('inund-satellite-hint') as HTMLElement | null;
-  const thresholdModeSelect = document.getElementById('inund-threshold-mode') as HTMLSelectElement | null;
-  const manualGroup = document.getElementById('inund-threshold-manual-group') as HTMLElement | null;
-  const thresholdValueInput = document.getElementById('inund-threshold-value') as HTMLInputElement | null;
-  const processBtn = document.getElementById('inund-btn-process') as HTMLButtonElement | null;
+  const thresholdModeSelect = document.getElementById(
+    'inund-threshold-mode'
+  ) as HTMLSelectElement | null;
+  const manualGroup = document.getElementById(
+    'inund-threshold-manual-group'
+  ) as HTMLElement | null;
+  const thresholdValueInput = document.getElementById(
+    'inund-threshold-value'
+  ) as HTMLInputElement | null;
+  const processBtn = document.getElementById(
+    'inund-btn-process'
+  ) as HTMLButtonElement | null;
 
   // Actualizar pista dinámica del satélite y umbrales por defecto
   satSelect?.addEventListener('change', () => {
@@ -90,14 +100,29 @@ function setupDomListeners(): void {
 async function handleProcessFlood(): Promise<void> {
   if (!_mapRef) return;
 
-  const processBtn = document.getElementById('inund-btn-process') as HTMLButtonElement | null;
-  const satSelect = document.getElementById('inund-satellite') as HTMLSelectElement | null;
+  const processBtn = document.getElementById(
+    'inund-btn-process'
+  ) as HTMLButtonElement | null;
+  const satSelect = document.getElementById(
+    'inund-satellite'
+  ) as HTMLSelectElement | null;
   const startInput = document.getElementById('inund-start') as HTMLInputElement | null;
   const endInput = document.getElementById('inund-end') as HTMLInputElement | null;
-  const thresholdModeSelect = document.getElementById('inund-threshold-mode') as HTMLSelectElement | null;
-  const thresholdValueInput = document.getElementById('inund-threshold-value') as HTMLInputElement | null;
+  const thresholdModeSelect = document.getElementById(
+    'inund-threshold-mode'
+  ) as HTMLSelectElement | null;
+  const thresholdValueInput = document.getElementById(
+    'inund-threshold-value'
+  ) as HTMLInputElement | null;
 
-  if (!satSelect || !startInput || !endInput || !thresholdModeSelect || !thresholdValueInput) return;
+  if (
+    !satSelect ||
+    !startInput ||
+    !endInput ||
+    !thresholdModeSelect ||
+    !thresholdValueInput
+  )
+    return;
 
   const satellite = satSelect.value;
   const start = startInput.value;
@@ -106,13 +131,19 @@ async function handleProcessFlood(): Promise<void> {
   const threshold = parseFloat(thresholdValueInput.value);
 
   if (!start || !end) {
-    showErrorModal('Error de validación', 'Debés seleccionar una fecha de inicio y fin.');
+    showErrorModal(
+      'Error de validación',
+      'Debés seleccionar una fecha de inicio y fin.'
+    );
     return;
   }
 
   const bbox = mapState.getBbox();
   if (!bbox) {
-    showErrorModal('Sin región seleccionada', 'Por favor, dibujá un área en el mapa antes de visualizar.');
+    showErrorModal(
+      'Sin región seleccionada',
+      'Por favor, dibujá un área en el mapa antes de visualizar.'
+    );
     return;
   }
 
@@ -121,7 +152,10 @@ async function handleProcessFlood(): Promise<void> {
 
   // Mostrar modal de progreso blocking
   createProgressIndicator();
-  updateProgressIndicator(0, 'Procesando imágenes en Google Earth Engine (esto puede tardar unos segundos)...');
+  updateProgressIndicator(
+    0,
+    'Procesando imágenes en Google Earth Engine (esto puede tardar unos segundos)...'
+  );
 
   // Limpiar capas previas
   clearLayers();
@@ -140,13 +174,18 @@ async function handleProcessFlood(): Promise<void> {
     }
 
     // Agregar capa de fondo satelital
-    backgroundLayer = L.tileLayer(data.background_layer, { opacity: 0.85 }).addTo(_mapRef);
+    backgroundLayer = L.tileLayer(data.background_layer, { opacity: 0.85 }).addTo(
+      _mapRef
+    );
 
     // Agregar capa de inundación en cian
     floodLayer = L.tileLayer(data.water_layer, { opacity: 0.9 }).addTo(_mapRef);
 
     // Ajustar vista del mapa
-    const bounds = L.latLngBounds(L.latLng(bbox[1], bbox[0]), L.latLng(bbox[3], bbox[2]));
+    const bounds = L.latLngBounds(
+      L.latLng(bbox[1], bbox[0]),
+      L.latLng(bbox[3], bbox[2])
+    );
     _mapRef.fitBounds(bounds);
 
     // Crear la leyenda flotante con datos
@@ -160,7 +199,10 @@ async function handleProcessFlood(): Promise<void> {
     });
 
     // Consultar el área en hectáreas de forma asíncrona
-    updateProgressIndicator(80, 'Cargando capas de mapa y calculando hectáreas inundadas...');
+    updateProgressIndicator(
+      80,
+      'Cargando capas de mapa y calculando hectáreas inundadas...'
+    );
     const statsUrl = `/api/flood-stats?start=${start}&end=${end}&bbox=${encodeURIComponent(bboxStr)}&satellite=${satellite}&auto=${auto}&threshold=${threshold}`;
     void fetch(statsUrl)
       .then(res => res.json())
@@ -178,12 +220,15 @@ async function handleProcessFlood(): Promise<void> {
 
     // Ocultar modal de progreso de forma exitosa
     removeProgressIndicator(200);
-
-  } catch (err: any) {
+  } catch (err) {
     console.error(err);
     // Eliminar modal de progreso en caso de error
     removeProgressIndicator();
-    showErrorModal('Error en detección', err.message || 'No se pudieron recuperar los datos de inundación.');
+    const errMsg = err instanceof Error ? err.message : String(err);
+    showErrorModal(
+      'Error en detección',
+      errMsg || 'No se pudieron recuperar los datos de inundación.'
+    );
   } finally {
     document.getElementById('map')?.classList.remove('map-loading');
     if (processBtn) processBtn.disabled = false;
@@ -259,7 +304,9 @@ function createLegendControl(info: {
     `;
 
     // Listeners para checkboxes
-    const floodChk = div.querySelector('#chk-toggle-flood-layer') as HTMLInputElement | null;
+    const floodChk = div.querySelector(
+      '#chk-toggle-flood-layer'
+    ) as HTMLInputElement | null;
     const bgChk = div.querySelector('#chk-toggle-bg-layer') as HTMLInputElement | null;
 
     floodChk?.addEventListener('change', () => {

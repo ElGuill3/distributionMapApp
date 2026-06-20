@@ -1083,6 +1083,42 @@ body.animation-loaded .animation-date-label {
   }
 }
 
+/* Custom Leaflet station icon styles */
+.custom-station-icon {
+  background: none !important;
+  border: none !important;
+}
+
+.station-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  border: 2px solid white;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: white;
+}
+
+.station-icon:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+.station-icon-hidro {
+  background-color: #7c3aed; /* Púrpura/violeta */
+}
+
+.station-icon-clima {
+  background-color: #0284c7; /* Celeste/azul claro */
+}
+
+.station-icon svg {
+  display: block;
+}
+
 /* PR3: Hide old #player-controls when new topbar is active */
 body.animation-loaded #player-controls {
   display: none !important;
@@ -1290,23 +1326,125 @@ body.compare-mode-active #map-panel-b {
   border-color: var(--gray-300);
 }
 
-/* Popup de marcadores de estaciones */
+/* Popup de marcadores de estaciones - Moderno, Compacto y Adaptable al Tema */
 .station-popup-content {
+  font-family: inherit;
+  padding: 0;
+  min-width: 180px;
+}
+
+.station-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.station-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.station-badge-hidro {
+  background-color: rgba(3, 105, 161, 0.12);
+  color: var(--sky-500);
+  border: 1px solid rgba(3, 105, 161, 0.2);
+}
+
+.station-badge-clima {
+  background-color: rgba(45, 212, 191, 0.12);
+  color: var(--teal-600);
+  border: 1px solid rgba(45, 212, 191, 0.2);
+}
+
+.station-popup-title {
   font-size: 0.85rem;
-  line-height: 1.5;
+  font-weight: 700;
+  color: var(--surface-fg);
+  margin: 0 0 0.3rem 0;
+  line-height: 1.25;
 }
 
-.station-full-data-link {
-  display: inline-block;
-  margin-top: 0.3rem;
-  font-size: var(--text-sm);
-  color: var(--btn-primary-bg);
-  text-decoration: underline;
+.station-popup-meta {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin-bottom: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.station-popup-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.station-popup-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--btn-primary-fg) !important;
+  background-color: var(--btn-primary-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  text-decoration: none !important;
   cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.station-full-data-link:hover {
-  color: var(--btn-primary-hover);
+.station-popup-btn:hover {
+  background-color: var(--btn-primary-hover);
+  color: var(--btn-primary-fg) !important;
+}
+
+.station-popup-btn:active {
+  transform: scale(0.98);
+}
+
+/* Sobrescribir contenedor nativo de Leaflet Popup para soportar modo oscuro y tema premium */
+.leaflet-popup-content-wrapper {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--surface-fg) !important;
+  border: 1px solid var(--sidebar-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 10px 12px !important;
+  color: var(--surface-fg) !important;
+}
+
+.leaflet-popup-tip {
+  background-color: var(--sidebar-bg) !important;
+  border-left: 1px solid var(--sidebar-border);
+  border-bottom: 1px solid var(--sidebar-border);
+  box-shadow: var(--shadow-md) !important;
+}
+
+.leaflet-popup-close-button {
+  color: var(--gray-400) !important;
+  padding: 6px 6px 0 0 !important;
+  font-size: 14px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: var(--surface-fg) !important;
+  background: transparent !important;
 }
 
 /* Checkboxes de estaciones en controles de comparativa */
@@ -2074,7 +2212,7 @@ html.theme-transitioning #chart-b {
   justify-content: center;
   flex: 1;
   min-height: var(--chart-placeholder-min-height);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--chart-placeholder-bg) 92%, white), var(--chart-placeholder-bg));
+  background: var(--chart-placeholder-bg);
   border: 1px solid color-mix(in srgb, var(--chart-placeholder-border) 70%, var(--sidebar-fg));
   border-radius: var(--radius-md);
   margin: var(--space-4);

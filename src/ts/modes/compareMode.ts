@@ -80,11 +80,11 @@ let _compareYearBSelect: HTMLSelectElement | null = null;
 let _compareSeasonBSelect: HTMLSelectElement | null = null;
 let _btnGenerateB: HTMLButtonElement | null = null;
 
-/** Checkboxes de estaciones en modo comparativa. */
-let _chkStationSpA: HTMLInputElement | null = null;
-let _chkStationBdA: HTMLInputElement | null = null;
-let _chkStationSpB: HTMLInputElement | null = null;
-let _chkStationBdB: HTMLInputElement | null = null;
+/** Selectores de estaciones en modo comparativa. */
+let _selStationHidroA: HTMLSelectElement | null = null;
+let _selStationClimaA: HTMLSelectElement | null = null;
+let _selStationHidroB: HTMLSelectElement | null = null;
+let _selStationClimaB: HTMLSelectElement | null = null;
 
 /** PR2: Callback para actualizar la etiqueta de fecha en el overlay del mapa. */
 let _onDateLabelUpdate: ((frameIdx: number) => void) | undefined = undefined;
@@ -115,10 +115,10 @@ export interface CompareModeDomRefs {
   compareYearBSelect: HTMLSelectElement | null;
   compareSeasonBSelect: HTMLSelectElement | null;
   btnGenerateB: HTMLButtonElement | null;
-  chkStationSpA: HTMLInputElement | null;
-  chkStationBdA: HTMLInputElement | null;
-  chkStationSpB: HTMLInputElement | null;
-  chkStationBdB: HTMLInputElement | null;
+  selStationHidroA: HTMLSelectElement | null;
+  selStationClimaA: HTMLSelectElement | null;
+  selStationHidroB: HTMLSelectElement | null;
+  selStationClimaB: HTMLSelectElement | null;
   onDateLabelUpdate?: (frameIdx: number) => void;
 }
 
@@ -150,10 +150,10 @@ export function initCompareMode(domRefs: CompareModeDomRefs): void {
   _compareYearBSelect = domRefs.compareYearBSelect;
   _compareSeasonBSelect = domRefs.compareSeasonBSelect;
   _btnGenerateB = domRefs.btnGenerateB;
-  _chkStationSpA = domRefs.chkStationSpA;
-  _chkStationBdA = domRefs.chkStationBdA;
-  _chkStationSpB = domRefs.chkStationSpB;
-  _chkStationBdB = domRefs.chkStationBdB;
+  _selStationHidroA = domRefs.selStationHidroA;
+  _selStationClimaA = domRefs.selStationClimaA;
+  _selStationHidroB = domRefs.selStationHidroB;
+  _selStationClimaB = domRefs.selStationClimaB;
   _onDateLabelUpdate = domRefs.onDateLabelUpdate ?? undefined;
 }
 
@@ -265,26 +265,66 @@ export function initMapB(): void {
     mapState.setMapBSyncLock(false);
   });
 
+  // Iconos personalizados con SVG para el mapa B
+  const waveSvg = `
+  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.6 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+    <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+    <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+  </svg>
+  `;
+
+  const dropSvg = `
+  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z"></path>
+  </svg>
+  `;
+
+  const waveIconB = L.divIcon({
+    html: `<div class="station-icon station-icon-hidro">${waveSvg}</div>`,
+    className: 'custom-station-icon',
+    iconSize: [28, 28],
+    iconAnchor: [30, 14], // Desplazado 16px a la izquierda
+    popupAnchor: [-16, -14], // Popup alineado con el icono desplazado
+  });
+
+  const dropIconB = L.divIcon({
+    html: `<div class="station-icon station-icon-clima">${dropSvg}</div>`,
+    className: 'custom-station-icon',
+    iconSize: [28, 28],
+    iconAnchor: [-2, 14], // Desplazado 16px a la derecha
+    popupAnchor: [16, -14], // Popup alineado con el icono desplazado
+  });
+
   // Añadir marcadores de estaciones al mapa B
-  const STATION_COORDS: Record<'SPTTB' | 'BDCTB', [number, number]> = {
-    SPTTB: [17.791667, -91.158333],
-    BDCTB: [17.433333, -91.483333],
-  };
-  const STATION_LABELS: Record<'SPTTB' | 'BDCTB', string> = {
-    SPTTB: 'San Pedro (SPTTB)',
-    BDCTB: 'Boca del Cerro (BDCTB)',
-  };
-  for (const id of ['SPTTB', 'BDCTB'] as const) {
-    const [lat, lon] = STATION_COORDS[id];
-    const marker = L.marker(L.latLng(lat, lon))
-      .bindPopup(
-        `<div class="station-popup-content">` +
-          `<b>${STATION_LABELS[id]}</b><br>Estación de nivel local<br>` +
-          `<a href="#" class="station-full-data-link" data-station-id="${id}">` +
-          `Ver datos 2000–2024</a></div>`
-      )
-      .addTo(newMapB);
-    _stationMarkersMapB.push(marker);
+  const localStations = mapState.getLocalStations() || {};
+  for (const [id, info] of Object.entries(localStations)) {
+    if (info.coords && info.coords.length === 2) {
+      const [lat, lon] = info.coords;
+      const isHidro = info.type === 'hidrometrica' || id.endsWith('_hidro');
+      const icon = isHidro ? waveIconB : dropIconB;
+      const badgeClass = isHidro ? 'station-badge-hidro' : 'station-badge-clima';
+      const badgeLabel = isHidro ? '🌊 Hidro' : '💧 Clima';
+      const metricDesc = isHidro ? 'Nivel del río' : 'Precipitación';
+      const marker = L.marker(L.latLng(lat, lon), { icon })
+        .bindPopup(
+          `<div class="station-popup-content">` +
+            `<div class="station-popup-header">` +
+              `<span class="station-badge ${badgeClass}">${badgeLabel}</span>` +
+            `</div>` +
+            `<h3 class="station-popup-title">${info.station_name || info.name}</h3>` +
+            `<div class="station-popup-meta">` +
+              `<span class="station-popup-meta-item">📍 ${info.municipio || 'Sin Municipio'}</span>` +
+              `<span class="station-popup-meta-item">📊 ${metricDesc}</span>` +
+            `</div>` +
+            `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
+              `⚡ Ver datos 2000–2024` +
+            `</a>` +
+          `</div>`
+        )
+        .addTo(newMapB);
+      _stationMarkersMapB.push(marker);
+    }
   }
 
   mapState.setMapB(newMapB);
@@ -344,8 +384,8 @@ export function clearPanelA(): void {
     _compareSeasonASelect.disabled = true;
   }
   if (_btnGenerateA) _btnGenerateA.disabled = true;
-  if (_chkStationSpA) _chkStationSpA.checked = false;
-  if (_chkStationBdA) _chkStationBdA.checked = false;
+  if (_selStationHidroA) _selStationHidroA.value = '';
+  if (_selStationClimaA) _selStationClimaA.value = '';
   _updateStationMarkersVisibility();
 }
 
@@ -370,8 +410,8 @@ export function clearPanelB(): void {
     _compareSeasonBSelect.disabled = true;
   }
   if (_btnGenerateB) _btnGenerateB.disabled = true;
-  if (_chkStationSpB) _chkStationSpB.checked = false;
-  if (_chkStationBdB) _chkStationBdB.checked = false;
+  if (_selStationHidroB) _selStationHidroB.value = '';
+  if (_selStationClimaB) _selStationClimaB.value = '';
   _updateStationMarkersVisibility();
 }
 
@@ -423,7 +463,8 @@ export function initCompareSelects(): void {
 function _wireCompareSelectPair(
   yearSel: HTMLSelectElement | null,
   seasonSel: HTMLSelectElement | null,
-  btn: HTMLButtonElement | null
+  btn: HTMLButtonElement | null,
+  panel: 'A' | 'B'
 ): void {
   if (!yearSel || !seasonSel || !btn) return;
 
@@ -435,9 +476,35 @@ function _wireCompareSelectPair(
     const hasYear = Boolean(yearSel.value);
     seasonSel.disabled = !hasYear;
     if (!hasYear) seasonSel.value = '';
+
+    const hidroSel = panel === 'A' ? _selStationHidroA : _selStationHidroB;
+    const climaSel = panel === 'A' ? _selStationClimaA : _selStationClimaB;
+    if (hidroSel) {
+      hidroSel.value = '';
+      hidroSel.dispatchEvent(new Event('change'));
+    }
+    if (climaSel) {
+      climaSel.value = '';
+      climaSel.dispatchEvent(new Event('change'));
+    }
+
     sync();
   });
-  seasonSel.addEventListener('change', sync);
+
+  seasonSel.addEventListener('change', () => {
+    const hidroSel = panel === 'A' ? _selStationHidroA : _selStationHidroB;
+    const climaSel = panel === 'A' ? _selStationClimaA : _selStationClimaB;
+    if (hidroSel) {
+      hidroSel.value = '';
+      hidroSel.dispatchEvent(new Event('change'));
+    }
+    if (climaSel) {
+      climaSel.value = '';
+      climaSel.dispatchEvent(new Event('change'));
+    }
+
+    sync();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -450,14 +517,24 @@ function _wireCompareSelectPair(
  */
 export function registerCompareModeListeners(): void {
   // Wire year/season selects
-  _wireCompareSelectPair(_compareYearASelect, _compareSeasonASelect, _btnGenerateA);
-  _wireCompareSelectPair(_compareYearBSelect, _compareSeasonBSelect, _btnGenerateB);
+  _wireCompareSelectPair(
+    _compareYearASelect,
+    _compareSeasonASelect,
+    _btnGenerateA,
+    'A'
+  );
+  _wireCompareSelectPair(
+    _compareYearBSelect,
+    _compareSeasonBSelect,
+    _btnGenerateB,
+    'B'
+  );
 
   // Cuando cambia la variable en un panel, repoblar su selector de años
   _compareVarASelect?.addEventListener('change', () => {
     const sel = _compareVarASelect as HTMLSelectElement;
     const v = (sel.value ?? 'ndvi') as Exclude<VariableKey, 'local_sp' | 'local_bd'>;
-    
+
     const years = VARIABLE_YEARS[v] || [];
 
     _populateYearSelect(_compareYearASelect, years);
@@ -532,31 +609,31 @@ export function registerCompareModeListeners(): void {
 
   // Botones limpiar
 
-  // Station checkboxes
-  _wireCompareStationCheck(
-    _chkStationSpA,
-    'SPTTB',
+  // Station selects
+  _wireCompareStationSelect(
+    _selStationHidroA,
+    'hidro',
     'A',
     _compareYearASelect,
     _compareSeasonASelect
   );
-  _wireCompareStationCheck(
-    _chkStationBdA,
-    'BDCTB',
+  _wireCompareStationSelect(
+    _selStationClimaA,
+    'clima',
     'A',
     _compareYearASelect,
     _compareSeasonASelect
   );
-  _wireCompareStationCheck(
-    _chkStationSpB,
-    'SPTTB',
+  _wireCompareStationSelect(
+    _selStationHidroB,
+    'hidro',
     'B',
     _compareYearBSelect,
     _compareSeasonBSelect
   );
-  _wireCompareStationCheck(
-    _chkStationBdB,
-    'BDCTB',
+  _wireCompareStationSelect(
+    _selStationClimaB,
+    'clima',
     'B',
     _compareYearBSelect,
     _compareSeasonBSelect
@@ -614,7 +691,7 @@ export function trySyncBothPanels(): void {
 import { seasonToDates } from '../utils/seasonDates.js';
 
 async function _loadCompareStation(
-  stationId: 'SPTTB' | 'BDCTB',
+  stationId: string,
   panel: 'A' | 'B',
   year: string,
   season: string
@@ -623,12 +700,13 @@ async function _loadCompareStation(
   const { fetchLocalStationLevel } = await import('../apiClient.js');
   try {
     const data = await fetchLocalStationLevel({ stationId, start, end });
+    const values =
+      data.value || (data.type === 'climatolica' ? data.precip_mm : data.level_m);
 
-    const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
     if (panel === 'A') {
-      mapState.setSeriesDataForVariable('A', key, {
+      mapState.setSeriesDataForVariable('A', stationId, {
         dates: data.dates,
-        values: data.level_m,
+        values: values,
       });
       if (_ndviChartDiv)
         plotAllSelectedSeries(
@@ -640,9 +718,9 @@ async function _loadCompareStation(
           hideChartPlaceholderA
         );
     } else {
-      mapState.setSeriesDataForVariable('B', key, {
+      mapState.setSeriesDataForVariable('B', stationId, {
         dates: data.dates,
-        values: data.level_m,
+        values: values,
       });
       if (_chartBDiv)
         plotAllSelectedSeries(
@@ -663,32 +741,41 @@ async function _loadCompareStation(
   }
 }
 
-function _wireCompareStationCheck(
-  chk: HTMLInputElement | null,
-  stationId: 'SPTTB' | 'BDCTB',
+function _wireCompareStationSelect(
+  sel: HTMLSelectElement | null,
+  type: 'hidro' | 'clima',
   panel: 'A' | 'B',
   yearSel: HTMLSelectElement | null,
   seasonSel: HTMLSelectElement | null
 ): void {
-  if (!chk) return;
+  if (!sel) return;
 
-  chk.addEventListener('change', () => {
-    const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
+  sel.addEventListener('change', () => {
+    // 1. Clean up any existing station of this type from the state
+    const suffix = `_${type}`;
+    const activeSeries =
+      panel === 'A' ? mapState.getSeriesDataA() : mapState.getSeriesDataB();
+    for (const key of Object.keys(activeSeries)) {
+      if (key.endsWith(suffix)) {
+        mapState.deleteSeriesDataForVariable(panel, key);
+      }
+    }
 
-    if (chk.checked) {
+    const stationId = sel.value;
+    if (stationId) {
       const year = yearSel?.value ?? '';
       const season = seasonSel?.value ?? '';
       if (!year || !season) {
         showFieldError(
-          chk,
+          sel,
           'Seleccioná año y temporada del panel antes de cargar la estación.'
         );
-        chk.checked = false;
+        sel.value = '';
         return;
       }
       void _loadCompareStation(stationId, panel, year, season);
     } else {
-      mapState.deleteSeriesDataForVariable(panel, key);
+      // Re-render chart to reflect deletion
       if (panel === 'A') {
         if (_ndviChartDiv)
           plotAllSelectedSeries(
@@ -811,7 +898,8 @@ export async function requestGifAndSeriesForPanel(
         closeWarningModal();
       }
       // Mapear el progreso del servidor (0-100) a 0-90% para reservar el último 10%
-      const mappedProgress = progress >= 0 ? Math.min(90, Math.round(progress * 0.9)) : -1;
+      const mappedProgress =
+        progress >= 0 ? Math.min(90, Math.round(progress * 0.9)) : -1;
       updateProgressIndicator(mappedProgress, message);
       if (progress === 100 || progress === -1) {
         eventSource.close();
@@ -847,7 +935,6 @@ export async function requestGifAndSeriesForPanel(
   }, 15000);
 
   try {
-
     const { gifData, tsData } = await fetchGifAndSeriesForPanel({
       variable,
       start,
@@ -866,7 +953,10 @@ export async function requestGifAndSeriesForPanel(
       return;
     }
 
-    updateProgressIndicator(93, `Descargando y decodificando animación (panel ${panel})...`);
+    updateProgressIndicator(
+      93,
+      `Descargando y decodificando animación (panel ${panel})...`
+    );
 
     const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
     const overlayBounds = L.latLngBounds(

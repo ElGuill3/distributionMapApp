@@ -287,7 +287,7 @@ class TestLocalStationQuerySchemaNoYearLimit:
         s = LocalStationQuerySchema(
             station_id="SPTTB", start="2000-01-01", end="2024-12-31"
         )
-        assert s.station_id == "SPTTB"
+        assert s.station_id == "SPTTB_hidro"
         assert s.start == date(2000, 1, 1)
         assert s.end == date(2024, 12, 31)
 
@@ -298,7 +298,7 @@ class TestLocalStationQuerySchemaNoYearLimit:
         s = LocalStationQuerySchema(
             station_id="BDCTB", start="1974-01-01", end="2024-01-01"
         )
-        assert s.station_id == "BDCTB"
+        assert s.station_id == "BDCTB_hidro"
         assert s.start == date(1974, 1, 1)
         assert s.end == date(2024, 1, 1)
 

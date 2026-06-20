@@ -16,13 +16,7 @@ export type BBox = [number, number, number, number];
 export type Season = 'invierno' | 'primavera' | 'verano' | 'otono' | 'anual';
 
 /** Variables hidrometeorológicas soportadas por la aplicación */
-export type VariableKey =
-  | 'ndvi'
-  | 'temp'
-  | 'soil'
-  | 'precip'
-  | 'local_sp'
-  | 'local_bd';
+export type VariableKey = 'ndvi' | 'temp' | 'soil' | 'precip' | 'local_sp' | 'local_bd';
 
 // ---------------------------------------------------------------------------
 // Respuestas de la API
@@ -56,9 +50,23 @@ export interface TimeseriesResponse {
 /** Respuesta de /api/local-station-level-range */
 export interface StationResponse {
   station: string;
+  type: 'hidrometrica' | 'climatolica';
   dates: string[];
   level_m: number[];
+  precip_mm: number[];
+  value: number[];
+  unit: string;
 }
+
+export interface LocalStationInfo {
+  name: string;
+  type: 'hidrometrica' | 'climatolica';
+  coords: [number, number] | null;
+  station_name?: string;
+  municipio?: string;
+}
+
+export type LocalStationsResponse = Record<string, LocalStationInfo>;
 
 /** Respuesta de /api/flood-risk-municipio */
 export interface FloodRiskResponse {

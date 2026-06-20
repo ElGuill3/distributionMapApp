@@ -6,7 +6,7 @@
  *  - plotAllSelectedSeries() : renderiza todas las series activas en la gráfica.
  */
 
-import type { VariableKey, SeriesData } from '../types.js';
+import type { SeriesData } from '../types.js';
 
 // ---------------------------------------------------------------------------
 // Configuración por variable
@@ -19,7 +19,7 @@ interface VariableChartConfig {
   yRange?: (dataMin: number, dataMax: number, padding: number) => [number, number];
 }
 
-const VARIABLE_CHART_CONFIG: Record<VariableKey, VariableChartConfig> = {
+const VARIABLE_CHART_CONFIG: Record<string, VariableChartConfig> = {
   ndvi: {
     label: 'NDVI',
     lineColorLight: '#006837', // Verde oscuro rico
@@ -55,12 +55,41 @@ const VARIABLE_CHART_CONFIG: Record<VariableKey, VariableChartConfig> = {
   },
 };
 
+export function getChartConfig(variable: string): VariableChartConfig {
+  if (VARIABLE_CHART_CONFIG[variable]) {
+    return VARIABLE_CHART_CONFIG[variable];
+  }
+
+  if (variable.endsWith('_clima')) {
+    const baseName = variable.replace('_clima', '');
+    return {
+      label: `Lluvia ${baseName} (mm)`,
+      lineColorLight: '#0284c7', // Celeste/azul claro
+      lineColorDark: '#38bdf8',
+      yRange: (min, max, pad) => [Math.max(0, min - pad), max + pad],
+    };
+  } else if (variable.endsWith('_hidro')) {
+    const baseName = variable.replace('_hidro', '');
+    return {
+      label: `Nivel ${baseName} (m)`,
+      lineColorLight: '#7c3aed', // Púrpura/violeta
+      lineColorDark: '#a78bfa',
+    };
+  }
+
+  return {
+    label: variable,
+    lineColorLight: '#4b5563',
+    lineColorDark: '#9ca3af',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Tipos internos
 // ---------------------------------------------------------------------------
 
 interface TraceConfig {
-  variable: VariableKey;
+  variable: string;
   label: string;
   lineColor: string;
   dates: string[];
@@ -96,11 +125,11 @@ function hexToRgba(hex: string, opacity: number): string {
  * Construye la configuración de una traza Plotly para la variable indicada.
  */
 export function buildTrace(
-  variable: VariableKey,
+  variable: string,
   dates: string[],
   values: number[]
 ): TraceConfig {
-  const cfg = VARIABLE_CHART_CONFIG[variable];
+  const cfg = getChartConfig(variable);
   const dataMin = Math.min(...values);
   const dataMax = Math.max(...values);
   const span = Math.max(dataMax - dataMin, 1e-6);
@@ -143,7 +172,7 @@ export async function plotChartAsPng(chartDiv: HTMLDivElement): Promise<Blob> {
 
 // Registro de gráficas activas para el repintado ante cambio de tema
 interface LastPlotState {
-  allSeries: Partial<Record<VariableKey, SeriesData | undefined>>;
+  allSeries: Record<string, SeriesData | undefined>;
   onShow: () => void;
   onHide: () => void;
   onShowPlaceholder?: () => void;
@@ -189,25 +218,15 @@ if (typeof window !== 'undefined') {
  */
 export function plotAllSelectedSeries(
   chartDiv: HTMLDivElement,
-  allSeries: Partial<Record<VariableKey, SeriesData | undefined>>,
+  allSeries: Record<string, SeriesData | undefined>,
   onShow: () => void,
   onHide: () => void,
   onShowPlaceholder?: () => void,
   onHidePlaceholder?: () => void
 ): void {
-  const vars: VariableKey[] = [
-    'ndvi',
-    'temp',
-    'soil',
-    'precip',
-    'local_sp',
-    'local_bd',
-  ];
-
-  const seriesReady = vars
-    .map(key => {
-      const data = allSeries[key];
-      if (!data || data.values.length === 0) return null;
+  const seriesReady = Object.entries(allSeries)
+    .map(([key, data]) => {
+      if (!data || !data.values || data.values.length === 0) return null;
       return buildTrace(key, data.dates, data.values);
     })
     .filter((s): s is TraceConfig => s !== null);
@@ -244,24 +263,69 @@ export function plotAllSelectedSeries(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const yAxesConfig: Record<string, any> = {};
 
-  seriesReady.forEach((s, idx) => {
-    const axisName = idx === 0 ? 'y' : `y${idx + 1}`;
-    const axisKey = idx === 0 ? 'yaxis' : `yaxis${idx + 1}`;
+  // Determinar los ejes Y de cada serie de forma inteligente
+  let yaxis1: TraceConfig | null = null;
+  let yaxis2: TraceConfig | null = null;
 
-    yAxesConfig[axisKey] = {
+  if (seriesReady.length === 1) {
+    yaxis1 = seriesReady[0]!;
+  } else if (seriesReady.length >= 2) {
+    const rainSeries = seriesReady.find(
+      s => s.variable === 'precip' || s.variable.endsWith('_clima')
+    );
+    const nonRainSeries = seriesReady.find(
+      s => !(s.variable === 'precip' || s.variable.endsWith('_clima'))
+    );
+
+    if (rainSeries && nonRainSeries) {
+      yaxis1 = nonRainSeries;
+      yaxis2 = rainSeries;
+    } else {
+      yaxis1 = seriesReady[0]!;
+      yaxis2 = seriesReady[1]!;
+    }
+  }
+
+  if (yaxis1) {
+    const hasLevel = yaxis1.variable.includes('_hidro') || yaxis1.variable.startsWith('local_');
+    yAxesConfig['yaxis'] = {
       title: {
-        text: s.label,
+        text: hasLevel ? 'Nivel (m)' : yaxis1.label,
         font: { family: 'system-ui, sans-serif', size: 11, color: fgColor },
       },
-      range: s.yRange,
-      side: idx === 0 ? 'left' : 'right',
-      overlaying: idx === 0 ? undefined : 'y',
+      range: yaxis1.yRange,
+      side: 'left',
       gridcolor: gridColor,
       zeroline: true,
       zerolinecolor: zeroLineColor,
       tickfont: { family: 'system-ui, sans-serif', size: 10, color: textColor },
       showline: false,
     };
+  }
+
+  if (yaxis2) {
+    const isRain = yaxis2.variable === 'precip' || yaxis2.variable.endsWith('_clima');
+    yAxesConfig['yaxis2'] = {
+      title: {
+        text: isRain ? 'Precipitación (mm)' : yaxis2.label,
+        font: { family: 'system-ui, sans-serif', size: 11, color: fgColor },
+      },
+      range: yaxis2.yRange,
+      side: 'right',
+      overlaying: 'y',
+      gridcolor: yaxis1 ? 'rgba(0,0,0,0)' : gridColor,
+      zeroline: true,
+      zerolinecolor: zeroLineColor,
+      tickfont: { family: 'system-ui, sans-serif', size: 10, color: textColor },
+      showline: false,
+    };
+  }
+
+  seriesReady.forEach(s => {
+    let axisName = 'y';
+    if (yaxis2 && s.variable === yaxis2.variable) {
+      axisName = 'y2';
+    }
 
     traces.push({
       x: s.dates,

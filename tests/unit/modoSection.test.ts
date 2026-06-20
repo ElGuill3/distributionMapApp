@@ -185,8 +185,13 @@ describe('ModoSection', () => {
 
       // Assert: inundaciones mode should be active
       expect(modoSection.activeModo).toBe('inundaciones');
-      expect(inundacionesToggle.setAttribute).toHaveBeenCalledWith('aria-pressed', 'true');
-      expect(inundacionesToggle.classList.classes.has('modo-toggle--active')).toBe(true);
+      expect(inundacionesToggle.setAttribute).toHaveBeenCalledWith(
+        'aria-pressed',
+        'true'
+      );
+      expect(inundacionesToggle.classList.classes.has('modo-toggle--active')).toBe(
+        true
+      );
     });
 
     it('click active inundaciones toggle deactivates all', () => {
@@ -216,9 +221,13 @@ describe('ModoSection', () => {
       expect(modoSection.activeModo).toBe(null);
 
       // Verify no events were dispatched for invalid modo
-      const events = (document.dispatchEvent as any).mock.calls.map((call: any) => call[0]?.type);
+      const events = (document.dispatchEvent as any).mock.calls.map(
+        (call: any) => call[0]?.type
+      );
       expect(
-        events.filter((e: string) => e !== 'taskFlowDisabled' && e !== 'modoDeactivated')
+        events.filter(
+          (e: string) => e !== 'taskFlowDisabled' && e !== 'modoDeactivated'
+        )
       ).toHaveLength(0);
     });
   });

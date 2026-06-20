@@ -17,6 +17,7 @@ import type {
   FloodRiskResponse,
   VariableKey,
   SeriesData,
+  LocalStationsResponse,
 } from './types.js';
 import { VARIABLE_DATA_KEY } from './types.js';
 import { GIF_ENDPOINT, TS_ENDPOINT } from './config.js';
@@ -34,28 +35,21 @@ function buildGifUrl(
   taskId: string
 ): string {
   const bboxJson = JSON.stringify(bbox);
-  let url = (
+  const url =
     `${GIF_ENDPOINT[variable as keyof typeof GIF_ENDPOINT]}?start=${encodeURIComponent(start)}` +
     `&end=${encodeURIComponent(end)}` +
     `&bbox=${encodeURIComponent(bboxJson)}` +
-    `&task_id=${encodeURIComponent(taskId)}`
-  );
+    `&task_id=${encodeURIComponent(taskId)}`;
   return url;
 }
 
 /** Construye la URL completa para una petición de serie temporal. */
-function buildTsUrl(
-  variable: string,
-  start: string,
-  end: string,
-  bbox: BBox
-): string {
+function buildTsUrl(variable: string, start: string, end: string, bbox: BBox): string {
   const bboxJson = JSON.stringify(bbox);
-  let url = (
+  const url =
     `${TS_ENDPOINT[variable as keyof typeof TS_ENDPOINT]}?start=${encodeURIComponent(start)}` +
     `&end=${encodeURIComponent(end)}` +
-    `&bbox=${encodeURIComponent(bboxJson)}`
-  );
+    `&bbox=${encodeURIComponent(bboxJson)}`;
   return url;
 }
 
@@ -191,15 +185,26 @@ export async function fetchFloodRisk(
 // ---------------------------------------------------------------------------
 
 export interface FetchLocalStationLevelOptions {
-  stationId: 'SPTTB' | 'BDCTB';
+  stationId: string;
   start: string;
   end: string;
 }
 
 /**
- * Obtiene la serie temporal de nivel para una estación local.
+ * Obtiene la lista completa de estaciones locales.
+ */
+export async function fetchLocalStationsList(): Promise<LocalStationsResponse> {
+  const resp = await fetch('/api/local-stations');
+  if (!resp.ok) {
+    throw new Error('Error al cargar la lista de estaciones locales.');
+  }
+  return resp.json() as Promise<LocalStationsResponse>;
+}
+
+/**
+ * Obtiene la serie temporal (nivel o precipitación) para una estación local.
  *
- * @returns StationResponse con station, dates y level_m
+ * @returns StationResponse con station, dates y level_m/precip_mm
  */
 export async function fetchLocalStationLevel(
   options: FetchLocalStationLevelOptions
@@ -213,7 +218,7 @@ export async function fetchLocalStationLevel(
   const data = (await resp.json()) as StationResponse & { error?: string };
 
   if (!resp.ok) {
-    throw new Error(data.error ?? 'Error cargando serie de nivel de estación local.');
+    throw new Error(data.error ?? 'Error cargando serie de estación local.');
   }
 
   return data;
@@ -276,9 +281,7 @@ export async function exportBundle(options: ExportBundleOptions): Promise<Blob> 
   // Unimos por fecha para soportar variables con distintas frecuencias
   // (p. ej. NDVI quincenal + estaciones locales diarias).
   const allDates = Array.from(
-    new Set(
-      Object.values(seriesData).flatMap(data => data?.dates ?? [])
-    )
+    new Set(Object.values(seriesData).flatMap(data => data?.dates ?? []))
   ).sort();
 
   const allVariables: Record<string, (number | null)[]> = {};

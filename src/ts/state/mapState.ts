@@ -9,7 +9,7 @@
  * Mantiene tipado completo con TypeScript.
  */
 
-import type { BBox, VariableKey, SeriesData } from '../types.js';
+import type { BBox, VariableKey, SeriesData, LocalStationsResponse } from '../types.js';
 import type { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
 import type { Season } from '../types.js';
 import type L from 'leaflet';
@@ -63,8 +63,8 @@ export interface AppState {
   taskFlow: TaskFlowState;
 
   // series data — panel A y B
-  seriesDataA: Partial<Record<VariableKey, SeriesData | undefined>>;
-  seriesDataB: Partial<Record<VariableKey, SeriesData | undefined>>;
+  seriesDataA: Record<string, SeriesData | undefined>;
+  seriesDataB: Record<string, SeriesData | undefined>;
 
   // players — modo comparativa
   gifPlayerA: GifPlayer | null;
@@ -87,6 +87,9 @@ export interface AppState {
 
   // PR2: Animation frame date labels for date label overlay
   frameDateLabels: AnimationFrameInfo[];
+
+  // Local stations response/list
+  localStations: LocalStationsResponse | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +118,8 @@ export const initialState: AppState = {
   gifPathsB: {},
   // PR2: Animation frame date labels for date label overlay
   frameDateLabels: [],
+  // Local stations list
+  localStations: null,
   // PR1: Task flow initial state
   taskFlow: {
     currentStep: 'area',
@@ -184,11 +189,11 @@ export function getTaskFlowStepValidity(step: string): boolean {
   return state.taskFlow.steps[step]?.isValid || false;
 }
 
-export function getSeriesDataA(): Partial<Record<VariableKey, SeriesData | undefined>> {
+export function getSeriesDataA(): Record<string, SeriesData | undefined> {
   return state.seriesDataA;
 }
 
-export function getSeriesDataB(): Partial<Record<VariableKey, SeriesData | undefined>> {
+export function getSeriesDataB(): Record<string, SeriesData | undefined> {
   return state.seriesDataB;
 }
 
@@ -275,7 +280,10 @@ export function setGifPathForVariable(
   }
 }
 
-export function deleteGifPathForVariable(panel: 'A' | 'B', variable: VariableKey): void {
+export function deleteGifPathForVariable(
+  panel: 'A' | 'B',
+  variable: VariableKey
+): void {
   if (panel === 'A') {
     const { [variable]: _removed, ...restA } = state.gifPathsA;
     void _removed;
@@ -420,21 +428,17 @@ export function updateTaskFlowStepStatus(step: string, status: StepStatus): void
 // Setters — series data
 // ---------------------------------------------------------------------------
 
-export function setSeriesDataA(
-  data: Partial<Record<VariableKey, SeriesData | undefined>>
-): void {
+export function setSeriesDataA(data: Record<string, SeriesData | undefined>): void {
   state = { ...state, seriesDataA: data };
 }
 
-export function setSeriesDataB(
-  data: Partial<Record<VariableKey, SeriesData | undefined>>
-): void {
+export function setSeriesDataB(data: Record<string, SeriesData | undefined>): void {
   state = { ...state, seriesDataB: data };
 }
 
 export function setSeriesDataForVariable(
   panel: 'A' | 'B',
-  variable: VariableKey,
+  variable: string,
   data: SeriesData
 ): void {
   if (panel === 'A') {
@@ -462,10 +466,7 @@ export function clearSeriesData(): void {
   state = { ...state, seriesDataA: {}, seriesDataB: {} };
 }
 
-export function deleteSeriesDataForVariable(
-  panel: 'A' | 'B',
-  variable: VariableKey
-): void {
+export function deleteSeriesDataForVariable(panel: 'A' | 'B', variable: string): void {
   if (panel === 'A') {
     const { [variable]: _removed, ...restA } = state.seriesDataA;
     void _removed;
@@ -574,4 +575,19 @@ export function cleanupComparePanels(): void {
 
 export function resetState(): void {
   state = { ...initialState };
+}
+
+// ---------------------------------------------------------------------------
+// Getters / Setters — local stations list
+// ---------------------------------------------------------------------------
+
+export function getLocalStations(): LocalStationsResponse | null {
+  return state.localStations;
+}
+
+export function setLocalStations(localStations: LocalStationsResponse | null): void {
+  state = {
+    ...state,
+    localStations,
+  };
 }
