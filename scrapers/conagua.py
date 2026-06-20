@@ -16,6 +16,49 @@ class ConaguaScraper(BaseScraper):
         self.stations = [s.upper() for s in stations if s]
         self.output_dir = output_dir or (BASE_DIR / "data" / "stations")
 
+    def _download_via_https(self, station: str) -> bool:
+        category = self.username.capitalize()  # "Hidros" o "Climas"
+        url = f"https://{self.host}/basedatos/{category}/{station}.csv"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        try:
+            import requests
+            logger.info(f"Intentando descargar {station} vía HTTPS desde {url}...")
+            r = requests.get(url, headers=headers, timeout=15)
+            if r.status_code == 200:
+                content = r.text
+                if "<html" in content.lower() or "challenge validation" in content.lower():
+                    logger.warning(f"Descarga HTTPS de {station} bloqueada por desafío de seguridad (Incapsula).")
+                    return False
+                
+                # Guardar el archivo de forma atómica
+                local_final_path = self.output_dir / f"{station}.csv"
+                fd, temp_path_str = tempfile.mkstemp(dir=str(self.output_dir), suffix=".tmp")
+                temp_path = Path(temp_path_str)
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8") as local_file:
+                        local_file.write(content)
+                    os.replace(temp_path, local_final_path)
+                    logger.info(f"Descarga HTTPS de {station} finalizada exitosamente.")
+                    return True
+                except Exception as e:
+                    logger.error(f"Error escribiendo archivo temporal para {station}: {e}")
+                    if temp_path.exists():
+                        try:
+                            os.unlink(temp_path)
+                        except OSError:
+                            pass
+                    return False
+            else:
+                logger.warning(f"Respuesta HTTP {r.status_code} al descargar {station}.")
+                return False
+        except Exception as e:
+            logger.error(f"Error en descarga HTTPS de {station}: {e}")
+            return False
+
     def scrape(self) -> None:
         if not self.stations:
             logger.info(f"No hay estaciones configuradas para el scraper de {self.username}.")
@@ -24,10 +67,11 @@ class ConaguaScraper(BaseScraper):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Iniciando descarga FTP desde {self.host} para {self.username}...")
 
+        ftp_success = False
         max_retries = 3
         for attempt in range(1, max_retries + 1):
             try:
-                with FTP(self.host) as ftp:
+                with FTP(self.host, timeout=10) as ftp:
                     ftp.login(self.username, self.password)
                     logger.info(f"Conexión FTP exitosa como {self.username}.")
                     
@@ -64,8 +108,7 @@ class ConaguaScraper(BaseScraper):
                                     os.unlink(temp_path)
                                 except OSError:
                                     pass
-                    
-                    # Si terminamos exitosamente, salimos del bucle de reintentos
+                    ftp_success = True
                     break
             except Exception as e:
                 logger.error(f"Fallo en la conexión FTP de {self.username} (intento {attempt}/{max_retries}): {e}")
@@ -75,4 +118,10 @@ class ConaguaScraper(BaseScraper):
                     import time
                     time.sleep(sleep_time)
                 else:
-                    logger.error(f"Se agotaron todos los reintentos para {self.username}. Abortando.")
+                    logger.error(f"Se agotaron todos los reintentos FTP para {self.username}.")
+
+        # Si falló FTP, intentar vía HTTPS
+        if not ftp_success:
+            logger.info(f"FTP falló. Iniciando fallback de descarga vía HTTPS para {self.username}...")
+            for station in self.stations:
+                self._download_via_https(station)
