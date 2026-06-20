@@ -11,6 +11,7 @@ services:
       - .env
     volumes:
       - data_stations:/app/data/stations
+      - ~/.config/earthengine:/root/.config/earthengine:ro
     restart: always
 
   scraper:
