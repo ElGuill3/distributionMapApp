@@ -106,6 +106,5 @@ openspec/
 # ---------------------------------------------------------------------------
 # Datos de estaciones (se descargan automáticamente, no se versionan)
 # ---------------------------------------------------------------------------
-data/stations/*.csv
-data/stations/*.tmp
+data/stations/
 
