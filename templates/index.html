@@ -136,42 +136,56 @@
             <span class="tflow-step-label">Explorar</span>
           </div>
           <div class="tflow-step-content">
-            <div class="tflow-stations">
-              <details class="tflow-station-details" open>
-              <summary><span class="summary-chevron" data-lucide="chevron-right" aria-hidden="true"></span><span>San Pedro (SPTTB)</span></summary>
+            <div class="tflow-stations-panel">
+              <!-- Estación Hidrométrica -->
+              <div class="tflow-station-group">
+                <span class="tflow-station-group-title">Estación Hidrométrica (Nivel)</span>
                 <div class="tflow-station-content">
-                  <label for="tflow-spYear">Año</label>
-                  <select id="tflow-spYear">
+                  <label for="tflow-hidroStation">Estación</label>
+                  <select id="tflow-hidroStation" class="tflow-station-select">
+                    <option value="">-- Seleccionar Estación --</option>
+                  </select>
+                  
+                  <label for="tflow-hidroYear">Año</label>
+                  <select id="tflow-hidroYear" class="tflow-year-select" disabled>
                     <option value="">-- Año --</option>
                   </select>
-                  <label for="tflow-spSeason">Temporada</label>
-                  <select id="tflow-spSeason" disabled>
+                  
+                  <label for="tflow-hidroSeason">Temporada</label>
+                  <select id="tflow-hidroSeason" class="tflow-season-select" disabled>
                     <option value="">-- Temporada --</option>
                   </select>
-                  <button id="tflow-btnLocalSpLevel" class="primary-action" disabled>
+                  
+                  <button id="tflow-btnLocalHidro" class="primary-action" disabled>
                     Cargar serie de nivel
                   </button>
-                  <p class="hint">Se combinará con las otras series en la gráfica.</p>
                 </div>
-              </details>
+              </div>
 
-              <details class="tflow-station-details">
-              <summary><span class="summary-chevron" data-lucide="chevron-right" aria-hidden="true"></span><span>Boca del Cerro (BDCTB)</span></summary>
+              <!-- Estación Climatológica -->
+              <div class="tflow-station-group" style="margin-top: 1rem; border-top: 1px solid var(--sidebar-border); padding-top: 1rem;">
+                <span class="tflow-station-group-title">Estación Climatológica (Lluvia)</span>
                 <div class="tflow-station-content">
-                  <label for="tflow-bdYear">Año</label>
-                  <select id="tflow-bdYear">
+                  <label for="tflow-climaStation">Estación</label>
+                  <select id="tflow-climaStation" class="tflow-station-select">
+                    <option value="">-- Seleccionar Estación --</option>
+                  </select>
+                  
+                  <label for="tflow-climaYear">Año</label>
+                  <select id="tflow-climaYear" class="tflow-year-select" disabled>
                     <option value="">-- Año --</option>
                   </select>
-                  <label for="tflow-bdSeason">Temporada</label>
-                  <select id="tflow-bdSeason" disabled>
+                  
+                  <label for="tflow-climaSeason">Temporada</label>
+                  <select id="tflow-climaSeason" class="tflow-season-select" disabled>
                     <option value="">-- Temporada --</option>
                   </select>
-                  <button id="tflow-btnLocalBdLevel" class="primary-action" disabled>
-                    Cargar serie de nivel
+                  
+                  <button id="tflow-btnLocalClima" class="primary-action" disabled>
+                    Cargar serie de precipitación
                   </button>
-                  <p class="hint">Se combinará con las otras series en la gráfica.</p>
                 </div>
-              </details>
+              </div>
             </div>
 
 
@@ -357,7 +371,7 @@
               <span data-lucide="film" aria-hidden="true"></span>
               <span>Animación</span>
             </button>
-            <button id="topbar-layer-stations" type="button" class="topbar-layer-btn" data-layer="stations" aria-pressed="false" title="Mostrar/ocultar estaciones">
+            <button id="topbar-layer-stations" type="button" class="topbar-layer-btn topbar-layer-btn--active" data-layer="stations" aria-pressed="true" title="Mostrar/ocultar estaciones">
               <span data-lucide="map-pinned" aria-hidden="true"></span>
               <span>Estaciones</span>
             </button>
@@ -427,10 +441,19 @@
                 Generar panel A
               </button>
             </div>
-            <div class="compare-station-checks">
-              <span class="compare-station-checks-label">Estaciones:</span>
-              <label><input type="checkbox" id="chkStationSpA"> San Pedro (SPTTB)</label>
-              <label><input type="checkbox" id="chkStationBdA"> Boca del Cerro (BDCTB)</label>
+            <div class="compare-station-selectors">
+              <div class="compare-select-group">
+                <label for="selStationHidroA">Est. Hidrométrica</label>
+                <select id="selStationHidroA" class="compare-station-select">
+                  <option value="">-- Seleccionar --</option>
+                </select>
+              </div>
+              <div class="compare-select-group">
+                <label for="selStationClimaA">Est. Climatológica</label>
+                <select id="selStationClimaA" class="compare-station-select">
+                  <option value="">-- Seleccionar --</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -505,10 +528,19 @@
                 Generar panel B
               </button>
             </div>
-            <div class="compare-station-checks">
-              <span class="compare-station-checks-label">Estaciones:</span>
-              <label><input type="checkbox" id="chkStationSpB"> San Pedro (SPTTB)</label>
-              <label><input type="checkbox" id="chkStationBdB"> Boca del Cerro (BDCTB)</label>
+            <div class="compare-station-selectors">
+              <div class="compare-select-group">
+                <label for="selStationHidroB">Est. Hidrométrica</label>
+                <select id="selStationHidroB" class="compare-station-select">
+                  <option value="">-- Seleccionar --</option>
+                </select>
+              </div>
+              <div class="compare-select-group">
+                <label for="selStationClimaB">Est. Climatológica</label>
+                <select id="selStationClimaB" class="compare-station-select">
+                  <option value="">-- Seleccionar --</option>
+                </select>
+              </div>
             </div>
           </div>
 

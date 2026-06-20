@@ -38,6 +38,7 @@ import { seasonToDates } from './utils/seasonDates.js';
 
 import {
   fetchLocalStationLevel,
+  fetchLocalStationsList,
   exportBundle,
   exportPdfReport,
   downloadBlob,
@@ -63,40 +64,126 @@ buildColorbars();
 // Marcadores de estaciones locales
 // ---------------------------------------------------------------------------
 
-const STATION_COORDS: Record<'SPTTB' | 'BDCTB', [number, number]> = {
-  SPTTB: [17.791667, -91.158333],
-  BDCTB: [17.433333, -91.483333],
-};
-
-const STATION_LABELS: Record<'SPTTB' | 'BDCTB', string> = {
-  SPTTB: 'San Pedro (SPTTB)',
-  BDCTB: 'Boca del Cerro (BDCTB)',
-};
-
 /** Marcadores de estaciones en mapa principal y mapa B. */
 const stationMarkersMap: L.Marker[] = [];
 const stationMarkersMapB: L.Marker[] = [];
 
-function _makeStationMarker(
-  id: 'SPTTB' | 'BDCTB',
-  targetMap: L.Map,
-  markerList: L.Marker[]
-): L.Marker {
-  const [lat, lon] = STATION_COORDS[id];
-  const marker = L.marker(L.latLng(lat, lon))
-    .bindPopup(
-      `<div class="station-popup-content">` +
-        `<b>${STATION_LABELS[id]}</b><br>Estación de nivel local<br>` +
-        `<a href="#" class="station-full-data-link" data-station-id="${id}">` +
-        `Ver datos 2000–2024</a></div>`
-    )
-    .addTo(targetMap);
-  markerList.push(marker);
-  return marker;
-}
+// SVGs e Iconos personalizados para estaciones locales
+const waveSvg = `
+<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.6 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+  <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+  <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+</svg>
+`;
 
-_makeStationMarker('SPTTB', map, stationMarkersMap);
-_makeStationMarker('BDCTB', map, stationMarkersMap);
+const dropSvg = `
+<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z"></path>
+</svg>
+`;
+
+const waveIcon = L.divIcon({
+  html: `<div class="station-icon station-icon-hidro">${waveSvg}</div>`,
+  className: 'custom-station-icon',
+  iconSize: [28, 28],
+  iconAnchor: [30, 14], // Desplazado 16px a la izquierda
+  popupAnchor: [-16, -14], // Popup alineado con el icono desplazado
+});
+
+const dropIcon = L.divIcon({
+  html: `<div class="station-icon station-icon-clima">${dropSvg}</div>`,
+  className: 'custom-station-icon',
+  iconSize: [28, 28],
+  iconAnchor: [-2, 14], // Desplazado 16px a la derecha
+  popupAnchor: [16, -14], // Popup alineado con el icono desplazado
+});
+
+async function initializeLocalStations(): Promise<void> {
+  try {
+    const list = await fetchLocalStationsList();
+    mapState.setLocalStations(list);
+
+    // Limpiar marcadores existentes por si acaso
+    stationMarkersMap.forEach(m => map.removeLayer(m));
+    stationMarkersMap.length = 0;
+
+    const tflowHidro = document.getElementById(
+      'tflow-hidroStation'
+    ) as HTMLSelectElement | null;
+    const tflowClima = document.getElementById(
+      'tflow-climaStation'
+    ) as HTMLSelectElement | null;
+    const selHidroA = document.getElementById(
+      'selStationHidroA'
+    ) as HTMLSelectElement | null;
+    const selClimaA = document.getElementById(
+      'selStationClimaA'
+    ) as HTMLSelectElement | null;
+    const selHidroB = document.getElementById(
+      'selStationHidroB'
+    ) as HTMLSelectElement | null;
+    const selClimaB = document.getElementById(
+      'selStationClimaB'
+    ) as HTMLSelectElement | null;
+
+    if (tflowHidro)
+      tflowHidro.innerHTML = '<option value="">-- Seleccionar Estación --</option>';
+    if (tflowClima)
+      tflowClima.innerHTML = '<option value="">-- Seleccionar Estación --</option>';
+    if (selHidroA) selHidroA.innerHTML = '<option value="">-- Seleccionar --</option>';
+    if (selClimaA) selClimaA.innerHTML = '<option value="">-- Seleccionar --</option>';
+    if (selHidroB) selHidroB.innerHTML = '<option value="">-- Seleccionar --</option>';
+    if (selClimaB) selClimaB.innerHTML = '<option value="">-- Seleccionar --</option>';
+
+    for (const [id, info] of Object.entries(list)) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = info.name;
+
+      const isHidro = info.type === 'hidrometrica' || id.endsWith('_hidro');
+      if (isHidro) {
+        tflowHidro?.appendChild(opt.cloneNode(true));
+        selHidroA?.appendChild(opt.cloneNode(true));
+        selHidroB?.appendChild(opt.cloneNode(true));
+      } else {
+        tflowClima?.appendChild(opt.cloneNode(true));
+        selClimaA?.appendChild(opt.cloneNode(true));
+        selClimaB?.appendChild(opt.cloneNode(true));
+      }
+
+      if (info.coords && info.coords.length === 2) {
+        const [lat, lon] = info.coords;
+        const icon = isHidro ? waveIcon : dropIcon;
+        const badgeClass = isHidro ? 'station-badge-hidro' : 'station-badge-clima';
+        const badgeLabel = isHidro ? '🌊 Hidro' : '💧 Clima';
+        const metricDesc = isHidro ? 'Nivel del río' : 'Precipitación';
+        const marker = L.marker(L.latLng(lat, lon), { icon }).bindPopup(
+          `<div class="station-popup-content">` +
+            `<div class="station-popup-header">` +
+              `<span class="station-badge ${badgeClass}">${badgeLabel}</span>` +
+            `</div>` +
+            `<h3 class="station-popup-title">${info.station_name || info.name}</h3>` +
+            `<div class="station-popup-meta">` +
+              `<span class="station-popup-meta-item">📍 ${info.municipio || 'Sin Municipio'}</span>` +
+              `<span class="station-popup-meta-item">📊 ${metricDesc}</span>` +
+            `</div>` +
+            `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
+              `⚡ Ver datos 2000–2024` +
+            `</a>` +
+          `</div>`
+        );
+        marker.addTo(map);
+        stationMarkersMap.push(marker);
+      }
+    }
+    
+    // Sincronizar visibilidad de marcadores y estado del botón al inicializar
+    toggleStationsLayer(layerVisibility.stations);
+  } catch (err) {
+    console.error('Error al inicializar estaciones locales:', err);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Herramienta de dibujo (Leaflet.draw)
@@ -432,18 +519,18 @@ const btnGenerateB = document.getElementById(
 // Checkboxes de estaciones en modo comparativa
 // ---------------------------------------------------------------------------
 
-const chkStationSpA = document.getElementById(
-  'chkStationSpA'
-) as HTMLInputElement | null;
-const chkStationBdA = document.getElementById(
-  'chkStationBdA'
-) as HTMLInputElement | null;
-const chkStationSpB = document.getElementById(
-  'chkStationSpB'
-) as HTMLInputElement | null;
-const chkStationBdB = document.getElementById(
-  'chkStationBdB'
-) as HTMLInputElement | null;
+const selStationHidroA = document.getElementById(
+  'selStationHidroA'
+) as HTMLSelectElement | null;
+const selStationClimaA = document.getElementById(
+  'selStationClimaA'
+) as HTMLSelectElement | null;
+const selStationHidroB = document.getElementById(
+  'selStationHidroB'
+) as HTMLSelectElement | null;
+const selStationClimaB = document.getElementById(
+  'selStationClimaB'
+) as HTMLSelectElement | null;
 
 // DOM: player controls
 const playerControlsDiv = document.getElementById(
@@ -462,9 +549,7 @@ const playerSlider = document.getElementById('playerSlider') as HTMLInputElement
 const playerFrameLabel = document.getElementById(
   'playerFrameLabel'
 ) as HTMLSpanElement | null;
-let playerPlayIcon = document.getElementById(
-  'playerPlayIcon'
-) as Element | null;
+let playerPlayIcon = document.getElementById('playerPlayIcon') as Element | null;
 const playerSpeedSelect = document.getElementById(
   'playerSpeed'
 ) as HTMLSelectElement | null;
@@ -479,9 +564,7 @@ const topbarStepPrevBtn = document.getElementById(
 const topbarStepNextBtn = document.getElementById(
   'topbar-step-next'
 ) as HTMLButtonElement | null;
-let topbarPlayIcon = document.getElementById(
-  'topbar-play-icon'
-) as Element | null;
+let topbarPlayIcon = document.getElementById('topbar-play-icon') as Element | null;
 const topbarSlider = document.getElementById(
   'topbar-slider'
 ) as HTMLInputElement | null;
@@ -526,15 +609,29 @@ function hidePlayerControls(): void {
   playerControlsDiv?.classList.add('hidden');
 }
 
-function getActivePlayer():
-  | { isPlaying: boolean; pause(): void; play(): void; goToFrame(n: number): void; currentFrameIndex: number; frameCount?: number; totalFrameCount?: number }
-  | null {
-  return (mapState.getSyncPlayer() ?? mapState.getSoloPlayer()) as
-    | { isPlaying: boolean; pause(): void; play(): void; goToFrame(n: number): void; currentFrameIndex: number; frameCount?: number; totalFrameCount?: number }
-    | null;
+function getActivePlayer(): {
+  isPlaying: boolean;
+  pause(): void;
+  play(): void;
+  goToFrame(n: number): void;
+  currentFrameIndex: number;
+  frameCount?: number;
+  totalFrameCount?: number;
+} | null {
+  return (mapState.getSyncPlayer() ?? mapState.getSoloPlayer()) as {
+    isPlaying: boolean;
+    pause(): void;
+    play(): void;
+    goToFrame(n: number): void;
+    currentFrameIndex: number;
+    frameCount?: number;
+    totalFrameCount?: number;
+  } | null;
 }
 
-function getActivePlayerTotalFrames(player: ReturnType<typeof getActivePlayer>): number {
+function getActivePlayerTotalFrames(
+  player: ReturnType<typeof getActivePlayer>
+): number {
   if (!player) return 0;
   return player.totalFrameCount ?? player.frameCount ?? 0;
 }
@@ -593,10 +690,10 @@ compareMode.initCompareMode({
   compareYearBSelect,
   compareSeasonBSelect,
   btnGenerateB,
-  chkStationSpA,
-  chkStationBdA,
-  chkStationSpB,
-  chkStationBdB,
+  selStationHidroA,
+  selStationClimaA,
+  selStationHidroB,
+  selStationClimaB,
 });
 
 // Phase D: registrar todos los listeners de comparativa en compareMode
@@ -1110,18 +1207,18 @@ document.addEventListener('tflowGenerateAnimation', (e: Event) => {
 // Phase A: usa fetchLocalStationLevel de apiClient.ts.
 
 async function requestLocalStationLevel(
-  stationId: 'SPTTB' | 'BDCTB',
+  stationId: string,
   start: string,
   end: string
 ): Promise<void> {
   try {
-    // Phase A: usa fetchLocalStationLevel de apiClient.ts
     const data = await fetchLocalStationLevel({ stationId, start, end });
+    const values =
+      data.value || (data.type === 'climatolica' ? data.precip_mm : data.level_m);
 
-    const key: VariableKey = stationId === 'SPTTB' ? 'local_sp' : 'local_bd';
-    mapState.setSeriesDataForVariable('A', key, {
+    mapState.setSeriesDataForVariable('A', stationId, {
       dates: data.dates,
-      values: data.level_m,
+      values: values,
     });
     renderChart();
   } catch (err) {
@@ -1137,46 +1234,51 @@ async function requestLocalStationLevel(
 // Selectores DOM — estaciones locales (nuevos IDs tflow-)
 // ---------------------------------------------------------------------------
 
-const spYearSelect = document.getElementById(
-  'tflow-spYear'
+const tflowHidroStation = document.getElementById(
+  'tflow-hidroStation'
 ) as HTMLSelectElement | null;
-const spSeasonSelect = document.getElementById(
-  'tflow-spSeason'
+const tflowHidroYear = document.getElementById(
+  'tflow-hidroYear'
 ) as HTMLSelectElement | null;
-const btnLocalSpLevel = document.getElementById(
-  'tflow-btnLocalSpLevel'
+const tflowHidroSeason = document.getElementById(
+  'tflow-hidroSeason'
+) as HTMLSelectElement | null;
+const tflowBtnLocalHidro = document.getElementById(
+  'tflow-btnLocalHidro'
 ) as HTMLButtonElement | null;
 
-const bdYearSelect = document.getElementById(
-  'tflow-bdYear'
+const tflowClimaStation = document.getElementById(
+  'tflow-climaStation'
 ) as HTMLSelectElement | null;
-const bdSeasonSelect = document.getElementById(
-  'tflow-bdSeason'
+const tflowClimaYear = document.getElementById(
+  'tflow-climaYear'
 ) as HTMLSelectElement | null;
-const btnLocalBdLevel = document.getElementById(
-  'tflow-btnLocalBdLevel'
+const tflowClimaSeason = document.getElementById(
+  'tflow-climaSeason'
+) as HTMLSelectElement | null;
+const tflowBtnLocalClima = document.getElementById(
+  'tflow-btnLocalClima'
 ) as HTMLButtonElement | null;
 
 // ---------------------------------------------------------------------------
 // Listeners de estaciones locales (año + temporada)
 // ---------------------------------------------------------------------------
 
-function _wireLocalStation(
+function wireTflowStationGroup(
+  stationSel: HTMLSelectElement | null,
   yearSel: HTMLSelectElement | null,
   seasonSel: HTMLSelectElement | null,
-  btn: HTMLButtonElement | null,
-  stationId: 'SPTTB' | 'BDCTB',
-  stationKey: 'local_sp' | 'local_bd'
+  btn: HTMLButtonElement | null
 ): void {
-  if (!yearSel || !seasonSel || !btn) return;
+  if (!stationSel || !yearSel || !seasonSel || !btn) return;
 
-  // Poblar selectores
-  for (const year of VARIABLE_YEARS[stationKey]) {
-    const opt = document.createElement('option');
-    opt.value = String(year);
-    opt.textContent = String(year);
-    yearSel.appendChild(opt);
-  }
+  // Clear and disable year/season by default
+  yearSel.disabled = true;
+  seasonSel.disabled = true;
+  btn.disabled = true;
+
+  // Populate seasons once
+  while (seasonSel.options.length > 1) seasonSel.remove(1);
   for (const s of SEASONS) {
     const opt = document.createElement('option');
     opt.value = s.value;
@@ -1184,23 +1286,46 @@ function _wireLocalStation(
     seasonSel.appendChild(opt);
   }
 
-  const syncBtn = (): void => {
-    btn.disabled = !yearSel.value || !seasonSel.value;
-  };
+  // Populate years once
+  const years = VARIABLE_YEARS.local_sp; // All local stations use 2000-2024 range
+  while (yearSel.options.length > 1) yearSel.remove(1);
+  for (const year of years) {
+    const opt = document.createElement('option');
+    opt.value = String(year);
+    opt.textContent = String(year);
+    yearSel.appendChild(opt);
+  }
+
+  stationSel.addEventListener('change', () => {
+    const hasStation = Boolean(stationSel.value);
+    yearSel.disabled = !hasStation;
+    if (!hasStation) {
+      yearSel.value = '';
+      seasonSel.value = '';
+      seasonSel.disabled = true;
+    }
+    btn.disabled = !stationSel.value || !yearSel.value || !seasonSel.value;
+  });
 
   yearSel.addEventListener('change', () => {
     const hasYear = Boolean(yearSel.value);
     seasonSel.disabled = !hasYear;
-    if (!hasYear) seasonSel.value = '';
-    syncBtn();
+    if (!hasYear) {
+      seasonSel.value = '';
+    }
+    btn.disabled = !stationSel.value || !yearSel.value || !seasonSel.value;
   });
-  seasonSel.addEventListener('change', syncBtn);
+
+  seasonSel.addEventListener('change', () => {
+    btn.disabled = !stationSel.value || !yearSel.value || !seasonSel.value;
+  });
 
   btn.addEventListener('click', () => {
+    const stationId = stationSel.value;
     const year = Number(yearSel.value);
     const season = seasonSel.value as Season;
-    if (!year || !season) {
-      showFieldError(btn, 'Seleccioná año y temporada antes de continuar.');
+    if (!stationId || !year || !season) {
+      showFieldError(btn, 'Seleccioná estación, año y temporada antes de continuar.');
       return;
     }
     const { start, end } = seasonToDates(year, season);
@@ -1208,8 +1333,18 @@ function _wireLocalStation(
   });
 }
 
-_wireLocalStation(spYearSelect, spSeasonSelect, btnLocalSpLevel, 'SPTTB', 'local_sp');
-_wireLocalStation(bdYearSelect, bdSeasonSelect, btnLocalBdLevel, 'BDCTB', 'local_bd');
+wireTflowStationGroup(
+  tflowHidroStation,
+  tflowHidroYear,
+  tflowHidroSeason,
+  tflowBtnLocalHidro
+);
+wireTflowStationGroup(
+  tflowClimaStation,
+  tflowClimaYear,
+  tflowClimaSeason,
+  tflowBtnLocalClima
+);
 
 // ---------------------------------------------------------------------------
 // Listeners de municipios (riesgo de inundación)
@@ -1559,3 +1694,6 @@ btnExportPdfReport?.addEventListener('click', async () => {
     showErrorModal('Error de exportación PDF', msg);
   }
 });
+
+// Inicializar catálogo y cargadores dinámicos de estaciones locales
+void initializeLocalStations();

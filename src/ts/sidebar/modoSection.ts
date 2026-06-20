@@ -51,7 +51,12 @@ class ModoSection {
       'toggleInundacionesMode'
     ) as HTMLButtonElement | null;
 
-    if (!this.modoSection || !this.compareToggle || !this.floodToggle || !this.inundacionesToggle) {
+    if (
+      !this.modoSection ||
+      !this.compareToggle ||
+      !this.floodToggle ||
+      !this.inundacionesToggle
+    ) {
       console.warn('[ModoSection] Required elements not found');
       return;
     }
@@ -124,7 +129,12 @@ class ModoSection {
       }
 
       // Disable all task flow steps on the left
-      this.disableTaskFlowSteps(['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore']);
+      this.disableTaskFlowSteps([
+        'tflow-area',
+        'tflow-variable',
+        'tflow-config',
+        'tflow-explore',
+      ]);
 
       // Dispatch event
       document.dispatchEvent(new CustomEvent('compareModeActivated'));
@@ -135,7 +145,12 @@ class ModoSection {
       }
 
       // Disable all task flow steps on the left
-      this.disableTaskFlowSteps(['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore']);
+      this.disableTaskFlowSteps([
+        'tflow-area',
+        'tflow-variable',
+        'tflow-config',
+        'tflow-explore',
+      ]);
 
       // Dispatch event
       document.dispatchEvent(new CustomEvent('floodRiskModeActivated'));

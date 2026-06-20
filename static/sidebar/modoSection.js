@@ -25,7 +25,10 @@ class ModoSection {
         this.compareToggle = document.getElementById('toggleCompareMode');
         this.floodToggle = document.getElementById('toggleFloodRiskMode');
         this.inundacionesToggle = document.getElementById('toggleInundacionesMode');
-        if (!this.modoSection || !this.compareToggle || !this.floodToggle || !this.inundacionesToggle) {
+        if (!this.modoSection ||
+            !this.compareToggle ||
+            !this.floodToggle ||
+            !this.inundacionesToggle) {
             console.warn('[ModoSection] Required elements not found');
             return;
         }
@@ -92,7 +95,12 @@ class ModoSection {
                 this.compareToggle.classList.add('modo-toggle--active');
             }
             // Disable all task flow steps on the left
-            this.disableTaskFlowSteps(['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore']);
+            this.disableTaskFlowSteps([
+                'tflow-area',
+                'tflow-variable',
+                'tflow-config',
+                'tflow-explore',
+            ]);
             // Dispatch event
             document.dispatchEvent(new CustomEvent('compareModeActivated'));
         }
@@ -102,7 +110,12 @@ class ModoSection {
                 this.floodToggle.classList.add('modo-toggle--active');
             }
             // Disable all task flow steps on the left
-            this.disableTaskFlowSteps(['tflow-area', 'tflow-variable', 'tflow-config', 'tflow-explore']);
+            this.disableTaskFlowSteps([
+                'tflow-area',
+                'tflow-variable',
+                'tflow-config',
+                'tflow-explore',
+            ]);
             // Dispatch event
             document.dispatchEvent(new CustomEvent('floodRiskModeActivated'));
         }

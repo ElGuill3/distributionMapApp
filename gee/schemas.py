@@ -100,9 +100,29 @@ class LocalStationQuerySchema(BaseModel):
     histórico completo.
     """
 
-    station_id: Literal["SPTTB", "BDCTB"]
+    station_id: str
     start: date
     end: date
+
+    @field_validator("station_id")
+    @classmethod
+    def validate_station_id(cls, v: str) -> str:
+        from config import LOCAL_STATIONS
+        if not LOCAL_STATIONS:
+            # Fallback para tests unitarios cuando no hay archivos CSV en el entorno de prueba
+            known_fallback = {"SPTTB", "BDCTB", "SPTTB_hidro", "BDCTB_hidro", "SPTTB_clima", "BDCTB_clima"}
+            if v in known_fallback:
+                if not v.endswith("_hidro") and not v.endswith("_clima"):
+                    return f"{v}_hidro"
+                return v
+            raise ValueError(f"Estación local no soportada: '{v}'.")
+
+        if v not in LOCAL_STATIONS:
+            # Compatibilidad hacia atrás: mapear clave simple (ej. BDCTB) a su versión hidro
+            if f"{v}_hidro" in LOCAL_STATIONS:
+                return f"{v}_hidro"
+            raise ValueError(f"Estación local no soportada: '{v}'.")
+        return v
 
     @field_validator("start", "end", mode="before")
     @classmethod

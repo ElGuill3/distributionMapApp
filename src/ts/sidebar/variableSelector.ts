@@ -48,8 +48,6 @@ class VariableSelector {
     this.updateChipVisuals();
     // PR2 fix: populate year select on init so it's ready before first chip click
     this.populateYearSelect();
-
-
   }
 
   /**
@@ -78,8 +76,6 @@ class VariableSelector {
 
     this.activeVariable = variable;
     this.updateChipVisuals();
-
-
 
     // PR2: Single source of truth — update mapState and taskFlow directly
     setCurrentVariable(variable as VariableKey);
@@ -134,9 +130,7 @@ class VariableSelector {
     }
 
     // Get years for active variable
-    let years = VARIABLE_YEARS[this.activeVariable as VariableKey] || [];
-
-
+    const years = VARIABLE_YEARS[this.activeVariable as VariableKey] || [];
 
     // Populate options
     years.forEach((year: number) => {
@@ -198,8 +192,6 @@ class VariableSelector {
   reset(): void {
     this.activeVariable = 'ndvi';
     this.updateChipVisuals();
-
-
 
     this.populateYearSelect();
   }

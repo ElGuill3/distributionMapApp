@@ -53,7 +53,7 @@ def _env_list(key: str, default: str = "") -> list[str]:
 DEBUG = _env_bool("FLASK_DEBUG", "false")
 GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-proyecto")
 CONAGUA_HIDROS_STATIONS = _env_list("CONAGUA_HIDROS_STATIONS", "BDCTB,SPTTB")
-CONAGUA_CLIMAS_STATIONS = _env_list("CONAGUA_CLIMAS_STATIONS", "")
+CONAGUA_CLIMAS_STATIONS = _env_list("CONAGUA_CLIMAS_STATIONS", "BDCTB,SPTTB")
 
 # ---------------------------------------------------------------------------
 # Rutas del proyecto
@@ -121,14 +121,45 @@ MUNICIPAL_TIFS = {
 # ---------------------------------------------------------------------------
 # Estaciones hidrometeorológicas locales
 # ---------------------------------------------------------------------------
+# Coordenadas conocidas de las estaciones locales
+STATION_COORDS = {
+    "SPTTB": [17.791667, -91.158333],
+    "BDCTB": [17.433333, -91.483333],
+}
+
 def _load_local_stations() -> dict[str, dict]:
+    def clean_encoding(text: str) -> str:
+        if not text:
+            return text
+        try:
+            return text.encode("latin-1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return text
+
     stations = {}
     stations_dir = BASE_DIR / "data" / "stations"
     if not stations_dir.exists():
         return stations
 
-    for csv_file in stations_dir.glob("*.csv"):
+    # Escaneo recursivo buscando archivos en subcarpetas 'hidros' y 'climas'
+    for csv_file in stations_dir.glob("**/*.csv"):
         try:
+            parent_name = csv_file.parent.name.lower()
+            if parent_name == "hidros":
+                station_type = "hidrometrica"
+                type_suffix = "hidro"
+                metric_label = "[Nivel]"
+            elif parent_name == "climas":
+                station_type = "climatolica"
+                type_suffix = "clima"
+                metric_label = "[Precipitación]"
+            elif parent_name == "stations":
+                station_type = "hidrometrica"
+                type_suffix = "hidro"
+                metric_label = "[Nivel]"
+            else:
+                continue
+
             # Intentar leer con UTF-8
             with open(csv_file, "r", encoding="utf-8") as f:
                 lines = [f.readline().strip() for _ in range(6)]
@@ -139,15 +170,28 @@ def _load_local_stations() -> dict[str, dict]:
                     parts = line.split(":", 1)
                     metadata[parts[0].strip()] = parts[1].strip()
             
-            station_key = metadata.get("Clave")
-            station_name = metadata.get("Estación")
-            municipio = metadata.get("Municipio")
+            station_key = None
+            station_name = None
+            municipio = None
+            for k, v in metadata.items():
+                k_lower = k.lower()
+                if "clave" in k_lower:
+                    station_key = clean_encoding(v)
+                elif "estac" in k_lower:
+                    station_name = clean_encoding(v)
+                elif "municip" in k_lower:
+                    municipio = clean_encoding(v)
             
             if station_key and station_name:
-                display_name = f"{station_name} ({municipio})" if municipio else station_name
-                stations[station_key] = {
+                display_name = f"{station_name} ({municipio}) {metric_label}" if municipio else f"{station_name} {metric_label}"
+                combined_key = f"{station_key}_{type_suffix}"
+                stations[combined_key] = {
                     "name": display_name,
+                    "station_name": station_name,
+                    "municipio": municipio,
                     "csv_path": csv_file,
+                    "type": station_type,
+                    "coords": STATION_COORDS.get(station_key.upper()),
                 }
         except Exception:
             # Fallback a Latin-1 por si falla la decodificación por caracteres con tilde
@@ -161,15 +205,28 @@ def _load_local_stations() -> dict[str, dict]:
                         parts = line.split(":", 1)
                         metadata[parts[0].strip()] = parts[1].strip()
                 
-                station_key = metadata.get("Clave")
-                station_name = metadata.get("Estación")
-                municipio = metadata.get("Municipio")
+                station_key = None
+                station_name = None
+                municipio = None
+                for k, v in metadata.items():
+                    k_lower = k.lower()
+                    if "clave" in k_lower:
+                        station_key = clean_encoding(v)
+                    elif "estac" in k_lower:
+                        station_name = clean_encoding(v)
+                    elif "municip" in k_lower:
+                        municipio = clean_encoding(v)
                 
                 if station_key and station_name:
-                    display_name = f"{station_name} ({municipio})" if municipio else station_name
-                    stations[station_key] = {
+                    display_name = f"{station_name} ({municipio}) {metric_label}" if municipio else f"{station_name} {metric_label}"
+                    combined_key = f"{station_key}_{type_suffix}"
+                    stations[combined_key] = {
                         "name": display_name,
+                        "station_name": station_name,
+                        "municipio": municipio,
                         "csv_path": csv_file,
+                        "type": station_type,
+                        "coords": STATION_COORDS.get(station_key.upper()),
                     }
             except Exception:
                 pass

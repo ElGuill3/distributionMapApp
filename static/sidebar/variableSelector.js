@@ -101,7 +101,7 @@ class VariableSelector {
             yearSelect.remove(1);
         }
         // Get years for active variable
-        let years = VARIABLE_YEARS[this.activeVariable] || [];
+        const years = VARIABLE_YEARS[this.activeVariable] || [];
         // Populate options
         years.forEach((year) => {
             const option = document.createElement('option');

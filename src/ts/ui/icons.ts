@@ -10,10 +10,7 @@ export function initLucideIcons(
 }
 
 /** Renderiza o actualiza un icono Lucide en un elemento específico. */
-export function setLucideIcon(
-  element: Element | null,
-  iconName: LucideIconName
-): void {
+export function setLucideIcon(element: Element | null, iconName: LucideIconName): void {
   if (!element) return;
   element.setAttribute('data-lucide', String(iconName));
   const scope = element.parentElement ?? document;
