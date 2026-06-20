@@ -103,3 +103,9 @@ htmlcov/
 openspec/
 # Este archivo debe estar en UTF-8. Si Cursor lo guarda en UTF-16, Git no aplicará las reglas.
 
+# ---------------------------------------------------------------------------
+# Datos de estaciones (se descargan automáticamente, no se versionan)
+# ---------------------------------------------------------------------------
+data/stations/*.csv
+data/stations/*.tmp
+
