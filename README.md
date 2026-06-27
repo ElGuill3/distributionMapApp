@@ -1,5 +1,7 @@
 # Visor Hidrometeorológico — distributionMapApp
 
+*Read this in [English](README.en.md).*
+
 Aplicación web interactiva para visualizar animaciones y series temporales de variables hidrometeorológicas sobre el estado de Tabasco, México, usando Google Earth Engine como principal fuente de datos satelitales.
 
 ---
@@ -231,6 +233,12 @@ Copiá el archivo `.env.example` a `.env` en la raíz del proyecto y configurá 
 cp .env.example .env
 ```
 
+> [!IMPORTANT]
+> Debés configurar `GEE_PROJECT` con el ID real de tu proyecto de Google Cloud. Para ver la lista de tus proyectos y obtener el ID correcto, podés ejecutar:
+> ```bash
+> gcloud projects list
+> ```
+
 | Variable de Entorno | Valor por Defecto | Descripción |
 |---|---|---|
 | `GEE_PROJECT` | `inundaciones-proyecto` | ID del proyecto de Google Cloud con la API de Earth Engine habilitada. |
@@ -302,6 +310,9 @@ Los GeoTIFFs del índice FHI deben estar en `data/mapa_riesgo/municipios/` con e
 ---
 
 ### 7. Instalar dependencias de Node y compilar TypeScript
+
+> [!IMPORTANT]
+> Compilar el código TypeScript es **obligatorio** antes de iniciar la aplicación por primera vez. Si no lo hacés, la interfaz se mostrará en blanco con errores 404 al intentar cargar el archivo compilado `main.js`.
 
 ```bash
 npm install
