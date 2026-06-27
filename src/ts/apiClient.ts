@@ -339,10 +339,11 @@ export interface ExportPdfReportOptions {
   seriesData: { dates: string[]; variables: Record<string, (number | null)[]> };
   bbox: [number, number, number, number];
   metadata: { variableKeys: string[] };
+  taskId?: string;
 }
 
 export async function exportPdfReport(options: ExportPdfReportOptions): Promise<Blob> {
-  const { chartBlob, gifPath, seriesData, bbox, metadata } = options;
+  const { chartBlob, gifPath, seriesData, bbox, metadata, taskId } = options;
 
   const payload = {
     chart_blob: chartBlob,
@@ -352,7 +353,9 @@ export async function exportPdfReport(options: ExportPdfReportOptions): Promise<
     metadata,
   };
 
-  const resp = await fetch('/api/export/pdf-report', {
+  const url = taskId ? `/api/export/pdf-report?task_id=${encodeURIComponent(taskId)}` : '/api/export/pdf-report';
+
+  const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

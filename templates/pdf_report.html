@@ -23,11 +23,13 @@
     </div>
 
     {# ---------------------------------------------------- #}
-    {# RESUMEN EJECUTIVO                                     #}
+    {# REPORTE GENERADO POR IA                              #}
     {# ---------------------------------------------------- #}
-    <div class="executive-summary">
-        <div class="section-title">Resumen corto</div>
-        <p>{{ summary_text }}</p>
+    <div class="ai-report-section">
+        <div class="section-title">Análisis de la Inteligencia Artificial</div>
+        <div class="ai-report-content">
+            {{ report_html | safe }}
+        </div>
     </div>
 
     <div class="variables-section">
@@ -38,41 +40,6 @@
             {% endfor %}
         </div>
     </div>
-
-    {# ---------------------------------------------------- #}
-    {# HALLAZGOS CLAVE (always rendered)                    #}
-    {# ---------------------------------------------------- #}
-    <div class="key-findings-header">Lo más importante que ocurrió</div>
-
-    {% if anomaly_events %}
-        {% for event in anomaly_events %}
-        <div class="anomaly-card">
-            <div class="anomaly-event-header">
-                <span class="severity-badge severity-{{ event.severity|lower }}">{{ event.severity_label }}</span>
-                <span class="anomaly-variable">{{ event.variable_label }}</span>
-                <span class="anomaly-type">
-                    {% if event.type == 'spike' %}
-                        Aumento inusual
-                    {% elif event.type == 'drop' %}
-                        Caída inusual
-                    {% elif event.type == 'sustained_shift' %}
-                        Cambio sostenido
-                    {% else %}
-                        {{ event.type }}
-                    {% endif %}
-                </span>
-                <span class="anomaly-date">{{ event.start_date }}{% if event.end_date != event.start_date %} → {{ event.end_date }}{% endif %}</span>
-            </div>
-            <div class="anomaly-description">{{ event.description }}</div>
-            <div class="anomaly-magnitude">Interpretación: {{ event.severity_label }}</div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="anomaly-card no-anomalies-card">
-            <div class="no-anomalies-message">Sin cambios importantes</div>
-            <div class="no-anomalies-detail">No se observaron cambios relevantes en el período analizado. Los valores se mantuvieron dentro de un comportamiento normal.</div>
-        </div>
-    {% endif %}
 
     {# ---------------------------------------------------- #}
     {# CHART IMAGE                                           #}

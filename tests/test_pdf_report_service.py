@@ -9,11 +9,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from services.pdf_report_service import (
-    AnomalyEvent,
-    AnomalyResult,
     build_pdf_context,
     compute_statistics,
     compute_stats,
+    generate_ai_report,
     extract_frame_for_date,
     extract_middle_frame,
     render_pdf_report,
@@ -230,9 +229,9 @@ class TestBuildPdfContext:
 
     def test_returns_context_with_required_keys(self) -> None:
         """
-        GIVEN datos válidos
+        GIVEN datos válidos y reporte de IA
         WHEN build_pdf_context es llamada
-        THEN devuelve un dict con todas las claves requeridas
+        THEN devuelve un dict con todas las claves requeridas incluyendo report_html y spatial_caption
         """
         context = build_pdf_context(
             series_data={"ndvi": [0.3, 0.4, 0.5]},
@@ -242,6 +241,8 @@ class TestBuildPdfContext:
             gif_frame_path="/path/to/frame.png",
             bbox=[-92.5, 17.0, -91.0, 18.0],
             metadata={"variableKeys": ["ndvi"]},
+            report_html="<h3>Reporte</h3><p>Análisis de vegetación</p>",
+            spatial_caption="Vegetación en su nivel máximo",
         )
 
         assert "variable_label" in context
@@ -256,6 +257,8 @@ class TestBuildPdfContext:
         assert "report_objective" in context
         assert "variable_labels" in context
         assert "labeled_variables" in context
+        assert context["report_html"] == "<h3>Reporte</h3><p>Análisis de vegetación</p>"
+        assert context["spatial_caption"] == "Vegetación en su nivel máximo"
         
     def test_date_range_format(self) -> None:
         """
@@ -271,6 +274,8 @@ class TestBuildPdfContext:
             gif_frame_path=None,
             bbox=[-92.5, 17.0, -91.0, 18.0],
             metadata={"variableKeys": ["ndvi"]},
+            report_html="",
+            spatial_caption="",
         )
 
         assert "2020-01-15 → 2020-06-20" in context["date_range"]
@@ -289,6 +294,8 @@ class TestBuildPdfContext:
             gif_frame_path=None,
             bbox=[-92.5, 17.0, -91.0, 18.0],
             metadata={"variableKeys": ["ndvi"]},
+            report_html="",
+            spatial_caption="",
         )
 
         assert context["trend_str"] == "Va en aumento"
@@ -307,6 +314,8 @@ class TestBuildPdfContext:
             gif_frame_path=None,
             bbox=[-92.5, 17.0, -91.0, 18.0],
             metadata={"variableKeys": ["temp"]},
+            report_html="",
+            spatial_caption="",
         )
 
         assert "temperatura" in context["interpretation"].lower()
@@ -541,78 +550,85 @@ class TestExtractFrameForDate:
 
 
 # ---------------------------------------------------------------------------
-# build_pdf_context — no anomalies path
+# generate_ai_report
 # ---------------------------------------------------------------------------
 
-class TestBuildPdfContextNoAnomalies:
-    """Tests para build_pdf_context con events=[] (no anomalies)."""
+class TestGenerateAiReport:
+    """Tests para la función generate_ai_report."""
 
-    def test_no_anomalies_sets_placeholder_context(self) -> None:
+    @patch("services.pdf_report_service.requests.post")
+    def test_generate_ai_report_success(self, mock_post) -> None:
         """
-        GIVEN anomaly_result with empty events
-        WHEN build_pdf_context is called
-        THEN summary_text is no-anomalies message
-        AND no_anomalies=True
-        AND spatial_caption="Vista del período analizado"
+        GIVEN una llamada exitosa y en stream a MiniMax M3
+        WHEN generate_ai_report es invocada con datos correctos
+        THEN retorna la estructura JSON esperada
         """
-        from services.pdf_report_service import AnomalyResult
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        # Mock de iter_lines para simular SSE chunks
+        mock_response.iter_lines.return_value = [
+            b'data: {"choices": [{"delta": {"reasoning_content": "Pensando..."}}]}',
+            b'data: {"choices": [{"delta": {"content": "{\\"report_html\\": \\"<p>Ok</p>\\", \\"selected_date\\": \\"2020-01-02\\", \\"frame_caption\\": \\"Capt\\"}"}}]}',
+            b'data: [DONE]'
+        ]
+        mock_post.return_value = mock_response
 
-        context = build_pdf_context(
-            series_data={"ndvi": [0.3, 0.4, 0.5]},
-            dates=["2020-01-01", "2020-01-02", "2020-01-03"],
-            stats={"ndvi": {"min": 0.3, "max": 0.5, "mean": 0.4, "std_dev": 0.1, "first": 0.3, "last": 0.5, "count": 3, "trend": "→"}},
-            chart_blob="base64pngdata",
-            gif_frame_path="/path/to/frame.png",
-            bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["ndvi"]},
-            anomaly_result=AnomalyResult(events=[], fallback_reason="zero_variance"),
-        )
+        with patch("services.pdf_report_service.MINIMAX_API_KEY", "test_key"):
+            data = generate_ai_report(
+                series_data={"ndvi": [0.3, 0.4, 0.5]},
+                dates=["2020-01-01", "2020-01-02", "2020-01-03"],
+                bbox=[-92.5, 17.0, -91.0, 18.0],
+                stats={}
+            )
 
-        assert context["no_anomalies"] is True
-        assert "No se detectaron anomalías significativas" in context["summary_text"]
-        assert context["spatial_caption"] == "Vista del período analizado"
-        assert context["anomaly_events"] == []
-        assert context["top_event_type"] == ""
-        assert context["top_event_date"] == ""
-        assert context["top_event_severity"] == ""
+        assert data["report_html"] == "<p>Ok</p>"
+        assert data["selected_date"] == "2020-01-02"
+        assert data["frame_caption"] == "Capt"
 
-    def test_with_events_sets_event_context(self) -> None:
+    @patch("services.pdf_report_service.requests.post")
+    def test_generate_ai_report_key_error(self, mock_post) -> None:
         """
-        GIVEN anomaly_result with events
-        WHEN build_pdf_context is called
-        THEN summary_text from top event
-        AND no_anomalies=False
-        AND anomaly_events populated
+        GIVEN un JSON retornado incompleto en stream
+        WHEN generate_ai_report es invocada
+        THEN lanza RuntimeError
         """
-        from services.pdf_report_service import AnomalyEvent, AnomalyResult
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.iter_lines.return_value = [
+            b'data: {"choices": [{"delta": {"content": "{\\"report_html\\": \\"<p>Incompleto</p>\\"}"}}]}',
+            b'data: [DONE]'
+        ]
+        mock_post.return_value = mock_response
 
-        event = AnomalyEvent(
-            start_date="2020-06-15",
-            end_date="2020-06-15",
-            type="spike",
-            magnitude=3.5,
-            severity="Alta",
-            duration_days=1,
-            description="Se detectó un aumento significativo.",
-        )
+        with patch("services.pdf_report_service.MINIMAX_API_KEY", "test_key"):
+            with pytest.raises(RuntimeError):
+                generate_ai_report(
+                    series_data={"ndvi": [0.3, 0.4]},
+                    dates=["2020-01-01", "2020-01-02"],
+                    bbox=[-92.5, 17.0, -91.0, 18.0],
+                    stats={}
+                )
 
-        context = build_pdf_context(
-            series_data={"ndvi": [0.3, 0.4, 0.5]},
-            dates=["2020-01-01", "2020-01-02", "2020-01-03"],
-            stats={"ndvi": {"min": 0.3, "max": 0.5, "mean": 0.4, "std_dev": 0.1, "first": 0.3, "last": 0.5, "count": 3, "trend": "→"}},
-            chart_blob="base64pngdata",
-            gif_frame_path="/path/to/frame.png",
-            bbox=[-92.5, 17.0, -91.0, 18.0],
-            metadata={"variableKeys": ["ndvi"]},
-            anomaly_result=AnomalyResult(events=[event], fallback_reason=None),
-        )
+    @patch("services.pdf_report_service.requests.post")
+    def test_generate_ai_report_invalid_date(self, mock_post) -> None:
+        """
+        GIVEN una fecha seleccionada no presente en dates en stream
+        WHEN generate_ai_report es invocada
+        THEN lanza RuntimeError
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.iter_lines.return_value = [
+            b'data: {"choices": [{"delta": {"content": "{\\"report_html\\": \\"<p>Ok</p>\\", \\"selected_date\\": \\"2020-12-31\\", \\"frame_caption\\": \\"Capt\\"}"}}]}',
+            b'data: [DONE]'
+        ]
+        mock_post.return_value = mock_response
 
-        assert context["no_anomalies"] is False
-        assert "2020-06-15" in context["summary_text"]
-        assert "aumento significativo" in context["summary_text"].lower()
-        assert context["spatial_caption"] == "Mapa en el momento del evento principal"
-        assert len(context["anomaly_events"]) == 1
-        assert context["top_event_type"] == "spike"
-        assert context["top_event_date"] == "2020-06-15"
-        assert context["top_event_severity"] == "Alta"
-        assert "eventos principales" in context["report_objective"].lower()
+        with patch("services.pdf_report_service.MINIMAX_API_KEY", "test_key"):
+            with pytest.raises(RuntimeError):
+                generate_ai_report(
+                    series_data={"ndvi": [0.3, 0.4]},
+                    dates=["2020-01-01", "2020-01-02"],
+                    bbox=[-92.5, 17.0, -91.0, 18.0],
+                    stats={}
+                )
