@@ -29,7 +29,7 @@ export function createProgressIndicator(title = 'Procesando GIF', hideProgressBa
   div.innerHTML = `
     <div class="modal-overlay modal-progress">
       <div class="modal-progress-title">${title}</div>
-      <div id="progress-message" class="modal-progress-message" style="word-break: break-all; max-height: 250px; overflow-y: auto; text-align: left; background: var(--gray-100); padding: 12px; border-radius: 6px;">Iniciando...</div>
+      <div id="progress-message" class="modal-progress-message" style="white-space: pre-wrap; word-break: break-word; max-height: 450px; overflow-y: auto; text-align: left; background: var(--gray-100); padding: 12px; border-radius: 6px;">Iniciando...</div>
       ${progressBarHtml}
     </div>
   `;
