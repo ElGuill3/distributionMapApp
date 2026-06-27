@@ -26,10 +26,15 @@ export function createProgressIndicator(title = 'Procesando GIF', hideProgressBa
     <div id="progress-percent" class="modal-progress-percent">0%</div>
   `;
 
+  const overlayClass = hideProgressBar ? 'modal-overlay modal-progress modal-large' : 'modal-overlay modal-progress';
+  const messageStyle = hideProgressBar 
+    ? 'white-space: pre-wrap; word-break: break-word; max-height: 450px; overflow-y: auto; text-align: left; background: var(--gray-100); padding: 12px; border-radius: 6px;' 
+    : '';
+
   div.innerHTML = `
-    <div class="modal-overlay modal-progress">
+    <div class="${overlayClass}">
       <div class="modal-progress-title">${title}</div>
-      <div id="progress-message" class="modal-progress-message" style="white-space: pre-wrap; word-break: break-word; max-height: 450px; overflow-y: auto; text-align: left; background: var(--gray-100); padding: 12px; border-radius: 6px;">Iniciando...</div>
+      <div id="progress-message" class="modal-progress-message" style="${messageStyle}">Iniciando...</div>
       ${progressBarHtml}
     </div>
   `;

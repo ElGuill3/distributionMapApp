@@ -1968,10 +1968,13 @@ html.theme-transitioning #chart-b {
   padding: 30px;
   border-radius: 12px;
   min-width: 400px;
-  max-width: 650px;
-  width: 90%;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--sidebar-border);
+}
+
+.modal-overlay.modal-large {
+  max-width: 650px;
+  width: 90%;
 }
 
 /* Progress Modal */
