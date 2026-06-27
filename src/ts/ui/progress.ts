@@ -13,19 +13,24 @@ const INDICATOR_ID = 'loading-indicator';
  *
  * @returns Referencia al div del indicador (ya añadido al body).
  */
-export function createProgressIndicator(): HTMLDivElement {
+export function createProgressIndicator(title = 'Procesando GIF', hideProgressBar = false): HTMLDivElement {
   document.getElementById(INDICATOR_ID)?.remove();
 
   const div = document.createElement('div');
   div.id = INDICATOR_ID;
+  
+  const progressBarHtml = hideProgressBar ? '' : `
+    <div class="modal-progress-bar-bg">
+      <div id="progress-bar" class="modal-progress-bar-fill"></div>
+    </div>
+    <div id="progress-percent" class="modal-progress-percent">0%</div>
+  `;
+
   div.innerHTML = `
     <div class="modal-overlay modal-progress">
-      <div class="modal-progress-title">Procesando GIF</div>
-      <div id="progress-message" class="modal-progress-message">Iniciando...</div>
-      <div class="modal-progress-bar-bg">
-        <div id="progress-bar" class="modal-progress-bar-fill"></div>
-      </div>
-      <div id="progress-percent" class="modal-progress-percent">0%</div>
+      <div class="modal-progress-title">${title}</div>
+      <div id="progress-message" class="modal-progress-message" style="word-break: break-all; max-height: 250px; overflow-y: auto; text-align: left; background: var(--gray-100); padding: 12px; border-radius: 6px;">Iniciando...</div>
+      ${progressBarHtml}
     </div>
   `;
   document.body.appendChild(div);
@@ -43,22 +48,33 @@ export function updateProgressIndicator(progress: number, message: string): void
   const msgEl = document.getElementById('progress-message');
   const pctEl = document.getElementById('progress-percent');
 
-  if (!barEl || !msgEl || !pctEl) return;
+  if (msgEl) {
+    msgEl.textContent = message;
+  }
 
   if (progress === -1) {
-    barEl.classList.add('error');
-    barEl.style.width = '100%';
-    msgEl.textContent = `Error: ${message}`;
-    pctEl.textContent = 'Error';
-    pctEl.classList.add('error');
+    if (barEl) {
+      barEl.classList.add('error');
+      barEl.style.width = '100%';
+    }
+    if (msgEl) {
+      msgEl.textContent = `Error: ${message}`;
+    }
+    if (pctEl) {
+      pctEl.textContent = 'Error';
+      pctEl.classList.add('error');
+    }
     return;
   }
 
   const pct = Math.max(0, Math.min(100, progress));
-  barEl.style.width = `${pct}%`;
-  barEl.textContent = pct > 20 ? `${pct}%` : '';
-  msgEl.textContent = message;
-  pctEl.textContent = `${pct}%`;
+  if (barEl) {
+    barEl.style.width = `${pct}%`;
+    barEl.textContent = pct > 20 ? `${pct}%` : '';
+  }
+  if (pctEl) {
+    pctEl.textContent = `${pct}%`;
+  }
 }
 
 /**

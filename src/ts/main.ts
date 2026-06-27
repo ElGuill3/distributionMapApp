@@ -43,6 +43,7 @@ import {
   exportPdfReport,
   downloadBlob,
   buildExportBundleZip,
+  createProgressEventSource,
 } from './apiClient.js';
 import { plotChartAsPng } from './ui/chart.js';
 
@@ -1651,14 +1652,26 @@ btnExportPdfReport?.addEventListener('click', async () => {
   const variableKeys = Object.keys(allVariables);
   const gifPath = mapState.getActiveGifPathA() || mapState.getActiveGifPathB() || '';
 
-  createProgressIndicator();
+  const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  createProgressIndicator('Generando Reporte PDF', true);
+
+  const eventSource = createProgressEventSource(
+    taskId,
+    (progress, message) => {
+      const mappedProgress = progress >= 0 ? Math.min(95, progress) : -1;
+      updateProgressIndicator(mappedProgress, message);
+    },
+    () => {
+      /* ignore connection errors, let fetch handle timeout */
+    }
+  );
 
   try {
-    updateProgressIndicator(10, 'Capturando gráfica como PNG...');
+    updateProgressIndicator(5, 'Capturando gráfica como PNG...');
     if (!ndviChartDiv) throw new Error('Chart div no encontrado.');
     const chartBlob = await plotChartAsPng(ndviChartDiv);
 
-    updateProgressIndicator(30, 'Convirtiendo chart a base64...');
+    updateProgressIndicator(8, 'Convirtiendo chart a base64...');
     const base64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -1670,16 +1683,17 @@ btnExportPdfReport?.addEventListener('click', async () => {
       reader.readAsDataURL(chartBlob);
     });
 
-    updateProgressIndicator(50, 'Enviando solicitud de PDF...');
     const pdfBlob = await exportPdfReport({
       chartBlob: base64,
       gifPath,
       seriesData: { dates: allDates, variables: allVariables },
       bbox,
       metadata: { variableKeys },
+      taskId,
     });
 
-    updateProgressIndicator(80, 'Descargando PDF...');
+    eventSource.close();
+    updateProgressIndicator(95, 'Descargando PDF...');
     const timestamp = new Date()
       .toISOString()
       .replace(/[^0-9]/g, '')
@@ -1689,6 +1703,7 @@ btnExportPdfReport?.addEventListener('click', async () => {
     removeProgressIndicator(1500);
   } catch (err) {
     console.error(err);
+    eventSource.close();
     removeProgressIndicator(0);
     const msg = err instanceof Error ? err.message : 'Error generando el PDF.';
     showErrorModal('Error de exportación PDF', msg);

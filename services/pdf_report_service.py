@@ -8,6 +8,7 @@ Responsabilidades:
   - Renderizar plantilla Jinja2 y convertir a PDF con WeasyPrint.
 """
 
+import json
 import logging
 import math
 from dataclasses import dataclass, field
@@ -16,8 +17,9 @@ from typing import Any, Literal
 
 from PIL import Image as PILImage
 from PIL import ImageSequence
+import requests
 
-from config import GIFS_DIR, STATIC_DIR
+from config import GIFS_DIR, STATIC_DIR, MINIMAX_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -112,385 +114,159 @@ def compute_statistics(
 
 
 # ---------------------------------------------------------------------------
-# Anomaly Detection
+# MiniMax M3 AI Report Generation
 # ---------------------------------------------------------------------------
 
-Z_THRESHOLD = 2.5
-SUSTAINED_THRESHOLD = 1.5
-SUSTAINED_MIN_RUN = 3
-WINDOW_SIZE = 7
-TOP_N_EVENTS = 3
 
-
-@dataclass
-class AnomalyEvent:
-    start_date: str
-    end_date: str
-    type: Literal["spike", "drop", "sustained_shift"]
-    magnitude: float
-    severity: Literal["Alta", "Media", "Baja"]
-    duration_days: int
-    description: str
-    chart_annotation: bool = True
-    variable_key: str = ""
-
-
-@dataclass
-class AnomalyResult:
-    events: list[AnomalyEvent] = field(default_factory=list)
-    fallback_reason: str | None = None
-    effective_report_type: str = "summary"
-
-
-def rolling_z_scores(
-    series_data: dict, dates: list, window: int = WINDOW_SIZE
-) -> list[float]:
+def generate_ai_report(
+    series_data: dict[str, Any],
+    dates: list[str],
+    bbox: list[float],
+    stats: dict[str, dict[str, Any]],
+    on_status_update: Any | None = None
+) -> dict[str, Any]:
     """
-    Compute rolling z-scores for the first variable in series_data.
-
-    Each point is scored against the rolling mean and std of the PRECEDING
-    window-1 points (pure past-looking rolling window). This avoids the
-    self-referential effect where a spike inflates its own window's std.
-
-    Args:
-        series_data: dict of {variable_key: [float|null, ...]}
-        dates: aligned list of date strings
-        window: rolling window size (default 7)
-
-    Returns:
-        list of z-scores aligned with dates; NaN for first window-1 entries
+    Calls the MiniMax M3 API to generate an analysis report and select the best frame.
+    Supports streaming reasoning process to on_status_update callback.
     """
-    # Get first variable (MVP single-variable)
-    var_key = list(series_data.keys())[0]
-    raw_values = series_data[var_key]
+    if not MINIMAX_API_KEY:
+        raise RuntimeError("MINIMAX_API_KEY no está configurada en las variables de entorno.")
 
-    # Build valid (date, value) pairs
-    valid_pairs = [(d, v) for d, v in zip(dates, raw_values) if v is not None]
-    if len(valid_pairs) < window:
-        return [float("nan")] * len(valid_pairs)
+    # Prepare data context to send
+    context_data = {
+        "bbox": bbox,
+        "variables_active": list(series_data.keys()),
+        "dates_range": f"{dates[0]} a {dates[-1]}",
+        "dates_list": dates,
+        "timeseries_data": series_data,
+        "statistics": stats
+    }
 
-    valid_values = [v for _, v in valid_pairs]
-
-    z_scores: list[float] = []
-    nan_count = window - 1
-    z_scores.extend([float("nan")] * nan_count)
-
-    # Compute z-score for each point using the PRECEDING window-1 points' stats
-    # At i=window-1 (first scoreable point): use valid_values[0:window-1] for stats
-    for i in range(window - 1, len(valid_values)):
-        # Past window: the window-1 values BEFORE the current point
-        past_vals = valid_values[i - (window - 1) : i]
-        past_mean = sum(past_vals) / len(past_vals)
-        variance = sum((v - past_mean) ** 2 for v in past_vals) / len(past_vals)
-        past_std = math.sqrt(variance)
-
-        # Clamp to avoid extreme z-scores from near-constant windows
-        # A constant or near-constant window means normal behavior; don't amplify
-        if past_std < 1e-6:
-            # Past window is effectively constant; deviation is measured vs. the
-            # past mean directly, capped at z=5.0 to avoid overflow
-            deviation = abs(valid_values[i] - past_mean)
-            z = min(deviation / 1e-6, 5.0)
-            z_scores.append(z)
-        else:
-            z = (valid_values[i] - past_mean) / past_std
-            z_scores.append(z)
-
-    return z_scores
-
-
-def identify_events(z_scores: list[float], dates: list[str]) -> list[AnomalyEvent]:
-    """
-    Identify anomaly events from z-scores.
-
-    Classifies each point as spike (z>2.5), drop (z<-2.5),
-    or sustained_shift (3+ consecutive |z|>1.5).
-    """
-    events: list[AnomalyEvent] = []
-
-    # Pair z_scores with valid (date, value) pairs
-    valid_pairs: list[tuple[str, float]] = []
-    for d, v in zip(dates, z_scores):
-        if not math.isnan(v):
-            valid_pairs.append((d, v))
-
-    if not valid_pairs:
-        return events
-
-    i = 0
-    while i < len(valid_pairs):
-        date_i, z_i = valid_pairs[i]
-
-        # Check for sustained shift (3+ consecutive |z| > SUSTAINED_THRESHOLD)
-        if i + 2 < len(valid_pairs):
-            run_length = 1
-            j = i
-            while (
-                j + 1 < len(valid_pairs)
-                and abs(valid_pairs[j + 1][1]) > SUSTAINED_THRESHOLD
-            ):
-                run_length += 1
-                j += 1
-
-            if run_length >= SUSTAINED_MIN_RUN:
-                magnitudes = [abs(valid_pairs[k][1]) for k in range(i, i + run_length)]
-                max_z = max(magnitudes)
-                start_date = valid_pairs[i][0]
-                end_date = valid_pairs[i + run_length - 1][0]
-                events.append(
-                    AnomalyEvent(
-                        start_date=start_date,
-                        end_date=end_date,
-                        type="sustained_shift",
-                        magnitude=max_z,
-                        severity="Media",  # will be recomputed
-                        duration_days=run_length,
-                        description="",
-                        chart_annotation=True,
-                        variable_key="",
-                    )
-                )
-                i += run_length
-                continue
-
-        # Single-day spike or drop
-        if z_i >= Z_THRESHOLD:
-            events.append(
-                AnomalyEvent(
-                    start_date=date_i,
-                    end_date=date_i,
-                    type="spike",
-                    magnitude=abs(z_i),
-                    severity="Media",  # will be recomputed
-                    duration_days=1,
-                    description="",
-                    chart_annotation=True,
-                    variable_key="",
-                )
-            )
-        elif z_i < -Z_THRESHOLD:
-            events.append(
-                AnomalyEvent(
-                    start_date=date_i,
-                    end_date=date_i,
-                    type="drop",
-                    magnitude=abs(z_i),
-                    severity="Media",  # will be recomputed
-                    duration_days=1,
-                    description="",
-                    chart_annotation=True,
-                    variable_key="",
-                )
-            )
-
-        i += 1
-
-    return events
-
-
-def merge_consecutive_events(events: list[AnomalyEvent]) -> list[AnomalyEvent]:
-    """
-    Merge consecutive same-type events into a single event.
-    Keeps max magnitude and earliest start_date of the run.
-    """
-    if not events:
-        return []
-
-    merged: list[AnomalyEvent] = []
-    current = events[0]
-
-    for next_event in events[1:]:
-        if next_event.type == current.type and next_event.variable_key == current.variable_key:
-            # Extend the run
-            current = AnomalyEvent(
-                start_date=current.start_date,
-                end_date=next_event.end_date,
-                type=current.type,
-                magnitude=max(current.magnitude, next_event.magnitude),
-                severity=current.severity,
-                duration_days=current.duration_days + 1,
-                description="",
-                chart_annotation=True,
-                variable_key=current.variable_key,
-            )
-        else:
-            merged.append(current)
-            current = next_event
-
-    merged.append(current)
-    return merged
-
-
-def rank_and_truncate_events(
-    events: list[AnomalyEvent], top_n: int = TOP_N_EVENTS
-) -> list[AnomalyEvent]:
-    """Sort events by magnitude descending and return top N."""
-    sorted_events = sorted(events, key=lambda e: e.magnitude, reverse=True)
-    return sorted_events[:top_n]
-
-
-def compute_severity(
-    magnitude: float,
-    duration_days: int,
-    z_scores: list[float],
-    event_start_idx: int,
-) -> Literal["Alta", "Media", "Baja"]:
-    """
-    Compute severity from magnitude ONLY.
-
-    Alta: |z| > 3.5
-    Media: |z| in [2.5, 3.5]
-    Baja: |z| >= 2.5, single-day, both adjacent |z| < 1.5
-    """
-    abs_mag = abs(magnitude)
-
-    if abs_mag > 3.5:
-        return "Alta"
-    if abs_mag >= 2.5:
-        if duration_days == 1:
-            # Check adjacent z-scores
-            n = len(z_scores)
-            left_ok = (event_start_idx == 0) or (
-                event_start_idx > 0 and abs(z_scores[event_start_idx - 1]) < 1.5
-            )
-            right_ok = (event_start_idx == n - 1) or (
-                event_start_idx < n - 1 and abs(z_scores[event_start_idx + 1]) < 1.5
-            )
-            if left_ok and right_ok:
-                return "Baja"
-        return "Media"
-    return "Media"
-
-
-def generate_event_description(event: AnomalyEvent) -> str:
-    """Generate templated description for an anomaly event."""
-    if event.type == "spike":
-        return (
-            f"Se observó un aumento inusual el {event.start_date}. "
-            f"El valor subió bastante por encima de lo esperado."
-        )
-    elif event.type == "drop":
-        return (
-            f"Se observó una caída inusual el {event.start_date}. "
-            f"El valor bajó bastante por debajo de lo esperado."
-        )
-    else:  # sustained_shift
-        return (
-            f"Se observó un cambio sostenido entre {event.start_date} y {event.end_date}. "
-            f"El comportamiento se mantuvo distinto a lo habitual durante varios días."
-        )
-
-
-def _detect_anomalies_for_variable(
-    var_key: str, raw_values: list[Any], dates: list[str]
-) -> tuple[list[AnomalyEvent], str | None]:
-    """
-    Detect anomalies for a single variable.
-
-    Returns:
-        (events, fallback_reason)
-    """
-    valid_pairs = [(d, v) for d, v in zip(dates, raw_values) if v is not None]
-    valid_values = [v for _, v in valid_pairs]
-
-    if len(valid_values) < 10:
-        return [], "insufficient_observations"
-
-    if max(valid_values) - min(valid_values) < 1e-6:
-        return [], "zero_variance"
-
-    z_scores = rolling_z_scores({var_key: raw_values}, dates)
-    valid_dates = [d for d, v in zip(dates, raw_values) if v is not None]
-
-    events = identify_events(z_scores, valid_dates)
-    events = merge_consecutive_events(events)
-    events = rank_and_truncate_events(events)
-
-    if not events:
-        return [], "no_anomalies_above_threshold"
-
-    final_events: list[AnomalyEvent] = []
-    for event in events:
-        try:
-            event_idx = valid_dates.index(event.start_date)
-        except ValueError:
-            event_idx = 0
-
-        severity = compute_severity(
-            event.magnitude, event.duration_days, z_scores, event_idx
-        )
-        description = generate_event_description(event)
-
-        final_events.append(
-            AnomalyEvent(
-                start_date=event.start_date,
-                end_date=event.end_date,
-                type=event.type,
-                magnitude=event.magnitude,
-                severity=severity,
-                duration_days=event.duration_days,
-                description=description,
-                chart_annotation=True,
-                variable_key=var_key,
-            )
-        )
-
-    return final_events, None
-
-
-def detect_anomalies(series_data: dict, dates: list) -> AnomalyResult:
-    """
-    Detect anomalies in a time series. Pure function.
-
-    Fallback conditions:
-    - insufficient_observations: valid obs < 10
-    - zero_variance: max - min < 1e-6
-    - no_anomalies_above_threshold: no events with |z| >= 2.5
-
-    Returns AnomalyResult with effective_report_type="summary" on fallback,
-    "anomaly" otherwise.
-    """
-    if not series_data or not dates:
-        return AnomalyResult(
-            events=[],
-            fallback_reason="insufficient_observations",
-            effective_report_type="summary",
-        )
-    all_events: list[AnomalyEvent] = []
-    fallback_reasons: list[str] = []
-
-    for var_key, raw_values in series_data.items():
-        events, fallback_reason = _detect_anomalies_for_variable(
-            var_key, raw_values, dates
-        )
-        all_events.extend(events)
-        if fallback_reason:
-            fallback_reasons.append(fallback_reason)
-
-    if not all_events:
-        if fallback_reasons and all(
-            reason == "insufficient_observations" for reason in fallback_reasons
-        ):
-            fallback_reason = "insufficient_observations"
-        elif fallback_reasons and all(reason == "zero_variance" for reason in fallback_reasons):
-            fallback_reason = "zero_variance"
-        else:
-            fallback_reason = "no_anomalies_above_threshold"
-
-        return AnomalyResult(
-            events=[],
-            fallback_reason=fallback_reason,
-            effective_report_type="summary",
-        )
-
-    # Rank and truncate globally across all variables
-    all_events = rank_and_truncate_events(all_events)
-
-    return AnomalyResult(
-        events=all_events,
-        fallback_reason=None,
-        effective_report_type="anomaly",
+    system_prompt = (
+        "Eres un analista ambiental senior y experto en hidrometeorología. "
+        "Tu tarea es analizar las series temporales de variables ambientales y estaciones locales para escribir un reporte legible para humanos y seleccionar la fecha más relevante para mostrar en el mapa (el fotograma clave).\n\n"
+        "Debes devolver obligatoriamente un objeto JSON con la siguiente estructura:\n"
+        "{\n"
+        "  \"report_html\": \"Análisis en formato HTML limpio utilizando etiquetas <p>, <ul>, <li>, <strong>, <h3>. No incluyas html ni markdown block codes como ```json.\",\n"
+        "  \"selected_date\": \"La fecha YYYY-MM-DD seleccionada de la lista de fechas provista.\",\n"
+        "  \"frame_caption\": \"Una explicación corta (1 o 2 oraciones) del evento o anomalía detectada en esa fecha seleccionada.\"\n"
+        "}\n\n"
+        "Pautas:\n"
+        "- Explica los eventos principales, tendencias y anomalías en las variables activas.\n"
+        "- Si hay múltiples variables, analiza su correlación.\n"
+        "- Sé conciso, profesional y directo.\n"
+        "- La fecha seleccionada debe corresponder a un pico, caída crítica o punto de inflexión importante en las variables. Debe pertenecer obligatoriamente a la lista de fechas proporcionada."
     )
+
+    user_prompt = f"Analiza los siguientes datos y genera el reporte:\n\n{json.dumps(context_data, indent=2)}"
+
+    headers = {
+        "Authorization": f"Bearer {MINIMAX_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "minimax-m3",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.1,
+        "reasoning": True,
+        "stream": True
+    }
+
+    accumulated_raw = []
+    accumulated_reasoning = []
+
+    try:
+        # Aumentamos el timeout de lectura (read timeout) a 180s y conectamos con 15s de límite.
+        # Al habilitar stream=True, evitamos bloquear el thread y podemos ir procesando los tokens de razonamiento.
+        response = requests.post(
+            "https://api.minimax.io/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=(15, 180),
+            stream=True
+        )
+        response.raise_for_status()
+
+        for line in response.iter_lines():
+            if not line:
+                continue
+            line_str = line.decode("utf-8").strip()
+            if line_str.startswith("data: "):
+                data_str = line_str[6:].strip()
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk_json = json.loads(data_str)
+                    choices = chunk_json.get("choices", [])
+                    if choices:
+                        delta = choices[0].get("delta", {})
+                        
+                        # Extraer tokens de razonamiento si vienen por separado
+                        reasoning_chunk = delta.get("reasoning_content") or delta.get("reasoning")
+                        if reasoning_chunk:
+                            accumulated_reasoning.append(reasoning_chunk)
+                            if on_status_update:
+                                full_reason = "".join(accumulated_reasoning)
+                                preview = full_reason[-60:] if len(full_reason) > 60 else full_reason
+                                on_status_update(f"IA Pensando: ...{preview}")
+                                
+                        # Extraer tokens de contenido (que en M3 pueden contener <think>...</think> incrustados)
+                        content_chunk = delta.get("content")
+                        if content_chunk:
+                            accumulated_raw.append(content_chunk)
+                            
+                            # Si estamos en medio del tag <think>...</think>, lo reportamos al callback
+                            raw_str = "".join(accumulated_raw)
+                            if "<think>" in raw_str:
+                                # Si ya cerró el think, mostramos lo último pensado
+                                if "</think>" in raw_str:
+                                    think_part = raw_str.split("</think>")[0].replace("<think>", "")
+                                    preview = think_part[-60:] if len(think_part) > 60 else think_part
+                                    if on_status_update:
+                                        on_status_update(f"IA Pensando: ...{preview}")
+                                else:
+                                    # Sigue pensando
+                                    think_part = raw_str.split("<think>")[1]
+                                    preview = think_part[-60:] if len(think_part) > 60 else think_part
+                                    if on_status_update:
+                                        on_status_update(f"IA Pensando: ...{preview}")
+                except Exception as ex:
+                    print(f"[DEBUG EXCEPTION]: {ex}")
+                    pass
+
+        full_raw_content = "".join(accumulated_raw)
+        
+        # Separar el pensamiento (<think>...</think>) del JSON final
+        final_json_str = full_raw_content
+        if "<think>" in full_raw_content:
+            parts = full_raw_content.split("</think>")
+            if len(parts) > 1:
+                final_json_str = parts[1].strip()
+            else:
+                # Si por algún motivo no cerró el tag, removemos la apertura y todo lo que esté antes
+                final_json_str = full_raw_content.split("<think>")[0].strip()
+
+        if not final_json_str:
+            raise ValueError("No se recibió contenido estructurado desde la IA.")
+
+        data = json.loads(final_json_str)
+        
+        # Validation
+        if not all(k in data for k in ("report_html", "selected_date", "frame_caption")):
+            raise ValueError("El JSON devuelto por la IA no contiene todas las claves requeridas.")
+            
+        if data["selected_date"] not in dates:
+            raise ValueError(f"La fecha seleccionada '{data['selected_date']}' no está en la lista de fechas válidas.")
+            
+        return data
+    except Exception as e:
+        logger.error("Error en la llamada a la IA: %s", e)
+        raise RuntimeError(f"Error al generar reporte con IA: {str(e)}") from e
 
 
 # ---------------------------------------------------------------------------
@@ -569,7 +345,8 @@ def extract_frame_for_date(
             # Single-frame GIF — return that frame
             cache_path = cache_dir / f"{Path(normalized).stem}_frame.png"
             if cache_path.exists():
-                return str(cache_path)
+                if cache_path.stat().st_size > 2000 or not full_gif_path.exists():
+                    return str(cache_path)
             frame = frames[0]
             if frame.mode not in ("RGB", "RGBA"):
                 frame = frame.convert("RGB")
@@ -583,19 +360,40 @@ def extract_frame_for_date(
         stem = Path(normalized).stem
         cache_path = cache_dir / f"{stem}_frame_{frame_index}.png"
 
+        # Check if cache exists and is valid (>2KB, as buggy deltas are ~1.4KB)
+        # If the original GIF does not exist, we return the cached file anyway (covers mock tests)
         if cache_path.exists():
-            return str(cache_path)
+            if cache_path.stat().st_size > 2000 or not full_gif_path.exists():
+                return str(cache_path)
 
-        frame = frames[frame_index]
-        if frame.mode not in ("RGB", "RGBA"):
-            frame = frame.convert("RGB")
-        frame.save(str(cache_path), "PNG")
-        logger.debug("Frame %d extraído y cacheado: %s", frame_index, cache_path)
-        return str(cache_path)
+        return _composite_and_save_frame(full_gif_path, frame_index, cache_path)
 
     except Exception:
         # Any computation error → fallback to middle frame
         return extract_middle_frame(gif_path, cache_dir)
+
+
+def _composite_and_save_frame(full_gif_path: Path, frame_index: int, cache_path: Path) -> str:
+    """
+    Reconstructs the full frame of an optimized differential GIF by compositing frames
+    from index 0 up to frame_index, then saves it as a PNG file.
+    """
+    gif = PILImage.open(str(full_gif_path))
+    width, height = gif.size
+    
+    # Base RGBA canvas to paste frames on top
+    canvas = PILImage.new("RGBA", (width, height))
+    
+    for i, frame in enumerate(ImageSequence.Iterator(gif)):
+        frame_rgba = frame.convert("RGBA")
+        canvas.paste(frame_rgba, (0, 0), frame_rgba)
+        if i == frame_index:
+            break
+            
+    final_frame = canvas.convert("RGB")
+    final_frame.save(str(cache_path), "PNG")
+    logger.debug("Frame %d compositado y guardado en: %s", frame_index, cache_path)
+    return str(cache_path)
 
 
 def extract_middle_frame(gif_path: str, cache_dir: Path | None = None) -> str:
@@ -628,9 +426,11 @@ def extract_middle_frame(gif_path: str, cache_dir: Path | None = None) -> str:
     stem = Path(normalized).stem
     cache_path = cache_dir / f"{stem}_frame.png"
 
-    # Devolver caché si ya existe (evita reprocesar el GIF)
+    # Devolver caché si ya existe y es válido (evita reprocesar el GIF)
+    # If the original GIF does not exist, we return the cached file anyway (covers mock tests)
     if cache_path.exists():
-        return str(cache_path)
+        if cache_path.stat().st_size > 2000 or not full_gif_path.exists():
+            return str(cache_path)
 
     # Verificar que el GIF exista antes de procesarlo
     if not full_gif_path.exists():
@@ -640,17 +440,8 @@ def extract_middle_frame(gif_path: str, cache_dir: Path | None = None) -> str:
     gif = PILImage.open(str(full_gif_path))
     frames = list(ImageSequence.Iterator(gif))
     mid_index = len(frames) // 2
-    mid_frame = frames[mid_index]
 
-    # Convertir a RGB si es necesario (para PNG)
-    if mid_frame.mode not in ("RGB", "RGBA"):
-        mid_frame = mid_frame.convert("RGB")
-
-    # Guardar como PNG
-    mid_frame.save(str(cache_path), "PNG")
-    logger.debug("Frame extraído y cacheado: %s", cache_path)
-
-    return str(cache_path)
+    return _composite_and_save_frame(full_gif_path, mid_index, cache_path)
 
 
 def build_pdf_context(
@@ -661,7 +452,8 @@ def build_pdf_context(
     gif_frame_path: str | None,
     bbox: list[float],
     metadata: dict[str, Any],
-    anomaly_result: AnomalyResult | None = None,
+    report_html: str,
+    spatial_caption: str,
 ) -> dict[str, Any]:
     """
     Construye el dict de contexto para la plantilla Jinja2 del PDF.
@@ -674,7 +466,8 @@ def build_pdf_context(
         gif_frame_path: ruta absoluta al PNG del frame del GIF (o None)
         bbox: [minLon, minLat, maxLon, maxLat]
         metadata: {variableKeys}
-        anomaly_result: resultado del detector de anomalías (always passed now)
+        report_html: reporte en HTML generado por la IA
+        spatial_caption: pie de foto de la fecha de interés generado por la IA
 
     Returns:
         dict de contexto para renderizar la plantilla
@@ -697,14 +490,7 @@ def build_pdf_context(
     active_variable_keys = variable_keys or list(series_data.keys()) or ["ndvi"]
     labeled_variables = [variable_labels.get(key, key) for key in active_variable_keys]
 
-    if anomaly_result is None:
-        anomaly_result = AnomalyResult(events=[], fallback_reason=None)
-
-    primary_var = (
-        anomaly_result.events[0].variable_key
-        if anomaly_result and anomaly_result.events and anomaly_result.events[0].variable_key
-        else active_variable_keys[0]
-    )
+    primary_var = active_variable_keys[0]
     label = variable_labels.get(primary_var, primary_var)
 
     # Rango de fechas
@@ -757,85 +543,16 @@ def build_pdf_context(
         "interpretation": interpretation,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "report_objective": (
-            "Explicar de forma sencilla cuáles fueron los eventos principales "
-            "detectados en las variables activas y qué tan relevantes pueden ser para su revisión."
+            "Explicar mediante análisis inteligente los patrones, eventos y correlaciones "
+            "detectados en las variables activas del período seleccionado."
         ),
         "variable_labels": variable_labels,
         "labeled_variables": labeled_variables,
+        "report_html": report_html,
+        "spatial_caption": spatial_caption,
     }
-
-    context["fallback_reason"] = anomaly_result.fallback_reason
-
-    if anomaly_result.events:
-        # Top event for executive summary and frame selection
-        top_event = anomaly_result.events[0]
-        context["no_anomalies"] = False
-        context["top_event_type"] = top_event.type
-        context["top_event_date"] = top_event.start_date
-        context["top_event_severity"] = top_event.severity
-        context["summary_text"] = _generate_executive_summary(top_event)
-        context["spatial_caption"] = "Mapa en el momento del evento principal"
-        context["anomaly_events"] = [
-            {
-                "start_date": e.start_date,
-                "end_date": e.end_date,
-                "type": e.type,
-                "magnitude": e.magnitude,
-                "severity": e.severity,
-                "severity_label": {
-                    "Alta": "Muy importante",
-                    "Media": "Importante",
-                    "Baja": "Moderado",
-                }.get(e.severity, e.severity),
-                "variable_label": variable_labels.get(e.variable_key, e.variable_key),
-                "duration_days": e.duration_days,
-                "description": e.description,
-                "chart_annotation": e.chart_annotation,
-                "variable_key": e.variable_key,
-            }
-            for e in anomaly_result.events
-        ]
-    else:
-        # No anomalies
-        context["no_anomalies"] = True
-        context["top_event_type"] = ""
-        context["top_event_date"] = ""
-        context["top_event_severity"] = ""
-        context["summary_text"] = (
-            "No se detectaron anomalías significativas en el período analizado. "
-            "Los valores observados se encuentran dentro de los rangos esperados."
-        )
-        context["spatial_caption"] = "Vista del período analizado"
-        context["anomaly_events"] = []
 
     return context
-
-
-def _generate_executive_summary(event: AnomalyEvent) -> str:
-    """
-    Generate a 2-3 sentence executive summary from the top anomaly event.
-    """
-    type_labels = {
-        "spike": "aumento significativo",
-        "drop": "descenso significativo",
-        "sustained_shift": "desviación sostenida",
-    }
-    type_label = type_labels.get(event.type, event.type)
-    severity = event.severity.lower()
-
-    if event.type == "sustained_shift":
-        return (
-            f"Se detectó una {type_label} entre el {event.start_date} "
-            f"y el {event.end_date} (duración: {event.duration_days} días). "
-            f"La desviación máxima alcanzó {event.magnitude:.1f}σ con respecto "
-            f"a la media histórica, clasificada como severidad {severity}."
-        )
-    else:
-        return (
-            f"Se registró un {type_label} el {event.start_date} "
-            f"con una desviación de {event.magnitude:.1f}σ respecto a la "
-            f"media histórica, clasificada como severidad {severity}."
-        )
 
 
 # ---------------------------------------------------------------------------

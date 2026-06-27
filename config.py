@@ -54,6 +54,7 @@ DEBUG = _env_bool("FLASK_DEBUG", "false")
 GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-proyecto")
 CONAGUA_HIDROS_STATIONS = _env_list("CONAGUA_HIDROS_STATIONS", "BDCTB,SPTTB")
 CONAGUA_CLIMAS_STATIONS = _env_list("CONAGUA_CLIMAS_STATIONS", "BDCTB,SPTTB")
+MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Rutas del proyecto

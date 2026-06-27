@@ -31,6 +31,18 @@ def client() -> FlaskClient:
         yield client
 
 
+@pytest.fixture(autouse=True)
+def mock_backend_dependencies():
+    with patch("routes.export_routes.generate_ai_report") as mock_gen, \
+         patch("routes.export_routes.render_pdf_report", return_value=b"fake_pdf_bytes") as mock_render:
+        mock_gen.return_value = {
+            "report_html": "<h3>Report</h3>",
+            "selected_date": "2020-03-01",
+            "frame_caption": "Caption"
+        }
+        yield mock_gen, mock_render
+
+
 def _make_payload(
     chart_blob: str = "",
     gif_path: str = "",
