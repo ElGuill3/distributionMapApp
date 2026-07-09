@@ -40,7 +40,6 @@ import {
   fetchLocalStationLevel,
   fetchLocalStationsList,
   exportBundle,
-  exportPdfReport,
   downloadBlob,
   buildExportBundleZip,
   createProgressEventSource,
@@ -1499,9 +1498,6 @@ if (themeToggleBtn) {
 const btnExportAnalysis = document.getElementById(
   'btnExportAnalysis'
 ) as HTMLButtonElement | null;
-const btnExportPdfReport = document.getElementById(
-  'btnExportPdfReport'
-) as HTMLButtonElement | null;
 
 /**
  * Determina si hay datos de serie cargados para exportar.
@@ -1538,7 +1534,6 @@ function syncExportButton(): void {
   const exportToolbar = document.getElementById('export-toolbar');
 
   btnExportAnalysis.disabled = !hasData;
-  if (btnExportPdfReport) btnExportPdfReport.disabled = !hasData;
 
   // Toggle export toolbar visibility
   if (exportToolbar) {
@@ -1555,9 +1550,6 @@ function syncExportButton(): void {
 
   if (btnExportAnalysis) {
     btnExportAnalysis.title = hasData ? '' : baseTitle + bboxSuffix;
-  }
-  if (btnExportPdfReport) {
-    btnExportPdfReport.title = hasData ? '' : baseTitle + bboxSuffix;
   }
 }
 
@@ -1612,101 +1604,6 @@ btnExportAnalysis?.addEventListener('click', async () => {
     removeProgressIndicator(0);
     const msg = err instanceof Error ? err.message : 'Error generando la exportación.';
     showErrorModal('Error de exportación', msg);
-  }
-});
-
-// ---------------------------------------------------------------------------
-// Export PDF Report
-// ---------------------------------------------------------------------------
-
-btnExportPdfReport?.addEventListener('click', async () => {
-  const bbox = mapState.getBbox();
-  if (!bbox) {
-    showErrorModal(
-      'Sin área seleccionada',
-      'Dibujá un rectángulo en el mapa antes de exportar.'
-    );
-    return;
-  }
-
-  if (!canExport()) {
-    showErrorModal(
-      'Sin datos para exportar',
-      'Cargá al menos una variable antes de exportar.'
-    );
-    return;
-  }
-
-  const seriesDataA = mapState.getSeriesDataA();
-
-  // Recopilar datos
-  const allDates: string[] = [];
-  const allVariables: Record<string, (number | null)[]> = {};
-
-  for (const [key, data] of Object.entries(seriesDataA)) {
-    if (!data) continue;
-    if (allDates.length === 0) allDates.push(...data.dates);
-    allVariables[key] = [...data.values];
-  }
-
-  const variableKeys = Object.keys(allVariables);
-  const gifPath = mapState.getActiveGifPathA() || mapState.getActiveGifPathB() || '';
-
-  const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-  createProgressIndicator('Generando Reporte PDF', true);
-
-  const eventSource = createProgressEventSource(
-    taskId,
-    (progress, message) => {
-      const mappedProgress = progress >= 0 ? Math.min(95, progress) : -1;
-      updateProgressIndicator(mappedProgress, message);
-    },
-    () => {
-      /* ignore connection errors, let fetch handle timeout */
-    }
-  );
-
-  try {
-    updateProgressIndicator(5, 'Capturando gráfica como PNG...');
-    if (!ndviChartDiv) throw new Error('Chart div no encontrado.');
-    const chartBlob = await plotChartAsPng(ndviChartDiv);
-
-    updateProgressIndicator(8, 'Convirtiendo chart a base64...');
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const parts = result.split(',');
-        resolve(parts[1] ?? result);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(chartBlob);
-    });
-
-    const pdfBlob = await exportPdfReport({
-      chartBlob: base64,
-      gifPath,
-      seriesData: { dates: allDates, variables: allVariables },
-      bbox,
-      metadata: { variableKeys },
-      taskId,
-    });
-
-    eventSource.close();
-    updateProgressIndicator(95, 'Descargando PDF...');
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/[^0-9]/g, '')
-      .slice(0, 14);
-    downloadBlob(pdfBlob, `analysis_report_${timestamp}.pdf`);
-    updateProgressIndicator(100, '¡PDF listo!');
-    removeProgressIndicator(1500);
-  } catch (err) {
-    console.error(err);
-    eventSource.close();
-    removeProgressIndicator(0);
-    const msg = err instanceof Error ? err.message : 'Error generando el PDF.';
-    showErrorModal('Error de exportación PDF', msg);
   }
 });
 

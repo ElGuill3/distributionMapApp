@@ -168,50 +168,10 @@ class MuniQuerySchema(BaseModel):
     palette: str = "gee_flood"
 
 
-class ExportMetadataSchema(BaseModel):
-    """Schema para metadatos de exportación."""
-
-    model_config = {"populate_by_name": True}
-
-    variableKeys: list[str]  # noqa: N815
-
-
 class ExportBundleMetadataSchema(BaseModel):
     """Schema para metadatos específicos del export ZIP."""
 
     variableKeys: list[str]  # noqa: N815
-
-
-class PdfReportRequestSchema(BaseModel):
-    """
-    Schema para validar peticiones al endpoint de PDF report.
-
-    chart_blob: PNG del chart codificado en base64 (desde Plotly.toImage).
-    gif_path: ruta relativa al GIF animado, ej "gifs/ndvi_2020_abc123.gif".
-    series_data: datos de series temporales con dates y variables.
-    bbox: [minLon, minLat, maxLon, maxLat].
-    metadata: variableKeys.
-    """
-
-    model_config = {"populate_by_name": True}
-
-    chart_blob: str = Field(..., description="base64-encoded PNG from Plotly chart")
-    gif_path: str = Field(
-        ..., description="Relative path to GIF, e.g. gifs/ndvi_2020_abc123.gif"
-    )
-    series_data: "SeriesDataSchema"
-    bbox: list[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
-
-    @field_validator("bbox")
-    @classmethod
-    def bbox_must_have_4_elements(cls, v: list[float]) -> list[float]:
-        if len(v) != 4:
-            raise ValueError(
-                "bbox must have exactly 4 elements [minLon, minLat, maxLon, maxLat]"
-            )
-        return v
-
-    metadata: ExportMetadataSchema
 
 
 class SeriesDataSchema(BaseModel):
