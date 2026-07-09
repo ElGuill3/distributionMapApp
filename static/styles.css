@@ -2248,24 +2248,17 @@ html.theme-transitioning #chart-b {
 .chart-placeholder-icon {
   display: grid;
   place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  font-size: 1.05rem;
-  border-radius: 999px;
-  color: var(--btn-primary-bg);
-  background: color-mix(in srgb, var(--btn-primary-bg) 10%, white);
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--btn-primary-bg) 12%, transparent);
+  color: var(--gray-500);
+  opacity: 0.35;
+  margin-bottom: var(--space-3);
   transition:
-    background-color 220ms ease,
     color 220ms ease,
-    box-shadow 220ms ease,
-    opacity 220ms ease,
-    transform 220ms ease;
+    opacity 220ms ease;
 }
 
 .chart-placeholder-icon svg {
-  width: var(--chart-placeholder-icon-size, 1.5rem);
-  height: var(--chart-placeholder-icon-size, 1.5rem);
+  width: 3rem;
+  height: 3rem;
 }
 
 .chart-placeholder-copy {
