@@ -178,7 +178,7 @@ async function initializeLocalStations(): Promise<void> {
               `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
             `</div>` +
             `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
-              `<span data-lucide="zap" style="width: 12px; height: 12px;"></span> Ver datos 2000–2024` +
+              `Ver datos 2000–2024` +
             `</a>` +
           `</div>`
         );
