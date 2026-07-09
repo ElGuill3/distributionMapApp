@@ -58,6 +58,13 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 }).addTo(map);
 
+map.on('popupopen', (e) => {
+  const container = e.popup.getElement();
+  if (container) {
+    initLucideIcons(container);
+  }
+});
+
 buildColorbars();
 
 // ---------------------------------------------------------------------------
@@ -156,7 +163,9 @@ async function initializeLocalStations(): Promise<void> {
         const [lat, lon] = info.coords;
         const icon = isHidro ? waveIcon : dropIcon;
         const badgeClass = isHidro ? 'station-badge-hidro' : 'station-badge-clima';
-        const badgeLabel = isHidro ? '🌊 Hidro' : '💧 Clima';
+        const badgeLabel = isHidro
+          ? '<span data-lucide="waves" style="width: 12px; height: 12px;"></span> Hidro'
+          : '<span data-lucide="droplet" style="width: 12px; height: 12px;"></span> Clima';
         const metricDesc = isHidro ? 'Nivel del río' : 'Precipitación';
         const marker = L.marker(L.latLng(lat, lon), { icon }).bindPopup(
           `<div class="station-popup-content">` +
@@ -165,11 +174,11 @@ async function initializeLocalStations(): Promise<void> {
             `</div>` +
             `<h3 class="station-popup-title">${info.station_name || info.name}</h3>` +
             `<div class="station-popup-meta">` +
-              `<span class="station-popup-meta-item">📍 ${info.municipio || 'Sin Municipio'}</span>` +
-              `<span class="station-popup-meta-item">📊 ${metricDesc}</span>` +
+              `<span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${info.municipio || 'Sin Municipio'}</span>` +
+              `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
             `</div>` +
             `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
-              `⚡ Ver datos 2000–2024` +
+              `<span data-lucide="zap" style="width: 12px; height: 12px;"></span> Ver datos 2000–2024` +
             `</a>` +
           `</div>`
         );
@@ -581,9 +590,6 @@ const topbarLayerGif = document.getElementById(
 ) as HTMLButtonElement | null;
 const topbarLayerStations = document.getElementById(
   'topbar-layer-stations'
-) as HTMLButtonElement | null;
-const topbarLayerFlood = document.getElementById(
-  'topbar-layer-flood'
 ) as HTMLButtonElement | null;
 
 // PR2: Topbar opacity slider
@@ -1137,7 +1143,6 @@ function toggleFloodLayer(show: boolean): void {
     }
   }
   layerVisibility.flood = show;
-  if (topbarLayerFlood) syncLayerButtonState(topbarLayerFlood, show);
 }
 
 topbarLayerGif?.addEventListener('click', () => {
@@ -1146,10 +1151,6 @@ topbarLayerGif?.addEventListener('click', () => {
 
 topbarLayerStations?.addEventListener('click', () => {
   toggleStationsLayer(!layerVisibility.stations);
-});
-
-topbarLayerFlood?.addEventListener('click', () => {
-  toggleFloodLayer(!layerVisibility.flood);
 });
 
 // ---------------------------------------------------------------------------

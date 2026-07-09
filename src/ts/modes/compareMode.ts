@@ -33,6 +33,7 @@ import {
   closeWarningModal,
 } from '../ui/progress.js';
 import { showFieldError } from '../ui/fieldErrors.js';
+import { initLucideIcons } from '../ui/icons.js';
 import { translateBackendError } from '../errorMap.js';
 import { plotAllSelectedSeries } from '../ui/chart.js';
 import { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
@@ -245,6 +246,13 @@ export function initMapB(): void {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(newMapB);
 
+  newMapB.on('popupopen', (e) => {
+    const container = e.popup.getElement();
+    if (container) {
+      initLucideIcons(container);
+    }
+  });
+
   newMapB.on('moveend', () => {
     if (mapState.getMapBSyncLock() || !mapState.getMapB()) return;
     mapState.setMapBSyncLock(true);
@@ -304,7 +312,9 @@ export function initMapB(): void {
       const isHidro = info.type === 'hidrometrica' || id.endsWith('_hidro');
       const icon = isHidro ? waveIconB : dropIconB;
       const badgeClass = isHidro ? 'station-badge-hidro' : 'station-badge-clima';
-      const badgeLabel = isHidro ? '🌊 Hidro' : '💧 Clima';
+      const badgeLabel = isHidro
+        ? '<span data-lucide="waves" style="width: 12px; height: 12px;"></span> Hidro'
+        : '<span data-lucide="droplet" style="width: 12px; height: 12px;"></span> Clima';
       const metricDesc = isHidro ? 'Nivel del río' : 'Precipitación';
       const marker = L.marker(L.latLng(lat, lon), { icon })
         .bindPopup(
@@ -314,11 +324,11 @@ export function initMapB(): void {
             `</div>` +
             `<h3 class="station-popup-title">${info.station_name || info.name}</h3>` +
             `<div class="station-popup-meta">` +
-              `<span class="station-popup-meta-item">📍 ${info.municipio || 'Sin Municipio'}</span>` +
-              `<span class="station-popup-meta-item">📊 ${metricDesc}</span>` +
+              `<span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${info.municipio || 'Sin Municipio'}</span>` +
+              `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
             `</div>` +
             `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
-              `⚡ Ver datos 2000–2024` +
+              `<span data-lucide="zap" style="width: 12px; height: 12px;"></span> Ver datos 2000–2024` +
             `</a>` +
           `</div>`
         )
