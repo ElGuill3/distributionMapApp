@@ -2263,6 +2263,11 @@ html.theme-transitioning #chart-b {
     transform 220ms ease;
 }
 
+.chart-placeholder-icon svg {
+  width: var(--chart-placeholder-icon-size, 1.5rem);
+  height: var(--chart-placeholder-icon-size, 1.5rem);
+}
+
 .chart-placeholder-copy {
   display: flex;
   flex-direction: column;
