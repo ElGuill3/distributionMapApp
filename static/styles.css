@@ -2245,21 +2245,7 @@ html.theme-transitioning #chart-b {
   max-width: 360px;
 }
 
-.chart-placeholder-icon {
-  display: grid;
-  place-items: center;
-  color: var(--gray-500);
-  opacity: 0.35;
-  margin-bottom: var(--space-3);
-  transition:
-    color 220ms ease,
-    opacity 220ms ease;
-}
 
-.chart-placeholder-icon svg {
-  width: 3rem;
-  height: 3rem;
-}
 
 .chart-placeholder-copy {
   display: flex;
