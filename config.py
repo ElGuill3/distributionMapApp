@@ -275,7 +275,6 @@ RATE_LIMITS = {
     "gif": os.getenv("RATE_LIMIT_GIF", "30/minute"),  # Endpoints *-gif-bbox (costosos: llaman GEE)
     "timeseries": os.getenv("RATE_LIMIT_TIMESERIES", "60/minute"),  # Endpoints *-timeseries-bbox
     "export": os.getenv("RATE_LIMIT_EXPORT", "10/minute"),  # Endpoint /api/export/bundle (POST, genera ZIP)
-    "pdf-export": os.getenv("RATE_LIMIT_PDF_EXPORT", "10/minute"),  # Endpoint /api/export/pdf-report (POST, genera PDF)
     "flood": os.getenv("RATE_LIMIT_FLOOD", "60/minute"),  # Endpoint /api/flood-risk-municipio
     "station": os.getenv("RATE_LIMIT_STATION", "60/minute"),  # Endpoint /api/local-station-level-range
 }

@@ -61,15 +61,10 @@ The project includes a module to automate fetching local data directly from CONA
 - **Run on Startup (Bootstrap)**: Runs all configured scrapers immediately upon starting the container to ensure data is up to date.
 - **Atomic Writes**: FTP downloads are saved atomically to prevent data corruption if the connection is interrupted.
 
-### Data Export and PDF Reports
+### Data Export
 
 To facilitate offline analysis, the system offers:
 - **Analysis ZIP**: Exports a ZIP package containing the active time series data in CSV format, along with the animation GIFs and analysis metadata.
-- **PDF Report**: Generates styled, professional-grade PDF reports using `WeasyPrint`. The report automatically includes:
-  - The Plotly time-series chart exported as an image.
-  - A frame from the middle of the corresponding GIF animation.
-  - Descriptive statistics of the variables (minimum, maximum, mean, standard deviation).
-  - Automatic anomaly detection in the satellite time series (persistent changes, unusual spikes, etc.).
 
 ### Operation Modes
 
@@ -110,7 +105,7 @@ To facilitate offline analysis, the system offers:
                                     │ HTTP / SSE
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                        Flask Backend (Python 3)                        │
-│    routes/  →  gee/  →  services/ (incl. weasyprint for PDF)          │
+│    routes/  →  gee/  →  services/                                     │
 └─────────────┬──────────────────────────────────────────┬───────────────┘
               │ earthengine-api                          │ Shared Volume
 ┌─────────────▼─────────────┐              ┌─────────────▼───────────────┐
@@ -457,13 +452,12 @@ distributionMapApp/
 │   ├── flood_routes.py       # GET /api/flood-risk-municipio
 │   ├── station_routes.py     # GET /api/local-station-level-range
 │   ├── progress_routes.py    # GET /api/gif-progress/<task_id> (SSE)
-│   └── export_routes.py      # POST /api/export/bundle and /api/export/pdf-report
+│   └── export_routes.py      # POST /api/export/bundle
 │
 ├── services/
 │   ├── gif_service.py        # Downloads GEE GIFs, annotates with PIL, cache & cleanup
 │   ├── station_service.py    # Reads and preprocesses local station CSVs
-│   ├── export_service.py     # Decoupled ZIP bundle exports (CSV + GIFs + metadata)
-│   └── pdf_report_service.py # Generates PDFs via WeasyPrint, statistics and anomalies
+│   └── export_service.py     # Decoupled ZIP bundle exports (CSV + GIFs + metadata)
 │
 ├── data/
 │   ├── mapa_riesgo/
@@ -517,7 +511,6 @@ distributionMapApp/
 | `GET /api/flood-risk-municipio` | `GET` | `muni` | `{ mapUrl, bbox }` |
 | `GET /api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, dates, level_m[] }` |
 | `POST /api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | ZIP Archive (CSV data + GIFs + metadata) |
-| `POST /api/export/pdf-report` | `POST` | `chart_blob`, `gif_path`, `seriesData`, `bbox`, `metadata` | PDF File (styled report with anomalies) |
 | `GET /api/docs` | `GET` | — | Interactive Scalar UI API documentation |
 | `GET /api/docs/openapi.yaml` | `GET` | — | OpenAPI 3.1.0 specification in YAML format |
 

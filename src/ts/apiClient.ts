@@ -330,52 +330,6 @@ export async function exportBundle(options: ExportBundleOptions): Promise<Blob> 
 }
 
 // ---------------------------------------------------------------------------
-// PDF Report Export
-// ---------------------------------------------------------------------------
-
-export interface ExportPdfReportOptions {
-  chartBlob: string;
-  gifPath: string;
-  seriesData: { dates: string[]; variables: Record<string, (number | null)[]> };
-  bbox: [number, number, number, number];
-  metadata: { variableKeys: string[] };
-  taskId?: string;
-}
-
-export async function exportPdfReport(options: ExportPdfReportOptions): Promise<Blob> {
-  const { chartBlob, gifPath, seriesData, bbox, metadata, taskId } = options;
-
-  const payload = {
-    chart_blob: chartBlob,
-    gif_path: gifPath,
-    series_data: seriesData,
-    bbox,
-    metadata,
-  };
-
-  const url = taskId ? `/api/export/pdf-report?task_id=${encodeURIComponent(taskId)}` : '/api/export/pdf-report';
-
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!resp.ok) {
-    let errorMsg = 'Error generating PDF report';
-    try {
-      const errData = await resp.json();
-      errorMsg = errData.error ?? errorMsg;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(errorMsg);
-  }
-
-  return resp.blob();
-}
-
-// ---------------------------------------------------------------------------
 // Client-side ZIP assembly
 // ---------------------------------------------------------------------------
 

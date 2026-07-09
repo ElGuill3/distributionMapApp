@@ -61,15 +61,10 @@ El proyecto incluye un módulo para automatizar la obtención de datos locales d
 - **Ejecución al inicio (Bootstrap)**: Corre inmediatamente todos los scrapers configurados al iniciar el contenedor para asegurar que los datos estén al día.
 - **Escritura Atómica**: Las descargas FTP se guardan de forma atómica para evitar corrupción de datos si la conexión se interrumpe.
 
-### Exportación de Datos y Reportes PDF
+### Exportación de Datos
 
 Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 - **ZIP de Análisis**: Exporta un paquete ZIP con los datos de las series temporales activas en formato CSV, junto a los GIFs de animación y metadatos del análisis.
-- **Reporte en PDF**: Genera reportes PDF estilizados de nivel profesional utilizando `WeasyPrint`. El reporte incluye de forma automatizada:
-  - La gráfica temporal de Plotly exportada como imagen.
-  - Un fotograma (frame) del medio de la animación del GIF correspondiente.
-  - Estadísticas descriptivas de las variables (mínimo, máximo, media, desviación estándar).
-  - Detección automática de anomalías en las series temporales satelitales (cambios persistentes, picos inusuales, etc.).
 
 ### Modos de operación
 
@@ -110,7 +105,7 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
                                     │ HTTP / SSE
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                       Backend Flask (Python 3)                         │
-│    routes/  →  gee/  →  services/ (incl. weasyprint para PDF)          │
+│    routes/  →  gee/  →  services/                                       │
 └─────────────┬──────────────────────────────────────────┬───────────────┘
               │ earthengine-api                          │ Shared Volume
 ┌─────────────▼─────────────┐              ┌─────────────▼───────────────┐
@@ -262,7 +257,6 @@ cp .env.example .env
 | `RATE_LIMIT_GIF` | `30/minute` | Límite de peticiones para generación de GIFs. |
 | `RATE_LIMIT_TIMESERIES` | `60/minute` | Límite de peticiones para descarga de series temporales. |
 | `RATE_LIMIT_EXPORT` | `10/minute` | Límite de peticiones para exportación de ZIPs. |
-| `RATE_LIMIT_PDF_EXPORT` | `10/minute` | Límite de peticiones para generación de reportes PDF. |
 | `RATE_LIMIT_FLOOD` | `60/minute` | Límite de peticiones para mapas de riesgo. |
 | `RATE_LIMIT_STATION` | `60/minute` | Límite de peticiones para datos de estaciones locales. |
 | `GIF_DOWNLOAD_TIMEOUT_S` | `120` | Timeout para la descarga de GIFs desde Earth Engine. |
@@ -471,13 +465,12 @@ distributionMapApp/
 │   ├── flood_routes.py       # GET /api/flood-risk-municipio
 │   ├── station_routes.py     # GET /api/local-station-level-range
 │   ├── progress_routes.py    # GET /api/gif-progress/<task_id>  (SSE)
-│   └── export_routes.py      # POST /api/export/bundle y /api/export/pdf-report
+│   └── export_routes.py      # POST /api/export/bundle
 │
 ├── services/
 │   ├── gif_service.py        # Descarga GIF desde GEE, anotación con PIL, caché, limpieza
 │   ├── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
-│   ├── export_service.py     # Generación de exportación ZIP (CSV + GIFs + metadatos)
-│   └── pdf_report_service.py # Generación de PDFs con WeasyPrint, estadísticas y anomalías
+│   └── export_service.py     # Generación de exportación ZIP (CSV + GIFs + metadatos)
 │
 ├── data/
 │   ├── mapa_riesgo/
@@ -531,7 +524,6 @@ distributionMapApp/
 | `GET /api/flood-risk-municipio` | `GET` | `muni` | `{ mapUrl, bbox }` |
 | `GET /api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, dates, level_m[] }` |
 | `POST /api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | Archivo ZIP (datos CSV + GIFs + metadatos) |
-| `POST /api/export/pdf-report` | `POST` | `chart_blob`, `gif_path`, `seriesData`, `bbox`, `metadata` | Archivo PDF (reporte con estadísticas y anomalías) |
 | `GET /api/docs` | `GET` | — | Interfaz de Scalar UI con la documentación interactiva de la API |
 | `GET /api/docs/openapi.yaml` | `GET` | — | Especificación OpenAPI 3.1.0 del sistema en formato YAML |
 

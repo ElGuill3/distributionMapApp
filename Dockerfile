@@ -3,14 +3,9 @@ FROM python:3.11-slim AS base
 
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias para WeasyPrint y compilación
+# Instalar dependencias del sistema necesarias para compilación
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libcairo2 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libgdk-pixbuf-2.0-0 \
-    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar uv desde la imagen oficial
