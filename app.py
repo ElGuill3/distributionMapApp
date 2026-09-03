@@ -14,6 +14,7 @@ import logging
 import sys
 
 import ee
+import requests
 from flask import (
     Flask,
     Response,
@@ -23,7 +24,14 @@ from flask import (
     send_from_directory,
 )
 
-from config import BASE_DIR, CACHE_POLICIES, DEBUG, GEE_PROJECT, STATIC_DIR
+from config import (
+    BASE_DIR,
+    BDCTB_FORECAST_API_BASE_URL,
+    CACHE_POLICIES,
+    DEBUG,
+    GEE_PROJECT,
+    STATIC_DIR,
+)
 from extensions import limiter
 
 # ---------------------------------------------------------------------------
@@ -75,11 +83,11 @@ limiter.init_app(app)
 @app.errorhandler(429)
 def rate_limit_exceeded(e):
     """Handler personalizado para respuestas 429 — JSON consistente con Retry-After."""
-    return jsonify(
-        {
-            "error": f"Rate limit exceeded. Retry after {int(e.description)}s.",
-        }
-    ), 429
+    try:
+        message = f"Rate limit exceeded. Retry after {int(e.description)}s."
+    except (TypeError, ValueError):
+        message = f"Rate limit exceeded: {e.description}."
+    return jsonify({"error": message}), 429
 
 
 app.register_blueprint(gif_bp)
@@ -132,6 +140,37 @@ def inject_cache_headers(response: Response) -> Response:
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.get("/api/v1/forecasts/bdctb")
+@limiter.limit("60/minute")
+def bdctb_forecast():
+    """Proxy the local forecast service without exposing it to browsers."""
+    upstream_url = f"{BDCTB_FORECAST_API_BASE_URL.rstrip('/')}/api/v1/forecasts/bdctb"
+    try:
+        with requests.get(
+            upstream_url,
+            headers={"Accept": "application/json"},
+            timeout=(2, 5),
+            allow_redirects=False,
+            stream=True,
+        ) as upstream:
+            if upstream.status_code not in (200, 503):
+                return jsonify({"error": "Forecast service returned an error."}), 502
+
+            body = bytearray()
+            for chunk in upstream.iter_content(chunk_size=8192):
+                body.extend(chunk)
+                if len(body) > 64 * 1024:
+                    return jsonify({"error": "Forecast response is too large."}), 502
+    except requests.Timeout:
+        return jsonify({"error": "Forecast service timed out."}), 504
+    except requests.RequestException:
+        return jsonify({"error": "Forecast service is unavailable."}), 502
+
+    return Response(
+        bytes(body), status=upstream.status_code, mimetype="application/json"
+    )
 
 
 @app.route("/static/<path:filename>")

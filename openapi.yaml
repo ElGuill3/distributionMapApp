@@ -1145,6 +1145,50 @@ paths:
       x-cache-policy:
         max_age: 0
         etag: false
+  /api/v1/forecasts/bdctb:
+    get:
+      operationId: getBdctbForecast
+      summary: Latest cached BDCTB modeled forecast
+      description: Returns the latest valid read-only BDCTB forecast cache through
+        the bounded same-origin proxy. This endpoint never starts acquisition,
+        inference, or provider submission.
+      tags:
+      - Forecast
+      responses:
+        '200':
+          description: Strict modeled forecast with ordered h1/h3/h7 quantiles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BdctbForecastResponse'
+        '429':
+          description: Rate limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: The upstream response was unavailable, unexpected, or too large.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BdctbForecastProxyErrorResponse'
+        '503':
+          description: No valid cached forecast is currently available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BdctbForecastUnavailableResponse'
+        '504':
+          description: The bounded upstream request timed out.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BdctbForecastProxyErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 0
+        etag: false
 components:
   schemas:
     BBoxSchema:
@@ -1330,6 +1374,181 @@ components:
       - variableKeys
       title: ExportMetadataSchema
       type: object
+    BdctbForecastResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        schema_version:
+          type: string
+          const: bdctb-forecast/v1
+        station:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              const: BDCTB
+            name:
+              type: string
+              minLength: 1
+          required:
+          - code
+          - name
+        model_version:
+          type: string
+          const: BDCTB Exogenous Quantile Gradient Boosting v1
+        issue_time:
+          type: string
+          format: date-time
+        generated_at:
+          type: string
+          format: date-time
+        status:
+          type: object
+          additionalProperties: false
+          properties:
+            availability:
+              type: string
+              const: available
+            freshness:
+              type: string
+              enum:
+              - fresh
+              - stale
+            age_seconds:
+              type: integer
+              minimum: 0
+            stale_after_seconds:
+              type: integer
+              minimum: 1
+            evaluated_at:
+              type: string
+              format: date-time
+          required:
+          - availability
+          - freshness
+          - age_seconds
+          - stale_after_seconds
+          - evaluated_at
+        forecasts:
+          type: array
+          minItems: 3
+          maxItems: 3
+          prefixItems:
+          - $ref: '#/components/schemas/BdctbForecastH1Point'
+          - $ref: '#/components/schemas/BdctbForecastH3Point'
+          - $ref: '#/components/schemas/BdctbForecastH7Point'
+          items: false
+        unit:
+          type: string
+          const: m
+        data_kind:
+          type: string
+          const: modeled_not_observed
+        warning:
+          type: string
+          const: Modeled river-stage forecast, not an observation or an official warning.
+        provenance:
+          type: string
+          enum:
+          - synthetic_demo
+          - model_run
+        scientific_use:
+          type: string
+          enum:
+          - prohibited
+          - model_output
+      required:
+      - schema_version
+      - station
+      - model_version
+      - issue_time
+      - generated_at
+      - status
+      - forecasts
+      - unit
+      - data_kind
+      - warning
+      - provenance
+      - scientific_use
+    BdctbForecastPoint:
+      type: object
+      additionalProperties: false
+      properties:
+        horizon_days:
+          type: integer
+        target_date:
+          type: string
+          format: date
+        q10:
+          type: number
+        q50:
+          type: number
+        q90:
+          type: number
+      required:
+      - horizon_days
+      - target_date
+      - q10
+      - q50
+      - q90
+    BdctbForecastH1Point:
+      allOf:
+      - $ref: '#/components/schemas/BdctbForecastPoint'
+      - type: object
+        properties:
+          horizon_days:
+            const: 1
+    BdctbForecastH3Point:
+      allOf:
+      - $ref: '#/components/schemas/BdctbForecastPoint'
+      - type: object
+        properties:
+          horizon_days:
+            const: 3
+    BdctbForecastH7Point:
+      allOf:
+      - $ref: '#/components/schemas/BdctbForecastPoint'
+      - type: object
+        properties:
+          horizon_days:
+            const: 7
+    BdctbForecastUnavailableResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        schema_version:
+          type: string
+          const: bdctb-forecast-error/v1
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              const: forecast_unavailable
+            message:
+              type: string
+              const: No valid cached BDCTB forecast is available.
+          required:
+          - code
+          - message
+      required:
+      - schema_version
+      - error
+    BdctbForecastProxyErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+          enum:
+          - Forecast service returned an error.
+          - Forecast response is too large.
+          - Forecast service is unavailable.
+          - Forecast service timed out.
+      required:
+      - error
     ErrorResponse:
       type: object
       description: Standard error response format.
