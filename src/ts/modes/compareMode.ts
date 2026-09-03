@@ -40,6 +40,7 @@ import { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
 import { setLucideIcon } from '../ui/icons.js';
 import * as normalMode from './normalMode.js';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
+import { bdctbForecastAction } from '../ui/bdctbForecast.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
 declare const L: typeof import('leaflet');
@@ -330,6 +331,7 @@ export function initMapB(): void {
             `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
               `Ver datos 2000–2024` +
             `</a>` +
+            bdctbForecastAction(id, isHidro) +
           `</div>`
         )
         .addTo(newMapB);
