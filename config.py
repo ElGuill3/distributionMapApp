@@ -9,6 +9,7 @@ Variables de entorno (todas con valores por defecto):
   BASE_DIR_OVERRIDE      - Ruta base alternativa para despliegues (opcional)
   GIF_MAX_AGE_MINUTES    - Edad máxima de GIFs antes de limpieza (default: 60)
   GIF_CLEANUP_INTERVAL_S - Intervalo del daemon de limpieza en segundos (default: 600)
+  BDCTB_FORECAST_API_BASE_URL - URL base de la API local de pronóstico
 """
 
 import os
@@ -55,6 +56,9 @@ GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-proyecto")
 CONAGUA_HIDROS_STATIONS = _env_list("CONAGUA_HIDROS_STATIONS", "BDCTB,SPTTB")
 CONAGUA_CLIMAS_STATIONS = _env_list("CONAGUA_CLIMAS_STATIONS", "BDCTB,SPTTB")
 MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY", "")
+BDCTB_FORECAST_API_BASE_URL = os.getenv(
+    "BDCTB_FORECAST_API_BASE_URL", "http://127.0.0.1:8765"
+)
 
 # ---------------------------------------------------------------------------
 # Rutas del proyecto
@@ -262,6 +266,7 @@ CACHE_POLICIES = {
     "/api/water-timeseries": (300, True),
     "/api/flood-risk": (86400, False),  # Mapa riesgo — 24h, sin ETag
     "/api/local-station": (600, True),  # Estaciones — 10 min
+    "/api/v1/forecasts/bdctb": (0, False),  # Pronóstico — no cachear
     "/api/export": (0, False),  # Export ZIP — no cachear
 }
 

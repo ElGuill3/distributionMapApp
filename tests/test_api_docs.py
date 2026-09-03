@@ -73,12 +73,52 @@ class TestOpenApiSpec:
         assert "title" in spec["info"]
         assert "version" in spec["info"]
 
-    def test_openapi_yaml_has_14_paths(self):
-        """The spec documents exactly 14 endpoints."""
+    def test_openapi_yaml_has_15_paths(self):
+        """The spec documents exactly 15 endpoints."""
         with open(OPENAPI_YAML) as f:
             spec = yaml.safe_load(f)
         paths = spec.get("paths", {})
-        assert len(paths) == 14, f"Expected 14 paths, got {len(paths)}: {list(paths.keys())}"
+        assert len(paths) == 15, (
+            f"Expected 15 paths, got {len(paths)}: {list(paths.keys())}"
+        )
+
+    def test_bdctb_forecast_proxy_contract_is_closed(self):
+        with open(OPENAPI_YAML) as f:
+            spec = yaml.safe_load(f)
+
+        operation = spec["paths"]["/api/v1/forecasts/bdctb"]["get"]
+        assert set(operation["responses"]) == {"200", "429", "502", "503", "504"}
+        schemas = spec["components"]["schemas"]
+        for name in (
+            "BdctbForecastResponse",
+            "BdctbForecastUnavailableResponse",
+            "BdctbForecastProxyErrorResponse",
+        ):
+            assert schemas[name]["additionalProperties"] is False
+        assert set(
+            schemas["BdctbForecastProxyErrorResponse"]["properties"]["error"][
+                "enum"
+            ]
+        ) == {
+            "Forecast service returned an error.",
+            "Forecast response is too large.",
+            "Forecast service is unavailable.",
+            "Forecast service timed out.",
+        }
+        assert schemas["BdctbForecastResponse"]["required"] == [
+            "schema_version",
+            "station",
+            "model_version",
+            "issue_time",
+            "generated_at",
+            "status",
+            "forecasts",
+            "unit",
+            "data_kind",
+            "warning",
+            "provenance",
+            "scientific_use",
+        ]
 
     def test_openapi_yaml_has_components_schemas(self):
         """The spec has component schemas including ErrorResponse."""
