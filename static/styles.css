@@ -1414,6 +1414,119 @@ body.compare-mode-active #map-panel-b {
   transform: scale(0.98);
 }
 
+.station-forecast-link {
+  margin-top: 0.4rem;
+  background: #0e7490;
+}
+
+.forecast-dialog {
+  width: min(760px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 0;
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-lg);
+  color: var(--surface-fg);
+  background: var(--surface-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.forecast-dialog::backdrop {
+  background: var(--modal-backdrop);
+  backdrop-filter: blur(3px);
+}
+
+.forecast-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem 0.8rem;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.forecast-dialog-header h2,
+.forecast-eyebrow {
+  margin: 0;
+}
+
+.forecast-eyebrow {
+  color: #0e7490;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.forecast-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.forecast-state,
+.forecast-content {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.forecast-state:empty {
+  display: none;
+}
+
+.forecast-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  color: var(--gray-400);
+  font-size: 0.78rem;
+}
+
+.forecast-fresh,
+.forecast-stale,
+.forecast-demo {
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.4rem;
+  font-weight: 700;
+}
+
+.forecast-fresh { background: rgba(22, 163, 74, 0.12); color: #15803d; }
+.forecast-stale { background: rgba(217, 119, 6, 0.14); color: #b45309; }
+.forecast-demo { background: rgba(220, 38, 38, 0.1); color: #b91c1c; }
+
+.forecast-chart {
+  width: 100%;
+  height: clamp(280px, 48vh, 430px);
+  margin-top: 0.75rem;
+}
+
+.forecast-warning {
+  margin: 0.75rem 0 0;
+  padding: 0.7rem 0.8rem;
+  border-left: 3px solid #d97706;
+  background: rgba(217, 119, 6, 0.1);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 540px) {
+  .forecast-dialog {
+    width: 100vw;
+    max-width: none;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .forecast-dialog-header,
+  .forecast-state,
+  .forecast-content {
+    padding-left: 0.8rem;
+    padding-right: 0.8rem;
+  }
+  .forecast-chart { height: 300px; }
+}
+
 /* Sobrescribir contenedor nativo de Leaflet Popup para soportar modo oscuro y tema premium */
 .leaflet-popup-content-wrapper {
   background-color: var(--sidebar-bg) !important;

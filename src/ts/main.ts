@@ -35,6 +35,7 @@ import { translateBackendError } from './errorMap.js';
 import { plotAllSelectedSeries, isDarkModeActive } from './ui/chart.js';
 import { initLucideIcons, setLucideIcon } from './ui/icons.js';
 import { seasonToDates } from './utils/seasonDates.js';
+import { bdctbForecastAction, openBdctbForecastDialog } from './ui/bdctbForecast.js';
 
 import {
   fetchLocalStationLevel,
@@ -180,6 +181,7 @@ async function initializeLocalStations(): Promise<void> {
             `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
               `Ver datos 2000–2024` +
             `</a>` +
+            bdctbForecastAction(id, isHidro) +
           `</div>`
         );
         marker.addTo(map);
@@ -1397,6 +1399,14 @@ export function toggleModeBanner(
 // ---------------------------------------------------------------------------
 
 document.addEventListener('click', e => {
+  const forecastLink = (e.target as HTMLElement).closest<HTMLElement>(
+    '.station-forecast-link'
+  );
+  if (forecastLink) {
+    e.preventDefault();
+    void openBdctbForecastDialog();
+    return;
+  }
   const link = (e.target as HTMLElement).closest<HTMLElement>(
     '.station-full-data-link'
   );
