@@ -4,6 +4,50 @@
 
 Aplicación web interactiva para visualizar animaciones y series temporales de variables hidrometeorológicas sobre el estado de Tabasco, México, usando Google Earth Engine como principal fuente de datos satelitales.
 
+## Inicio rápido local con pronóstico automático
+
+Desde la raíz de este repositorio, ejecute exactamente:
+
+```bash
+.venv/bin/python scripts/run_local_forecast_stack.py
+```
+
+El comando usa exclusivamente los entornos locales existentes y espera el
+repositorio del modelo en `../distributionMapApp-model-research`. Para otra
+ubicación, agregue `--model-repo /ruta/al/repositorio`. No instala dependencias
+ni modifica credenciales.
+
+Antes de ejecutarlo, prepare:
+
+- `.venv/` y `node_modules/` de esta aplicación, sin ejecutar instalaciones
+  desde el supervisor.
+- `.venv/` del repositorio del modelo con sus dependencias de modelo, GEFS y
+  GloFAS.
+- `GEE_PROJECT` y una autorización local existente de Earth Engine.
+- `BDCTB_MODEL_BUNDLE` con la ruta del bundle calibrado-v1 verificado.
+- `BDCTB_GEFS_WEIGHTS` con la ruta del YAML `gefs-spatial-weights/v2`.
+- Credenciales de GloFAS/EWDS ya configuradas externamente.
+
+El supervisor valida primero esos requisitos y compila la aplicación TypeScript
+actual. Después inicia tres procesos en primer plano: la aplicación en
+`http://127.0.0.1:5000`, la API de pronóstico en
+`http://127.0.0.1:8765` y el worker automático independiente. La aplicación
+configura internamente su proxy hacia esa API. Pulse `Ctrl+C` para terminar solo
+esos tres procesos; los registros permanecen en
+`.cache/bdctb-local-stack/logs/`.
+
+El navegador y el proxy solo consultan la caché. Nunca ejecutan el worker. El
+worker comprueba disponibilidad normalmente cada 15 minutos y conserva su
+política acotada de ciclo común 00Z, estabilidad GEFS, costo GloFAS exacto menor
+o igual a 6 y una sola entrega sin reenvío automático. En el primer inicio, una
+respuesta HTTP 503 es normal hasta que exista una caché válida. Si el comando
+falla antes de iniciar, revise que las rutas, entornos, autorización de Earth
+Engine, credenciales del proveedor y puertos 5000/8765 estén disponibles; el
+supervisor nunca imprime valores secretos.
+
+Docker, systemd, usuarios del host, aprovisionamiento e instalación quedan
+explícitamente fuera de este flujo local.
+
 ---
 
 ## Descripción general
