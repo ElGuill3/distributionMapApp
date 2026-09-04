@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import signal
 import stat
@@ -27,6 +28,7 @@ from scripts.run_local_forecast_stack import (
     APP_PREFLIGHT_MODULE,
     LOG_FILE_MAX_BYTES,
     LOG_FILES_PER_PROCESS,
+    MODEL_RUNTIME_DESCRIPTOR,
     ROOT,
     WORKER_MODULE,
     LauncherError,
@@ -46,12 +48,26 @@ def _runtime(tmp_path: Path, *, secret: str = ""):
         app / ".venv/bin/python",
         app / "node_modules/.bin/tsc",
         model / ".venv/bin/python",
+        model / "configs/model/bdctb_runtime_paths_v1.json",
         model / "configs/model/bdctb_exogenous_qgb_v1.yaml",
         model / "bundle/manifest.json",
         model / "weights.yaml",
     ):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("fixture", encoding="utf-8")
+    (model / MODEL_RUNTIME_DESCRIPTOR).write_text(
+        json.dumps(
+            {
+                "schema_version": "bdctb-operational-runtime-paths/v1",
+                "model_config": "configs/model/bdctb_exogenous_qgb_v1.yaml",
+                "model_bundle": "runs/bdctb-exogenous-qgb-real-v1-calibrated-20260730",
+                "gefs_weights": "configs/model/usumacinta_bdctb_precip_grid_v1.yaml",
+                "state_root": "var/operational/bdctb",
+                "forecast_cache": "var/forecasts/bdctb/latest-v1.json",
+            }
+        ),
+        encoding="utf-8",
+    )
     for path in (
         app / ".venv/bin/python",
         app / "node_modules/.bin/tsc",
@@ -64,6 +80,43 @@ def _runtime(tmp_path: Path, *, secret: str = ""):
         "PROVIDER_SECRET": secret,
     }
     return build_settings(app, model, environment)
+
+
+def test_absent_artifact_environment_uses_canonical_tracked_paths(tmp_path):
+    overridden = _runtime(tmp_path)
+    settings = build_settings(overridden.app_root, overridden.model_root, {})
+
+    assert settings.model_config == overridden.model_root / (
+        "configs/model/bdctb_exogenous_qgb_v1.yaml"
+    )
+    assert settings.model_bundle == overridden.model_root / (
+        "runs/bdctb-exogenous-qgb-real-v1-calibrated-20260730"
+    )
+    assert settings.weights == overridden.model_root / (
+        "configs/model/usumacinta_bdctb_precip_grid_v1.yaml"
+    )
+    assert settings.state_root == overridden.model_root / "var/operational/bdctb"
+    assert settings.cache_path == overridden.model_root / (
+        "var/forecasts/bdctb/latest-v1.json"
+    )
+
+
+def test_explicit_artifact_overrides_still_win(tmp_path):
+    settings = _runtime(tmp_path)
+
+    assert settings.model_bundle == settings.model_root / "bundle"
+    assert settings.weights == settings.model_root / "weights.yaml"
+
+
+def test_unsafe_runtime_descriptor_fails_before_any_child_can_start(tmp_path):
+    settings = _runtime(tmp_path)
+    descriptor = settings.model_root / MODEL_RUNTIME_DESCRIPTOR
+    value = json.loads(descriptor.read_bytes())
+    value["model_bundle"] = "../outside"
+    descriptor.write_text(json.dumps(value), encoding="utf-8")
+
+    with pytest.raises(LauncherError, match="unsafe path"):
+        build_settings(settings.app_root, settings.model_root, {})
 
 
 def test_preflight_fails_before_commands_when_required_artifact_is_absent(tmp_path):
@@ -104,6 +157,29 @@ def test_preflight_runs_only_bounded_checks_and_current_typescript_build(tmp_pat
     forbidden = (" install ", "pip", "npm", "uv sync")
     assert all(token not in flattened for token in forbidden)
     assert all(kwargs["capture_output"] is True for _call, kwargs in calls)
+
+
+def test_tampered_bundle_preflight_fails_before_typescript_or_children(tmp_path):
+    settings = _runtime(tmp_path)
+    (settings.model_bundle / "manifest.json").write_text("tampered", encoding="ascii")
+    calls = []
+
+    def runner(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(
+            command,
+            2 if WORKER_MODULE in command else 0,
+            stdout="",
+            stderr="",
+        )
+
+    with pytest.raises(LauncherError, match="model dependencies, artifacts"):
+        preflight(settings, runner=runner, port_check=lambda _host, _port: True)
+
+    assert calls == [
+        [str(settings.app_python), "-m", APP_PREFLIGHT_MODULE],
+        [str(settings.model_python), "-m", WORKER_MODULE, "--preflight"],
+    ]
 
 
 def test_preflight_failure_never_exposes_captured_secret(tmp_path):

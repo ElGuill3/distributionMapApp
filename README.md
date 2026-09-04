@@ -6,23 +6,23 @@ Aplicación web interactiva para visualizar animaciones y series temporales de v
 
 ## Inicio rápido local con pronóstico automático
 
-Desde la raíz de este repositorio, exporte las dos rutas de artefactos en el
-**proceso del supervisor** y ejecute exactamente:
+Desde la raíz de este repositorio, ejecute exactamente:
 
 ```bash
-export BDCTB_MODEL_BUNDLE=/ruta/absoluta/al/bundle-calibrado-v1
-export BDCTB_GEFS_WEIGHTS=/ruta/absoluta/gefs-spatial-weights-v2.yaml
 .venv/bin/python scripts/run_local_forecast_stack.py
 ```
-
-El supervisor lee esas dos variables antes de iniciar Flask. El archivo `.env`
-de esta aplicación no proporciona `BDCTB_MODEL_BUNDLE` ni
-`BDCTB_GEFS_WEIGHTS` al supervisor.
 
 El comando usa exclusivamente los entornos locales existentes y espera el
 repositorio del modelo en `../distributionMapApp-model-research`. Para otra
 ubicación, agregue `--model-repo /ruta/al/repositorio`. No instala dependencias
-ni modifica credenciales.
+ni modifica credenciales. El supervisor descubre desde ese repositorio el bundle
+calibrado-v1 y los pesos GEFS canónicos que ya están versionados.
+
+Para un diseño no estándar, `BDCTB_MODEL_BUNDLE` y `BDCTB_GEFS_WEIGHTS` siguen
+siendo reemplazos opcionales explícitos. También se pueden reemplazar
+`BDCTB_MODEL_CONFIG`, `BDCTB_STATE_ROOT` y `BDCTB_CACHE_PATH`. Exporte esas
+variables en el proceso del supervisor; el archivo `.env` de esta aplicación no
+es una fuente de configuración para el lanzador.
 
 Antes de ejecutarlo, prepare:
 
@@ -35,9 +35,6 @@ Antes de ejecutarlo, prepare:
   seleccionado mediante `GOOGLE_APPLICATION_CREDENTIALS` o las credenciales
   predeterminadas de aplicación de gcloud (normalmente
   `~/.config/gcloud/application_default_credentials.json`).
-- `BDCTB_MODEL_BUNDLE` exportada con la ruta del bundle calibrado-v1 verificado.
-- `BDCTB_GEFS_WEIGHTS` exportada con la ruta del YAML
-  `gefs-spatial-weights/v2`.
 - Una configuración externa de credenciales GloFAS/EWDS: `CDSAPI_RC` apuntando
   a un archivo de credenciales (o el archivo predeterminado `~/.cdsapirc`), o
   ambas variables `CDSAPI_URL` y `CDSAPI_KEY` en el entorno del supervisor.

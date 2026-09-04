@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import json
 import os
 import select
 import signal
@@ -25,6 +26,9 @@ APP_ORIGIN = f"http://{APP_HOST}:{APP_PORT}"
 API_ORIGIN = f"http://{API_HOST}:{API_PORT}"
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL_REPO = ROOT.parent / "distributionMapApp-model-research"
+MODEL_RUNTIME_DESCRIPTOR = Path("configs/model/bdctb_runtime_paths_v1.json")
+MODEL_RUNTIME_SCHEMA = "bdctb-operational-runtime-paths/v1"
+MAX_MODEL_RUNTIME_DESCRIPTOR_BYTES = 4096
 WORKER_MODULE = "flood_research.modeling.exogenous.operational_worker"
 API_MODULE = "flood_research.forecast_api.server"
 APP_PREFLIGHT_MODULE = "app_preflight"
@@ -73,23 +77,67 @@ def _model_path(
     return candidate if candidate.is_absolute() else model_root / candidate
 
 
+def _canonical_model_paths(model_root: Path) -> Mapping[str, Path]:
+    descriptor = model_root / MODEL_RUNTIME_DESCRIPTOR
+    if (
+        descriptor.is_symlink()
+        or not descriptor.is_file()
+        or descriptor.stat().st_size > MAX_MODEL_RUNTIME_DESCRIPTOR_BYTES
+    ):
+        raise LauncherError("model runtime path descriptor is unavailable or unsafe")
+    try:
+        value = json.loads(descriptor.read_bytes())
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise LauncherError("model runtime path descriptor is malformed") from exc
+    expected = {
+        "schema_version",
+        "model_config",
+        "model_bundle",
+        "gefs_weights",
+        "state_root",
+        "forecast_cache",
+    }
+    if (
+        not isinstance(value, dict)
+        or set(value) != expected
+        or value.get("schema_version") != MODEL_RUNTIME_SCHEMA
+    ):
+        raise LauncherError("model runtime path descriptor contract mismatch")
+    paths: dict[str, Path] = {}
+    for key in expected - {"schema_version"}:
+        raw = value[key]
+        path = Path(raw) if isinstance(raw, str) else Path()
+        if (
+            not isinstance(raw, str)
+            or path.is_absolute()
+            or path.name in {"", ".", ".."}
+            or ".." in path.parts
+        ):
+            raise LauncherError("model runtime path descriptor contains an unsafe path")
+        paths[key] = path
+    if paths["forecast_cache"].name != "latest-v1.json":
+        raise LauncherError("forecast cache must use the fixed latest-v1.json filename")
+    return paths
+
+
 def build_settings(
     app_root: Path, model_root: Path, environment: Mapping[str, str]
 ) -> Settings:
     app_root = app_root.resolve()
     model_root = model_root.expanduser().resolve()
+    defaults = _canonical_model_paths(model_root)
     model_config = _model_path(
         model_root,
         environment.get("BDCTB_MODEL_CONFIG"),
-        Path("configs/model/bdctb_exogenous_qgb_v1.yaml"),
+        defaults["model_config"],
     )
     state_root = _model_path(
-        model_root, environment.get("BDCTB_STATE_ROOT"), Path("var/operational/bdctb")
+        model_root, environment.get("BDCTB_STATE_ROOT"), defaults["state_root"]
     )
     cache_path = _model_path(
         model_root,
         environment.get("BDCTB_CACHE_PATH"),
-        Path("var/forecasts/bdctb/latest-v1.json"),
+        defaults["forecast_cache"],
     )
     if cache_path.name != "latest-v1.json":
         raise LauncherError("forecast cache must use the fixed latest-v1.json filename")
@@ -100,8 +148,12 @@ def build_settings(
         model_python=model_root / ".venv/bin/python",
         typescript=app_root / "node_modules/.bin/tsc",
         model_config=model_config,
-        model_bundle=_model_path(model_root, environment.get("BDCTB_MODEL_BUNDLE")),
-        weights=_model_path(model_root, environment.get("BDCTB_GEFS_WEIGHTS")),
+        model_bundle=_model_path(
+            model_root, environment.get("BDCTB_MODEL_BUNDLE"), defaults["model_bundle"]
+        ),
+        weights=_model_path(
+            model_root, environment.get("BDCTB_GEFS_WEIGHTS"), defaults["gefs_weights"]
+        ),
         state_root=state_root,
         cache_path=cache_path,
         runtime_root=app_root / ".cache/bdctb-local-stack",
