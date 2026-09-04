@@ -6,23 +6,23 @@ Interactive web application to visualize animations and time series of hydromete
 
 ## Local quick path with automatic forecasting
 
-From this repository root, export the two model artifact paths into the
-**launcher process**, then run exactly:
+From this repository root, run exactly:
 
 ```bash
-export BDCTB_MODEL_BUNDLE=/absolute/path/to/calibrated-v1-bundle
-export BDCTB_GEFS_WEIGHTS=/absolute/path/to/gefs-spatial-weights-v2.yaml
 .venv/bin/python scripts/run_local_forecast_stack.py
 ```
-
-The launcher reads those two variables before the Flask app starts. Values in
-this app's `.env` are not used for `BDCTB_MODEL_BUNDLE` or
-`BDCTB_GEFS_WEIGHTS`.
 
 The command uses only the existing local environments and expects the model
 repository at `../distributionMapApp-model-research`. Add
 `--model-repo /path/to/repository` when it is elsewhere. The supervisor never
-installs dependencies or modifies credentials.
+installs dependencies or modifies credentials. It discovers the versioned
+canonical calibrated-v1 bundle and GEFS weights from the selected model
+repository.
+
+For a nonstandard layout, `BDCTB_MODEL_BUNDLE` and `BDCTB_GEFS_WEIGHTS` remain
+optional explicit overrides. `BDCTB_MODEL_CONFIG`, `BDCTB_STATE_ROOT`, and
+`BDCTB_CACHE_PATH` may also be overridden. Export overrides in the launcher
+process; this app's `.env` is not a launcher configuration source.
 
 Prepare these prerequisites first:
 
@@ -35,9 +35,6 @@ Prepare these prerequisites first:
   `~/.config/earthengine/credentials`), a credential file selected by
   `GOOGLE_APPLICATION_CREDENTIALS`, or gcloud Application Default Credentials
   (normally `~/.config/gcloud/application_default_credentials.json`).
-- Exported `BDCTB_MODEL_BUNDLE` pointing to the verified calibrated-v1 bundle.
-- Exported `BDCTB_GEFS_WEIGHTS` pointing to the
-  `gefs-spatial-weights/v2` YAML.
 - One external GloFAS/EWDS credential configuration: `CDSAPI_RC` pointing to a
   credentials file (or the default `~/.cdsapirc`), or both `CDSAPI_URL` and
   `CDSAPI_KEY` in the launcher environment.
