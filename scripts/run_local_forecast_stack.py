@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import os
+import select
 import signal
 import socket
 import subprocess
@@ -14,6 +15,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
 
 APP_HOST = "127.0.0.1"
 APP_PORT = 5000
@@ -25,31 +27,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL_REPO = ROOT.parent / "distributionMapApp-model-research"
 WORKER_MODULE = "flood_research.modeling.exogenous.operational_worker"
 API_MODULE = "flood_research.forecast_api.server"
-
-APP_PREFLIGHT = r"""
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-import ee
-import flask
-import requests
-
-load_dotenv()
-project = os.getenv("GEE_PROJECT", "").strip()
-if not project or project == "inundaciones-proyecto":
-    raise SystemExit(2)
-persistent = Path(ee.oauth.get_credentials_path()).expanduser()
-application = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
-application_path = Path(application).expanduser() if application else None
-gcloud_adc = Path.home() / ".config" / "gcloud" / "application_default_credentials.json"
-if (
-    not persistent.is_file()
-    and not (application_path and application_path.is_file())
-    and not gcloud_adc.is_file()
-):
-    raise SystemExit(3)
-"""
+APP_PREFLIGHT_MODULE = "app_preflight"
+LOG_FILE_MAX_BYTES = 1024 * 1024
+LOG_FILES_PER_PROCESS = 3
+LOG_READ_CHUNK_BYTES = 64 * 1024
 
 
 class LauncherError(RuntimeError):
@@ -165,6 +146,7 @@ def process_specs(settings: Settings) -> tuple[ProcessSpec, ...]:
             "BDCTB_FORECAST_API_BASE_URL": API_ORIGIN,
             "FLASK_DEBUG": "false",
             "PYTHONUNBUFFERED": "1",
+            "_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT": "0",
         }
     )
     api_command = (
@@ -222,7 +204,7 @@ def preflight(
         raise LauncherError("required loopback port is already in use")
 
     app_check = runner(
-        [str(settings.app_python), "-c", APP_PREFLIGHT],
+        [str(settings.app_python), "-m", APP_PREFLIGHT_MODULE],
         cwd=settings.app_root,
         env=dict(settings.environment),
         capture_output=True,
@@ -300,6 +282,128 @@ def _terminate(children: Sequence[subprocess.Popen[bytes]]) -> None:
                 child.wait(timeout=5)
 
 
+def _rotated_log_path(path: Path, index: int) -> Path:
+    return path.with_name(f"{path.name}.{index}")
+
+
+class _BoundedLog:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.stream: BinaryIO | None = None
+        self.size = 0
+        self._rotate()
+        self._open()
+
+    def _open(self) -> None:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(self.path, flags, 0o600)
+        os.fchmod(descriptor, 0o600)
+        self.stream = os.fdopen(descriptor, "wb", buffering=0)
+        self.size = 0
+
+    def _rotate(self) -> None:
+        if self.stream is not None:
+            self.stream.close()
+            self.stream = None
+        _rotated_log_path(self.path, LOG_FILES_PER_PROCESS - 1).unlink(missing_ok=True)
+        for index in range(LOG_FILES_PER_PROCESS - 2, 0, -1):
+            source = _rotated_log_path(self.path, index)
+            if source.exists():
+                os.replace(source, _rotated_log_path(self.path, index + 1))
+        if self.path.exists():
+            os.replace(self.path, _rotated_log_path(self.path, 1))
+
+    def write(self, data: bytes) -> None:
+        pending = memoryview(data)
+        while pending:
+            if self.size == LOG_FILE_MAX_BYTES:
+                self._rotate()
+                self._open()
+            count = min(len(pending), LOG_FILE_MAX_BYTES - self.size)
+            assert self.stream is not None
+            written = self.stream.write(pending[:count])
+            if written is None or written <= 0:
+                raise OSError("bounded log write made no progress")
+            self.size += written
+            pending = pending[written:]
+
+    def close(self) -> None:
+        if self.stream is not None:
+            self.stream.close()
+            self.stream = None
+
+
+def _prepare_private_log_dir(log_dir: Path, names: Sequence[str]) -> None:
+    log_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    log_dir.chmod(0o700)
+    retained = {
+        name
+        for process_name in names
+        for name in (
+            f"{process_name}.log",
+            *(
+                f"{process_name}.log.{index}"
+                for index in range(1, LOG_FILES_PER_PROCESS)
+            ),
+        )
+    }
+    for path in log_dir.iterdir():
+        if path.is_symlink() or (path.name not in retained and path.is_file()):
+            path.unlink()
+        elif path.name in retained and path.is_file():
+            path.chmod(0o600)
+
+
+def _pump_output(
+    source: BinaryIO,
+    target: _BoundedLog,
+    stop_requested: threading.Event,
+    failed: threading.Event,
+) -> None:
+    can_write = True
+
+    def write(data: bytes) -> None:
+        nonlocal can_write
+        if not can_write:
+            return
+        try:
+            target.write(data)
+        except OSError:
+            can_write = False
+            failed.set()
+
+    try:
+        try:
+            descriptor = source.fileno()
+            os.set_blocking(descriptor, False)
+        except (AttributeError, OSError):
+            while data := source.read(LOG_READ_CHUNK_BYTES):
+                write(data)
+            return
+
+        remaining_after_stop = LOG_FILE_MAX_BYTES
+        while True:
+            ready, _, _ = select.select([descriptor], [], [], 0.1)
+            if not ready:
+                if stop_requested.is_set():
+                    return
+                continue
+            try:
+                data = os.read(descriptor, LOG_READ_CHUNK_BYTES)
+            except BlockingIOError:
+                continue
+            if not data:
+                return
+            write(data)
+            if stop_requested.is_set():
+                remaining_after_stop -= len(data)
+                if remaining_after_stop <= 0:
+                    return
+    finally:
+        source.close()
+        target.close()
+
+
 def supervise(
     specs: Sequence[ProcessSpec],
     log_dir: Path,
@@ -309,22 +413,37 @@ def supervise(
     stop_requested: Callable[[], bool] = lambda: False,
     on_started: Callable[[], None] = lambda: None,
 ) -> int:
-    log_dir.mkdir(parents=True, exist_ok=True)
+    _prepare_private_log_dir(log_dir, [spec.name for spec in specs])
     children: list[subprocess.Popen[bytes]] = []
+    pump_stop = threading.Event()
+    pump_failed = threading.Event()
+    pumps: list[threading.Thread] = []
     try:
         for spec in specs:
-            log_path = log_dir / f"{time.time_ns()}-{spec.name}.log"
-            descriptor = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-            with os.fdopen(descriptor, "wb") as log:
+            log = _BoundedLog(log_dir / f"{spec.name}.log")
+            try:
                 child = popen(
                     list(spec.command),
                     cwd=spec.cwd,
                     env=dict(spec.environment),
                     stdin=subprocess.DEVNULL,
-                    stdout=log,
+                    stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                 )
+            except BaseException:
+                log.close()
+                raise
             children.append(child)
+            if child.stdout is None:
+                log.close()
+                raise LauncherError("supervised child output pipe is unavailable")
+            pump = threading.Thread(
+                target=_pump_output,
+                args=(child.stdout, log, pump_stop, pump_failed),
+                name=f"bdctb-log-pump-{spec.name}",
+            )
+            pump.start()
+            pumps.append(pump)
             returncode = child.poll()
             if returncode is not None:
                 return returncode if returncode != 0 else 1
@@ -334,10 +453,15 @@ def supervise(
                 returncode = child.poll()
                 if returncode is not None:
                     return returncode if returncode != 0 else 1
+            if pump_failed.is_set():
+                return 1
             sleep(0.25)
         return 0
     finally:
         _terminate(children)
+        pump_stop.set()
+        for pump in pumps:
+            pump.join()
 
 
 def _parser() -> argparse.ArgumentParser:

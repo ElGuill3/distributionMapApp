@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import io
 import os
 import signal
 import stat
 import subprocess
 import sys
 import textwrap
+import threading
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -21,7 +24,10 @@ from scripts.run_local_forecast_stack import (
     APP_HOST,
     APP_ORIGIN,
     APP_PORT,
-    APP_PREFLIGHT,
+    APP_PREFLIGHT_MODULE,
+    LOG_FILE_MAX_BYTES,
+    LOG_FILES_PER_PROCESS,
+    ROOT,
     WORKER_MODULE,
     LauncherError,
     ProcessSpec,
@@ -82,7 +88,11 @@ def test_preflight_runs_only_bounded_checks_and_current_typescript_build(tmp_pat
     preflight(settings, runner=runner, port_check=lambda _host, _port: True)
 
     assert len(calls) == 3
-    assert calls[0][0][:2] == [str(settings.app_python), "-c"]
+    assert calls[0][0] == [
+        str(settings.app_python),
+        "-m",
+        APP_PREFLIGHT_MODULE,
+    ]
     assert calls[1][0] == [
         str(settings.model_python),
         "-m",
@@ -109,7 +119,7 @@ def test_preflight_failure_never_exposes_captured_secret(tmp_path):
     assert secret not in str(failure.value)
 
 
-def test_app_preflight_checks_local_authorization_without_provider_calls(tmp_path):
+def test_app_preflight_imports_real_boundary_without_runtime_side_effects(tmp_path):
     credentials = tmp_path / "application-default.json"
     credentials.write_text("fixture", encoding="ascii")
     environment = {
@@ -117,20 +127,80 @@ def test_app_preflight_checks_local_authorization_without_provider_calls(tmp_pat
         "GEE_PROJECT": "offline-test-project",
         "GOOGLE_APPLICATION_CREDENTIALS": str(credentials),
         "HOME": str(tmp_path),
+        "BASE_DIR_OVERRIDE": str(tmp_path / "runtime"),
     }
 
     result = subprocess.run(
-        [sys.executable, "-c", APP_PREFLIGHT],
-        cwd=tmp_path,
+        [
+            sys.executable,
+            "-c",
+            (
+                "import app_preflight, threading; "
+                "result = app_preflight.main(); "
+                "raise SystemExit(result if threading.active_count() == 1 else 9)"
+            ),
+        ],
+        cwd=ROOT,
         env=environment,
         capture_output=True,
         text=True,
-        timeout=10,
+        timeout=30,
         check=False,
     )
 
     assert result.returncode == 0
     assert result.stdout == result.stderr == ""
+    assert not (tmp_path / "runtime").exists()
+
+
+def test_app_preflight_detects_missing_transitive_dependency(tmp_path):
+    credentials = tmp_path / "application-default.json"
+    credentials.write_text("fixture", encoding="ascii")
+    blocker = tmp_path / "blocker"
+    blocker.mkdir()
+    (blocker / "sitecustomize.py").write_text(
+        textwrap.dedent(
+            """
+            import builtins
+
+            original_import = builtins.__import__
+
+            def guarded_import(name, *args, **kwargs):
+                if name == "flask_limiter" or name.startswith("flask_limiter."):
+                    raise ImportError("withheld transitive dependency")
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = guarded_import
+            """
+        ),
+        encoding="utf-8",
+    )
+    environment = {
+        **os.environ,
+        "GEE_PROJECT": "offline-test-project",
+        "GOOGLE_APPLICATION_CREDENTIALS": str(credentials),
+        "HOME": str(tmp_path),
+        "PYTHONPATH": str(blocker),
+        "BASE_DIR_OVERRIDE": str(tmp_path / "runtime"),
+    }
+    settings = replace(
+        _runtime(tmp_path),
+        app_root=ROOT,
+        app_python=Path(sys.executable),
+        environment=environment,
+    )
+    calls = []
+
+    def runner(command, **kwargs):
+        calls.append(command)
+        return subprocess.run(command, **kwargs)
+
+    with pytest.raises(LauncherError) as failure:
+        preflight(settings, runner=runner, port_check=lambda _host, _port: True)
+
+    assert calls == [[sys.executable, "-m", APP_PREFLIGHT_MODULE]]
+    assert "flask_limiter" not in str(failure.value)
+    assert not (tmp_path / "runtime").exists()
 
 
 def test_process_contract_is_exact_loopback_and_starts_three_independent_children(
@@ -177,11 +247,12 @@ def test_duplicate_supervisor_is_rejected_without_starting_children(tmp_path):
 
 
 class FakeChild:
-    def __init__(self, returncode=None, *, timeout=False):
+    def __init__(self, returncode=None, *, timeout=False, output: bytes = b""):
         self.returncode = returncode
         self.timeout = timeout
         self.terminated = 0
         self.killed = 0
+        self.stdout = io.BytesIO(output)
 
     def poll(self):
         return self.returncode
@@ -256,6 +327,55 @@ def test_signal_cleanup_escalates_only_a_stuck_owned_child(tmp_path):
         stat.S_IMODE(path.stat().st_mode) == 0o600
         for path in (tmp_path / "logs").iterdir()
     )
+    assert stat.S_IMODE((tmp_path / "logs").stat().st_mode) == 0o700
+
+
+def test_large_output_is_bounded_private_and_retains_tail_without_pump_leaks(
+    tmp_path,
+):
+    child_script = tmp_path / "large_output.py"
+    tail = b"useful-final-tail-evidence"
+    child_script.write_text(
+        textwrap.dedent(
+            f"""
+            import os
+
+            chunk = b"x" * (64 * 1024)
+            for _ in range(52):
+                os.write(1, chunk)
+            os.write(1, {tail!r})
+            raise SystemExit(31)
+            """
+        ),
+        encoding="utf-8",
+    )
+    spec = ProcessSpec(
+        "large-child",
+        (sys.executable, str(child_script)),
+        tmp_path,
+        dict(os.environ),
+    )
+    pump_names_before = {
+        thread.name
+        for thread in threading.enumerate()
+        if thread.name.startswith("bdctb-log-pump-")
+    }
+
+    assert (
+        supervise((spec,), tmp_path / "logs", sleep=lambda _n: time.sleep(0.01)) == 31
+    )
+
+    logs = sorted((tmp_path / "logs").iterdir())
+    assert 1 <= len(logs) <= LOG_FILES_PER_PROCESS
+    assert all(path.stat().st_size <= LOG_FILE_MAX_BYTES for path in logs)
+    assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in logs)
+    assert stat.S_IMODE((tmp_path / "logs").stat().st_mode) == 0o700
+    assert tail in (tmp_path / "logs/large-child.log").read_bytes()
+    assert {
+        thread.name
+        for thread in threading.enumerate()
+        if thread.name.startswith("bdctb-log-pump-")
+    } == pump_names_before
 
 
 def test_real_harness_proves_failure_cleanup_and_unrelated_survival(tmp_path):

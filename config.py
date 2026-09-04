@@ -74,9 +74,10 @@ GIFS_DIR = STATIC_DIR / "gifs"
 FLOOD_MAPS_DIR = STATIC_DIR / "flood_maps"
 DATA_DIR = BASE_DIR / "data" / "mapa_riesgo" / "municipios"
 
-# Crear directorios necesarios si no existen
-GIFS_DIR.mkdir(parents=True, exist_ok=True)
-FLOOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)
+def prepare_runtime_directories() -> None:
+    """Create writable application directories during real startup only."""
+    GIFS_DIR.mkdir(parents=True, exist_ok=True)
+    FLOOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # Google Earth Engine

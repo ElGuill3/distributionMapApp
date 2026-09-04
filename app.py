@@ -11,6 +11,7 @@ Responsabilidades de este módulo:
 
 import hashlib
 import logging
+import os
 import sys
 
 import ee
@@ -31,8 +32,11 @@ from config import (
     DEBUG,
     GEE_PROJECT,
     STATIC_DIR,
+    prepare_runtime_directories,
 )
 from extensions import limiter
+
+DEPENDENCY_PREFLIGHT = os.getenv("_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT") == "1"
 
 # ---------------------------------------------------------------------------
 # Configuración de logging (una sola vez, antes de importar blueprints)
@@ -46,7 +50,9 @@ logging.basicConfig(
 # ---------------------------------------------------------------------------
 # Inicialización de Earth Engine (debe ocurrir antes de importar módulos GEE)
 # ---------------------------------------------------------------------------
-ee.Initialize(project=GEE_PROJECT)
+if not DEPENDENCY_PREFLIGHT:
+    prepare_runtime_directories()
+    ee.Initialize(project=GEE_PROJECT)
 
 # ---------------------------------------------------------------------------
 # Blueprints
@@ -63,7 +69,8 @@ from routes.timeseries_routes import ts_bp
 # ---------------------------------------------------------------------------
 from services.gif_service import start_cleanup_daemon
 
-start_cleanup_daemon()
+if not DEPENDENCY_PREFLIGHT:
+    start_cleanup_daemon()
 
 # ---------------------------------------------------------------------------
 # Aplicación Flask
@@ -77,7 +84,8 @@ app = Flask(
 # ---------------------------------------------------------------------------
 # Rate limiting (limiter se inicializa en extensions.py, init_app aquí)
 # ---------------------------------------------------------------------------
-limiter.init_app(app)
+if not DEPENDENCY_PREFLIGHT:
+    limiter.init_app(app)
 
 
 @app.errorhandler(429)
