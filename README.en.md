@@ -4,6 +4,48 @@
 
 Interactive web application to visualize animations and time series of hydrometeorological variables over the state of Tabasco, Mexico, using Google Earth Engine as the main satellite data source.
 
+## Local quick path with automatic forecasting
+
+From this repository root, run exactly:
+
+```bash
+.venv/bin/python scripts/run_local_forecast_stack.py
+```
+
+The command uses only the existing local environments and expects the model
+repository at `../distributionMapApp-model-research`. Add
+`--model-repo /path/to/repository` when it is elsewhere. The supervisor never
+installs dependencies or modifies credentials.
+
+Prepare these prerequisites first:
+
+- This app's existing `.venv/` and `node_modules/`; the supervisor performs no
+  installation.
+- The model repository's existing `.venv/` with model, GEFS, and GloFAS
+  dependencies.
+- `GEE_PROJECT` and existing local Earth Engine authorization.
+- `BDCTB_MODEL_BUNDLE` pointing to the verified calibrated-v1 bundle.
+- `BDCTB_GEFS_WEIGHTS` pointing to the `gefs-spatial-weights/v2` YAML.
+- Externally configured GloFAS/EWDS credentials.
+
+The supervisor first validates these prerequisites and compiles the current
+TypeScript application. It then starts three foreground processes: the app at
+`http://127.0.0.1:5000`, the Forecast API at
+`http://127.0.0.1:8765`, and the independent automatic worker. It configures
+the app proxy to that API internally. Press `Ctrl+C` to stop only those three
+children; diagnostic logs remain under `.cache/bdctb-local-stack/logs/`.
+
+The browser and proxy only read the cache; they never execute the worker. The
+worker ordinarily checks readiness every 15 minutes and retains its bounded
+common-00Z issue, stable-GEFS, exact GloFAS-cost-at-or-below-6, and single-
+submission-without-automatic-resubmission policies. On first start, HTTP 503 is
+normal until a valid cache exists. If startup fails early, verify paths,
+environments, Earth Engine authorization, provider credentials, and loopback
+ports 5000/8765. Secret values are never printed.
+
+Docker, systemd, host users, provisioning, and installation are explicitly out
+of scope for this local workflow.
+
 ---
 
 ## Overview
