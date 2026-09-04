@@ -6,11 +6,18 @@ Interactive web application to visualize animations and time series of hydromete
 
 ## Local quick path with automatic forecasting
 
-From this repository root, run exactly:
+From this repository root, export the two model artifact paths into the
+**launcher process**, then run exactly:
 
 ```bash
+export BDCTB_MODEL_BUNDLE=/absolute/path/to/calibrated-v1-bundle
+export BDCTB_GEFS_WEIGHTS=/absolute/path/to/gefs-spatial-weights-v2.yaml
 .venv/bin/python scripts/run_local_forecast_stack.py
 ```
+
+The launcher reads those two variables before the Flask app starts. Values in
+this app's `.env` are not used for `BDCTB_MODEL_BUNDLE` or
+`BDCTB_GEFS_WEIGHTS`.
 
 The command uses only the existing local environments and expects the model
 repository at `../distributionMapApp-model-research`. Add
@@ -23,10 +30,17 @@ Prepare these prerequisites first:
   installation.
 - The model repository's existing `.venv/` with model, GEFS, and GloFAS
   dependencies.
-- `GEE_PROJECT` and existing local Earth Engine authorization.
-- `BDCTB_MODEL_BUNDLE` pointing to the verified calibrated-v1 bundle.
-- `BDCTB_GEFS_WEIGHTS` pointing to the `gefs-spatial-weights/v2` YAML.
-- Externally configured GloFAS/EWDS credentials.
+- `GEE_PROJECT` and one existing local Earth Engine authorization source:
+  persistent Earth Engine credentials (normally
+  `~/.config/earthengine/credentials`), a credential file selected by
+  `GOOGLE_APPLICATION_CREDENTIALS`, or gcloud Application Default Credentials
+  (normally `~/.config/gcloud/application_default_credentials.json`).
+- Exported `BDCTB_MODEL_BUNDLE` pointing to the verified calibrated-v1 bundle.
+- Exported `BDCTB_GEFS_WEIGHTS` pointing to the
+  `gefs-spatial-weights/v2` YAML.
+- One external GloFAS/EWDS credential configuration: `CDSAPI_RC` pointing to a
+  credentials file (or the default `~/.cdsapirc`), or both `CDSAPI_URL` and
+  `CDSAPI_KEY` in the launcher environment.
 
 The supervisor first validates these prerequisites and compiles the current
 TypeScript application. It then starts three foreground processes: the app at
@@ -34,6 +48,20 @@ TypeScript application. It then starts three foreground processes: the app at
 `http://127.0.0.1:8765`, and the independent automatic worker. It configures
 the app proxy to that API internally. Press `Ctrl+C` to stop only those three
 children; diagnostic logs remain under `.cache/bdctb-local-stack/logs/`.
+Each child retains at most three private `0600` log files of at most 1 MiB each;
+the log directory is private (`0700`) and the current file retains the latest
+diagnostic tail.
+
+After `Ctrl+C`, optional cleanup is limited to supervisor diagnostics:
+
+```bash
+rm -rf .cache/bdctb-local-stack
+```
+
+Do **not** include the model's `var/operational/bdctb/` state or
+`var/forecasts/bdctb/latest-v1.json` cache in routine cleanup. The state protects
+submission recovery and the cache serves the last valid forecast; deleting
+either intentionally resets those guarantees and can restore HTTP 503.
 
 The browser and proxy only read the cache; they never execute the worker. The
 worker ordinarily checks readiness every 15 minutes and retains its bounded

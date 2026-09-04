@@ -6,11 +6,18 @@ Aplicación web interactiva para visualizar animaciones y series temporales de v
 
 ## Inicio rápido local con pronóstico automático
 
-Desde la raíz de este repositorio, ejecute exactamente:
+Desde la raíz de este repositorio, exporte las dos rutas de artefactos en el
+**proceso del supervisor** y ejecute exactamente:
 
 ```bash
+export BDCTB_MODEL_BUNDLE=/ruta/absoluta/al/bundle-calibrado-v1
+export BDCTB_GEFS_WEIGHTS=/ruta/absoluta/gefs-spatial-weights-v2.yaml
 .venv/bin/python scripts/run_local_forecast_stack.py
 ```
+
+El supervisor lee esas dos variables antes de iniciar Flask. El archivo `.env`
+de esta aplicación no proporciona `BDCTB_MODEL_BUNDLE` ni
+`BDCTB_GEFS_WEIGHTS` al supervisor.
 
 El comando usa exclusivamente los entornos locales existentes y espera el
 repositorio del modelo en `../distributionMapApp-model-research`. Para otra
@@ -23,10 +30,17 @@ Antes de ejecutarlo, prepare:
   desde el supervisor.
 - `.venv/` del repositorio del modelo con sus dependencias de modelo, GEFS y
   GloFAS.
-- `GEE_PROJECT` y una autorización local existente de Earth Engine.
-- `BDCTB_MODEL_BUNDLE` con la ruta del bundle calibrado-v1 verificado.
-- `BDCTB_GEFS_WEIGHTS` con la ruta del YAML `gefs-spatial-weights/v2`.
-- Credenciales de GloFAS/EWDS ya configuradas externamente.
+- `GEE_PROJECT` y una fuente de autorización local de Earth Engine: credenciales
+  persistentes (normalmente `~/.config/earthengine/credentials`), un archivo
+  seleccionado mediante `GOOGLE_APPLICATION_CREDENTIALS` o las credenciales
+  predeterminadas de aplicación de gcloud (normalmente
+  `~/.config/gcloud/application_default_credentials.json`).
+- `BDCTB_MODEL_BUNDLE` exportada con la ruta del bundle calibrado-v1 verificado.
+- `BDCTB_GEFS_WEIGHTS` exportada con la ruta del YAML
+  `gefs-spatial-weights/v2`.
+- Una configuración externa de credenciales GloFAS/EWDS: `CDSAPI_RC` apuntando
+  a un archivo de credenciales (o el archivo predeterminado `~/.cdsapirc`), o
+  ambas variables `CDSAPI_URL` y `CDSAPI_KEY` en el entorno del supervisor.
 
 El supervisor valida primero esos requisitos y compila la aplicación TypeScript
 actual. Después inicia tres procesos en primer plano: la aplicación en
@@ -35,6 +49,23 @@ actual. Después inicia tres procesos en primer plano: la aplicación en
 configura internamente su proxy hacia esa API. Pulse `Ctrl+C` para terminar solo
 esos tres procesos; los registros permanecen en
 `.cache/bdctb-local-stack/logs/`.
+Cada proceso conserva como máximo tres archivos de registro privados (`0600`),
+de hasta 1 MiB cada uno. El directorio es privado (`0700`) y el archivo actual
+conserva la evidencia de diagnóstico más reciente.
+
+Después de pulsar `Ctrl+C`, la limpieza opcional se limita a los diagnósticos
+del supervisor:
+
+```bash
+rm -rf .cache/bdctb-local-stack
+```
+
+No incluya en la limpieza habitual el estado
+`var/operational/bdctb/` ni la caché
+`var/forecasts/bdctb/latest-v1.json` del modelo. El estado protege la
+recuperación de entregas y la caché sirve el último pronóstico válido; eliminar
+cualquiera de ellos restablece intencionalmente esas garantías y puede volver a
+producir respuestas HTTP 503.
 
 El navegador y el proxy solo consultan la caché. Nunca ejecutan el worker. El
 worker comprueba disponibilidad normalmente cada 15 minutos y conserva su
