@@ -6,17 +6,29 @@ Aplicación web interactiva para visualizar animaciones y series temporales de v
 
 ## Inicio rápido local con pronóstico automático
 
-Desde la raíz de este repositorio, ejecute exactamente:
+Sincronice primero el proyecto de la aplicación y, desde la raíz de este
+repositorio, ejecute el comando público:
 
 ```bash
-.venv/bin/python scripts/run_local_forecast_stack.py
+uv sync
+uv run distribution-map
 ```
 
-El comando usa exclusivamente los entornos locales existentes y espera el
-repositorio del modelo en `../distributionMapApp-model-research`. Para otra
-ubicación, agregue `--model-repo /ruta/al/repositorio`. No instala dependencias
-ni modifica credenciales. El supervisor descubre desde ese repositorio el bundle
-calibrado-v1 y los pesos GEFS canónicos que ya están versionados.
+`uv sync` instala las dependencias y registra el comando del proyecto. El modelo
+es una dependencia local explícita y permanece en un repositorio separado. De
+forma predeterminada, el comando espera el checkout hermano
+`../distributionMapApp-model-research`. No descarga el modelo automáticamente.
+Para otra ubicación, ejecute
+`uv run distribution-map --model-repo /ruta/al/repositorio`.
+
+El repositorio del modelo selecciona sus rutas canónicas mediante
+`configs/model/bdctb_runtime_paths_v1.json`. Actualmente, ese descriptor resuelve
+el bundle calibrado en
+`runs/bdctb-exogenous-qgb-real-v1-calibrated-20260730`. El supervisor también
+descubre allí los pesos GEFS versionados; no modifica credenciales ni instala
+dependencias del modelo. La invocación anterior mediante
+`.venv/bin/python scripts/run_local_forecast_stack.py` se conserva únicamente
+como ruta de compatibilidad.
 
 Para un diseño no estándar, `BDCTB_MODEL_BUNDLE` y `BDCTB_GEFS_WEIGHTS` siguen
 siendo reemplazos opcionales explícitos. También se pueden reemplazar
@@ -39,7 +51,7 @@ Antes de ejecutarlo, prepare:
   a un archivo de credenciales (o el archivo predeterminado `~/.cdsapirc`), o
   ambas variables `CDSAPI_URL` y `CDSAPI_KEY` en el entorno del supervisor.
 
-El supervisor valida primero esos requisitos y compila la aplicación TypeScript
+El comando valida primero esos requisitos y compila la aplicación TypeScript
 actual. Después inicia tres procesos en primer plano: la aplicación en
 `http://127.0.0.1:5000`, la API de pronóstico en
 `http://127.0.0.1:8765` y el worker automático independiente. La aplicación

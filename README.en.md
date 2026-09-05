@@ -6,18 +6,29 @@ Interactive web application to visualize animations and time series of hydromete
 
 ## Local quick path with automatic forecasting
 
-From this repository root, run exactly:
+First synchronize the app project and then run its public command from this
+repository root:
 
 ```bash
-.venv/bin/python scripts/run_local_forecast_stack.py
+uv sync
+uv run distribution-map
 ```
 
-The command uses only the existing local environments and expects the model
-repository at `../distributionMapApp-model-research`. Add
-`--model-repo /path/to/repository` when it is elsewhere. The supervisor never
-installs dependencies or modifies credentials. It discovers the versioned
-canonical calibrated-v1 bundle and GEFS weights from the selected model
-repository.
+`uv sync` installs the dependencies and registers the project command. The model
+is an explicit local dependency that remains in a separate repository. By
+default, the command expects the sibling checkout at
+`../distributionMapApp-model-research`; it never downloads the model
+automatically. For another location, run
+`uv run distribution-map --model-repo /path/to/repository`.
+
+The model repository selects its canonical paths through
+`configs/model/bdctb_runtime_paths_v1.json`. That descriptor currently resolves
+the calibrated bundle at
+`runs/bdctb-exogenous-qgb-real-v1-calibrated-20260730`. The supervisor also
+discovers the versioned GEFS weights there; it does not modify credentials or
+install model dependencies. The previous
+`.venv/bin/python scripts/run_local_forecast_stack.py` invocation remains only
+as a compatibility path.
 
 For a nonstandard layout, `BDCTB_MODEL_BUNDLE` and `BDCTB_GEFS_WEIGHTS` remain
 optional explicit overrides. `BDCTB_MODEL_CONFIG`, `BDCTB_STATE_ROOT`, and
@@ -39,7 +50,7 @@ Prepare these prerequisites first:
   credentials file (or the default `~/.cdsapirc`), or both `CDSAPI_URL` and
   `CDSAPI_KEY` in the launcher environment.
 
-The supervisor first validates these prerequisites and compiles the current
+The command first validates these prerequisites and compiles the current
 TypeScript application. It then starts three foreground processes: the app at
 `http://127.0.0.1:5000`, the Forecast API at
 `http://127.0.0.1:8765`, and the independent automatic worker. It configures

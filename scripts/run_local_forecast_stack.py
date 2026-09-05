@@ -25,7 +25,7 @@ API_PORT = 8765
 APP_ORIGIN = f"http://{APP_HOST}:{APP_PORT}"
 API_ORIGIN = f"http://{API_HOST}:{API_PORT}"
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_MODEL_REPO = ROOT.parent / "distributionMapApp-model-research"
+DEFAULT_MODEL_REPOSITORY_NAME = "distributionMapApp-model-research"
 MODEL_RUNTIME_DESCRIPTOR = Path("configs/model/bdctb_runtime_paths_v1.json")
 MODEL_RUNTIME_SCHEMA = "bdctb-operational-runtime-paths/v1"
 MAX_MODEL_RUNTIME_DESCRIPTOR_BYTES = 4096
@@ -63,6 +63,49 @@ class ProcessSpec:
     command: tuple[str, ...]
     cwd: Path
     environment: Mapping[str, str]
+
+
+def _is_app_root(path: Path) -> bool:
+    return all(
+        candidate.is_file()
+        for candidate in (
+            path / "pyproject.toml",
+            path / "app.py",
+            path / "package.json",
+            path / "scripts/run_local_forecast_stack.py",
+        )
+    )
+
+
+def resolve_app_root(start: Path | None = None, *, source_root: Path = ROOT) -> Path:
+    """Resolve an application checkout without relying on an installed module path."""
+    search_root = (start or Path.cwd()).expanduser().resolve()
+    for candidate in (search_root, *search_root.parents):
+        if _is_app_root(candidate):
+            return candidate
+
+    source_root = source_root.resolve()
+    if _is_app_root(source_root):
+        return source_root
+    raise LauncherError("run the command from a distributionMapApp checkout")
+
+
+def resolve_runtime_roots(
+    model_repo: Path | None,
+    *,
+    start: Path | None = None,
+    source_root: Path = ROOT,
+) -> tuple[Path, Path]:
+    """Resolve app and model repositories from the command invocation context."""
+    invocation_root = (start or Path.cwd()).expanduser().resolve()
+    app_root = resolve_app_root(invocation_root, source_root=source_root)
+    if model_repo is None:
+        model_root = app_root.parent / DEFAULT_MODEL_REPOSITORY_NAME
+    else:
+        model_root = model_repo.expanduser()
+        if not model_root.is_absolute():
+            model_root = invocation_root / model_root
+    return app_root, model_root.resolve()
 
 
 def _model_path(
@@ -516,21 +559,22 @@ def supervise(
             pump.join()
 
 
-def _parser() -> argparse.ArgumentParser:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--model-repo",
         type=Path,
-        default=DEFAULT_MODEL_REPO,
+        default=None,
         help="Model repository path (default: existing sibling repository).",
     )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+    args = build_parser().parse_args(argv)
     try:
-        settings = build_settings(ROOT, args.model_repo, os.environ)
+        app_root, model_root = resolve_runtime_roots(args.model_repo)
+        settings = build_settings(app_root, model_root, os.environ)
         with SupervisorLock(settings.runtime_root / "supervisor.lock"):
             preflight(settings)
             settings.state_root.mkdir(parents=True, exist_ok=True)
