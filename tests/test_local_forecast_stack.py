@@ -26,6 +26,7 @@ from scripts.run_local_forecast_stack import (
     APP_ORIGIN,
     APP_PORT,
     APP_PREFLIGHT_MODULE,
+    DEFAULT_MODEL_REPOSITORY_NAME,
     LOG_FILE_MAX_BYTES,
     LOG_FILES_PER_PROCESS,
     MODEL_RUNTIME_DESCRIPTOR,
@@ -34,9 +35,12 @@ from scripts.run_local_forecast_stack import (
     LauncherError,
     ProcessSpec,
     SupervisorLock,
+    build_parser,
     build_settings,
     preflight,
     process_specs,
+    resolve_app_root,
+    resolve_runtime_roots,
     supervise,
 )
 
@@ -80,6 +84,59 @@ def _runtime(tmp_path: Path, *, secret: str = ""):
         "PROVIDER_SECRET": secret,
     }
     return build_settings(app, model, environment)
+
+
+def test_app_root_and_default_model_repo_resolve_from_checkout_subdirectory():
+    app_root, model_root = resolve_runtime_roots(None, start=ROOT / "tests")
+
+    assert resolve_app_root(ROOT / "tests") == ROOT
+    assert app_root == ROOT
+    assert model_root == ROOT.parent / DEFAULT_MODEL_REPOSITORY_NAME
+
+
+def test_parser_accepts_explicit_model_repo():
+    assert build_parser().parse_args([]).model_repo is None
+    assert build_parser().parse_args(
+        ["--model-repo", "../alternate-model"]
+    ).model_repo == Path("../alternate-model")
+
+
+def test_explicit_relative_model_repo_resolves_from_invocation_directory():
+    invocation_root = ROOT / "tests"
+    app_root, model_root = resolve_runtime_roots(
+        Path("../alternate-model"), start=invocation_root
+    )
+
+    assert app_root == ROOT
+    assert model_root == (invocation_root / "../alternate-model").resolve()
+
+
+def test_app_root_never_falls_back_to_an_installed_module_path(tmp_path):
+    installed_module_root = tmp_path / "site-packages"
+    installed_module_root.mkdir()
+
+    with pytest.raises(LauncherError, match="distributionMapApp checkout"):
+        resolve_app_root(tmp_path / "outside", source_root=installed_module_root)
+
+
+def test_installed_distribution_map_command_exposes_help_without_starting_stack():
+    command_name = "distribution-map.exe" if os.name == "nt" else "distribution-map"
+    command = Path(sys.executable).parent / command_name
+
+    assert command.is_file(), "uv must install the project command before tests run"
+    result = subprocess.run(
+        [str(command), "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "Run the local app, cached Forecast API" in result.stdout
+    assert "--model-repo" in result.stdout
+    assert result.stderr == ""
 
 
 def test_absent_artifact_environment_uses_canonical_tracked_paths(tmp_path):
