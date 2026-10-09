@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.scripts]
-distribution-map = "scripts.run_local_forecast_stack:main"
+distribution-map = "scripts.run_app:main"
 
 [build-system]
 requires = ["hatchling"]

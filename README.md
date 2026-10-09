@@ -4,7 +4,7 @@
 
 Aplicación web interactiva para visualizar animaciones y series temporales de variables hidrometeorológicas sobre el estado de Tabasco, México, usando Google Earth Engine como principal fuente de datos satelitales.
 
-## Inicio rápido local con pronóstico automático
+## Inicio rápido local (solo aplicación)
 
 Sincronice primero el proyecto de la aplicación y, desde la raíz de este
 repositorio, ejecute el comando público:
@@ -14,21 +14,55 @@ uv sync
 uv run distribution-map
 ```
 
-`uv sync` instala las dependencias y registra el comando del proyecto. El modelo
-es una dependencia local explícita y permanece en un repositorio separado. De
-forma predeterminada, el comando espera el checkout hermano
+`uv sync` instala las dependencias y registra el comando del proyecto. El
+comando público es solo-aplicación: compila el frontend TypeScript con el
+driver limpio determinista (`scripts/build-typescript.mjs`, expuesto también
+como `npm run build:ts`), valida el límite de dependencias de la aplicación y
+sirve Flask en primer plano en `http://127.0.0.1:5000`. Nunca requiere el
+repositorio hermano del modelo y nunca inicia la API de pronóstico ni el
+worker automático.
+
+Antes de ejecutarlo, prepare:
+
+- `.venv/` y `node_modules/` de esta aplicación, además de un runtime de
+  Node.js; el lanzador no ejecuta instalaciones.
+- `GEE_PROJECT` y una fuente de autorización local de Earth Engine: credenciales
+  persistentes (normalmente `~/.config/earthengine/credentials`), un archivo
+  seleccionado mediante `GOOGLE_APPLICATION_CREDENTIALS` o las credenciales
+  predeterminadas de aplicación de gcloud (normalmente
+  `~/.config/gcloud/application_default_credentials.json`).
+
+El comando valida primero esos requisitos, compila el frontend y después sirve
+la aplicación en primer plano. Pulse `Ctrl+C` para terminar el backend; los
+registros permanecen en `.cache/bdctb-local-app/logs/`, con el mismo esquema
+privado del supervisor general (`0600` por archivo, `0700` para el directorio,
+tres archivos de hasta 1 MiB cada uno).
+
+Sin la pila del modelo no existe caché de pronóstico válida: la aplicación
+sigue funcionando, pero sus rutas de pronóstico no deben presentarse como
+predicción operativa.
+
+## Ruta diferida: pila local con pronóstico automático (compatibilidad)
+
+La pila completa con modelo, API de pronóstico y worker se conserva en
+`scripts/run_local_forecast_stack.py` para uso diferido; ya no es el destino
+del comando público:
+
+```bash
+.venv/bin/python scripts/run_local_forecast_stack.py
+.venv/bin/python scripts/run_local_forecast_stack.py --model-repo /ruta/al/repositorio
+```
+
+El modelo es una dependencia local explícita y permanece en un repositorio
+separado. De forma predeterminada, el script espera el checkout hermano
 `../distributionMapApp-model-research`. No descarga el modelo automáticamente.
-Para otra ubicación, ejecute
-`uv run distribution-map --model-repo /ruta/al/repositorio`.
 
 El repositorio del modelo selecciona sus rutas canónicas mediante
 `configs/model/bdctb_runtime_paths_v1.json`. Actualmente, ese descriptor resuelve
 el bundle calibrado en
 `runs/bdctb-exogenous-qgb-real-v1-calibrated-20260730`. El supervisor también
 descubre allí los pesos GEFS versionados; no modifica credenciales ni instala
-dependencias del modelo. La invocación anterior mediante
-`.venv/bin/python scripts/run_local_forecast_stack.py` se conserva únicamente
-como ruta de compatibilidad.
+dependencias del modelo.
 
 Para un diseño no estándar, `BDCTB_MODEL_BUNDLE` y `BDCTB_GEFS_WEIGHTS` siguen
 siendo reemplazos opcionales explícitos. También se pueden reemplazar
@@ -51,8 +85,10 @@ Antes de ejecutarlo, prepare:
   a un archivo de credenciales (o el archivo predeterminado `~/.cdsapirc`), o
   ambas variables `CDSAPI_URL` y `CDSAPI_KEY` en el entorno del supervisor.
 
-El comando valida primero esos requisitos y compila la aplicación TypeScript
-actual. Después inicia tres procesos en primer plano: la aplicación en
+El script valida primero esos requisitos y compila la aplicación TypeScript
+currente directamente con el compilador TypeScript local
+(`node_modules/.bin/tsc`). Después inicia tres procesos en
+primer plano: la aplicación en
 `http://127.0.0.1:5000`, la API de pronóstico en
 `http://127.0.0.1:8765` y el worker automático independiente. La aplicación
 configura internamente su proxy hacia esa API. Pulse `Ctrl+C` para terminar solo
@@ -85,7 +121,7 @@ falla antes de iniciar, revise que las rutas, entornos, autorización de Earth
 Engine, credenciales del proveedor y puertos 5000/8765 estén disponibles; el
 supervisor nunca imprime valores secretos.
 
-Docker, systemd, usuarios del host, aprovisionamiento e instalación quedan
+Systemd, usuarios del host, aprovisionamiento e instalación quedan
 explícitamente fuera de este flujo local.
 
 ---
@@ -426,32 +462,6 @@ BASE_URL=http://localhost:8080 npm run test:e2e:ui
 
 ---
 
-### 9. Ejecución con Docker (Recomendado para Producción)
-
-El proyecto está dockerizado usando una arquitectura multi-contenedor para separar el servidor web del servicio de scraping. Ambos contenedores comparten un volumen de datos (`data_stations`) para que el servidor web pueda acceder a los archivos de estaciones descargados en tiempo real.
-
-**Requisitos previos:**
-- Tener instalado **Docker** y **Docker Compose**.
-- Tener configuradas tus credenciales de Google Earth Engine en el entorno del host (o configurar el volumen del path de credenciales).
-
-**Levantar el entorno completo:**
-
-```bash
-docker compose up --build
-```
-
-Esto compilará y levantará:
-- El servicio `web` expuesto en el puerto `5000` (corriendo la app Flask).
-- El servicio `scraper` que ejecuta el orquestador de descargas semanal/horario.
-
-Para ejecutar los servicios en segundo plano:
-
-```bash
-docker compose up -d
-```
-
----
-
 ## Uso básico
 
 ### Iniciar la aplicación
@@ -523,8 +533,6 @@ distributionMapApp/
 ├── package.json              # Dependencias Node y scripts de compilación TS
 ├── tsconfig.json             # Configuración del compilador TypeScript
 ├── openapi.yaml              # Especificación OpenAPI 3.1.0 de la API REST
-├── docker-compose.yml        # Configuración del entorno multi-contenedor
-├── Dockerfile                # Receta Docker multi-stage para web y scraper
 │
 ├── tests/                    # Suite de pruebas unitarias, integración (Vitest/pytest) y E2E (Playwright)
 │

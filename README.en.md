@@ -4,7 +4,7 @@
 
 Interactive web application to visualize animations and time series of hydrometeorological variables over the state of Tabasco, Mexico, using Google Earth Engine as the main satellite data source.
 
-## Local quick path with automatic forecasting
+## Local quick start (app only)
 
 First synchronize the app project and then run its public command from this
 repository root:
@@ -14,21 +14,56 @@ uv sync
 uv run distribution-map
 ```
 
-`uv sync` installs the dependencies and registers the project command. The model
-is an explicit local dependency that remains in a separate repository. By
-default, the command expects the sibling checkout at
+`uv sync` installs the dependencies and registers the project command. The
+public command is app-only: it compiles the TypeScript frontend through the
+clean deterministic driver (`scripts/build-typescript.mjs`, also exposed as
+`npm run build:ts`), validates the application dependency boundary, and serves
+Flask in the foreground at `http://127.0.0.1:5000`. It never requires the
+sibling model repository and never starts the Forecast API or the automatic
+worker.
+
+Prepare these prerequisites first:
+
+- This app's existing `.venv/` and `node_modules/`, plus a Node.js runtime;
+  the launcher performs no installation.
+- `GEE_PROJECT` and one existing local Earth Engine authorization source:
+  persistent Earth Engine credentials (normally
+  `~/.config/earthengine/credentials`), a credential file selected by
+  `GOOGLE_APPLICATION_CREDENTIALS`, or gcloud Application Default Credentials
+  (normally `~/.config/gcloud/application_default_credentials.json`).
+
+The command first validates these prerequisites, compiles the frontend, and
+then serves the application in the foreground. Press `Ctrl+C` to stop the
+backend; diagnostic logs remain under `.cache/bdctb-local-app/logs/` with the
+same private scheme as the general supervisor (`0600` per file, `0700` for the
+directory, three files of at most 1 MiB each).
+
+Without the model stack there is no valid forecast cache: the application keeps
+working, but its forecast routes must not be presented as operational
+prediction.
+
+## Deferred path: local stack with automatic forecasting (compatibility)
+
+The full stack with model, Forecast API, and worker remains preserved in
+`scripts/run_local_forecast_stack.py` for deferred use; it is no longer the
+target of the public command:
+
+```bash
+.venv/bin/python scripts/run_local_forecast_stack.py
+.venv/bin/python scripts/run_local_forecast_stack.py --model-repo /path/to/repository
+```
+
+The model is an explicit local dependency that remains in a separate
+repository. By default, the script expects the sibling checkout at
 `../distributionMapApp-model-research`; it never downloads the model
-automatically. For another location, run
-`uv run distribution-map --model-repo /path/to/repository`.
+automatically.
 
 The model repository selects its canonical paths through
 `configs/model/bdctb_runtime_paths_v1.json`. That descriptor currently resolves
 the calibrated bundle at
 `runs/bdctb-exogenous-qgb-real-v1-calibrated-20260730`. The supervisor also
 discovers the versioned GEFS weights there; it does not modify credentials or
-install model dependencies. The previous
-`.venv/bin/python scripts/run_local_forecast_stack.py` invocation remains only
-as a compatibility path.
+install model dependencies.
 
 For a nonstandard layout, `BDCTB_MODEL_BUNDLE` and `BDCTB_GEFS_WEIGHTS` remain
 optional explicit overrides. `BDCTB_MODEL_CONFIG`, `BDCTB_STATE_ROOT`, and
@@ -50,8 +85,10 @@ Prepare these prerequisites first:
   credentials file (or the default `~/.cdsapirc`), or both `CDSAPI_URL` and
   `CDSAPI_KEY` in the launcher environment.
 
-The command first validates these prerequisites and compiles the current
-TypeScript application. It then starts three foreground processes: the app at
+The script first validates these prerequisites and compiles the current
+TypeScript application directly with the local TypeScript compiler
+(`node_modules/.bin/tsc`). It then starts
+three foreground processes: the app at
 `http://127.0.0.1:5000`, the Forecast API at
 `http://127.0.0.1:8765`, and the independent automatic worker. It configures
 the app proxy to that API internally. Press `Ctrl+C` to stop only those three
@@ -79,8 +116,8 @@ normal until a valid cache exists. If startup fails early, verify paths,
 environments, Earth Engine authorization, provider credentials, and loopback
 ports 5000/8765. Secret values are never printed.
 
-Docker, systemd, host users, provisioning, and installation are explicitly out
-of scope for this local workflow.
+Systemd, host users, provisioning, and installation are explicitly out of
+scope for this local workflow.
 
 ---
 
@@ -407,32 +444,6 @@ BASE_URL=http://localhost:8080 npm run test:e2e:ui
 
 ---
 
-### 9. Run with Docker (Recommended for Production)
-
-The project is dockerized using a multi-container architecture that separates the web server from the scraping service. Both containers share a data volume (`data_stations`) so the web server can access downloaded station files in real time.
-
-**Prerequisites:**
-- **Docker** and **Docker Compose** installed.
-- Google Earth Engine credentials configured on your host system (or configure the volume path for credentials).
-
-**Bring up the environment:**
-
-```bash
-docker compose up --build
-```
-
-This builds and launches:
-- The `web` service exposed on port `5000` (running the Flask app).
-- The `scraper` service running the weekly/hourly scheduler.
-
-To run the services in the background:
-
-```bash
-docker compose up -d
-```
-
----
-
 ## Basic Usage
 
 ### Start the Application
@@ -504,8 +515,6 @@ distributionMapApp/
 ├── package.json              # Node dependencies and TS compile scripts
 ├── tsconfig.json             # TypeScript compiler settings
 ├── openapi.yaml              # OpenAPI 3.1.0 REST API specification
-├── docker-compose.yml        # Multi-container Compose configuration
-├── Dockerfile                # Multi-stage Dockerfile for web and scraper
 │
 ├── tests/                    # Unit, integration (Vitest/pytest), and E2E (Playwright) tests
 │

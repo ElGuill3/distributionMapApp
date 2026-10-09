@@ -119,26 +119,6 @@ def test_app_root_never_falls_back_to_an_installed_module_path(tmp_path):
         resolve_app_root(tmp_path / "outside", source_root=installed_module_root)
 
 
-def test_installed_distribution_map_command_exposes_help_without_starting_stack():
-    command_name = "distribution-map.exe" if os.name == "nt" else "distribution-map"
-    command = Path(sys.executable).parent / command_name
-
-    assert command.is_file(), "uv must install the project command before tests run"
-    result = subprocess.run(
-        [str(command), "--help"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=False,
-    )
-
-    assert result.returncode == 0
-    assert "Run the local app, cached Forecast API" in result.stdout
-    assert "--model-repo" in result.stdout
-    assert result.stderr == ""
-
-
 def test_absent_artifact_environment_uses_canonical_tracked_paths(tmp_path):
     overridden = _runtime(tmp_path)
     settings = build_settings(overridden.app_root, overridden.model_root, {})

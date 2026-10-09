@@ -6,7 +6,7 @@ from scrapers.conagua import ConaguaScraper
 from scrapers.smn import SmnWeatherScraper
 from config import CONAGUA_HIDROS_STATIONS, CONAGUA_CLIMAS_STATIONS
 
-# Configuración de logs básica a stdout para visibilidad en Docker
+# Configuración de logs básica a stdout para visibilidad
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
