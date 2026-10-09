@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build:ts": "tsc",
+    "build:ts": "node scripts/build-typescript.mjs",
     "watch:ts": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
