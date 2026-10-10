@@ -111,7 +111,7 @@ def test_app_spec_binds_loopback_and_injects_no_model_configuration(tmp_path):
         assert key not in spec.environment
 
 
-def test_preflight_runs_dependency_check_then_clean_build_only(tmp_path):
+def test_preflight_runs_dependency_check_station_bootstrap_then_clean_build(tmp_path):
     settings = _app_settings(tmp_path)
     calls = []
 
@@ -130,6 +130,17 @@ def test_preflight_runs_dependency_check_then_clean_build_only(tmp_path):
                 capture_output=True,
                 text=True,
                 timeout=run_app.PREFLIGHT_TIMEOUT_SECONDS,
+                check=False,
+            ),
+        ),
+        (
+            [str(settings.app_python), "-m", run_app.STATION_BOOTSTRAP_MODULE],
+            dict(
+                cwd=settings.app_root,
+                env=dict(settings.environment),
+                capture_output=False,
+                text=True,
+                timeout=None,
                 check=False,
             ),
         ),
@@ -182,8 +193,50 @@ def test_preflight_build_failure_propagates_and_backend_never_starts(tmp_path):
     with pytest.raises(LauncherError, match="frontend did not build"):
         run_app.preflight(settings, runner=runner, port_check=lambda _h, _p: True)
 
-    assert len(calls) == 2
-    assert APP_PREFLIGHT_MODULE not in calls[1]
+    assert len(calls) == 3
+    assert APP_PREFLIGHT_MODULE not in calls[2]
+
+
+def test_station_bootstrap_failure_blocks_build_and_backend(
+    tmp_path, monkeypatch, capsys
+):
+    settings = _app_settings(tmp_path)
+    calls = []
+
+    def runner(command, **_kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(
+            command,
+            2 if "scripts.bootstrap_stations" in command else 0,
+            stdout="",
+            stderr="",
+        )
+
+    real_preflight = run_app.preflight
+    monkeypatch.setattr(run_app, "build_app_settings", lambda *_args: settings)
+    monkeypatch.setattr(
+        run_app,
+        "preflight",
+        lambda settings: real_preflight(
+            settings, runner=runner, port_check=lambda *_args: True
+        ),
+    )
+    monkeypatch.setattr(
+        run_app,
+        "supervise",
+        lambda *_args, **_kwargs: pytest.fail("backend must not start"),
+    )
+    assert run_app.main([]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err == "Local app failed safely: "
+        "no usable station data is available after bootstrap.\n"
+    )
+    assert calls == [
+        [str(settings.app_python), "-m", APP_PREFLIGHT_MODULE],
+        [str(settings.app_python), "-m", "scripts.bootstrap_stations"],
+    ]
 
 
 def test_preflight_rejects_occupied_loopback_port_without_any_process(tmp_path):

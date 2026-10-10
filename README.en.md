@@ -32,8 +32,24 @@ Prepare these prerequisites first:
   `GOOGLE_APPLICATION_CREDENTIALS`, or gcloud Application Default Credentials
   (normally `~/.config/gcloud/application_default_credentials.json`).
 
-The command first validates these prerequisites, compiles the frontend, and
-then serves the application in the foreground. Press `Ctrl+C` to stop the
+The command first validates these prerequisites, performs an initial download
+of the CONAGUA stations configured in `CONAGUA_HIDROS_STATIONS` and
+`CONAGUA_CLIMAS_STATIONS`, compiles the frontend, and then serves the app in the
+foreground. No separate station download command is needed. Downloads finish
+before Flask loads its catalog; the periodic scraper scheduler is not started.
+Responses are downloaded into a temporary directory. Latin-1 CSVs and reversible
+UTF-8-as-Latin-1 decoding errors are normalized to UTF-8 before validation,
+without altering observations. Valid accented text is preserved. Downloads only replace local CSVs
+if they contain metadata for a station with known coordinates and at least one
+valid date and measurement. If any download fails, the command warns and uses
+available usable local data. If no usable station remains, it exits with code 2
+without starting Flask. Data stays in the Git-ignored `data/stations/` directory;
+startup may take longer while CONAGUA responds or the downloader tries FTP.
+Startup prints downloader progress and per-station rejection reasons to stderr,
+including missing files, invalid metadata, unrecognized measurement columns
+(check CSV encoding), and malformed rows. These messages distinguish download
+failures from validation rejection; the final summary remains on stdout.
+Press `Ctrl+C` to stop the
 backend; diagnostic logs remain under `.cache/bdctb-local-app/logs/` with the
 same private scheme as the general supervisor (`0600` per file, `0700` for the
 directory, three files of at most 1 MiB each).

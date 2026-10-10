@@ -2,8 +2,10 @@
 
 The public app-only command compiles the TypeScript frontend through the clean
 deterministic build driver, validates the application dependency boundary, and
-then serves the Flask application in the foreground on
-http://127.0.0.1:5000. It never requires the sibling model repository and
+refreshes CONAGUA station data before Flask loads its catalog, and then serves
+Flask in the foreground on http://127.0.0.1:5000. If downloads fail, usable local
+station data is retained with a warning; startup stops if none is available.
+It never requires the sibling model repository and
 never starts the Forecast API or the automatic worker; those remain available
 through the deferred ``scripts/run_local_forecast_stack.py`` supervisor.
 """
@@ -40,6 +42,7 @@ NODE_EXECUTABLE = "node"
 BUILD_SCRIPT = Path("scripts/build-typescript.mjs")
 PREFLIGHT_TIMEOUT_SECONDS = 30
 BUILD_TIMEOUT_SECONDS = 300
+STATION_BOOTSTRAP_MODULE = "scripts.bootstrap_stations"
 
 # Startup children currently running under preflight/build. The foreground
 # signal-cleanup requirement covers startup too: a SIGTERM to the launcher
@@ -222,6 +225,20 @@ def preflight(
         raise LauncherError(
             "app dependencies or Earth Engine prerequisites are unavailable"
         )
+
+    # Run in a fresh, signal-managed process before the serving Flask process
+    # imports config.LOCAL_STATIONS. Keep downloader progress and warnings visible.
+    stations = runner(
+        [str(settings.app_python), "-m", STATION_BOOTSTRAP_MODULE],
+        cwd=settings.app_root,
+        env=dict(settings.environment),
+        capture_output=False,
+        text=True,
+        timeout=None,
+        check=False,
+    )
+    if stations.returncode != 0:
+        raise LauncherError("no usable station data is available after bootstrap")
 
     build = runner(
         [settings.node, str(settings.build_script)],

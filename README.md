@@ -32,8 +32,25 @@ Antes de ejecutarlo, prepare:
   predeterminadas de aplicación de gcloud (normalmente
   `~/.config/gcloud/application_default_credentials.json`).
 
-El comando valida primero esos requisitos, compila el frontend y después sirve
-la aplicación en primer plano. Pulse `Ctrl+C` para terminar el backend; los
+El comando valida primero esos requisitos, ejecuta una descarga inicial de las
+estaciones CONAGUA configuradas en `CONAGUA_HIDROS_STATIONS` y
+`CONAGUA_CLIMAS_STATIONS`, compila el frontend y después sirve la aplicación en
+primer plano. No hace falta ejecutar otro comando para descargar las estaciones.
+La descarga termina antes de que Flask cargue el catálogo; no inicia el
+planificador periódico de scrapers. Las respuestas se descargan en una carpeta
+temporal. Los CSV Latin-1 y los errores reversibles de UTF-8 interpretado como
+Latin-1 se normalizan a UTF-8 antes de validar, sin alterar las observaciones
+ni el texto correctamente acentuado. Solo se reemplazan los CSV locales si contienen metadatos de una
+estación con coordenadas conocidas y al menos una fecha con una medición válida.
+Si alguna descarga falla, el comando advierte y usa los datos locales utilizables.
+Si no hay ninguna estación utilizable, termina con código 2 sin iniciar Flask.
+Los datos permanecen en `data/stations/` (fuera de Git); el arranque puede tardar
+mientras CONAGUA responde o el descargador intenta su alternativa FTP.
+El arranque muestra el progreso del descargador y el motivo de rechazo de cada
+estación en stderr: archivo no descargado, metadatos inválidos, columna de
+medición no reconocida (revisar codificación) o filas malformadas. Así se
+distinguen los fallos de descarga de los rechazos de validación; el resumen
+final permanece en stdout. Pulse `Ctrl+C` para terminar el backend; los
 registros permanecen en `.cache/bdctb-local-app/logs/`, con el mismo esquema
 privado del supervisor general (`0600` por archivo, `0700` para el directorio,
 tres archivos de hasta 1 MiB cada uno).
