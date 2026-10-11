@@ -261,7 +261,18 @@ To facilitate offline analysis, the system offers:
 5. The backend responds with `{ gifUrl, bbox, dates, <values> }`.
 6. The frontend overlays the GIF on the Leaflet map using `L.imageOverlay` and renders the chart using Plotly.
 
-Generation progress is communicated in real time using **Server-Sent Events (SSE)** via the `/api/gif-progress/<task_id>` endpoint. The progress queue is cleaned up when the stream closes (normal completion, error, or client disconnect); if the same `task_id` is re-registered, an old stream closing never removes the newer task's queue, and the wait interval uses `SSE_TASK_QUEUE_TIMEOUT_S`. Completed or failed progress without a subscriber expires after `SSE_PROGRESS_RETENTION_S` (default 3600 seconds, minimum 1), counted from producer completion; running producers are not expired. Expiry is checked on registry access and on the existing cleanup daemon tick (controlled by `GIF_CLEANUP_INTERVAL_S`). Streams already attached keep their own queue. Per-process memory is bounded by `SSE_MAX_PROGRESS_TASKS` (default 1024, minimum 1) and `SSE_MAX_PROGRESS_MESSAGES` (default 128, minimum 2). Registration evicts completed tasks first, then the oldest registered task if all are running; an evicted ID returns the existing missing-task SSE event. Full message buffers discard their oldest progress, preserving the latest terminal pair without blocking generation. Attached streams retain their queue when the registry entry is evicted.
+Generation progress uses **Server-Sent Events (SSE)** at `/api/gif-progress/<task_id>`. The registry is **process-local**: use one application process with concurrent request threads so generation and SSE reach the same registry.
+
+| Setting | Default | Behavior |
+| --- | --- | --- |
+| `SSE_TASK_QUEUE_TIMEOUT_S` | 60 seconds | Wait between keep-alive comments. |
+| `SSE_PROGRESS_RETENTION_S` | 3600 seconds, minimum 1 | Completed/error progress expires from producer completion; running tasks do not expire. |
+| `SSE_MAX_PROGRESS_TASKS` | 1024, minimum 1 | Evict completed registrations first, then the oldest if all are running. |
+| `SSE_MAX_PROGRESS_MESSAGES` | 128, minimum 2 | Discard oldest buffered progress without blocking generation; retain the latest terminal pair. |
+
+- Closing a stream cleans its queue on completion, error, or client disconnect. An old producer or stream never removes a newer registration with the same ID.
+- Expiry is checked on registry access and on cleanup daemon ticks (`GIF_CLEANUP_INTERVAL_S`). An evicted/expired ID emits the existing missing-task SSE event; already attached streams retain their own queue.
+- Multiple processes or replicas require a shared progress backend; none is configured by this application. A load balancer alone does not make the registry shared.
 
 ### Frontend Architecture
 
@@ -698,8 +709,10 @@ GIFs are cached under `static/gifs/` and cleared by the daemon when they exceed 
 
 ```bash
 pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
+gunicorn --workers 1 --threads 4 -b 0.0.0.0:8000 app:app
 ```
+
+Keep one worker for the process-local SSE registry; threads allow the SSE request to run while GIF generation is in progress. Do not scale this command to multiple workers/replicas without first adding a shared progress backend. Configure server/proxy timeouts for generation requests, which can take several minutes.
 
 We recommend placing an Nginx reverse proxy in front of the Flask app to serve static assets directly.
 

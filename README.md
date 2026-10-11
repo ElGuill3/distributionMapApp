@@ -267,7 +267,18 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 5. El backend responde con `{ gifUrl, bbox, dates, <valores> }`.
 6. El frontend superpone el GIF sobre el mapa Leaflet usando `L.imageOverlay` y renderiza la gráfica con Plotly.
 
-El progreso de generación se comunica en tiempo real mediante **Server-Sent Events (SSE)** a través del endpoint `/api/gif-progress/<task_id>`. La cola de progreso se limpia al cerrar el stream (cierre normal, error o desconexión del cliente); si un mismo `task_id` se re-registra, el cierre de un stream antiguo nunca elimina la cola de la tarea nueva, y el intervalo de espera usa `SSE_TASK_QUEUE_TIMEOUT_S`. El progreso terminado o fallido sin suscriptor caduca después de `SSE_PROGRESS_RETENTION_S` (3600 segundos por defecto, mínimo 1), contados desde que finaliza el productor; las generaciones activas no caducan. Se comprueba al acceder al registro y en cada ciclo del daemon existente (`GIF_CLEANUP_INTERVAL_S`). Los streams ya conectados conservan su propia cola. La memoria por proceso queda limitada por `SSE_MAX_PROGRESS_TASKS` (1024 por defecto, mínimo 1) y `SSE_MAX_PROGRESS_MESSAGES` (128 por defecto, mínimo 2). Al registrar se eliminan primero tareas terminadas y luego la más antigua si todas están activas; un ID desalojado emite el mensaje SSE existente de tarea no encontrada. Una cola llena descarta el progreso más antiguo, preservando el par terminal más reciente sin bloquear la generación. Los streams conectados conservan su cola aunque el registro sea desalojado.
+El progreso de generación usa **Server-Sent Events (SSE)** en `/api/gif-progress/<task_id>`. El registro es **local al proceso**: usar un proceso de aplicación con hilos concurrentes permite que la generación y SSE accedan al mismo registro.
+
+| Configuración | Por defecto | Comportamiento |
+| --- | --- | --- |
+| `SSE_TASK_QUEUE_TIMEOUT_S` | 60 segundos | Espera entre comentarios keep-alive. |
+| `SSE_PROGRESS_RETENTION_S` | 3600 segundos, mínimo 1 | El progreso terminado/fallido caduca desde el fin del productor; las tareas activas no caducan. |
+| `SSE_MAX_PROGRESS_TASKS` | 1024, mínimo 1 | Desaloja primero registros terminados y luego el más antiguo si todos están activos. |
+| `SSE_MAX_PROGRESS_MESSAGES` | 128, mínimo 2 | Descarta progreso antiguo sin bloquear la generación y conserva el par terminal más reciente. |
+
+- Cerrar un stream limpia su cola al terminar, fallar o desconectarse el cliente. Un productor o stream antiguo nunca elimina un registro más nuevo con el mismo ID.
+- Se comprueba la caducidad al acceder al registro y en cada ciclo del daemon (`GIF_CLEANUP_INTERVAL_S`). Un ID desalojado/caducado emite el mensaje SSE existente de tarea no encontrada; los streams conectados conservan su cola.
+- Varios procesos o réplicas necesitan un backend de progreso compartido; la aplicación no configura ninguno. Un balanceador por sí solo no comparte el registro.
 
 ### Arquitectura del frontend
 
@@ -738,8 +749,10 @@ Para un entorno de producción se recomienda:
 
 ```bash
 pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
+gunicorn --workers 1 --threads 4 -b 0.0.0.0:8000 app:app
 ```
+
+Mantener un worker para el registro SSE local al proceso; los hilos permiten atender SSE mientras se genera el GIF. No escalar este comando a varios workers/réplicas sin implementar antes un backend de progreso compartido. Configurar los timeouts del servidor/proxy para solicitudes de generación que pueden tardar varios minutos.
 
 Junto con un servidor proxy inverso (Nginx o Apache) que sirva los archivos estáticos directamente.
 
