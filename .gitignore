@@ -44,9 +44,10 @@ static/gifs/
 static/flood_maps/
 
 # ---------------------------------------------------------------------------
-# TypeScript build output (src/ts/ → static/)
+# Frontend build output (src/ts/ + src/styles/ → static/)
 # Se regeneran con: npm run build:ts
 # ---------------------------------------------------------------------------
+/static/styles.css
 /static/*.js
 /static/*.js.map
 /static/*.d.ts

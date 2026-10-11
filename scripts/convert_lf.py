@@ -8,7 +8,7 @@ files = [
     'src/ts/ui/chart.ts',
     'src/ts/modes/compareMode.ts',
     'src/ts/main.ts',
-    'static/styles.css'
+    'src/styles/styles.css'
 ]
 
 for f in files:

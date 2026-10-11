@@ -17,7 +17,8 @@ uv run distribution-map
 `uv sync` installs the dependencies and registers the project command. The
 public command is app-only: it compiles the TypeScript frontend through the
 clean deterministic driver (`scripts/build-typescript.mjs`, also exposed as
-`npm run build:ts`), validates the application dependency boundary, and serves
+`npm run build:ts`), which compiles TypeScript and copies the authored
+`src/styles/styles.css` to its unchanged public `/static/styles.css` URL, validates the application dependency boundary, and serves
 Flask in the foreground at `http://127.0.0.1:5000`. It never requires the
 sibling model repository and never starts the Forecast API or the automatic
 worker.
@@ -601,9 +602,12 @@ distributionMapApp/
 │
 ├── static/                   # Files served directly to the browser
 │   ├── main.js               # Compiled JavaScript from TypeScript
-│   ├── styles.css            # Main stylesheet
+│   ├── styles.css            # Published copy of src/styles/styles.css
 │   ├── gifs/                 # Generated GIFs (temp cache, automatically cleaned)
 │   └── flood_maps/           # Rendered risk map PNGs
+│
+├── src/styles/              # Authored stylesheets (copied to static/ by build:ts)
+│   └── styles.css            # Main stylesheet source
 │
 ├── src/ts/                   # TypeScript source code (compiles to static/)
 │   ├── main.ts               # Composition root — orchestrator and wiring

@@ -1,4 +1,4 @@
-import { readdir, rmdir, rm } from 'node:fs/promises';
+import { copyFile, readdir, rmdir, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -59,3 +59,7 @@ function compileTypeScript() {
 
 await cleanGeneratedOutput(outputRoot);
 await compileTypeScript();
+await copyFile(
+  path.join(root, 'src', 'styles', 'styles.css'),
+  path.join(outputRoot, 'styles.css')
+);
