@@ -107,6 +107,27 @@ export function removeProgressIndicator(delayMs = 0): void {
 
 const WARNING_MODAL_ID = 'warning-modal';
 
+/** Listener Escape activo del warning modal actual (para limpieza en close). */
+let warningEscapeListener: ((e: KeyboardEvent) => void) | null = null;
+
+/** Timer de auto-cierre del warning modal actual. */
+let warningDismissTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Elimina el listener Escape y el timer de auto-cierre del warning actual.
+ * Debe llamarse en TODOS los caminos de cierre para no dejar registros huérfanos.
+ */
+function clearWarningLifecycle(): void {
+  if (warningEscapeListener !== null) {
+    document.removeEventListener('keydown', warningEscapeListener);
+    warningEscapeListener = null;
+  }
+  if (warningDismissTimer !== null) {
+    clearTimeout(warningDismissTimer);
+    warningDismissTimer = null;
+  }
+}
+
 /**
  * Muestra un modal de warning NO-bloqueante.
  *
@@ -117,6 +138,8 @@ const WARNING_MODAL_ID = 'warning-modal';
  * - Solo informa al usuario sin bloquear la interacción
  */
 export function showWarningModal(title: string, message: string): void {
+  // Cierra cualquier warning previo y limpia su listener/timer para que ni un
+  // Escape huérfano ni el timer antiguo puedan cerrar el warning nuevo.
   closeWarningModal();
   const div = document.createElement('div');
   div.id = WARNING_MODAL_ID;
@@ -135,19 +158,23 @@ export function showWarningModal(title: string, message: string): void {
   document
     .getElementById('warning-modal-close')
     ?.addEventListener('click', closeWarningModal);
-  // Auto-cerrar a los 8 segundos si el usuario no interactuó
-  setTimeout(() => closeWarningModal(), 8000);
-  // Escape también cierra
-  const escListener = (e: KeyboardEvent) => {
+  // Auto-cerrar a los 8 segundos si el usuario no interactuó.
+  // Se registra en la variable de módulo para poder cancelarlo en cualquier cierre.
+  warningDismissTimer = setTimeout(() => {
+    warningDismissTimer = null;
+    closeWarningModal();
+  }, 8000);
+  // Escape también cierra; el listener se limpia en closeWarningModal.
+  warningEscapeListener = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       closeWarningModal();
-      document.removeEventListener('keydown', escListener);
     }
   };
-  document.addEventListener('keydown', escListener);
+  document.addEventListener('keydown', warningEscapeListener);
 }
 
 export function closeWarningModal(): void {
+  clearWarningLifecycle();
   document.getElementById(WARNING_MODAL_ID)?.remove();
 }
 
@@ -156,6 +183,20 @@ export function closeWarningModal(): void {
 // ---------------------------------------------------------------------------
 
 const ERROR_MODAL_ID = 'error-modal';
+
+/** Listener Escape activo del error modal actual (para limpieza en close). */
+let errorEscapeListener: ((e: KeyboardEvent) => void) | null = null;
+
+/**
+ * Elimina el listener Escape del error modal actual.
+ * Debe llamarse en TODOS los caminos de cierre para no dejar registros huérfanos.
+ */
+function clearErrorLifecycle(): void {
+  if (errorEscapeListener !== null) {
+    document.removeEventListener('keydown', errorEscapeListener);
+    errorEscapeListener = null;
+  }
+}
 
 /**
  * Muestra un modal de error blocking con título, mensaje y acción opcional.
@@ -221,14 +262,13 @@ export function showErrorModal(
     });
   }
 
-  // Escape cierra el modal
-  const escListener = (e: KeyboardEvent) => {
+  // Escape cierra el modal; el listener se limpia en closeErrorModal.
+  errorEscapeListener = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       closeErrorModal();
-      document.removeEventListener('keydown', escListener);
     }
   };
-  document.addEventListener('keydown', escListener);
+  document.addEventListener('keydown', errorEscapeListener);
 
   // Focus inicial en el botón Cerrar para accessibility (keyboard users)
   const closeBtn = document.getElementById(
@@ -241,6 +281,7 @@ export function showErrorModal(
  * Cierra y elimina el modal de error del DOM, si existe.
  */
 export function closeErrorModal(): void {
+  clearErrorLifecycle();
   document.getElementById(ERROR_MODAL_ID)?.remove();
 }
 
