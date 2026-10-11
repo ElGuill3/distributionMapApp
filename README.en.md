@@ -296,6 +296,7 @@ src/ts/
 - **`apiClient.ts`** encapsulates all `fetch()` calls, including SSE progress and typed error handling.
 - **`mapState.ts`** holds session state: selected bbox, active mode, loaded time series, and references to animation players (`GifPlayer`, `SyncPlayer`, `SoloPlayer`). `GifPlayer` owns its frame blob URLs: reloading releases replaced frames, disposing invalidates pending loads, and a failed or superseded load releases its candidate frames without replacing the current animation.
 - **`normalMode.ts`** gives each generation its own lifecycle: obsolete responses, decode completions and SSE callbacks cannot replace or clear newer state. Clearing/reinitializing the mode invalidates pending generations; the existing animation stays owned until a current replacement has decoded successfully.
+- **`compareMode.ts`** owns generations per panel, so A and B can finish independently. Shared progress belongs to the latest pending request; clearing a panel or leaving/reinitializing comparison invalidates obsolete work. Failed/stale decoded candidates are disposed without replacing owned frames, and late B view-sync callbacks cannot restore cleared state.
 - **`modes/*.ts`** contain specific behavior for each mode of operation and access state exclusively through `mapState`.
 
 ---

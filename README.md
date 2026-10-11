@@ -302,6 +302,7 @@ src/ts/
 - **`apiClient.ts`** encapsula todos los `fetch()` al backend, incluyendo SSE de progreso y manejo de errores tipados.
 - **`mapState.ts`** mantiene el estado de la sesión: bbox seleccionado, modo activo, series temporales cargadas y referencias a los players de animación (GifPlayer, SyncPlayer, SoloPlayer). `GifPlayer` es dueño de las URLs blob de sus frames: recargar libera los frames reemplazados, disponer invalida cargas pendientes y una carga fallida u obsoleta libera sus frames candidatos sin reemplazar la animación actual.
 - **`normalMode.ts`** asigna un ciclo de vida a cada generación: respuestas, decodificaciones y callbacks SSE obsoletos no pueden reemplazar ni limpiar el estado más nuevo. Limpiar/reinicializar el modo invalida generaciones pendientes; la animación existente conserva sus recursos hasta que se decodifica correctamente un reemplazo vigente.
+- **`compareMode.ts`** administra las generaciones por panel para que A y B terminen independientemente. El progreso compartido pertenece a la última solicitud pendiente; limpiar un panel o salir/reinicializar la comparación invalida trabajo obsoleto. Las decodificaciones fallidas/obsoletas liberan sus candidatos sin reemplazar los frames vigentes, y los callbacks tardíos de sincronización de B no restauran el estado limpiado.
 - **`modes/*.ts`** contienen el comportamiento específico de cada modo de operación y acceden al estado exclusivamente a través de `mapState`.
 
 ---

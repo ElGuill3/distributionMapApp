@@ -51,6 +51,18 @@ declare const L: typeof import('leaflet');
 
 /** Referencia al mapa principal (inyectada desde main.ts). */
 let _mapRef: L.Map | null = null;
+let requestRevision = 0;
+const panelRevisions = { A: 0, B: 0 };
+const progressRequests = { A: 0, B: 0 };
+
+function invalidatePanel(panel: 'A' | 'B'): void {
+  const wasPending = progressRequests[panel] !== 0;
+  panelRevisions[panel] = ++requestRevision;
+  progressRequests[panel] = 0;
+  if (wasPending && !progressRequests.A && !progressRequests.B) {
+    removeProgressIndicator(0);
+  }
+}
 
 /** Marcadores de estaciones en mapa principal y mapa B. */
 let _stationMarkersMap: L.Marker[] = [];
@@ -133,6 +145,8 @@ export interface CompareModeDomRefs {
  * Debe llamarse desde main.ts al arrancar, antes de cualquier interacción.
  */
 export function initCompareMode(domRefs: CompareModeDomRefs): void {
+  invalidatePanel('A');
+  invalidatePanel('B');
   _mapRef = domRefs.map;
   _stationMarkersMap = domRefs.stationMarkersMap;
   _stationMarkersMapB = domRefs.stationMarkersMapB;
@@ -339,6 +353,8 @@ export function clearMapBOverlay(): void {
  * Limpia todos los players y overlays activos del modo comparativa.
  */
 export function cleanupComparePanels(): void {
+  invalidatePanel('A');
+  invalidatePanel('B');
   normalMode.stopSoloPlayer();
   normalMode.stopSyncPlayer();
   mapState.getGifPlayerA()?.dispose();
@@ -359,6 +375,8 @@ export function cleanupComparePanels(): void {
  * Limpia solo el panel A (animación + gráfica) sin tocar el panel B.
  */
 export function clearPanelA(): void {
+  invalidatePanel('A');
+  normalMode.stopSoloPlayer();
   normalMode.stopSyncPlayer();
   mapState.getGifPlayerA()?.dispose();
   mapState.setGifPlayerA(null);
@@ -385,6 +403,7 @@ export function clearPanelA(): void {
  * Limpia solo el panel B (animación + gráfica) sin tocar el panel A.
  */
 export function clearPanelB(): void {
+  invalidatePanel('B');
   normalMode.stopSyncPlayer();
   normalMode.stopSoloPlayer();
   mapState.getGifPlayerB()?.dispose();
@@ -874,6 +893,15 @@ export async function requestGifAndSeriesForPanel(
   end: string,
   bbox: BBox
 ): Promise<void> {
+  const revision = ++requestRevision;
+  panelRevisions[panel] = revision;
+  progressRequests[panel] = revision;
+  const isCurrent = () =>
+    panelRevisions[panel] === revision && mapState.getCompareModeActive();
+  const ownsProgress = () =>
+    isCurrent() && revision === Math.max(progressRequests.A, progressRequests.B);
+  const isLastPending = () => !progressRequests[panel === 'A' ? 'B' : 'A'];
+  let pendingPlayer: GifPlayer | null = null;
   mapState.setCurrentVariable(variable);
 
   const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -885,6 +913,7 @@ export async function requestGifAndSeriesForPanel(
   const eventSource = createProgressEventSource(
     taskId,
     (progress, message) => {
+      if (!ownsProgress()) return;
       sseMessagesReceived++;
       if (progress > 0) {
         closeWarningModal();
@@ -895,19 +924,20 @@ export async function requestGifAndSeriesForPanel(
       updateProgressIndicator(mappedProgress, message);
       if (progress === 100 || progress === -1) {
         eventSource.close();
-        if (progress === -1) {
+        if (progress === -1 && isLastPending()) {
           removeProgressIndicator(3000);
         }
       }
     },
     () => {
-      closeWarningModal();
+      if (ownsProgress()) closeWarningModal();
       eventSource.close();
     }
   );
 
   // Watchdog timer para detectar conexión lenta o procesamiento largo
   const connectionWatchdog = setTimeout(() => {
+    if (!ownsProgress()) return;
     if (!navigator.onLine) {
       showWarningModal(
         'Sin conexión',
@@ -934,21 +964,29 @@ export async function requestGifAndSeriesForPanel(
       bbox,
       taskId,
     });
+    if (!isCurrent()) return;
 
     clearTimeout(connectionWatchdog);
-    closeWarningModal();
+    if (ownsProgress()) closeWarningModal();
 
     if (gifData.error) {
-      removeProgressIndicator(0);
+      if (!ownsProgress()) return;
+      if (isLastPending()) removeProgressIndicator(0);
       const uxError = translateBackendError(gifData.error);
       showErrorModal(uxError.title, uxError.message);
       return;
     }
 
-    updateProgressIndicator(
-      93,
-      `Descargando y decodificando animación (panel ${panel})...`
-    );
+    if (ownsProgress()) {
+      updateProgressIndicator(
+        93,
+        `Descargando y decodificando animación (panel ${panel})...`
+      );
+    }
+    const player = new GifPlayer();
+    pendingPlayer = player;
+    await player.load(gifData.gifUrl);
+    if (!isCurrent()) return;
 
     const [minLon, minLat, maxLon, maxLat] = gifData.bbox;
     const overlayBounds = L.latLngBounds(
@@ -968,10 +1006,7 @@ export async function requestGifAndSeriesForPanel(
       mapState.setOverlayA(null);
       removeActiveOverlay(_mapRef!);
 
-      const player = new GifPlayer();
-      await player.load(gifData.gifUrl);
-
-      updateProgressIndicator(97, 'Renderizando panel A...');
+      if (ownsProgress()) updateProgressIndicator(97, 'Renderizando panel A...');
 
       const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, {
         opacity: 0.8,
@@ -982,6 +1017,7 @@ export async function requestGifAndSeriesForPanel(
       _mapRef!.fitBounds(overlayBounds);
 
       mapState.setGifPlayerA(player);
+      pendingPlayer = null;
       mapState.setOverlayA(overlay);
       mapState.setActiveGifPathA(gifData.gifUrl);
       mapState.setGifPathForVariable('A', variable, gifData.gifUrl);
@@ -1019,10 +1055,7 @@ export async function requestGifAndSeriesForPanel(
       mapState.setGifPlayerB(null);
       clearMapBOverlay();
 
-      const player = new GifPlayer();
-      await player.load(gifData.gifUrl);
-
-      updateProgressIndicator(97, 'Renderizando panel B...');
+      if (ownsProgress()) updateProgressIndicator(97, 'Renderizando panel B...');
 
       const mapB = mapState.getMapB()!;
       const overlay = L.imageOverlay(player.getFrameUrl(0), overlayBounds, {
@@ -1032,13 +1065,14 @@ export async function requestGifAndSeriesForPanel(
       _updateStationMarkersVisibility();
       switchColorbar(mapB, variable, _mapRef!);
       mapB.fitBounds(overlayBounds);
-      setTimeout(
-        () =>
-          mapB.setView(_mapRef!.getCenter(), _mapRef!.getZoom(), { animate: false }),
-        100
-      );
+      setTimeout(() => {
+        if (isCurrent() && mapB === mapState.getMapB()) {
+          mapB.setView(_mapRef!.getCenter(), _mapRef!.getZoom(), { animate: false });
+        }
+      }, 100);
 
       mapState.setGifPlayerB(player);
+      pendingPlayer = null;
       mapState.setActiveGifPathB(gifData.gifUrl);
       mapState.setGifPathForVariable('B', variable, gifData.gifUrl);
 
@@ -1059,18 +1093,23 @@ export async function requestGifAndSeriesForPanel(
     // Si ambos paneles tienen GIF → sincronizar
     trySyncBothPanels();
 
-    updateProgressIndicator(100, '¡Listo!');
-    removeProgressIndicator(500);
+    if (ownsProgress()) {
+      updateProgressIndicator(100, '¡Listo!');
+      if (isLastPending()) removeProgressIndicator(500);
+    }
   } catch (err) {
+    if (!ownsProgress()) return;
     console.error(err);
-    removeProgressIndicator(0);
+    if (isLastPending()) removeProgressIndicator(0);
     showErrorModal(
       'Error de red',
       `No se pudo generar la animación / serie temporal (panel ${panel}). Verificá tu conexión.`
     );
   } finally {
+    pendingPlayer?.dispose();
     clearTimeout(connectionWatchdog);
-    closeWarningModal();
+    if (ownsProgress()) closeWarningModal();
+    if (progressRequests[panel] === revision) progressRequests[panel] = 0;
     eventSource.close();
   }
 }
