@@ -3,6 +3,7 @@
  * Todas las constantes de UI y de llamadas a la API viven aquí.
  */
 
+import { RUNTIME_LIMITS } from './utils/processingLimits.js';
 import type { VariableKey, Season } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -43,7 +44,7 @@ export const SEASONS: SeasonOption[] = [
 
 export const DEFAULT_CENTER: [number, number] = [17.8409, -92.6189];
 export const DEFAULT_ZOOM = 8;
-export const MAX_SPAN_DEG = 8.0;
+export const MAX_SPAN_DEG = RUNTIME_LIMITS.MAX_SPAN_DEG;
 
 /** Mapa de VariableKey → URL base del endpoint gif-bbox */
 export const GIF_ENDPOINT: Record<

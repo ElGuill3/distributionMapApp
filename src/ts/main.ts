@@ -303,7 +303,7 @@ map.on(L.Draw.Event.CREATED, e => {
   if (widthDeg > MAX_SPAN_DEG || heightDeg > MAX_SPAN_DEG) {
     showErrorModal(
       'Área demasiado grande',
-      'El bounding box es demasiado grande (máx. ~8° por lado). Intentá con un área menor.'
+      `El bounding box es demasiado grande (máx. ~${MAX_SPAN_DEG}° por lado). Intentá con un área menor.`
     );
     return;
   }

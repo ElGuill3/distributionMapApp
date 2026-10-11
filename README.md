@@ -419,6 +419,8 @@ cp .env.example .env
 
 Los límites `MAX_SPAN_DEG`, `MAX_YEARS_RANGE` y `MAX_SPAN_DEG_S2` deben ser números finitos positivos (se permiten fracciones). Valores vacíos, malformados, cero, negativos, NaN o infinitos impiden el arranque con `<ENV_KEY> must be a finite number greater than zero.`, sin mostrar el valor. Los valores predeterminados siguen siendo 8°, 10 años y 4°, respectivamente.
 
+La página HTML incorpora solo estos tres límites numéricos como JSON antes de cargar los módulos del cliente. El dibujo de áreas usa la extensión configurada y conserva la exportación `MAX_SPAN_DEG`; un contexto ausente o malformado usa los valores predeterminados. La validación del servidor sigue siendo la autoridad; recargá la página después de cambiar la configuración.
+
 Las cuotas usan la notación de Flask-Limiter (por ejemplo, `1/minute` o `10/minute;100/hour`). Todos los conteos deben ser positivos. Valores vacíos o inválidos impiden el arranque con `<ENV_KEY> must specify positive request rates.`, sin mostrar el valor, incluso con el limitador desactivado. Las cuotas son independientes por endpoint/IP, locales al proceso y cuentan también solicitudes HTTP rechazadas. Exceder la cuota devuelve el JSON HTTP 429 existente con `Cache-Control: no-store`.
 | `RATE_LIMIT_GIF` | `30/minute` | Límite de peticiones para generación de GIFs. |
 | `RATE_LIMIT_TIMESERIES` | `60/minute` | Límite de peticiones para descarga de series temporales. |

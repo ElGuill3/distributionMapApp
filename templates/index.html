@@ -608,6 +608,10 @@
   }
   </script>
 
+  <!-- Límites de procesamiento servidos por el backend (solo números);
+       main.js los lee y valida antes de cualquier generación. -->
+  <script id="runtime-limits" type="application/json">{{ runtime_limits | tojson }}</script>
+
   <script type="module" src="/static/main.js?v=1.0.1"></script>
 </body>
 </html>

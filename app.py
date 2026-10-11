@@ -26,6 +26,7 @@ from flask import (
     send_from_directory,
 )
 
+import config
 from config import (
     BASE_DIR,
     BDCTB_FORECAST_API_BASE_URL,
@@ -163,7 +164,16 @@ def inject_cache_headers(response: Response) -> Response:
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    # Límites de procesamiento vigentes, solo números, para el cliente
+    # (config valida y falla al arranque si algún valor no es finito positivo).
+    return render_template(
+        "index.html",
+        runtime_limits={
+            "MAX_SPAN_DEG": config.MAX_SPAN_DEG,
+            "MAX_YEARS_RANGE": config.MAX_YEARS_RANGE,
+            "MAX_SPAN_DEG_S2": config.MAX_SPAN_DEG_S2,
+        },
+    )
 
 
 @app.get("/api/v1/forecasts/bdctb")
