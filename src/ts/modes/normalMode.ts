@@ -302,6 +302,16 @@ function renderChart(): void {
 // Generación de GIF + serie temporal — modo normal
 // ---------------------------------------------------------------------------
 
+/** Capture the current request's ownership for callers that await its result. */
+export function captureGenerationOwnership(): () => boolean {
+  const revision = generationRevision;
+  return () =>
+    revision === generationRevision &&
+    !mapState.getCompareModeActive() &&
+    !mapState.getFloodRiskModeActive() &&
+    !mapState.getInundacionesModeActive();
+}
+
 /**
  * Genera animación GIF y serie temporal para el modo normal.
  * Maneja el flujo completo: progress SSE, loading, creación de players,
@@ -318,12 +328,8 @@ export async function requestGifAndSeries(
   end: string,
   bbox: BBox
 ): Promise<NormalModeResult> {
-  const revision = ++generationRevision;
-  const isCurrent = () =>
-    revision === generationRevision &&
-    !mapState.getCompareModeActive() &&
-    !mapState.getFloodRiskModeActive() &&
-    !mapState.getInundacionesModeActive();
+  ++generationRevision;
+  const isCurrent = captureGenerationOwnership();
   let pendingPlayer: GifPlayer | null = null;
   mapState.setCurrentVariable(variable);
 

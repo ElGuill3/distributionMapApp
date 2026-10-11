@@ -7,6 +7,7 @@
 import type { BBox, VariableKey, Season } from './types.js';
 import * as mapState from './state/mapState.js';
 import * as normalMode from './modes/normalMode.js';
+import { requestNormalGeneration } from './modes/normalGeneration.js';
 import * as compareMode from './modes/compareMode.js';
 import * as floodRiskMode from './modes/floodRiskMode.js';
 import * as inundacionesMode from './modes/inundacionesMode.js';
@@ -1136,13 +1137,7 @@ async function requestGifAndSeries(
   end: string,
   bbox: BBox
 ): Promise<void> {
-  const result = await normalMode.requestGifAndSeries(variable, start, end, bbox);
-  if (!result.success && result.error) {
-    const uxError = translateBackendError(result.error);
-    showErrorModal(uxError.title, uxError.message);
-  }
-  // PR1: Notify task flow of generation complete
-  document.dispatchEvent(new CustomEvent('generationComplete'));
+  await requestNormalGeneration(variable, start, end, bbox);
 }
 
 // PR1: New task flow generation handler
