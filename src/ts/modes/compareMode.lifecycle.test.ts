@@ -77,19 +77,21 @@ vi.mock('../ui/gifPlayer.js', () => ({
 }));
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>(done => {
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((done, fail) => {
     resolve = done;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 function at<T>(items: T[], index: number): T {
   const item = items[index];
   if (item === undefined) throw new Error('Missing fixture');
   return item;
 }
-function payload(path: string) {
+function payload(path: string, error?: string) {
   return {
-    gifData: { gifUrl: path, bbox: [-92, 17, -91, 18], dates: [] },
+    gifData: { gifUrl: path, bbox: [-92, 17, -91, 18], dates: [], error },
     tsData: null,
   };
 }
@@ -250,6 +252,28 @@ it.each(['A', 'B'] as const)(
     pending.resolve(payload('/cleared.gif'));
     await loading;
     expect(path(panel)).toBeNull();
+  }
+);
+
+it.each(['network', 'backend'] as const)(
+  'reports current A %s failure while B owns progress',
+  async kind => {
+    const a = deferred<ReturnType<typeof payload>>();
+    const b = deferred<ReturnType<typeof payload>>();
+    doubles.fetch.mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise);
+    const left = request('A');
+    const right = request('B');
+    doubles.remove.mockClear();
+    if (kind === 'network') a.reject(new Error('A failed'));
+    else a.resolve(payload('/unused.gif', 'A failed'));
+    await left;
+    expect(doubles.error).toHaveBeenCalledOnce();
+    expect(doubles.remove).not.toHaveBeenCalled();
+    at(doubles.streams, 1).message(40, 'B still working');
+    expect(doubles.update).toHaveBeenLastCalledWith(36, 'B still working');
+    b.resolve(payload('/b.gif'));
+    await right;
+    expect(path('B')).toBe('/b.gif');
   }
 );
 

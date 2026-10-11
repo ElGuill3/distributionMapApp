@@ -970,8 +970,7 @@ export async function requestGifAndSeriesForPanel(
     if (ownsProgress()) closeWarningModal();
 
     if (gifData.error) {
-      if (!ownsProgress()) return;
-      if (isLastPending()) removeProgressIndicator(0);
+      if (ownsProgress() && isLastPending()) removeProgressIndicator(0);
       const uxError = translateBackendError(gifData.error);
       showErrorModal(uxError.title, uxError.message);
       return;
@@ -1098,9 +1097,9 @@ export async function requestGifAndSeriesForPanel(
       if (isLastPending()) removeProgressIndicator(500);
     }
   } catch (err) {
-    if (!ownsProgress()) return;
+    if (!isCurrent()) return;
     console.error(err);
-    if (isLastPending()) removeProgressIndicator(0);
+    if (ownsProgress() && isLastPending()) removeProgressIndicator(0);
     showErrorModal(
       'Error de red',
       `No se pudo generar la animación / serie temporal (panel ${panel}). Verificá tu conexión.`
