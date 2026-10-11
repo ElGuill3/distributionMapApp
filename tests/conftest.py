@@ -52,3 +52,11 @@ def mock_modules():
 
     yield
     # No cleanup needed — session scope
+
+
+@pytest.fixture(autouse=True)
+def disable_external_runtime(monkeypatch, mock_modules):
+    """API tests must not initialize EE or delete checkout GIFs."""
+    from app import app
+
+    monkeypatch.setitem(app.config, "INITIALIZE_RUNTIME", False)

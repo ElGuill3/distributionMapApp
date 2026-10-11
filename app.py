@@ -13,6 +13,7 @@ import hashlib
 import logging
 import os
 import sys
+from threading import Lock
 
 import ee
 import requests
@@ -39,22 +40,6 @@ from extensions import limiter
 DEPENDENCY_PREFLIGHT = os.getenv("_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT") == "1"
 
 # ---------------------------------------------------------------------------
-# Configuración de logging (una sola vez, antes de importar blueprints)
-# ---------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.DEBUG if DEBUG else logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stderr)],
-)
-
-# ---------------------------------------------------------------------------
-# Inicialización de Earth Engine (debe ocurrir antes de importar módulos GEE)
-# ---------------------------------------------------------------------------
-if not DEPENDENCY_PREFLIGHT:
-    prepare_runtime_directories()
-    ee.Initialize(project=GEE_PROJECT)
-
-# ---------------------------------------------------------------------------
 # Blueprints
 # ---------------------------------------------------------------------------
 from routes.export_routes import export_bp
@@ -69,8 +54,7 @@ from routes.timeseries_routes import ts_bp
 # ---------------------------------------------------------------------------
 from services.gif_service import start_cleanup_daemon
 
-if not DEPENDENCY_PREFLIGHT:
-    start_cleanup_daemon()
+
 
 # ---------------------------------------------------------------------------
 # Aplicación Flask
@@ -80,6 +64,37 @@ app = Flask(
     static_folder=str(STATIC_DIR),
     template_folder="templates",
 )
+
+app.config["INITIALIZE_RUNTIME"] = True
+_runtime_lock = Lock()
+_runtime_initialized = False
+
+
+def initialize_runtime() -> None:
+    """Initialize external runtime once; imports and preflight remain inert."""
+    global _runtime_initialized
+    if DEPENDENCY_PREFLIGHT:
+        return
+    with _runtime_lock:
+        if _runtime_initialized:
+            return
+        logging.basicConfig(
+            level=logging.DEBUG if DEBUG else logging.INFO,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[logging.StreamHandler(sys.stderr)],
+        )
+        prepare_runtime_directories()
+        ee.Initialize(project=GEE_PROJECT)
+        start_cleanup_daemon()
+        _runtime_initialized = True
+
+
+@app.before_request
+def initialize_request_runtime() -> None:
+    """Keep WSGI app:app usable without import-time external effects."""
+    if app.config["INITIALIZE_RUNTIME"]:
+        initialize_runtime()
+
 
 # ---------------------------------------------------------------------------
 # Rate limiting (limiter se inicializa en extensions.py, init_app aquí)
@@ -215,5 +230,9 @@ def api_docs_spec():
 # ---------------------------------------------------------------------------
 # Arranque directo
 # ---------------------------------------------------------------------------
+if os.getenv("_DISTRIBUTIONMAPAPP_RUNTIME_STARTUP") == "1":
+    initialize_runtime()
+
 if __name__ == "__main__":
+    initialize_runtime()
     app.run(host="0.0.0.0", port=5000, debug=DEBUG)

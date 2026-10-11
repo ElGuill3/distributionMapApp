@@ -175,6 +175,7 @@ def app_environment(settings: AppSettings) -> dict[str, str]:
             "FLASK_DEBUG": "false",
             "PYTHONUNBUFFERED": "1",
             "_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT": "0",
+            "_DISTRIBUTIONMAPAPP_RUNTIME_STARTUP": "1",
         }
     )
     return environment

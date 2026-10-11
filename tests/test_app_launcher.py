@@ -99,6 +99,7 @@ def test_app_spec_binds_loopback_and_injects_no_model_configuration(tmp_path):
     )
     assert spec.environment["FLASK_DEBUG"] == "false"
     assert spec.environment["_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT"] == "0"
+    assert spec.environment["_DISTRIBUTIONMAPAPP_RUNTIME_STARTUP"] == "1"
     assert spec.environment["PASSTHROUGH"] == "1"
     for key in (
         "BDCTB_FORECAST_API_BASE_URL",

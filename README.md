@@ -748,6 +748,10 @@ Los GIFs generados se almacenan en `static/gifs/` con el nombre `<variable>_<sta
 
 ### Despliegue en producción
 
+Importar `app` construye las rutas Flask sin iniciar Earth Engine, crear directorios de ejecución ni lanzar la limpieza de GIFs. `uv run distribution-map` y `python app.py` inicializan antes de servir; WSGI `app:app` inicializa en la primera solicitud. `initialize_runtime()` es local al proceso y seguro entre hilos: llamadas repetidas no duplican la limpieza, y un fallo de EE impide iniciarla. El preflight de dependencias nunca inicia el runtime.
+
+Los tests sintéticos usan `app.config["INITIALIZE_RUNTIME"] = False` para desactivar el arranque por solicitud. Las llamadas explícitas al inicializador siguen necesitando proveedores simulados y archivos aislados.
+
 Para un entorno de producción se recomienda:
 
 ```bash

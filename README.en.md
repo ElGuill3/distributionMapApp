@@ -708,6 +708,12 @@ npm run quality:ts
 
 GIFs are cached under `static/gifs/` and cleared by the daemon when they exceed **60 minutes of age** (`GIF_MAX_AGE_MINUTES` in `config.py`).
 
+### Runtime Initialization
+
+Importing `app` constructs Flask routes without starting Earth Engine, creating runtime directories or launching GIF cleanup. `uv run distribution-map` and `python app.py` initialize before serving; WSGI `app:app` initializes on its first request. `initialize_runtime()` is process-local and thread-safe: repeated calls do not start duplicate cleanup threads, and EE failure prevents cleanup startup. Dependency preflight never initializes runtime.
+
+Synthetic tests set `app.config["INITIALIZE_RUNTIME"] = False` to disable request-triggered startup. Explicit initializer calls still require mocked providers and isolated files.
+
 ### Production Deployment
 
 ```bash
