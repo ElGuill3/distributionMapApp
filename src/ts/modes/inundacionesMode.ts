@@ -10,6 +10,11 @@
  */
 
 import * as mapState from '../state/mapState.js';
+import {
+  bboxSpanViolation,
+  dateRangeViolation,
+  RUNTIME_LIMITS,
+} from '../utils/processingLimits.js';
 import { escapeHtml } from '../utils/html.js';
 import {
   showErrorModal,
@@ -145,6 +150,15 @@ async function handleProcessFlood(): Promise<void> {
       'Sin región seleccionada',
       'Por favor, dibujá un área en el mapa antes de visualizar.'
     );
+    return;
+  }
+
+  // All flood generators use the server's Sentinel-2 spatial limit.
+  const violation =
+    bboxSpanViolation(bbox, RUNTIME_LIMITS.MAX_SPAN_DEG_S2) ??
+    dateRangeViolation(start, end, RUNTIME_LIMITS.MAX_YEARS_RANGE);
+  if (violation) {
+    showErrorModal('Error de validación', violation);
     return;
   }
 

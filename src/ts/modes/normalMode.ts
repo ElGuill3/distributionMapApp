@@ -14,6 +14,11 @@
 import type { BBox, VariableKey } from '../types.js';
 import * as mapState from '../state/mapState.js';
 import {
+  bboxSpanViolation,
+  dateRangeViolation,
+  RUNTIME_LIMITS,
+} from '../utils/processingLimits.js';
+import {
   fetchGifAndSeries,
   createProgressEventSource,
   extractTimeseriesValues,
@@ -328,6 +333,11 @@ export async function requestGifAndSeries(
   end: string,
   bbox: BBox
 ): Promise<NormalModeResult> {
+  const violation =
+    bboxSpanViolation(bbox, RUNTIME_LIMITS.MAX_SPAN_DEG) ??
+    dateRangeViolation(start, end, RUNTIME_LIMITS.MAX_YEARS_RANGE);
+  if (violation) return { success: false, error: violation };
+
   ++generationRevision;
   const isCurrent = captureGenerationOwnership();
   let pendingPlayer: GifPlayer | null = null;

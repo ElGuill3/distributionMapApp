@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import * as mapState from '../state/mapState.js';
+import { DEFAULT_RUNTIME_LIMITS, RUNTIME_LIMITS } from '../utils/processingLimits.js';
 import {
   cleanupComparePanels,
   clearPanelA,
@@ -11,6 +12,7 @@ import type { CompareModeDomRefs } from './compareMode.js';
 
 const doubles = vi.hoisted(() => ({
   fetch: vi.fn(),
+  create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
   warning: vi.fn(),
@@ -39,7 +41,7 @@ vi.mock('../map/overlays.js', () => ({
   municipalFloodOverlays: new Map(),
 }));
 vi.mock('../ui/progress.js', () => ({
-  createProgressIndicator: vi.fn(),
+  createProgressIndicator: doubles.create,
   updateProgressIndicator: doubles.update,
   removeProgressIndicator: doubles.remove,
   showWarningModal: vi.fn(),
@@ -120,6 +122,7 @@ function map() {
 let mapB: ReturnType<typeof map>;
 
 beforeEach(() => {
+  Object.assign(RUNTIME_LIMITS, DEFAULT_RUNTIME_LIMITS);
   vi.useFakeTimers();
   doubles.loads.clear();
   doubles.players.length = 0;
@@ -298,3 +301,52 @@ it('does not apply a late B view-sync timer after cleanup', async () => {
   await vi.advanceTimersByTimeAsync(100);
   expect(mapB.setView).not.toHaveBeenCalled();
 });
+
+it.each([
+  ['A', 'span'],
+  ['A', 'years'],
+  ['B', 'span'],
+  ['B', 'years'],
+] as const)(
+  'rejects %s configured %s without modifying either comparison panel',
+  async (panel, rule) => {
+    doubles.fetch.mockResolvedValue(payload('/owned.gif'));
+    await request('A');
+    await request('B');
+    const before = JSON.stringify([
+      path('A'),
+      path('B'),
+      mapState.getFrameDateLabels(),
+    ]);
+    Object.assign(RUNTIME_LIMITS, { MAX_SPAN_DEG: 2.5, MAX_YEARS_RANGE: 2 });
+    vi.clearAllMocks();
+    await requestGifAndSeriesForPanel(
+      panel,
+      'ndvi',
+      '2020-01-01',
+      rule === 'years' ? '2022-03-01' : '2020-12-31',
+      rule === 'span' ? [0, 0, 2.5001, 2] : [-92, 17, -91, 18]
+    );
+    expect(doubles.error).toHaveBeenCalledExactlyOnceWith(
+      'Error de validación',
+      rule === 'span'
+        ? 'El bounding box es demasiado grande (máx. 2.5°). Reduce el área seleccionada.'
+        : 'El rango de fechas excede el límite de 2 años. Reduce el intervalo.'
+    );
+    expect(JSON.stringify([path('A'), path('B'), mapState.getFrameDateLabels()])).toBe(
+      before
+    );
+    for (const fn of [
+      doubles.fetch,
+      doubles.create,
+      doubles.update,
+      doubles.remove,
+      doubles.warning,
+    ])
+      expect(fn).not.toHaveBeenCalled();
+    expect(doubles.players).toHaveLength(2);
+    expect(doubles.streams).toHaveLength(2);
+    for (const player of doubles.players) expect(player.dispose).not.toHaveBeenCalled();
+    for (const stream of doubles.streams) expect(stream.close).not.toHaveBeenCalled();
+  }
+);

@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import * as mapState from '../state/mapState.js';
+import { DEFAULT_RUNTIME_LIMITS, RUNTIME_LIMITS } from '../utils/processingLimits.js';
+import { captureGenerationOwnership } from './normalMode.js';
 import { clearNormalMode, initNormalMode, requestGifAndSeries } from './normalMode.js';
 
 const doubles = vi.hoisted(() => ({
   fetch: vi.fn(),
+  create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
   closeWarning: vi.fn(),
@@ -30,7 +33,7 @@ vi.mock('../map/overlays.js', () => ({
   setActiveOverlay: vi.fn(),
 }));
 vi.mock('../ui/progress.js', () => ({
-  createProgressIndicator: vi.fn(),
+  createProgressIndicator: doubles.create,
   updateProgressIndicator: doubles.update,
   removeProgressIndicator: doubles.remove,
   showWarningModal: vi.fn(),
@@ -87,6 +90,7 @@ function request() {
 }
 
 beforeEach(() => {
+  Object.assign(RUNTIME_LIMITS, DEFAULT_RUNTIME_LIMITS);
   vi.clearAllMocks();
   doubles.players.length = 0;
   doubles.streams.length = 0;
@@ -110,6 +114,7 @@ beforeEach(() => {
   clearNormalMode();
 });
 afterEach(() => {
+  Object.assign(RUNTIME_LIMITS, DEFAULT_RUNTIME_LIMITS);
   clearNormalMode();
   vi.unstubAllGlobals();
 });
@@ -217,3 +222,44 @@ it('preserves the owned animation and error contract when replacement decoding f
   expect(at(doubles.players, 0).dispose).not.toHaveBeenCalled();
   expect(at(doubles.players, 1).dispose).toHaveBeenCalledOnce();
 });
+
+it.each(['span', 'years'] as const)(
+  'rejects configured %s before changing normal ownership or animation',
+  async rule => {
+    doubles.fetch.mockResolvedValue(payload('/owned.gif'));
+    expect(await request()).toEqual({ success: true });
+    const before = JSON.stringify([
+      mapState.getActiveGifPathA(),
+      mapState.getFrameDateLabels(),
+    ]);
+    const owns = captureGenerationOwnership();
+    Object.assign(RUNTIME_LIMITS, { MAX_SPAN_DEG: 2.5, MAX_YEARS_RANGE: 2 });
+    vi.clearAllMocks();
+    const result = await requestGifAndSeries(
+      'ndvi',
+      '2020-01-01',
+      rule === 'years' ? '2022-03-01' : '2020-12-31',
+      rule === 'span' ? [0, 0, 2.5001, 2] : [-92, 17, -91, 18]
+    );
+    expect(result).toEqual({
+      success: false,
+      error:
+        rule === 'span'
+          ? 'El bounding box es demasiado grande (máx. 2.5°). Reduce el área seleccionada.'
+          : 'El rango de fechas excede el límite de 2 años. Reduce el intervalo.',
+    });
+    expect(owns()).toBe(true);
+    expect(
+      JSON.stringify([mapState.getActiveGifPathA(), mapState.getFrameDateLabels()])
+    ).toBe(before);
+    expect(doubles.fetch).not.toHaveBeenCalled();
+    expect(doubles.create).not.toHaveBeenCalled();
+    expect(doubles.update).not.toHaveBeenCalled();
+    expect(doubles.remove).not.toHaveBeenCalled();
+    expect(doubles.closeWarning).not.toHaveBeenCalled();
+    expect(doubles.players).toHaveLength(1);
+    expect(doubles.streams).toHaveLength(1);
+    expect(at(doubles.players, 0).dispose).not.toHaveBeenCalled();
+    expect(at(doubles.streams, 0).close).not.toHaveBeenCalled();
+  }
+);

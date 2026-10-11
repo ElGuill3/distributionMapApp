@@ -14,6 +14,11 @@
 import type { BBox, VariableKey, Season } from '../types.js';
 import * as mapState from '../state/mapState.js';
 import {
+  bboxSpanViolation,
+  dateRangeViolation,
+  RUNTIME_LIMITS,
+} from '../utils/processingLimits.js';
+import {
   fetchGifAndSeriesForPanel,
   createProgressEventSource,
   extractTimeseriesValues,
@@ -893,6 +898,14 @@ export async function requestGifAndSeriesForPanel(
   end: string,
   bbox: BBox
 ): Promise<void> {
+  const violation =
+    bboxSpanViolation(bbox, RUNTIME_LIMITS.MAX_SPAN_DEG) ??
+    dateRangeViolation(start, end, RUNTIME_LIMITS.MAX_YEARS_RANGE);
+  if (violation) {
+    showErrorModal('Error de validación', violation);
+    return;
+  }
+
   const revision = ++requestRevision;
   panelRevisions[panel] = revision;
   progressRequests[panel] = revision;
