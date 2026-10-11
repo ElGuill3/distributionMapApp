@@ -15,6 +15,7 @@ Variables de entorno (todas con valores por defecto):
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from limits import parse_many
 
 load_dotenv()
 
@@ -276,13 +277,27 @@ CACHE_POLICIES = {
 # ---------------------------------------------------------------------------
 RATE_LIMIT_ENABLED = _env_bool("RATE_LIMIT_ENABLED", "true")
 
-# Límites por categoría de endpoint (request por minuto por IP)
+def _env_rate_limit(key: str, default: str) -> str:
+    """Validate configured quotas before registering any request guards."""
+    value = os.getenv(key, default)
+    try:
+        rates = parse_many(value)
+    except ValueError:
+        raise ValueError(f"{key} must specify positive request rates.") from None
+    if not rates or any(rate.amount <= 0 for rate in rates):
+        raise ValueError(f"{key} must specify positive request rates.")
+    return value
+
+
+# Per endpoint and IP, not a shared category bucket.
 RATE_LIMITS = {
-    "gif": os.getenv("RATE_LIMIT_GIF", "30/minute"),  # Endpoints *-gif-bbox (costosos: llaman GEE)
-    "timeseries": os.getenv("RATE_LIMIT_TIMESERIES", "60/minute"),  # Endpoints *-timeseries-bbox
-    "export": os.getenv("RATE_LIMIT_EXPORT", "10/minute"),  # Endpoint /api/export/bundle (POST, genera ZIP)
-    "flood": os.getenv("RATE_LIMIT_FLOOD", "60/minute"),  # Endpoint /api/flood-risk-municipio
-    "station": os.getenv("RATE_LIMIT_STATION", "60/minute"),  # Endpoint /api/local-station-level-range
+    "gif": _env_rate_limit("RATE_LIMIT_GIF", "30/minute"),
+    "timeseries": _env_rate_limit("RATE_LIMIT_TIMESERIES", "60/minute"),
+    "export": _env_rate_limit("RATE_LIMIT_EXPORT", "10/minute"),
+    "flood": _env_rate_limit("RATE_LIMIT_FLOOD", "60/minute"),
+    "flood_stats": _env_rate_limit("RATE_LIMIT_FLOOD_STATS", "30/minute"),
+    "station": _env_rate_limit("RATE_LIMIT_STATION", "60/minute"),
+    "forecast": _env_rate_limit("RATE_LIMIT_FORECAST", "60/minute"),
 }
 
 # ---------------------------------------------------------------------------

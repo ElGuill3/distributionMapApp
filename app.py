@@ -32,6 +32,7 @@ from config import (
     CACHE_POLICIES,
     DEBUG,
     GEE_PROJECT,
+    RATE_LIMITS,
     STATIC_DIR,
     prepare_runtime_directories,
 )
@@ -166,7 +167,7 @@ def index():
 
 
 @app.get("/api/v1/forecasts/bdctb")
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMITS["forecast"])
 def bdctb_forecast():
     """Proxy the local forecast service without exposing it to browsers."""
     upstream_url = f"{BDCTB_FORECAST_API_BASE_URL.rstrip('/')}/api/v1/forecasts/bdctb"

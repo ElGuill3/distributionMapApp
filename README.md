@@ -409,6 +409,15 @@ cp .env.example .env
 | `GEE_CHIRPS_DAILY` | `UCSB-CHG/CHIRPS/DAILY` | ID del dataset de precipitación CHIRPS. |
 | `GEE_S2_SR` | `COPERNICUS/S2_SR_HARMONIZED` | ID del dataset de Sentinel-2 SR Harmonized. |
 | `RATE_LIMIT_ENABLED` | `true` | Habilita o deshabilita el limitador de peticiones (rate limiter). |
+| `RATE_LIMIT_GIF` | `30/minute` | Cada endpoint GIF, por IP. |
+| `RATE_LIMIT_TIMESERIES` | `60/minute` | Cada endpoint de series, por IP. |
+| `RATE_LIMIT_EXPORT` | `10/minute` | Exportaciones ZIP, por IP. |
+| `RATE_LIMIT_FLOOD` | `60/minute` | Mapas/detección, independientes por endpoint e IP. |
+| `RATE_LIMIT_FLOOD_STATS` | `30/minute` | Estadísticas de inundación, por IP. |
+| `RATE_LIMIT_STATION` | `60/minute` | Cada endpoint de estaciones, por IP. |
+| `RATE_LIMIT_FORECAST` | `60/minute` | Proxy de pronóstico, por IP. |
+
+Las cuotas usan la notación de Flask-Limiter (por ejemplo, `1/minute` o `10/minute;100/hour`). Todos los conteos deben ser positivos. Valores vacíos o inválidos impiden el arranque con `<ENV_KEY> must specify positive request rates.`, sin mostrar el valor, incluso con el limitador desactivado. Las cuotas son independientes por endpoint/IP, locales al proceso y cuentan también solicitudes HTTP rechazadas. Exceder la cuota devuelve el JSON HTTP 429 existente con `Cache-Control: no-store`.
 | `RATE_LIMIT_GIF` | `30/minute` | Límite de peticiones para generación de GIFs. |
 | `RATE_LIMIT_TIMESERIES` | `60/minute` | Límite de peticiones para descarga de series temporales. |
 | `RATE_LIMIT_EXPORT` | `10/minute` | Límite de peticiones para exportación de ZIPs. |

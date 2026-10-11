@@ -101,9 +101,10 @@ def test_maps_unexpected_upstream_status_without_exposing_body(client):
     assert response.json == {"error": "Forecast service returned an error."}
 
 
-def test_rejects_request_61_before_contacting_upstream(client):
+def test_rejects_request_61_before_contacting_upstream(client, monkeypatch):
     from extensions import limiter
 
+    monkeypatch.setattr(limiter, "enabled", True)
     limiter.reset()
     try:
         with patch(

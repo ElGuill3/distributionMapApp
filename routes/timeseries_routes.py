@@ -6,6 +6,7 @@ import json
 
 from flask import Blueprint, Response, jsonify, request
 
+from config import RATE_LIMITS
 from extensions import limiter
 from gee.ndvi import build_ndvi_timeseries_bbox
 from gee.precipitation import build_chirps_precip_timeseries_bbox
@@ -116,8 +117,8 @@ def _timeseries_pipeline(
     return jsonify({"dates": dates, ts_key: vals, "bbox": bbox})
 
 
-@limiter.limit("60/minute")
 @ts_bp.get("/api/ndvi-timeseries-bbox")
+@limiter.limit(RATE_LIMITS["timeseries"])
 def ndvi_timeseries_bbox() -> Response:
     """Serie temporal de NDVI medio (MODIS MOD13Q1)."""
     start_raw = request.args.get("start")
@@ -168,8 +169,8 @@ def ndvi_timeseries_bbox() -> Response:
     )
 
 
-@limiter.limit("60/minute")
 @ts_bp.get("/api/era5-temp-timeseries-bbox")
+@limiter.limit(RATE_LIMITS["timeseries"])
 def era5_temp_timeseries_bbox() -> Response:
     """Serie temporal de temperatura media diaria (ERA5-Land, °C)."""
     return _timeseries_pipeline(
@@ -179,8 +180,8 @@ def era5_temp_timeseries_bbox() -> Response:
     )
 
 
-@limiter.limit("60/minute")
 @ts_bp.get("/api/era5-soil-timeseries-bbox")
+@limiter.limit(RATE_LIMITS["timeseries"])
 def era5_soil_timeseries_bbox() -> Response:
     """Serie temporal de humedad del suelo media diaria (ERA5-Land, %)."""
     return _timeseries_pipeline(
@@ -192,8 +193,8 @@ def era5_soil_timeseries_bbox() -> Response:
     )
 
 
-@limiter.limit("60/minute")
 @ts_bp.get("/api/imerg-precip-timeseries-bbox")
+@limiter.limit(RATE_LIMITS["timeseries"])
 def imerg_precip_timeseries_bbox() -> Response:
     """Serie temporal de precipitación media diaria (CHIRPS, mm)."""
     return _timeseries_pipeline(

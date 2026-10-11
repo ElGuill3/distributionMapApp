@@ -15,7 +15,7 @@ from io import BytesIO
 from flask import Blueprint, Response, jsonify, request
 from pydantic import ValidationError
 
-from config import STATIC_DIR
+from config import RATE_LIMITS, STATIC_DIR
 from extensions import limiter
 from gee.schemas import ExportRequestSchema
 from services.export_service import (
@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 export_bp = Blueprint("export", __name__)
 
 
-@limiter.limit("10/minute")
 @export_bp.route("/api/export/bundle", methods=["POST"])
+@limiter.limit(RATE_LIMITS["export"])
 def export_bundle() -> Response:
     """
     Genera y devuelve un ZIP con timeseries.csv, GIFs opcionales y metadata.json.

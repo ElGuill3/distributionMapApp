@@ -56,7 +56,10 @@ def mock_modules():
 
 @pytest.fixture(autouse=True)
 def disable_external_runtime(monkeypatch, mock_modules):
-    """API tests must not initialize EE or delete checkout GIFs."""
+    """Isolate API behavior tests from runtime effects and shared quota counters."""
     from app import app
+    from extensions import limiter
 
     monkeypatch.setitem(app.config, "INITIALIZE_RUNTIME", False)
+    # Quota enforcement is exercised in private cold-process HTTP tests.
+    monkeypatch.setattr(limiter, "enabled", False)

@@ -10,15 +10,15 @@ from extensions import limiter
 
 logger = logging.getLogger(__name__)
 
-from config import MUNICIPAL_TIFS
+from config import MUNICIPAL_TIFS, RATE_LIMITS
 from gee.flood_risk import render_flood_risk_png
 from gee.schemas import MuniQuerySchema, BBoxSchema, DateRangeSchema, _parse_bbox_str
 
 flood_bp = Blueprint("flood", __name__)
 
 
-@limiter.limit("60/minute")
 @flood_bp.get("/api/flood-risk-municipio")
+@limiter.limit(RATE_LIMITS["flood"])
 def flood_risk_municipio() -> Response:
     """
     Genera (o usa el caché local) el PNG de riesgo de inundación para el municipio.
@@ -56,8 +56,8 @@ def flood_risk_municipio() -> Response:
     return jsonify({"mapUrl": map_url, "bbox": bbox})
 
 
-@limiter.limit("60/minute")
 @flood_bp.get("/api/flood-detection")
+@limiter.limit(RATE_LIMITS["flood"])
 def flood_detection() -> Response:
     """
     Detecta inundaciones utilizando Sentinel-1 o Landsat y devuelve
@@ -122,8 +122,8 @@ def flood_detection() -> Response:
         return jsonify({"error": f"Error interno al detectar inundación: {e}"}), 500
 
 
-@limiter.limit("30/minute")
 @flood_bp.get("/api/flood-stats")
+@limiter.limit(RATE_LIMITS["flood_stats"])
 def flood_stats() -> Response:
     """
     Calcula el área de inundación en hectáreas.

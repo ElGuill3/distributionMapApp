@@ -19,7 +19,7 @@ from flask import Blueprint, Response, jsonify, request
 
 logger = logging.getLogger(__name__)
 
-from config import GIFS_DIR
+from config import GIFS_DIR, RATE_LIMITS
 from extensions import limiter
 from gee.ndvi import build_ndvi_gif_bbox, build_ndvi_timeseries_bbox
 from gee.precipitation import (
@@ -281,8 +281,8 @@ def _gif_pipeline(
 # ---------------------------------------------------------------------------
 
 
-@limiter.limit("30/minute")
 @gif_bp.get("/api/ndvi-gif-bbox")
+@limiter.limit(RATE_LIMITS["gif"])
 def ndvi_gif_bbox() -> Response:
     """
     Genera el GIF animado de NDVI (MODIS MOD13Q1) para el bbox indicado.
@@ -333,8 +333,8 @@ def ndvi_gif_bbox() -> Response:
     )
 
 
-@limiter.limit("30/minute")
 @gif_bp.get("/api/era5-temp-gif-bbox")
+@limiter.limit(RATE_LIMITS["gif"])
 def era5_temp_gif_bbox() -> Response:
     """Genera el GIF animado de temperatura del aire (ERA5-Land) para el bbox."""
     return _gif_pipeline(
@@ -347,8 +347,8 @@ def era5_temp_gif_bbox() -> Response:
     )
 
 
-@limiter.limit("30/minute")
 @gif_bp.get("/api/era5-soil-gif-bbox")
+@limiter.limit(RATE_LIMITS["gif"])
 def era5_soil_gif_bbox() -> Response:
     """Genera el GIF animado de humedad del suelo (ERA5-Land) para el bbox."""
     return _gif_pipeline(
@@ -361,8 +361,8 @@ def era5_soil_gif_bbox() -> Response:
     )
 
 
-@limiter.limit("30/minute")
 @gif_bp.get("/api/imerg-precip-gif-bbox")
+@limiter.limit(RATE_LIMITS["gif"])
 def imerg_precip_gif_bbox() -> Response:
     """Genera el GIF animado de precipitación (CHIRPS) para el bbox."""
     return _gif_pipeline(

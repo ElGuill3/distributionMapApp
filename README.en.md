@@ -398,6 +398,15 @@ cp .env.example .env
 | `GEE_CHIRPS_DAILY` | `UCSB-CHG/CHIRPS/DAILY` | GEE CHIRPS precipitation dataset ID. |
 | `GEE_S2_SR` | `COPERNICUS/S2_SR_HARMONIZED` | GEE Sentinel-2 SR Harmonized dataset ID. |
 | `RATE_LIMIT_ENABLED` | `true` | Enables or disables rate limiting. |
+| `RATE_LIMIT_GIF` | `30/minute` | Each GIF endpoint, per IP. |
+| `RATE_LIMIT_TIMESERIES` | `60/minute` | Each timeseries endpoint, per IP. |
+| `RATE_LIMIT_EXPORT` | `10/minute` | Export bundles, per IP. |
+| `RATE_LIMIT_FLOOD` | `60/minute` | Flood maps/detection, independently per endpoint and IP. |
+| `RATE_LIMIT_FLOOD_STATS` | `30/minute` | Flood statistics, per IP. |
+| `RATE_LIMIT_STATION` | `60/minute` | Each station endpoint, per IP. |
+| `RATE_LIMIT_FORECAST` | `60/minute` | Forecast proxy, per IP. |
+
+Rate quotas use Flask-Limiter notation (for example, `1/minute` or `10/minute;100/hour`). Every count must be positive. Invalid or empty values abort startup with `<ENV_KEY> must specify positive request rates.` without echoing the value, even when limiting is disabled. Quotas are independent per endpoint/IP, process-local, and count rejected HTTP requests too. Over quota returns the existing JSON HTTP 429 response with `Cache-Control: no-store`.
 
 ---
 

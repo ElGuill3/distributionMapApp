@@ -4,7 +4,7 @@ Blueprint 'station' — endpoint de series temporales de estaciones hidrológica
 
 from flask import Blueprint, Response, jsonify, request
 
-from config import LOCAL_STATIONS
+from config import LOCAL_STATIONS, RATE_LIMITS
 from extensions import limiter
 from gee.schemas import LocalStationQuerySchema
 from services.station_service import read_station_level_timeseries
@@ -12,8 +12,8 @@ from services.station_service import read_station_level_timeseries
 station_bp = Blueprint("station", __name__)
 
 
-@limiter.limit("60/minute")
 @station_bp.get("/api/local-stations")
+@limiter.limit(RATE_LIMITS["station"])
 def local_stations() -> Response:
     """
     Devuelve los metadatos (nombre, tipo, coordenadas) de todas las estaciones locales disponibles.
@@ -30,8 +30,8 @@ def local_stations() -> Response:
     return jsonify(stations_data)
 
 
-@limiter.limit("60/minute")
 @station_bp.get("/api/local-station-level-range")
+@limiter.limit(RATE_LIMITS["station"])
 def local_station_level_range() -> Response:
     """
     Devuelve la serie temporal de una estación local (nivel o precipitación) dentro del rango de fechas.
