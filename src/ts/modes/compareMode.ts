@@ -40,7 +40,7 @@ import { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
 import { setLucideIcon } from '../ui/icons.js';
 import * as normalMode from './normalMode.js';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
-import { bdctbForecastAction } from '../ui/bdctbForecast.js';
+import { buildStationPopup } from '../ui/stationPopup.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
 declare const L: typeof import('leaflet');
@@ -312,28 +312,8 @@ export function initMapB(): void {
       const [lat, lon] = info.coords;
       const isHidro = info.type === 'hidrometrica' || id.endsWith('_hidro');
       const icon = isHidro ? waveIconB : dropIconB;
-      const badgeClass = isHidro ? 'station-badge-hidro' : 'station-badge-clima';
-      const badgeLabel = isHidro
-        ? '<span data-lucide="waves" style="width: 12px; height: 12px;"></span> Hidro'
-        : '<span data-lucide="droplet" style="width: 12px; height: 12px;"></span> Clima';
-      const metricDesc = isHidro ? 'Nivel del río' : 'Precipitación';
       const marker = L.marker(L.latLng(lat, lon), { icon })
-        .bindPopup(
-          `<div class="station-popup-content">` +
-            `<div class="station-popup-header">` +
-            `<span class="station-badge ${badgeClass}">${badgeLabel}</span>` +
-            `</div>` +
-            `<h3 class="station-popup-title">${info.station_name || info.name}</h3>` +
-            `<div class="station-popup-meta">` +
-            `<span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${info.municipio || 'Sin Municipio'}</span>` +
-            `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
-            `</div>` +
-            `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
-            `Ver datos 2000–2024` +
-            `</a>` +
-            bdctbForecastAction(id, isHidro) +
-            `</div>`
-        )
+        .bindPopup(buildStationPopup(id, info, isHidro))
         .addTo(newMapB);
       _stationMarkersMapB.push(marker);
     }

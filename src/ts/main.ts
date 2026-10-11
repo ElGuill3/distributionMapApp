@@ -34,7 +34,8 @@ import { translateBackendError } from './errorMap.js';
 import { plotAllSelectedSeries, isDarkModeActive } from './ui/chart.js';
 import { initLucideIcons, setLucideIcon } from './ui/icons.js';
 import { seasonToDates } from './utils/seasonDates.js';
-import { bdctbForecastAction, openBdctbForecastDialog } from './ui/bdctbForecast.js';
+import { openBdctbForecastDialog } from './ui/bdctbForecast.js';
+import { buildStationPopup } from './ui/stationPopup.js';
 
 import {
   fetchLocalStationLevel,
@@ -160,26 +161,8 @@ async function initializeLocalStations(): Promise<void> {
       if (info.coords && info.coords.length === 2) {
         const [lat, lon] = info.coords;
         const icon = isHidro ? waveIcon : dropIcon;
-        const badgeClass = isHidro ? 'station-badge-hidro' : 'station-badge-clima';
-        const badgeLabel = isHidro
-          ? '<span data-lucide="waves" style="width: 12px; height: 12px;"></span> Hidro'
-          : '<span data-lucide="droplet" style="width: 12px; height: 12px;"></span> Clima';
-        const metricDesc = isHidro ? 'Nivel del río' : 'Precipitación';
         const marker = L.marker(L.latLng(lat, lon), { icon }).bindPopup(
-          `<div class="station-popup-content">` +
-            `<div class="station-popup-header">` +
-            `<span class="station-badge ${badgeClass}">${badgeLabel}</span>` +
-            `</div>` +
-            `<h3 class="station-popup-title">${info.station_name || info.name}</h3>` +
-            `<div class="station-popup-meta">` +
-            `<span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${info.municipio || 'Sin Municipio'}</span>` +
-            `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
-            `</div>` +
-            `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
-            `Ver datos 2000–2024` +
-            `</a>` +
-            bdctbForecastAction(id, isHidro) +
-            `</div>`
+          buildStationPopup(id, info, isHidro)
         );
         marker.addTo(map);
         stationMarkersMap.push(marker);

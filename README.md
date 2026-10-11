@@ -198,6 +198,10 @@ El proyecto incluye un módulo para automatizar la obtención de datos locales d
 - **Ejecución al inicio (Bootstrap)**: Corre inmediatamente todos los scrapers configurados al iniciar el contenedor para asegurar que los datos estén al día.
 - **Escritura Atómica**: Las descargas FTP se guardan de forma atómica para evitar corrupción de datos si la conexión se interrumpe.
 
+### Renderizado seguro de texto en el navegador
+
+Los nombres de estaciones, municipios, identificadores y valores de la leyenda de inundaciones se muestran como datos, nunca como HTML enviado por el servidor. Ambos mapas comparten el renderizador de popups; los iconos y las acciones de pronóstico conservan su comportamiento.
+
 ### Exportación de Datos
 
 Para facilitar el análisis fuera de la plataforma, el sistema ofrece:

@@ -192,6 +192,10 @@ The project includes a module to automate fetching local data directly from CONA
 - **Run on Startup (Bootstrap)**: Runs all configured scrapers immediately upon starting the container to ensure data is up to date.
 - **Atomic Writes**: FTP downloads are saved atomically to prevent data corruption if the connection is interrupted.
 
+### Safe browser text rendering
+
+Station names, municipality labels, station IDs and inundation legend values are rendered as data, never interpreted as server-supplied HTML. Both map panels share the station popup renderer; icons and forecast actions retain their existing behavior.
+
 ### Data Export
 
 To facilitate offline analysis, the system offers:

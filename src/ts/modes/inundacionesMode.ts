@@ -10,6 +10,7 @@
  */
 
 import * as mapState from '../state/mapState.js';
+import { escapeHtml } from '../utils/html.js';
 import {
   showErrorModal,
   createProgressIndicator,
@@ -277,19 +278,19 @@ function createLegendControl(info: {
       <h4 class="inund-legend-title">Inundación Detectada</h4>
       <div class="inund-legend-item">
         <span>Satélite:</span>
-        <span>${info.satellite}</span>
+        <span>${escapeHtml(info.satellite)}</span>
       </div>
       <div class="inund-legend-item">
         <span>Periodo:</span>
-        <span style="font-size: 0.78rem;">${info.period}</span>
+        <span style="font-size: 0.78rem;">${escapeHtml(info.period)}</span>
       </div>
       <div class="inund-legend-item">
         <span>Umbral:</span>
-        <span>${info.threshold}</span>
+        <span>${escapeHtml(info.threshold)}</span>
       </div>
       <div class="inund-legend-item">
         <span>Área Inundada:</span>
-        <span id="inund-legend-area-value" style="color: var(--teal-600); font-weight: bold;">${info.total_ha}</span>
+        <span id="inund-legend-area-value" style="color: var(--teal-600); font-weight: bold;">${escapeHtml(info.total_ha)}</span>
       </div>
       <div class="inund-legend-toggles">
         <label style="color: var(--text-primary);">
