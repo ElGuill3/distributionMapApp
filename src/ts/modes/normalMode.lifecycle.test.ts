@@ -13,6 +13,7 @@ const doubles = vi.hoisted(() => ({
   }[],
   players: [] as { dispose: ReturnType<typeof vi.fn>; url: string }[],
   loads: new Map<string, Promise<void>>(),
+  frameCount: 2,
 }));
 vi.mock('../apiClient.js', () => ({
   fetchGifAndSeries: doubles.fetch,
@@ -41,7 +42,7 @@ vi.mock('../ui/gifPlayer.js', () => ({
   GifPlayer: class {
     dispose = vi.fn();
     url = '';
-    frameCount = 2;
+    frameCount = doubles.frameCount;
     constructor() {
       doubles.players.push(this);
     }
@@ -75,9 +76,9 @@ function at<T>(items: T[], index: number): T {
   return item;
 }
 
-function payload(path: string) {
+function payload(path: string, dates: string[] = []) {
   return {
-    gifData: { gifUrl: path, bbox: [-92, 17, -91, 18], dates: [] },
+    gifData: { gifUrl: path, bbox: [-92, 17, -91, 18], dates },
     tsData: null,
   };
 }
@@ -90,6 +91,7 @@ beforeEach(() => {
   doubles.players.length = 0;
   doubles.streams.length = 0;
   doubles.loads.clear();
+  doubles.frameCount = 2;
   mapState.setCompareModeActive(false);
   vi.stubGlobal('L', {
     latLng: vi.fn(),
@@ -110,6 +112,31 @@ beforeEach(() => {
 afterEach(() => {
   clearNormalMode();
   vi.unstubAllGlobals();
+});
+
+it('labels date-only API frames by their UTC season and year', async () => {
+  doubles.frameCount = 6;
+  doubles.fetch.mockResolvedValue(
+    payload('/calendar.gif', [
+      '2020-01-01',
+      '2020-02-29',
+      '2020-03-01',
+      '2020-06-01',
+      '2020-09-01',
+      '2020-12-01',
+    ])
+  );
+  expect(await request()).toEqual({ success: true });
+  expect(mapState.getFrameDateLabels()).toEqual([
+    { year: 2020, season: 'invierno', label: 'Invierno 2020' },
+    { year: 2020, season: 'invierno', label: 'Invierno 2020' },
+    { year: 2020, season: 'primavera', label: 'Primavera 2020' },
+    { year: 2020, season: 'verano', label: 'Verano 2020' },
+    { year: 2020, season: 'otono', label: 'Otoño 2020' },
+    { year: 2020, season: 'invierno', label: 'Invierno 2020' },
+  ]);
+  expect(mapState.getActiveGifPathA()).toBe('/calendar.gif');
+  expect(at(doubles.streams, 0).close).toHaveBeenCalledOnce();
 });
 
 it('keeps valid generation, player replacement and own SSE closure', async () => {

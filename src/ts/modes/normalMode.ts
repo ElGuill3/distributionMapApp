@@ -584,9 +584,9 @@ function _buildFrameDateLabels(dates: string[]): AnimationFrameInfo[] {
   const result: AnimationFrameInfo[] = [];
   for (const dateStr of dates) {
     const date = new Date(dateStr);
-    const year = date.getFullYear();
-    // Determine season from date
-    const month = date.getMonth() + 1; // 1-indexed
+    // API date-only values describe UTC calendar days, not local instants.
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1; // 1-indexed
     let season: Season;
     if (month >= 6 && month <= 8) {
       season = 'verano';
