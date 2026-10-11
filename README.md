@@ -642,7 +642,7 @@ distributionMapApp/
 | `GET /api/docs/openapi.yaml` | `GET` | — | Especificación OpenAPI 3.1.0 del sistema en formato YAML |
 
 **Parámetros comunes:**
-- `start` / `end`: fechas en formato `YYYY-MM-DD`.
+- `start` / `end`: fechas en formato `YYYY-MM-DD`. Todas las rutas GIF y de series temporales, incluyendo NDVI, también aceptan `year` + `season`; el par explícito completo tiene prioridad, de lo contrario el modo estacional reemplaza el par.
 - `bbox`: arreglo JSON `[minLon, minLat, maxLon, maxLat]` en grados decimales (WGS-84). Se exige `minLon < maxLon`, `minLat < maxLat`, lon dentro de `[-180, 180]`, lat dentro de `[-90, 90]` y valores finitos; lo contrario se rechaza con 400.
 - `ratio`: relación ancho/alto del GIF; debe ser un número positivo y finito.
 - `task_id`: identificador único de tarea para el canal SSE de progreso.

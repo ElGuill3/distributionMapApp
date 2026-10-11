@@ -124,6 +124,16 @@ def ndvi_timeseries_bbox() -> Response:
     end_raw = request.args.get("end")
     bbox_str = request.args.get("bbox")
 
+    # Match the existing standard-route fallback; complete explicit dates win.
+    if not start_raw or not end_raw:
+        year_str = request.args.get("year")
+        season = request.args.get("season")
+        if year_str and season:
+            try:
+                start_raw, end_raw = season_to_dates(int(year_str), season)
+            except (ValueError, TypeError):
+                pass  # Preserve the existing Pydantic date error below.
+
     try:
         bbox_parsed = _parse_bbox_str(bbox_str)
         bbox_validado = BBoxSchema(

@@ -287,9 +287,7 @@ def ndvi_gif_bbox() -> Response:
     _gif_pipeline para garantizar que bbox y fechas son correctos antes de
     cualquier llamada a GEE.
     """
-    start_raw = request.args.get("start")
-    end_raw = request.args.get("end")
-    bbox_str = request.args.get("bbox")
+    start_raw, end_raw, bbox_str, _, _ = _parse_common_params()
 
     # 1. Parseo + validación de bbox con Pydantic
     try:

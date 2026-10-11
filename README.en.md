@@ -623,7 +623,7 @@ distributionMapApp/
 | `GET /api/docs/openapi.yaml` | `GET` | — | OpenAPI 3.1.0 specification in YAML format |
 
 **Common parameters:**
-- `start` / `end`: dates in `YYYY-MM-DD` format.
+- `start` / `end`: dates in `YYYY-MM-DD` format. All GIF and timeseries routes, including NDVI, also accept `year` + `season`; a complete explicit date pair takes precedence, otherwise seasonal shorthand replaces the pair.
 - `bbox`: JSON array `[minLon, minLat, maxLon, maxLat]` in decimal degrees (WGS-84). Requires `minLon < maxLon`, `minLat < maxLat`, lon within `[-180, 180]`, lat within `[-90, 90]` and finite values; anything else is rejected with 400.
 - `ratio`: GIF width/height ratio; must be a positive finite number.
 
