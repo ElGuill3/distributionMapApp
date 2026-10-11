@@ -13,6 +13,7 @@ Variables de entorno (todas con valores por defecto):
 """
 
 import os
+from math import isfinite
 from pathlib import Path
 from dotenv import load_dotenv
 from limits import parse_many
@@ -39,6 +40,19 @@ def _env_float(key: str, default: float) -> float:
         return float(os.getenv(key, str(default)))
     except (ValueError, TypeError):
         return default
+
+
+def _env_positive_float(key: str, default: float) -> float:
+    """Reject invalid processing guards before runtime initialization."""
+    try:
+        value = float(os.getenv(key, str(default)))
+    except ValueError:
+        raise ValueError(
+            f"{key} must be a finite number greater than zero."
+        ) from None
+    if not isfinite(value) or value <= 0:
+        raise ValueError(f"{key} must be a finite number greater than zero.")
+    return value
 
 
 def _env_list(key: str, default: str = "") -> list[str]:
@@ -95,9 +109,15 @@ S2_SR = os.getenv("GEE_S2_SR", "COPERNICUS/S2_SR_HARMONIZED")
 # ---------------------------------------------------------------------------
 # Límites de procesamiento
 # ---------------------------------------------------------------------------
-MAX_SPAN_DEG = _env_float("MAX_SPAN_DEG", 8.0)  # Máxima extensión permitida por lado (grados)
-MAX_YEARS_RANGE = _env_float("MAX_YEARS_RANGE", 10.0)  # Máximo rango de fechas permitido en años
-MAX_SPAN_DEG_S2 = _env_float("MAX_SPAN_DEG_S2", 4.0)  # Límite restrictivo para Sentinel-2
+MAX_SPAN_DEG = _env_positive_float(
+    "MAX_SPAN_DEG", 8.0
+)  # Máxima extensión permitida por lado (grados)
+MAX_YEARS_RANGE = _env_positive_float(
+    "MAX_YEARS_RANGE", 10.0
+)  # Máximo rango de fechas permitido en años
+MAX_SPAN_DEG_S2 = _env_positive_float(
+    "MAX_SPAN_DEG_S2", 4.0
+)  # Límite restrictivo para Sentinel-2
 MAX_TOTAL_PIXELS = _env_int("MAX_TOTAL_PIXELS", 26_000_000)
 BASE_PIXELS_PER_FRAME = _env_int("BASE_PIXELS_PER_FRAME", 768 * 768)
 BASE_PIXELS_S2 = _env_int("BASE_PIXELS_S2", 512 * 512)  # Base Sentinel-2

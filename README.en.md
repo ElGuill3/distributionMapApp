@@ -406,6 +406,8 @@ cp .env.example .env
 | `RATE_LIMIT_STATION` | `60/minute` | Each station endpoint, per IP. |
 | `RATE_LIMIT_FORECAST` | `60/minute` | Forecast proxy, per IP. |
 
+Processing guards `MAX_SPAN_DEG`, `MAX_YEARS_RANGE` and `MAX_SPAN_DEG_S2` must be finite positive numbers (fractional values are supported). Empty, malformed, zero, negative, NaN or infinite values abort startup with `<ENV_KEY> must be a finite number greater than zero.` without echoing the value. Defaults remain 8°, 10 years and 4° respectively.
+
 Rate quotas use Flask-Limiter notation (for example, `1/minute` or `10/minute;100/hour`). Every count must be positive. Invalid or empty values abort startup with `<ENV_KEY> must specify positive request rates.` without echoing the value, even when limiting is disabled. Quotas are independent per endpoint/IP, process-local, and count rejected HTTP requests too. Over quota returns the existing JSON HTTP 429 response with `Cache-Control: no-store`.
 
 ---
