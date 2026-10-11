@@ -179,6 +179,7 @@ Cada variable genera:
 - Índice de Peligro de Inundación (FHI) por municipio, en escala 0–100.
 - 16 municipios de Tabasco disponibles, desde GeoTIFFs locales a 100 m de resolución.
 - Paleta de colores: verde (bajo riesgo) → amarillo → naranja → rojo (riesgo crítico).
+- La API municipal también acepta nombres de paletas registradas en Matplotlib (por ejemplo, `palette=viridis`), resueltos mediante el registro actual; los colores FHI predeterminados y las URLs de PNG cacheados se conservan.
 
 ### Estaciones hidrológicas locales
 

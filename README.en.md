@@ -173,6 +173,7 @@ Each variable generates:
 - Flood Hazard Index (FHI) by municipality, scaled 0–100.
 - 16 municipalities of Tabasco available, loaded from local 100 m resolution GeoTIFFs.
 - Color palette: green (low risk) → yellow → orange → red (critical risk).
+- The municipal API also accepts registered Matplotlib palette names (for example, `palette=viridis`), resolved through the current colormap registry; default FHI colors and cached PNG URLs are unchanged.
 
 ### Local Hydrological Stations
 

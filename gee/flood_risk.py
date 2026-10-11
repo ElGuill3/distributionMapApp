@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 import rasterio
-from matplotlib import cm
+from matplotlib import colormaps
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from PIL import Image as PILImage
 
@@ -86,7 +86,7 @@ def render_flood_risk_png(
         cmap = create_gee_flood_colormap()
         vmin, vmax = 0.0, 100.0
     else:
-        cmap = cm.get_cmap(palette)
+        cmap = colormaps[palette]
         vmin = float(np.nanmin(arr))
         vmax = float(np.nanmax(arr))
 
