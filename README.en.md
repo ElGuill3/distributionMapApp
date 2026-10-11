@@ -481,14 +481,12 @@ npm test
 # Unit tests in watch mode
 npm run test:watch
 
-# E2E tests (requires Chromium browser)
-# First start the static file server in another terminal:
-python -m http.server 8080
-# Then run the E2E suite:
-BASE_URL=http://localhost:8080 npm run test:e2e
+# E2E tests: build first; Playwright starts the rendered frontend server
+npm run build:ts
+npm run test:e2e
 
 # E2E tests in UI mode (for debugging)
-BASE_URL=http://localhost:8080 npm run test:e2e:ui
+npm run test:e2e:ui
 ```
 
 ---
@@ -687,15 +685,15 @@ npm run test:watch    # watch mode
 
 **Playwright** — End-to-End browser tests:
 ```bash
-# Start file server in another shell:
-python -m http.server 8080
-
-# Run E2E suite:
-BASE_URL=http://localhost:8080 npm run test:e2e
-
+npm run build:ts
+npm run test:e2e
 # Or in UI mode:
-BASE_URL=http://localhost:8080 npm run test:e2e:ui
+npm run test:e2e:ui
 ```
+
+The runner starts `tests/e2e/server.py --port 8080` on loopback with real Jinja rendering and validated runtime limits, without application providers. API calls return HTTP 503 unless mocked by the browser test. CDN dependencies still require network access. An existing server is never silently reused.
+
+Use `PLAYWRIGHT_EXECUTABLE_PATH=/absolute/path/to/chromium npm run test:e2e` for an already provisioned compatible portable browser, or the default Playwright Chromium installation. For an explicitly selected running server, use `BASE_URL=http://127.0.0.1:5000 SKIP_WEB_SERVER=1 npm run test:e2e`; this opts out of the synthetic API boundary.
 
 ### Quality Tools
 

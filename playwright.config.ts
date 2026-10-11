@@ -3,9 +3,10 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright E2E configuration for distributionMapApp.
  *
- * Serves static files + templates via a simple Python HTTP server.
- * Set BASE_URL to point at the running Flask app for full-stack testing.
- * Set SKIP_WEB_SERVER=1 and ensure BASE_URL points at a running server.
+ * Renders the real Jinja template with validated limits using a frontend-only
+ * Flask server. API calls return 503 unless mocked by a browser test.
+ * BASE_URL + SKIP_WEB_SERVER=1 target an explicitly selected external server.
+ * PLAYWRIGHT_EXECUTABLE_PATH optionally selects a portable Chromium binary.
  */
 
 export default defineConfig({
@@ -19,6 +20,9 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL ?? 'http://localhost:8080',
     trace: 'on-first-retry',
+    launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH
+      ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+      : undefined,
   },
   projects: [
     {
@@ -29,9 +33,9 @@ export default defineConfig({
   webServer: process.env.SKIP_WEB_SERVER
     ? undefined
     : {
-        command: 'python3 -m http.server 8080',
-        port: 8080,
-        reuseExistingServer: true,
+        command: '.venv/bin/python tests/e2e/server.py --port 8080',
+        url: 'http://127.0.0.1:8080/templates/index.html',
+        reuseExistingServer: false,
         timeout: 10_000,
       },
 });

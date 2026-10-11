@@ -500,14 +500,12 @@ npm test
 # Tests de unidad con modo watch
 npm run test:watch
 
-# Tests E2E (requiere navegador Chromium)
-# Primero iniciá el servidor de archivos estáticos en otra terminal:
-python -m http.server 8080
-# Luego ejecutá los tests:
-BASE_URL=http://localhost:8080 npm run test:e2e
+# Tests E2E: compilar primero; Playwright inicia el frontend renderizado
+npm run build:ts
+npm run test:e2e
 
 # Tests E2E con interfaz visual
-BASE_URL=http://localhost:8080 npm run test:e2e:ui
+npm run test:e2e:ui
 ```
 
 ---
@@ -711,15 +709,15 @@ npm run test:watch   # modo watch (reacciona a cambios)
 
 **Playwright** — tests E2E en navegador real:
 ```bash
-# Iniciá el servidor de archivos en otra terminal:
-python -m http.server 8080
-
-# Ejecutá los tests:
-BASE_URL=http://localhost:8080 npm run test:e2e
-
+npm run build:ts
+npm run test:e2e
 # O con interfaz visual (para debug):
-BASE_URL=http://localhost:8080 npm run test:e2e:ui
+npm run test:e2e:ui
 ```
+
+El runner inicia `tests/e2e/server.py --port 8080` en loopback, renderiza Jinja y los límites validados sin importar proveedores de la aplicación. Las APIs responden HTTP 503 salvo que la prueba las simule en el navegador. Las dependencias CDN siguen necesitando red. Nunca se reutiliza silenciosamente un servidor existente.
+
+Para un navegador portable compatible ya preparado, usá `PLAYWRIGHT_EXECUTABLE_PATH=/ruta/absoluta/a/chromium npm run test:e2e`, o la instalación Chromium predeterminada de Playwright. Para un servidor en ejecución elegido explícitamente: `BASE_URL=http://127.0.0.1:5000 SKIP_WEB_SERVER=1 npm run test:e2e`; esto abandona el límite de APIs sintéticas.
 
 Los tests E2E verifican que ningún flujo de usuario dispara `window.alert` sin reemplazarlo por feedback accesible.
 
