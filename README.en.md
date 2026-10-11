@@ -261,7 +261,7 @@ To facilitate offline analysis, the system offers:
 5. The backend responds with `{ gifUrl, bbox, dates, <values> }`.
 6. The frontend overlays the GIF on the Leaflet map using `L.imageOverlay` and renders the chart using Plotly.
 
-Generation progress is communicated in real time using **Server-Sent Events (SSE)** via the `/api/gif-progress/<task_id>` endpoint. The progress queue is cleaned up when the stream closes (normal completion, error, or client disconnect); if the same `task_id` is re-registered, an old stream closing never removes the newer task's queue, and the wait interval uses `SSE_TASK_QUEUE_TIMEOUT_S`.
+Generation progress is communicated in real time using **Server-Sent Events (SSE)** via the `/api/gif-progress/<task_id>` endpoint. The progress queue is cleaned up when the stream closes (normal completion, error, or client disconnect); if the same `task_id` is re-registered, an old stream closing never removes the newer task's queue, and the wait interval uses `SSE_TASK_QUEUE_TIMEOUT_S`. Completed or failed progress without a subscriber expires after `SSE_PROGRESS_RETENTION_S` (default 3600 seconds, minimum 1), counted from producer completion; running producers are not expired. Expiry is checked on registry access and on the existing cleanup daemon tick (controlled by `GIF_CLEANUP_INTERVAL_S`). Streams already attached keep their own queue.
 
 ### Frontend Architecture
 

@@ -39,6 +39,7 @@ from gee.utils import check_max_10_years, season_to_dates
 from services.gif_service import (
     add_dates_to_gif,
     create_progress_queue,
+    finish_progress_queue,
 )
 
 gif_bp = Blueprint("gif", __name__)
@@ -270,6 +271,9 @@ def _gif_pipeline(
         logger.exception("Error en endpoint GIF %s: %s", variable_prefix, e)
         _signal_error(pq, f"Error: {str(e)}")
         return jsonify({"error": f"Error interno: {str(e)}"}), 500
+    finally:
+        if task_id and pq is not None:
+            finish_progress_queue(task_id, pq)
 
 
 # ---------------------------------------------------------------------------

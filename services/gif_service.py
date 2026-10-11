@@ -23,6 +23,7 @@ from config import (
     GIF_DOWNLOAD_TIMEOUT_S,
     GIF_MAX_AGE_MINUTES,
     GIFS_DIR,
+    SSE_PROGRESS_RETENTION_S,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,12 +39,36 @@ progress_queues: dict[str, queue.Queue] = {}
 # de forma que el chequeo de identidad + eliminación no corra en paralelo a
 # un registro nuevo. Nunca se mantiene durante queue.get() ni yields SSE.
 _progress_lock = threading.Lock()
+_progress_completed: dict[str, float] = {}
+
+
+def _expire_completed_progress(now: float) -> None:
+    """Remove expired registrations while the registry lock is held."""
+    for task_id, completed in list(_progress_completed.items()):
+        if now - completed >= SSE_PROGRESS_RETENTION_S:
+            progress_queues.pop(task_id, None)
+            _progress_completed.pop(task_id, None)
+
+
+def cleanup_progress_queues() -> None:
+    """Sweep completed progress even when no client opens an SSE stream."""
+    with _progress_lock:
+        _expire_completed_progress(time.monotonic())
+
+
+def finish_progress_queue(task_id: str, expected_queue: queue.Queue) -> None:
+    """Start retention only for the producer that still owns this registration."""
+    with _progress_lock:
+        if progress_queues.get(task_id) is expected_queue:
+            _progress_completed[task_id] = time.monotonic()
 
 
 def create_progress_queue(task_id: str) -> queue.Queue:
     """Crea y registra una cola de progreso para la tarea indicada."""
     q = queue.Queue()
     with _progress_lock:
+        _expire_completed_progress(time.monotonic())
+        _progress_completed.pop(task_id, None)
         progress_queues[task_id] = q
     return q
 
@@ -51,6 +76,7 @@ def create_progress_queue(task_id: str) -> queue.Queue:
 def get_progress_queue(task_id: str) -> queue.Queue | None:
     """Devuelve la cola registrada para la tarea, o None si no existe."""
     with _progress_lock:
+        _expire_completed_progress(time.monotonic())
         return progress_queues.get(task_id)
 
 
@@ -69,6 +95,7 @@ def remove_progress_queue(
         if expected_queue is not None and registered is not expected_queue:
             return
         progress_queues.pop(task_id, None)
+        _progress_completed.pop(task_id, None)
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +110,7 @@ def cleanup_old_gifs(max_age_minutes: int = GIF_MAX_AGE_MINUTES) -> None:
     """
     while True:
         try:
+            cleanup_progress_queues()
             cutoff_time = time.time() - (max_age_minutes * 60)
             count = 0
             for gif_file in GIFS_DIR.glob("*.gif"):

@@ -291,3 +291,4 @@ RATE_LIMITS = {
 GIF_DOWNLOAD_TIMEOUT_S = _env_int("GIF_DOWNLOAD_TIMEOUT_S", 120)  # Timeout para descarga de GIF desde GEE
 SSE_TASK_QUEUE_TIMEOUT_S = _env_int("SSE_TASK_QUEUE_TIMEOUT_S", 60)  # Timeout de la cola SSE en progress endpoint
 SSE_WAIT_ATTEMPTS = _env_int("SSE_WAIT_ATTEMPTS", 100)  # Intentos de espera para que el endpoint GIF registre su cola
+SSE_PROGRESS_RETENTION_S = max(1, _env_int("SSE_PROGRESS_RETENTION_S", 3600))  # Completed progress lifetime (minimum 1s)
