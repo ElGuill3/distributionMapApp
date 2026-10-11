@@ -300,7 +300,7 @@ src/ts/
 
 - **`main.ts`** inicializa el mapa Leaflet, los módulos de modo y el sistema de listeners. No contiene lógica de negocio de ningún modo.
 - **`apiClient.ts`** encapsula todos los `fetch()` al backend, incluyendo SSE de progreso y manejo de errores tipados.
-- **`mapState.ts`** mantiene el estado de la sesión: bbox seleccionado, modo activo, series temporales cargadas y referencias a los players de animación (GifPlayer, SyncPlayer, SoloPlayer).
+- **`mapState.ts`** mantiene el estado de la sesión: bbox seleccionado, modo activo, series temporales cargadas y referencias a los players de animación (GifPlayer, SyncPlayer, SoloPlayer). `GifPlayer` es dueño de las URLs blob de sus frames: recargar libera los frames reemplazados, disponer invalida cargas pendientes y una carga fallida u obsoleta libera sus frames candidatos sin reemplazar la animación actual.
 - **`modes/*.ts`** contienen el comportamiento específico de cada modo de operación y acceden al estado exclusivamente a través de `mapState`.
 
 ---

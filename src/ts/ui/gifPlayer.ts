@@ -25,51 +25,64 @@ export class GifPlayer {
   private delays: number[] = [];
   private width = 0;
   private height = 0;
+  private loadRevision = 0;
 
   /** Descarga y pre-renderiza todos los frames del GIF indicado. */
   async load(gifUrl: string): Promise<void> {
+    const revision = ++this.loadRevision;
     const resp = await fetch(gifUrl);
     const buffer = await resp.arrayBuffer();
+    if (revision !== this.loadRevision) return;
 
     const parsed = parseGIF(buffer);
     const frames: ParsedFrame[] = decompressFrames(parsed, true);
 
-    this.width = parsed.lsd.width;
-    this.height = parsed.lsd.height;
+    const width = parsed.lsd.width;
+    const height = parsed.lsd.height;
 
     // Canvas reutilizable para componer cada frame
     const canvas = document.createElement('canvas');
-    canvas.width = this.width;
-    canvas.height = this.height;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('GifPlayer: no se pudo obtener 2D context del canvas.');
 
-    // Pre-renderizamos cada frame sobre el canvas acumulativo (disposal 0/1)
-    // y capturamos un blob URL por frame.
-    this.blobUrls = [];
-    this.delays = [];
+    // Keep candidate resources separate until the current load is complete.
+    const urls: string[] = [];
+    const delays: number[] = [];
+    let committed = false;
+    try {
+      for (const frame of frames) {
+        const { dims, patch, delay, disposalType } = frame;
 
-    for (const frame of frames) {
-      const { dims, patch, delay, disposalType } = frame;
+        // Disposal type 2 → limpiar canvas antes de pintar
+        if (disposalType === 2) {
+          ctx.clearRect(0, 0, width, height);
+        }
 
-      // Disposal type 2 → limpiar canvas antes de pintar
-      if (disposalType === 2) {
-        ctx.clearRect(0, 0, this.width, this.height);
+        // gifuct-js exposes ArrayBufferLike; ImageData expects ArrayBuffer.
+        const imageData = new ImageData(
+          patch as unknown as Uint8ClampedArray<ArrayBuffer>,
+          dims.width,
+          dims.height
+        );
+        ctx.putImageData(imageData, dims.left, dims.top);
+
+        urls.push(await canvasToBlobUrl(canvas));
+        if (revision !== this.loadRevision) return;
+        delays.push(delay > 0 ? delay : 100);
       }
 
-      // Cast necesario: gifuct-js tipifica patch como Uint8ClampedArray<ArrayBufferLike>
-      // pero ImageData espera Uint8ClampedArray<ArrayBuffer>.
-      const imageData = new ImageData(
-        patch as unknown as Uint8ClampedArray<ArrayBuffer>,
-        dims.width,
-        dims.height
-      );
-      ctx.putImageData(imageData, dims.left, dims.top);
-
-      const url = await canvasToBlobUrl(canvas);
-      this.blobUrls.push(url);
-      // delay ya viene en ms desde gifuct-js (multiplica el campo gce por 10)
-      this.delays.push(delay > 0 ? delay : 100);
+      for (const url of this.blobUrls) URL.revokeObjectURL(url);
+      this.blobUrls = urls;
+      this.delays = delays;
+      this.width = width;
+      this.height = height;
+      committed = true;
+    } finally {
+      if (!committed) {
+        for (const url of urls) URL.revokeObjectURL(url);
+      }
     }
   }
 
@@ -90,6 +103,7 @@ export class GifPlayer {
 
   /** Libera todos los blob URLs de memoria. Llamar al destruir el player. */
   dispose(): void {
+    ++this.loadRevision;
     for (const url of this.blobUrls) URL.revokeObjectURL(url);
     this.blobUrls = [];
     this.delays = [];
