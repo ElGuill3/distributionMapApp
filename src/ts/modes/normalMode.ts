@@ -47,6 +47,7 @@ declare const L: typeof import('leaflet');
 export interface NormalModeResult {
   success: boolean;
   error?: string;
+  superseded?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -55,6 +56,7 @@ export interface NormalModeResult {
 
 /** Referencia al mapa principal (inyectada desde main.ts al inicializar). */
 let _mapRef: L.Map | null = null;
+let generationRevision = 0;
 
 /** Referencia al div del chart (inyectada desde main.ts al inicializar). */
 let _chartDiv: HTMLElement | null = null;
@@ -95,6 +97,7 @@ export function initNormalMode(domRefs: {
   onChartRendered?: () => void;
   onDateLabelUpdate?: (frameIdx: number) => void;
 }): void {
+  ++generationRevision;
   _mapRef = domRefs.map;
   _chartDiv = domRefs.chartDiv;
   _playerControlsDiv = domRefs.playerControlsDiv;
@@ -188,6 +191,7 @@ export function stopSyncPlayer(): void {
  * No toca panel B ni ningún estado de compare mode.
  */
 export function clearNormalMode(): void {
+  ++generationRevision;
   stopSoloPlayer();
   mapState.getGifPlayerA()?.dispose();
   mapState.setGifPlayerA(null);
@@ -227,6 +231,7 @@ export function clearNormalMode(): void {
  * se moverá esa coordinación ahí.
  */
 export function enterNormalMode(): void {
+  ++generationRevision;
   // Limpiar estado residual de otros modos
   stopSoloPlayer();
   stopSyncPlayer();
@@ -313,6 +318,13 @@ export async function requestGifAndSeries(
   end: string,
   bbox: BBox
 ): Promise<NormalModeResult> {
+  const revision = ++generationRevision;
+  const isCurrent = () =>
+    revision === generationRevision &&
+    !mapState.getCompareModeActive() &&
+    !mapState.getFloodRiskModeActive() &&
+    !mapState.getInundacionesModeActive();
+  let pendingPlayer: GifPlayer | null = null;
   mapState.setCurrentVariable(variable);
 
   // Generar taskId para mantener SSE sincronizado con la petición GIF
@@ -326,6 +338,7 @@ export async function requestGifAndSeries(
   const eventSource = createProgressEventSource(
     taskId,
     (progress, message) => {
+      if (!isCurrent()) return;
       sseMessagesReceived++;
       if (progress > 0) {
         closeWarningModal();
@@ -342,13 +355,14 @@ export async function requestGifAndSeries(
       }
     },
     () => {
-      closeWarningModal();
+      if (isCurrent()) closeWarningModal();
       eventSource.close();
     }
   );
 
   // Watchdog timer para detectar conexión lenta o procesamiento largo
   const connectionWatchdog = setTimeout(() => {
+    if (!isCurrent()) return;
     if (!navigator.onLine) {
       showWarningModal(
         'Sin conexión',
@@ -375,6 +389,7 @@ export async function requestGifAndSeries(
       bbox,
       taskId,
     });
+    if (!isCurrent()) return { success: false, superseded: true };
 
     clearTimeout(connectionWatchdog);
     closeWarningModal();
@@ -392,16 +407,17 @@ export async function requestGifAndSeries(
       L.latLng(maxLat, maxLon)
     );
 
-    // Limpiar player anterior antes de crear el nuevo
+    // Keep the owned animation until the current candidate has decoded.
+    const player = new GifPlayer();
+    pendingPlayer = player;
+    await player.load(gifData.gifUrl);
+    if (!isCurrent()) return { success: false, superseded: true };
+
     stopSoloPlayer();
     mapState.getGifPlayerA()?.dispose();
     mapState.setGifPlayerA(null);
     mapState.setOverlayA(null);
     removeActiveOverlay(_mapRef!);
-
-    // Crear GIF player y overlay
-    const player = new GifPlayer();
-    await player.load(gifData.gifUrl);
 
     updateProgressIndicator(97, 'Renderizando mapa y gráfica...');
 
@@ -413,6 +429,7 @@ export async function requestGifAndSeries(
     _mapRef!.fitBounds(overlayBounds);
 
     mapState.setGifPlayerA(player);
+    pendingPlayer = null; // Ownership transferred to mapState.
     mapState.setOverlayA(overlay);
     mapState.setActiveGifPathA(gifData.gifUrl);
     mapState.setGifPathForVariable('A', variable, gifData.gifUrl);
@@ -461,6 +478,7 @@ export async function requestGifAndSeries(
 
     return { success: true };
   } catch (err) {
+    if (!isCurrent()) return { success: false, superseded: true };
     console.error(err);
     removeProgressIndicator(0);
     return {
@@ -468,8 +486,9 @@ export async function requestGifAndSeries(
       error: 'Error de red al generar animación / serie temporal.',
     };
   } finally {
+    pendingPlayer?.dispose();
     clearTimeout(connectionWatchdog);
-    closeWarningModal();
+    if (isCurrent()) closeWarningModal();
     eventSource.close();
   }
 }
