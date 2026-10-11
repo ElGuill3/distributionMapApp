@@ -247,7 +247,7 @@ export function initMapB(): void {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(newMapB);
 
-  newMapB.on('popupopen', (e) => {
+  newMapB.on('popupopen', e => {
     const container = e.popup.getElement();
     if (container) {
       initLucideIcons(container);
@@ -321,18 +321,18 @@ export function initMapB(): void {
         .bindPopup(
           `<div class="station-popup-content">` +
             `<div class="station-popup-header">` +
-              `<span class="station-badge ${badgeClass}">${badgeLabel}</span>` +
+            `<span class="station-badge ${badgeClass}">${badgeLabel}</span>` +
             `</div>` +
             `<h3 class="station-popup-title">${info.station_name || info.name}</h3>` +
             `<div class="station-popup-meta">` +
-              `<span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${info.municipio || 'Sin Municipio'}</span>` +
-              `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
+            `<span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${info.municipio || 'Sin Municipio'}</span>` +
+            `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
             `</div>` +
             `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
-              `Ver datos 2000–2024` +
+            `Ver datos 2000–2024` +
             `</a>` +
             bdctbForecastAction(id, isHidro) +
-          `</div>`
+            `</div>`
         )
         .addTo(newMapB);
       _stationMarkersMapB.push(marker);

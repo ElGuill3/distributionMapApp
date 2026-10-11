@@ -13,22 +13,29 @@ const INDICATOR_ID = 'loading-indicator';
  *
  * @returns Referencia al div del indicador (ya añadido al body).
  */
-export function createProgressIndicator(title = 'Procesando GIF', hideProgressBar = false): HTMLDivElement {
+export function createProgressIndicator(
+  title = 'Procesando GIF',
+  hideProgressBar = false
+): HTMLDivElement {
   document.getElementById(INDICATOR_ID)?.remove();
 
   const div = document.createElement('div');
   div.id = INDICATOR_ID;
-  
-  const progressBarHtml = hideProgressBar ? '' : `
+
+  const progressBarHtml = hideProgressBar
+    ? ''
+    : `
     <div class="modal-progress-bar-bg">
       <div id="progress-bar" class="modal-progress-bar-fill"></div>
     </div>
     <div id="progress-percent" class="modal-progress-percent">0%</div>
   `;
 
-  const overlayClass = hideProgressBar ? 'modal-overlay modal-progress modal-large' : 'modal-overlay modal-progress';
-  const messageStyle = hideProgressBar 
-    ? 'white-space: pre-wrap; word-break: break-word; max-height: 450px; overflow-y: auto; text-align: left; background: var(--gray-100); padding: 12px; border-radius: 6px;' 
+  const overlayClass = hideProgressBar
+    ? 'modal-overlay modal-progress modal-large'
+    : 'modal-overlay modal-progress';
+  const messageStyle = hideProgressBar
+    ? 'white-space: pre-wrap; word-break: break-word; max-height: 450px; overflow-y: auto; text-align: left; background: var(--gray-100); padding: 12px; border-radius: 6px;'
     : '';
 
   div.innerHTML = `

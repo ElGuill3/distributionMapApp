@@ -287,7 +287,8 @@ export function plotAllSelectedSeries(
   }
 
   if (yaxis1) {
-    const hasLevel = yaxis1.variable.includes('_hidro') || yaxis1.variable.startsWith('local_');
+    const hasLevel =
+      yaxis1.variable.includes('_hidro') || yaxis1.variable.startsWith('local_');
     yAxesConfig['yaxis'] = {
       title: {
         text: hasLevel ? 'Nivel (m)' : yaxis1.label,

@@ -21,7 +21,6 @@ import {
   buildColorbars,
   switchColorbar,
   removeActiveOverlay,
-  municipalFloodOverlays,
   setOverlayOpacity,
 } from './map/overlays.js';
 import {
@@ -41,9 +40,7 @@ import {
   fetchLocalStationLevel,
   fetchLocalStationsList,
   exportBundle,
-  downloadBlob,
   buildExportBundleZip,
-  createProgressEventSource,
 } from './apiClient.js';
 import { plotChartAsPng } from './ui/chart.js';
 
@@ -59,7 +56,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 }).addTo(map);
 
-map.on('popupopen', (e) => {
+map.on('popupopen', e => {
   const container = e.popup.getElement();
   if (container) {
     initLucideIcons(container);
@@ -171,24 +168,24 @@ async function initializeLocalStations(): Promise<void> {
         const marker = L.marker(L.latLng(lat, lon), { icon }).bindPopup(
           `<div class="station-popup-content">` +
             `<div class="station-popup-header">` +
-              `<span class="station-badge ${badgeClass}">${badgeLabel}</span>` +
+            `<span class="station-badge ${badgeClass}">${badgeLabel}</span>` +
             `</div>` +
             `<h3 class="station-popup-title">${info.station_name || info.name}</h3>` +
             `<div class="station-popup-meta">` +
-              `<span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${info.municipio || 'Sin Municipio'}</span>` +
-              `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
+            `<span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${info.municipio || 'Sin Municipio'}</span>` +
+            `<span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metricDesc}</span>` +
             `</div>` +
             `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${id}">` +
-              `Ver datos 2000–2024` +
+            `Ver datos 2000–2024` +
             `</a>` +
             bdctbForecastAction(id, isHidro) +
-          `</div>`
+            `</div>`
         );
         marker.addTo(map);
         stationMarkersMap.push(marker);
       }
     }
-    
+
     // Sincronizar visibilidad de marcadores y estado del botón al inicializar
     toggleStationsLayer(layerVisibility.stations);
   } catch (err) {
@@ -1131,20 +1128,6 @@ function toggleStationsLayer(show: boolean): void {
 
   layerVisibility.stations = show;
   if (topbarLayerStations) syncLayerButtonState(topbarLayerStations, show);
-}
-
-/**
- * Shows or hides the municipal flood overlays based on layer toggle state.
- */
-function toggleFloodLayer(show: boolean): void {
-  for (const overlay of Object.values(municipalFloodOverlays)) {
-    if (show && !map.hasLayer(overlay)) {
-      overlay.addTo(map);
-    } else if (!show && map.hasLayer(overlay)) {
-      map.removeLayer(overlay);
-    }
-  }
-  layerVisibility.flood = show;
 }
 
 topbarLayerGif?.addEventListener('click', () => {
