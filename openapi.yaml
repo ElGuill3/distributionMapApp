@@ -165,7 +165,7 @@ paths:
         required: true
         schema:
           type: string
-        description: JSON array [minLon, minLat, maxLon, maxLat].
+        description: 'JSON array [minLon, minLat, maxLon, maxLat]. Constraints: finite values, min/max lon ∈ [-180,180], min/max lat ∈ [-90,90] and min < max for each pair; otherwise rejected with 400.'
       - name: ratio
         in: query
         required: false
@@ -276,7 +276,7 @@ paths:
         required: true
         schema:
           type: string
-        description: JSON array [minLon, minLat, maxLon, maxLat].
+        description: 'JSON array [minLon, minLat, maxLon, maxLat]. Constraints: finite values, min/max lon ∈ [-180,180], min/max lat ∈ [-90,90] and min < max for each pair; otherwise rejected with 400.'
       - name: ratio
         in: query
         required: false
@@ -387,7 +387,7 @@ paths:
         required: true
         schema:
           type: string
-        description: JSON array [minLon, minLat, maxLon, maxLat].
+        description: 'JSON array [minLon, minLat, maxLon, maxLat]. Constraints: finite values, min/max lon ∈ [-180,180], min/max lat ∈ [-90,90] and min < max for each pair; otherwise rejected with 400.'
       - name: ratio
         in: query
         required: false
@@ -672,7 +672,7 @@ paths:
         required: true
         schema:
           type: string
-        description: JSON array [minLon, minLat, maxLon, maxLat].
+        description: 'JSON array [minLon, minLat, maxLon, maxLat]. Constraints: finite values, min/max lon ∈ [-180,180], min/max lat ∈ [-90,90] and min < max for each pair; otherwise rejected with 400.'
       responses:
         '200':
           description: Temperature timeseries data.
@@ -740,7 +740,7 @@ paths:
         required: true
         schema:
           type: string
-        description: JSON array [minLon, minLat, maxLon, maxLat].
+        description: 'JSON array [minLon, minLat, maxLon, maxLat]. Constraints: finite values, min/max lon ∈ [-180,180], min/max lat ∈ [-90,90] and min < max for each pair; otherwise rejected with 400.'
       responses:
         '200':
           description: Soil moisture timeseries data.
@@ -808,7 +808,7 @@ paths:
         required: true
         schema:
           type: string
-        description: JSON array [minLon, minLat, maxLon, maxLat].
+        description: 'JSON array [minLon, minLat, maxLon, maxLat]. Constraints: finite values, min/max lon ∈ [-180,180], min/max lat ∈ [-90,90] and min < max for each pair; otherwise rejected with 400.'
       responses:
         '200':
           description: Precipitation timeseries data.

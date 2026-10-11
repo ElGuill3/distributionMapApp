@@ -624,7 +624,7 @@ distributionMapApp/
 
 **Common parameters:**
 - `start` / `end`: dates in `YYYY-MM-DD` format.
-- `bbox`: JSON array `[minLon, minLat, maxLon, maxLat]` in decimal degrees (WGS-84).
+- `bbox`: JSON array `[minLon, minLat, maxLon, maxLat]` in decimal degrees (WGS-84). Requires `minLon < maxLon`, `minLat < maxLat`, lon within `[-180, 180]`, lat within `[-90, 90]` and finite values; anything else is rejected with 400.
 - `ratio`: GIF width/height ratio; must be a positive finite number.
 
 ---

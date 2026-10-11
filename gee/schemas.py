@@ -32,6 +32,40 @@ class BBoxSchema(BaseModel):
         return self
 
 
+def validate_bbox_values(bbox: list[float]) -> list[float]:
+    """
+    Valida orden, rangos y finitud de un bbox ya parseado
+    [minLon, minLat, maxLon, maxLat], con las mismas reglas de BBoxSchema
+    pero con mensajes estables de una sola línea.
+
+    Args:
+        bbox: lista de 4 floats ya convertidos.
+
+    Returns:
+        La misma lista, tras validar.
+
+    Raises:
+        ValueError: si algún valor no es finito, está fuera de rango o el
+            par min/max está invertido o igualado, p. ej.
+            'bbox min_lon debe ser menor que max_lon'.
+    """
+    for label, value, low, high in (
+        ("min_lon", bbox[0], -180.0, 180.0),
+        ("min_lat", bbox[1], -90.0, 90.0),
+        ("max_lon", bbox[2], -180.0, 180.0),
+        ("max_lat", bbox[3], -90.0, 90.0),
+    ):
+        if not math.isfinite(value):
+            raise ValueError(f"bbox {label} debe ser un número finito")
+        if value < low or value > high:
+            raise ValueError(f"bbox {label} fuera de rango [{low}, {high}]")
+    if not bbox[0] < bbox[2]:
+        raise ValueError("bbox min_lon debe ser menor que max_lon")
+    if not bbox[1] < bbox[3]:
+        raise ValueError("bbox min_lat debe ser menor que max_lat")
+    return bbox
+
+
 class DateRangeSchema(BaseModel):
     """Schema para validar rangos de fecha."""
 

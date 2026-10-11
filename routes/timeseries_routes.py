@@ -9,7 +9,12 @@ from flask import Blueprint, Response, jsonify, request
 from extensions import limiter
 from gee.ndvi import build_ndvi_timeseries_bbox
 from gee.precipitation import build_chirps_precip_timeseries_bbox
-from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
+from gee.schemas import (
+    BBoxSchema,
+    DateRangeSchema,
+    _parse_bbox_str,
+    validate_bbox_values,
+)
 from gee.soil import build_era5_soil_timeseries_bbox
 from gee.temperature import build_era5_temp_timeseries_bbox
 from gee.utils import check_max_10_years, season_to_dates
@@ -88,6 +93,13 @@ def _timeseries_pipeline(
             return jsonify(
                 {"error": "bbox debe ser un JSON [minLon,minLat,maxLon,maxLat]."}
             ), 400
+
+        # Rechazar orden/rango/no finito de forma consistente con las rutas
+        # GIF y con NDVI antes de llamar a cualquier builder.
+        try:
+            bbox = validate_bbox_values(bbox)
+        except ValueError as e:
+            return jsonify({"error": f"bbox inválido: {e}"}), 400
 
     kwargs = {}
     if satellite:

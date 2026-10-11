@@ -26,7 +26,13 @@ from gee.precipitation import (
     build_chirps_precip_gif_bbox,
     build_chirps_precip_timeseries_bbox,
 )
-from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str, parse_ratio
+from gee.schemas import (
+    BBoxSchema,
+    DateRangeSchema,
+    _parse_bbox_str,
+    parse_ratio,
+    validate_bbox_values,
+)
 from gee.soil import build_era5_soil_gif_bbox, build_era5_soil_timeseries_bbox
 from gee.temperature import build_era5_temp_gif_bbox, build_era5_temp_timeseries_bbox
 from gee.utils import check_max_10_years, season_to_dates
@@ -169,6 +175,13 @@ def _gif_pipeline(
             return jsonify(
                 {"error": "bbox debe ser un JSON [minLon,minLat,maxLon,maxLat]."}
             ), 400
+
+        # Rechazar orden/rango/no finito de forma consistente con NDVI antes
+        # de tocar caché, colas de progreso o GEE.
+        try:
+            bbox = validate_bbox_values(bbox)
+        except ValueError as e:
+            return jsonify({"error": f"bbox inválido: {e}"}), 400
 
     # ratio: rechazar no numérico / no finito / no positivo antes de tocar
     # caché, colas de progreso o GEE.
