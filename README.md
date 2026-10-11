@@ -267,7 +267,7 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 5. El backend responde con `{ gifUrl, bbox, dates, <valores> }`.
 6. El frontend superpone el GIF sobre el mapa Leaflet usando `L.imageOverlay` y renderiza la gráfica con Plotly.
 
-El progreso de generación se comunica en tiempo real mediante **Server-Sent Events (SSE)** a través del endpoint `/api/gif-progress/<task_id>`.
+El progreso de generación se comunica en tiempo real mediante **Server-Sent Events (SSE)** a través del endpoint `/api/gif-progress/<task_id>`. La cola de progreso se limpia al cerrar el stream (cierre normal, error o desconexión del cliente); si un mismo `task_id` se re-registra, el cierre de un stream antiguo nunca elimina la cola de la tarea nueva, y el intervalo de espera usa `SSE_TASK_QUEUE_TIMEOUT_S`.
 
 ### Arquitectura del frontend
 

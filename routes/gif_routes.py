@@ -38,7 +38,7 @@ from gee.temperature import build_era5_temp_gif_bbox, build_era5_temp_timeseries
 from gee.utils import check_max_10_years, season_to_dates
 from services.gif_service import (
     add_dates_to_gif,
-    progress_queues,
+    create_progress_queue,
 )
 
 gif_bp = Blueprint("gif", __name__)
@@ -96,12 +96,10 @@ def _make_progress_callback(pq: queue.Queue | None):
 
 
 def _setup_progress(task_id: str | None) -> queue.Queue | None:
-    """Crea y registra la cola SSE si hay task_id."""
+    """Crea y registra la cola SSE si hay task_id (bajo el lock del registro)."""
     if not task_id:
         return None
-    pq = queue.Queue()
-    progress_queues[task_id] = pq
-    return pq
+    return create_progress_queue(task_id)
 
 
 def _signal_error(pq: queue.Queue | None, message: str) -> None:

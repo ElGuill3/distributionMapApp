@@ -34,17 +34,41 @@ logger = logging.getLogger(__name__)
 # Diccionario global: task_id → Queue[dict | None]
 progress_queues: dict[str, queue.Queue] = {}
 
+# Lock de proceso que sincroniza registro/consulta/eliminación del registro,
+# de forma que el chequeo de identidad + eliminación no corra en paralelo a
+# un registro nuevo. Nunca se mantiene durante queue.get() ni yields SSE.
+_progress_lock = threading.Lock()
+
 
 def create_progress_queue(task_id: str) -> queue.Queue:
     """Crea y registra una cola de progreso para la tarea indicada."""
     q = queue.Queue()
-    progress_queues[task_id] = q
+    with _progress_lock:
+        progress_queues[task_id] = q
     return q
 
 
-def remove_progress_queue(task_id: str) -> None:
-    """Elimina la cola de progreso de una tarea finalizada."""
-    progress_queues.pop(task_id, None)
+def get_progress_queue(task_id: str) -> queue.Queue | None:
+    """Devuelve la cola registrada para la tarea, o None si no existe."""
+    with _progress_lock:
+        return progress_queues.get(task_id)
+
+
+def remove_progress_queue(
+    task_id: str, expected_queue: queue.Queue | None = None
+) -> None:
+    """
+    Elimina la cola de progreso de una tarea finalizada.
+
+    Con ``expected_queue`` solo elimina el registro si sigue apuntando a esa
+    misma cola, de modo que el cierre de un stream antiguo no pueda eliminar
+    la cola de una tarea más nueva registrada con el mismo task_id.
+    """
+    with _progress_lock:
+        registered = progress_queues.get(task_id)
+        if expected_queue is not None and registered is not expected_queue:
+            return
+        progress_queues.pop(task_id, None)
 
 
 # ---------------------------------------------------------------------------

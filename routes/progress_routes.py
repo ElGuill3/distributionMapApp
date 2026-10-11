@@ -9,7 +9,7 @@ import time
 from flask import Blueprint, Response, stream_with_context
 
 from config import SSE_TASK_QUEUE_TIMEOUT_S, SSE_WAIT_ATTEMPTS
-from services.gif_service import progress_queues, remove_progress_queue
+from services.gif_service import get_progress_queue, remove_progress_queue
 
 progress_bp = Blueprint("progress", __name__)
 
@@ -30,7 +30,7 @@ def gif_progress(task_id: str) -> Response:
         # Esperar hasta que el endpoint GIF registre su cola de progreso
         task_queue = None
         for _ in range(SSE_WAIT_ATTEMPTS):
-            task_queue = progress_queues.get(task_id)
+            task_queue = get_progress_queue(task_id)
             if task_queue:
                 break
             time.sleep(0.1)
@@ -40,21 +40,26 @@ def gif_progress(task_id: str) -> Response:
             yield f"data: {msg}\n\n"
             return
 
-        while True:
-            try:
-                # Esperar mensajes de progreso con un timeout de 10 segundos
-                message = task_queue.get(timeout=10)
-                if message is None:
-                    break
-                yield f"data: {json.dumps(message)}\n\n"
-                if message.get("progress") in (100, -1):
-                    break
-            except q_module.Empty:
-                # Enviar un comentario (keep-alive) para evitar que proxies o navegadores
-                # cierren la conexión por inactividad.
-                yield ": keep-alive\n\n"
-
-        remove_progress_queue(task_id)
+        try:
+            while True:
+                try:
+                    # Esperar mensajes con el timeout configurado (keep-alive).
+                    message = task_queue.get(timeout=SSE_TASK_QUEUE_TIMEOUT_S)
+                    if message is None:
+                        break
+                    yield f"data: {json.dumps(message)}\n\n"
+                    if message.get("progress") in (100, -1):
+                        break
+                except q_module.Empty:
+                    # Enviar un comentario (keep-alive) para evitar que proxies
+                    # o navegadores cierren la conexión por inactividad.
+                    yield ": keep-alive\n\n"
+        finally:
+            # Limpieza en cierre normal (100/-1), desconexión del cliente
+            # (GeneratorExit) o error de stream. El chequeo de identidad evita
+            # que un stream viejo elimine la cola de una tarea más nueva con
+            # el mismo task_id.
+            remove_progress_queue(task_id, task_queue)
 
     return Response(
         stream_with_context(_generate()),
