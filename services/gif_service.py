@@ -24,6 +24,8 @@ from config import (
     GIF_MAX_AGE_MINUTES,
     GIFS_DIR,
     SSE_PROGRESS_RETENTION_S,
+    SSE_MAX_PROGRESS_TASKS,
+    SSE_MAX_PROGRESS_MESSAGES,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,12 +65,31 @@ def finish_progress_queue(task_id: str, expected_queue: queue.Queue) -> None:
             _progress_completed[task_id] = time.monotonic()
 
 
+class _ProgressQueue(queue.Queue):
+    """Bounded latest-progress buffer; producers never wait for an SSE reader."""
+
+    def put(self, item, block=True, timeout=None):
+        with self.not_full:
+            if self._qsize() >= self.maxsize:
+                self._get()
+                self.unfinished_tasks -= 1
+            self._put(item)
+            self.unfinished_tasks += 1
+            self.not_empty.notify()
+
+
 def create_progress_queue(task_id: str) -> queue.Queue:
     """Crea y registra una cola de progreso para la tarea indicada."""
-    q = queue.Queue()
+    q = _ProgressQueue(maxsize=SSE_MAX_PROGRESS_MESSAGES)
     with _progress_lock:
         _expire_completed_progress(time.monotonic())
         _progress_completed.pop(task_id, None)
+        progress_queues.pop(task_id, None)
+        while len(progress_queues) >= SSE_MAX_PROGRESS_TASKS:
+            # Prefer completed work; attached readers retain their own queue.
+            victim = next(iter(_progress_completed), next(iter(progress_queues)))
+            progress_queues.pop(victim, None)
+            _progress_completed.pop(victim, None)
         progress_queues[task_id] = q
     return q
 
