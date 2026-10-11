@@ -644,6 +644,7 @@ distributionMapApp/
 **Parámetros comunes:**
 - `start` / `end`: fechas en formato `YYYY-MM-DD`.
 - `bbox`: arreglo JSON `[minLon, minLat, maxLon, maxLat]` en grados decimales (WGS-84).
+- `ratio`: relación ancho/alto del GIF; debe ser un número positivo y finito.
 - `task_id`: identificador único de tarea para el canal SSE de progreso.
 - `muni`: clave del municipio (p. ej. `centla`, `macuspana`, `tenosique`).
 - `station`: clave de la estación (`SPTTB` o `BDCTB`).

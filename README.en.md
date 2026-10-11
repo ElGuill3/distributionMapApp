@@ -622,6 +622,11 @@ distributionMapApp/
 | `GET /api/docs` | `GET` | — | Interactive Scalar UI API documentation |
 | `GET /api/docs/openapi.yaml` | `GET` | — | OpenAPI 3.1.0 specification in YAML format |
 
+**Common parameters:**
+- `start` / `end`: dates in `YYYY-MM-DD` format.
+- `bbox`: JSON array `[minLon, minLat, maxLon, maxLat]` in decimal degrees (WGS-84).
+- `ratio`: GIF width/height ratio; must be a positive finite number.
+
 ---
 
 ## Development Notes

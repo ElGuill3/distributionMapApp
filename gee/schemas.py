@@ -6,6 +6,7 @@ antes de llamar a cualquier servicio GEE.
 """
 
 import json
+import math
 from datetime import date, datetime
 from typing import Literal
 
@@ -199,6 +200,33 @@ class ExportRequestSchema(BaseModel):
     seriesData: SeriesDataSchema  # noqa: N815
     bbox: list[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
     metadata: ExportBundleMetadataSchema
+
+
+def parse_ratio(ratio_str: str | None) -> float | None:
+    """
+    Parsea el parámetro opcional ``ratio`` (relación ancho/alto del GIF).
+
+    Args:
+        ratio_str: valor crudo de la query string (o None si ausente).
+
+    Returns:
+        float finito y positivo, o None si el parámetro no se provee.
+
+    Raises:
+        ValueError: si el valor no es numérico, no es finito o no es
+            positivo (mensajes sin prefijo, p. ej. 'debe ser un número').
+    """
+    if ratio_str is None or ratio_str == "":
+        return None
+    try:
+        ratio = float(ratio_str)
+    except (TypeError, ValueError):
+        raise ValueError("debe ser un número")
+    if not math.isfinite(ratio):
+        raise ValueError("debe ser un número finito")
+    if ratio <= 0:
+        raise ValueError("debe ser mayor que 0")
+    return ratio
 
 
 def _parse_bbox_str(bbox_str: str) -> list[float]:

@@ -56,7 +56,9 @@ paths:
         required: false
         schema:
           type: number
-        description: Optional resolution ratio for the GIF.
+        description: Optional resolution ratio (width/height) for the GIF. Must
+          be a positive finite number; non-numeric, non-finite or non-positive
+          values are rejected with 400.
       - name: task_id
         in: query
         required: false
@@ -169,7 +171,9 @@ paths:
         required: false
         schema:
           type: number
-        description: Optional resolution ratio for the GIF.
+        description: Optional resolution ratio (width/height) for the GIF. Must
+          be a positive finite number; non-numeric, non-finite or non-positive
+          values are rejected with 400.
       - name: task_id
         in: query
         required: false
@@ -278,7 +282,9 @@ paths:
         required: false
         schema:
           type: number
-        description: Optional resolution ratio for the GIF.
+        description: Optional resolution ratio (width/height) for the GIF. Must
+          be a positive finite number; non-numeric, non-finite or non-positive
+          values are rejected with 400.
       - name: task_id
         in: query
         required: false
@@ -387,7 +393,9 @@ paths:
         required: false
         schema:
           type: number
-        description: Optional resolution ratio for the GIF.
+        description: Optional resolution ratio (width/height) for the GIF. Must
+          be a positive finite number; non-numeric, non-finite or non-positive
+          values are rejected with 400.
       - name: task_id
         in: query
         required: false

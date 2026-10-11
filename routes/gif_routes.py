@@ -26,7 +26,7 @@ from gee.precipitation import (
     build_chirps_precip_gif_bbox,
     build_chirps_precip_timeseries_bbox,
 )
-from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
+from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str, parse_ratio
 from gee.soil import build_era5_soil_gif_bbox, build_era5_soil_timeseries_bbox
 from gee.temperature import build_era5_temp_gif_bbox, build_era5_temp_timeseries_bbox
 from gee.utils import check_max_10_years, season_to_dates
@@ -170,7 +170,12 @@ def _gif_pipeline(
                 {"error": "bbox debe ser un JSON [minLon,minLat,maxLon,maxLat]."}
             ), 400
 
-    ratio = float(ratio_str) if ratio_str else None
+    # ratio: rechazar no numérico / no finito / no positivo antes de tocar
+    # caché, colas de progreso o GEE.
+    try:
+        ratio = parse_ratio(ratio_str)
+    except ValueError as e:
+        return jsonify({"error": f"ratio inválido: {e}"}), 400
 
     # --- Cache hit check: computar clave ANTES de llamar a GEE ---
     bbox_hash = hashlib.md5(str(bbox).encode()).hexdigest()[:8]

@@ -1,2 +1,3 @@
 app.py whitespace=cr-at-eol
 config.py whitespace=cr-at-eol
+routes/gif_routes.py whitespace=cr-at-eol
