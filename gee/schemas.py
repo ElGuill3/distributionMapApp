@@ -191,7 +191,11 @@ class ExportRequestSchema(BaseModel):
     metadata: variableKeys
     """
 
-    gifPaths: list[str] = Field(default_factory=list)  # noqa: N815
+    gifPaths: list[str] = Field(  # noqa: N815
+        default_factory=list,
+        description="GIF files confined to gifs/; optional /static/ prefix. "
+        "Traversal, absolute paths, non-GIF files and symlink escapes are rejected.",
+    )
     seriesData: SeriesDataSchema  # noqa: N815
     bbox: list[float] = Field(examples=[[-92.5, 17.0, -91.0, 18.0]])
     metadata: ExportBundleMetadataSchema

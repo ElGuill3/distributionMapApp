@@ -196,6 +196,7 @@ The project includes a module to automate fetching local data directly from CONA
 
 To facilitate offline analysis, the system offers:
 - **Analysis ZIP**: Exports a ZIP package containing the active time series data in CSV format, along with the animation GIFs and analysis metadata.
+  GIF paths must stay within `static/gifs/` and end in `.gif`; `gifs/name.gif` and `/static/gifs/name.gif` are accepted. Traversal, absolute paths, other files and escaping symlinks return HTTP 400; a missing permitted GIF returns HTTP 404.
 
 ### Operation Modes
 

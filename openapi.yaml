@@ -1304,6 +1304,8 @@ components:
         metadata: variableKeys'
       properties:
         gifPaths:
+          description: GIF files confined to gifs/; optional /static/ prefix. Traversal,
+            absolute paths, non-GIF files and symlink escapes are rejected.
           items:
             type: string
           title: Gifpaths

@@ -111,9 +111,18 @@ def test_explicit_relative_model_repo_resolves_from_invocation_directory():
     assert model_root == (invocation_root / "../alternate-model").resolve()
 
 
-def test_app_root_never_falls_back_to_an_installed_module_path(tmp_path):
+def test_app_root_never_falls_back_to_an_installed_module_path(tmp_path, monkeypatch):
+    from scripts import run_local_forecast_stack as stack
+
     installed_module_root = tmp_path / "site-packages"
     installed_module_root.mkdir()
+    # Model an isolated installation even when pytest scratch lives in a checkout.
+    original = stack._is_app_root
+    monkeypatch.setattr(
+        stack,
+        "_is_app_root",
+        lambda path: path.is_relative_to(tmp_path) and original(path),
+    )
 
     with pytest.raises(LauncherError, match="distributionMapApp checkout"):
         resolve_app_root(tmp_path / "outside", source_root=installed_module_root)

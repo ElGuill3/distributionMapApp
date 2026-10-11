@@ -18,7 +18,11 @@ from pydantic import ValidationError
 from config import STATIC_DIR
 from extensions import limiter
 from gee.schemas import ExportRequestSchema
-from services.export_service import create_export_zip, serialize_series_to_csv
+from services.export_service import (
+    create_export_zip,
+    resolve_export_gif,
+    serialize_series_to_csv,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +61,15 @@ def export_bundle() -> Response:
     # (el frontend envía "/static/gifs/..." pero STATIC_DIR ya incluye "static/")
     normalized_gif_paths = [p.removeprefix("/static/") for p in payload.gifPaths]
 
-    # 3. Validar que cada GIF exista en disco
-    for gif_path in normalized_gif_paths:
-        full_path = STATIC_DIR / gif_path
-        if not full_path.exists():
+    # 3. Validar todas las rutas antes de comprobar si algún GIF falta
+    try:
+        resolved_paths = [
+            resolve_export_gif(path, STATIC_DIR) for path in normalized_gif_paths
+        ]
+    except ValueError:
+        return jsonify({"error": "Invalid request body"}), 400
+    for gif_path, full_path in zip(normalized_gif_paths, resolved_paths, strict=True):
+        if not full_path.is_file():
             logger.warning("GIF no encontrado: %s", gif_path)
             return jsonify(
                 {
@@ -96,6 +105,8 @@ def export_bundle() -> Response:
             gif_paths=normalized_gif_paths,
             metadata=metadata,
         )
+    except ValueError:
+        return jsonify({"error": "Invalid request body"}), 400
     except FileNotFoundError as e:
         logger.warning("GIF no encontrado al crear ZIP: %s", e)
         return jsonify(
@@ -124,4 +135,3 @@ def export_bundle() -> Response:
         },
     )
     return response
-

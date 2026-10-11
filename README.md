@@ -202,6 +202,7 @@ El proyecto incluye un módulo para automatizar la obtención de datos locales d
 
 Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 - **ZIP de Análisis**: Exporta un paquete ZIP con los datos de las series temporales activas en formato CSV, junto a los GIFs de animación y metadatos del análisis.
+  Las rutas deben permanecer dentro de `static/gifs/` y terminar en `.gif`; se aceptan `gifs/nombre.gif` y `/static/gifs/nombre.gif`. Rutas con traversal, absolutas, otros archivos y enlaces simbólicos que escapen del directorio devuelven HTTP 400; un GIF permitido ausente devuelve HTTP 404.
 
 ### Modos de operación
 

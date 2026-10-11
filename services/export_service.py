@@ -10,12 +10,40 @@ import json
 import logging
 import zipfile
 from io import BytesIO
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from config import STATIC_DIR
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_export_gif(gif_path: str, static_dir: Path | None = None) -> Path:
+    """Resolve a permitted GIF without letting client paths escape the GIF root."""
+    normalized = gif_path.removeprefix("/static/")
+    logical = PurePosixPath(normalized)
+    if (
+        not normalized
+        or "\\" in normalized
+        or "\x00" in normalized
+        or logical.is_absolute()
+        or ".." in logical.parts
+        or len(logical.parts) < 2
+        or logical.parts[0] != "gifs"
+        or logical.suffix != ".gif"
+    ):
+        raise ValueError("Invalid export GIF path")
+    root = (STATIC_DIR if static_dir is None else static_dir).resolve()
+    gif_root = (root / "gifs").resolve()
+    try:
+        gif_root.relative_to(root)
+        resolved = (root / normalized).resolve()
+        resolved.relative_to(gif_root)
+    except (ValueError, OSError, RuntimeError) as exc:
+        raise ValueError("Invalid export GIF path") from exc
+    if resolved.exists() and not resolved.is_file():
+        raise ValueError("Invalid export GIF path")
+    return resolved
 
 
 def _infer_variable_from_gif_path(gif_path: str) -> str:
@@ -109,6 +137,8 @@ def create_export_zip(
     Raises:
         FileNotFoundError: si algún gif_path no existe
     """
+    # Validate the complete request before any missing-file check or packaging.
+    resolved_paths = [resolve_export_gif(path) for path in gif_paths]
     buffer = BytesIO()
 
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -117,9 +147,8 @@ def create_export_zip(
 
         # 2. Agregar GIFs (copiar archivos al ZIP)
         metadata_gif_available = False
-        for gif_path in gif_paths:
-            full_path = STATIC_DIR / gif_path
-            if not full_path.exists():
+        for gif_path, full_path in zip(gif_paths, resolved_paths, strict=True):
+            if not full_path.is_file():
                 raise FileNotFoundError(f"GIF not found: {gif_path}")
             # Nombre en ZIP: preservar estructura de carpetas
             arcname = Path(gif_path).name
