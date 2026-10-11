@@ -685,6 +685,7 @@ npm run watch:ts
 La aplicación cuenta con un stack de testing bipartito:
 
 **Vitest** — tests unitarios y de integración en TypeScript:
+Los tests importan directamente el TypeScript fuente y funcionan sin JavaScript generado en `static/`. La aplicación sigue necesitando la compilación para servirse.
 ```bash
 npm test              # todos los tests
 npm run test:watch   # modo watch (reacciona a cambios)

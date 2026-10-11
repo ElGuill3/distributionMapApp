@@ -661,6 +661,7 @@ npm run watch:ts
 ### Testing Stack
 
 **Vitest** — unit and integration tests:
+Tests import authored TypeScript directly and run without generated `static/` JavaScript. Build output is still required to serve the application.
 ```bash
 npm test              # runs all tests
 npm run test:watch    # watch mode

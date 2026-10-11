@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { showWarningModal, closeWarningModal } from '../../static/ui/progress.js';
+import { showWarningModal, closeWarningModal } from '../../src/ts/ui/progress.js';
 
 describe('slow connection warning — does NOT block user actions', () => {
   let testButton;

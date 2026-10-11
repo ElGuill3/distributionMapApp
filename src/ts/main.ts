@@ -744,14 +744,10 @@ document.addEventListener('inundacionesModeDeactivated', () => {
 // PR2: Initialize new sidebar task flow modules directly (no bridge)
 if (typeof window !== 'undefined') {
   Promise.all([
-    // @ts-expect-error - plain JS module, no types
-    import('../../static/sidebar/taskFlow.js'),
-    // @ts-expect-error - plain JS module, no types
-    import('../../static/sidebar/variableSelector.js'),
-    // @ts-expect-error - plain JS module, no types
-    import('../../static/sidebar/configPanel.js'),
-    // @ts-expect-error - plain JS module, no types
-    import('../../static/sidebar/modoSection.js'),
+    import('./sidebar/taskFlow.js'),
+    import('./sidebar/variableSelector.js'),
+    import('./sidebar/configPanel.js'),
+    import('./sidebar/modoSection.js'),
   ])
     .then(([taskFlow, variableSelector, configPanel, modoSection]) => {
       taskFlow.init();

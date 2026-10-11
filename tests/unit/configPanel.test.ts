@@ -111,7 +111,7 @@ global.CustomEvent = class CustomEvent {
 } as unknown as typeof CustomEvent;
 
 // Import the module - it will use mocks set up in beforeEach
-import * as mapState from '../../static/state/mapState.js';
+import * as mapState from '../../src/ts/state/mapState.js';
 
 describe('ConfigPanel', () => {
   let configPanel: any;
@@ -124,7 +124,7 @@ describe('ConfigPanel', () => {
     mapState.resetState();
 
     // Mock config module - use absolute path
-    vi.doMock('../../static/config.js', () => ({
+    vi.doMock('../../src/ts/config.js', () => ({
       VARIABLE_YEARS: {
         ndvi: [2000, 2001, 2002],
         temp: [2000, 2001],
@@ -136,12 +136,12 @@ describe('ConfigPanel', () => {
     }));
 
     // Mock taskFlow - track calls but delegate to real logic where needed
-    vi.doMock('../../static/sidebar/taskFlow.js', () => ({
+    vi.doMock('../../src/ts/sidebar/taskFlow.js', () => ({
       updateStepValidity: vi.fn(),
     }));
 
     // Mock mapState - provide the function configPanel uses
-    vi.doMock('../../static/state/mapState.js', () => ({
+    vi.doMock('../../src/ts/state/mapState.js', () => ({
       getTaskFlowStepValidity: vi.fn((step: string) => {
         // Default: config step is valid when called
         return step === 'config';
@@ -150,7 +150,7 @@ describe('ConfigPanel', () => {
 
     // Re-import module with fresh mocks - must use vi.resetModules first
     vi.resetModules();
-    const module = await import('../../static/sidebar/configPanel.js');
+    const module = await import('../../src/ts/sidebar/configPanel.js');
     configPanel = module.configPanel;
 
     // Setup DOM elements for init() to find
@@ -169,9 +169,9 @@ describe('ConfigPanel', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('../../static/config.js');
-    vi.doUnmock('../../static/sidebar/taskFlow.js');
-    vi.doUnmock('../../static/state/mapState.js');
+    vi.doUnmock('../../src/ts/config.js');
+    vi.doUnmock('../../src/ts/sidebar/taskFlow.js');
+    vi.doUnmock('../../src/ts/state/mapState.js');
   });
 
   describe('Year Select Change', () => {
