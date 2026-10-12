@@ -10,7 +10,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { showWarningModal, closeWarningModal } from '../../src/ts/ui/progress.js';
+import {
+  showWarningModal,
+  closeWarningModal,
+} from '../../frontend/src/ts/ui/progress.js';
 
 describe('showWarningModal — non-blocking warning', () => {
   let closeBtn;

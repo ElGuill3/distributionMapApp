@@ -18,7 +18,7 @@ uv run distribution-map
 comando público es solo-aplicación: compila el frontend TypeScript con el
 driver limpio determinista (`scripts/build-typescript.mjs`, expuesto también
 como `npm run build:ts`), que compila TypeScript y copia el CSS fuente
-`src/styles/styles.css` a la misma URL pública `/static/styles.css`, valida el límite de dependencias de la aplicación y
+`frontend/src/styles/styles.css` a la misma URL pública `/static/styles.css`, valida el límite de dependencias de la aplicación y
 sirve Flask en primer plano en `http://127.0.0.1:5000`. Nunca requiere el
 repositorio hermano del modelo y nunca inicia la API de pronóstico ni el
 worker automático.
@@ -284,7 +284,7 @@ El progreso de generación usa **Server-Sent Events (SSE)** en `/api/gif-progres
 
 ### Arquitectura del frontend
 
-El código TypeScript en `src/ts/` está organizado por responsabilidad:
+El código TypeScript en `frontend/src/ts/` está organizado por responsabilidad:
 
 ```
 src/ts/
@@ -621,8 +621,9 @@ distributionMapApp/
 │   ├── gifs/                 # GIFs generados (caché temporal, se limpian automáticamente)
 │   └── flood_maps/           # PNGs de mapas de riesgo renderizados
 │
-├── src/styles/              # Estilos fuente (build:ts los copia a static/)
-│   └── styles.css            # Hoja de estilos principal fuente
+├── frontend/
+│   └── src/styles/              # Estilos fuente (build:ts los copia a static/)
+│       └── styles.css            # Hoja de estilos principal fuente
 │
 ├── src/ts/                   # Código fuente TypeScript (se compila a static/)
 │   ├── main.ts               # Composition root — orquestador, inicializa módulos y wiring
@@ -682,7 +683,7 @@ distributionMapApp/
 
 ### Recompilar el TypeScript
 
-Tras modificar cualquier archivo en `src/ts/`, ejecuta:
+Tras modificar cualquier archivo en `frontend/src/ts/`, ejecuta:
 
 ```bash
 npm run build:ts

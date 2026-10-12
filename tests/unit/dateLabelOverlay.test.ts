@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { Season } from '../../src/ts/types.js';
+import type { Season } from '../../frontend/src/ts/types.js';
 
 /**
  * Pure formatting function - extracted from main.ts updateDateLabel

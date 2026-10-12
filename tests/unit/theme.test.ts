@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { isDarkModeActive } from '../../src/ts/ui/chart.js';
+import { isDarkModeActive } from '../../frontend/src/ts/ui/chart.js';
 
 describe('Theme management', () => {
   beforeEach(() => {

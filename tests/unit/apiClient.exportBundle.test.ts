@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { exportBundle } from '../../src/ts/apiClient.js';
+import { exportBundle } from '../../frontend/src/ts/apiClient.js';
 
 describe('apiClient.exportBundle', () => {
   afterEach(() => {

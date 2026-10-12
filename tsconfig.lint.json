@@ -11,7 +11,7 @@
     "types": ["leaflet", "node"]
   },
   "include": [
-    "src/ts/**/*.ts",
+    "frontend/src/ts/**/*.ts",
     "tests/**/*.ts"
   ],
   "exclude": [

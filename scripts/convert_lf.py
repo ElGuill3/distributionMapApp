@@ -2,13 +2,13 @@ import os
 
 files = [
     'templates/index.html',
-    'src/ts/types.ts',
-    'src/ts/state/mapState.ts',
-    'src/ts/apiClient.ts',
-    'src/ts/ui/chart.ts',
-    'src/ts/modes/compareMode.ts',
-    'src/ts/main.ts',
-    'src/styles/styles.css'
+    'frontend/src/ts/types.ts',
+    'frontend/src/ts/state/mapState.ts',
+    'frontend/src/ts/apiClient.ts',
+    'frontend/src/ts/ui/chart.ts',
+    'frontend/src/ts/modes/compareMode.ts',
+    'frontend/src/ts/main.ts',
+    'frontend/src/styles/styles.css'
 ]
 
 for f in files:

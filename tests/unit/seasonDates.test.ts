@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { isLeapYear, seasonToDates } from '../../src/ts/utils/seasonDates.js';
-import type { Season } from '../../src/ts/types.js';
+import { isLeapYear, seasonToDates } from '../../frontend/src/ts/utils/seasonDates.js';
+import type { Season } from '../../frontend/src/ts/types.js';
 
 describe('isLeapYear', () => {
   it('returns true for leap years divisible by 4 but not 100', () => {

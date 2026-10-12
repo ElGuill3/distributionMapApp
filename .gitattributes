@@ -1,5 +1,6 @@
 app.py whitespace=cr-at-eol
 config.py whitespace=cr-at-eol
+tsconfig.json whitespace=cr-at-eol
 backend/routes/gif_routes.py whitespace=cr-at-eol
 
 backend/routes/timeseries_routes.py whitespace=cr-at-eol

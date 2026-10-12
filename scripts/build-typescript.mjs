@@ -60,6 +60,6 @@ function compileTypeScript() {
 await cleanGeneratedOutput(outputRoot);
 await compileTypeScript();
 await copyFile(
-  path.join(root, 'src', 'styles', 'styles.css'),
+  path.join(root, 'frontend', 'src', 'styles', 'styles.css'),
   path.join(outputRoot, 'styles.css')
 );

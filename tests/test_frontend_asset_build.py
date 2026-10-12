@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_public_stylesheet_url_retains_exact_bytes_and_mime_type(tmp_path, monkeypatch):
     from app import app
 
-    css = (ROOT / "src/styles/styles.css").read_bytes()
+    css = (ROOT / "frontend/src/styles/styles.css").read_bytes()
     (tmp_path / "styles.css").write_bytes(css)
     monkeypatch.setattr(app, "static_folder", str(tmp_path))
     with app.test_client() as client:
@@ -24,7 +24,13 @@ def test_public_stylesheet_url_retains_exact_bytes_and_mime_type(tmp_path, monke
 
 
 def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
-    for folder in ("scripts", "src/ts", "src/styles", "static/vendor", "static/gifs"):
+    for folder in (
+        "scripts",
+        "frontend/src/ts",
+        "frontend/src/styles",
+        "static/vendor",
+        "static/gifs",
+    ):
         (tmp_path / folder).mkdir(parents=True, exist_ok=True)
     (tmp_path / "scripts/build-typescript.mjs").write_bytes(
         (ROOT / "scripts/build-typescript.mjs").read_bytes()
@@ -38,18 +44,18 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
                 "compilerOptions": {
                     "target": "ES2020",
                     "module": "ES2020",
-                    "rootDir": "src/ts",
+                    "rootDir": "frontend/src/ts",
                     "outDir": "static",
                     "types": [],
                     "skipLibCheck": True,
                 },
-                "include": ["src/ts/**/*.ts"],
+                "include": ["frontend/src/ts/**/*.ts"],
             }
         )
     )
-    (tmp_path / "src/ts/main.ts").write_text("export const proof = 42;\n")
+    (tmp_path / "frontend/src/ts/main.ts").write_text("export const proof = 42;\n")
     css = b"/* synthetic authored stylesheet */\nbody { color: teal; }\n"
-    (tmp_path / "src/styles/styles.css").write_bytes(css)
+    (tmp_path / "frontend/src/styles/styles.css").write_bytes(css)
     (tmp_path / "static/styles.css").write_bytes(b"stale stylesheet")
     preserved = {
         "static/vendor/icons.mjs": b"export const icon = 1;\n",

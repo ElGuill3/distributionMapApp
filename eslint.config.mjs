@@ -6,7 +6,7 @@ export default [
   ...tseslint.configs.recommended,
   // Main source files - use main tsconfig
   {
-    files: ['src/ts/**/*.ts'],
+    files: ['frontend/src/ts/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {

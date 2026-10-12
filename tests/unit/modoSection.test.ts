@@ -76,7 +76,7 @@ describe('ModoSection', () => {
     mockElements.set('toggleInundacionesMode', inundacionesToggle);
 
     // Import the module
-    const module = await import('../../src/ts/sidebar/modoSection.js');
+    const module = await import('../../frontend/src/ts/sidebar/modoSection.js');
     modoSection = module.modoSection;
 
     // Call init to set up event listeners

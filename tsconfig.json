@@ -2,7 +2,7 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDir": "src/ts",
+    "rootDir": "frontend/src/ts",
     "outDir": "static",
 
     // Environment Settings
@@ -45,5 +45,5 @@
     "forceConsistentCasingInFileNames": true,
     "allowUmdGlobalAccess": true,
   },
-  "include": ["src/ts/**/*.ts"]
+  "include": ["frontend/src/ts/**/*.ts"]
 }

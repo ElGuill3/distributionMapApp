@@ -33,7 +33,8 @@ with app.test_client() as client:
             'error': 'Synthetic E2E server: mock API requests in the browser.'}
     css = client.get('/static/styles.css?v=1.0.1')
     assert css.status_code == 200 and css.mimetype == 'text/css'
-    assert css.data == (server_path.parents[2] / 'src/styles/styles.css').read_bytes()
+    css_source = server_path.parents[2] / 'frontend/src/styles/styles.css'
+    assert css.data == css_source.read_bytes()
 assert 'ee' not in sys.modules
 assert 'app' not in sys.modules
 assert not [
