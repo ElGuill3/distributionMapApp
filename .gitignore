@@ -108,3 +108,10 @@ openspec/
 # ---------------------------------------------------------------------------
 data/stations/
 
+
+# ---------------------------------------------------------------------------
+# Local tool artifacts (Playwright last-run state, CodeGraph index, Engram project config)
+# ---------------------------------------------------------------------------
+test-results/
+.codegraph/
+.engram/
