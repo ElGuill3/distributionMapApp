@@ -87,9 +87,9 @@ def _runtime(tmp_path: Path, *, secret: str = ""):
 
 
 def test_app_root_and_default_model_repo_resolve_from_checkout_subdirectory():
-    app_root, model_root = resolve_runtime_roots(None, start=ROOT / "tests")
+    app_root, model_root = resolve_runtime_roots(None, start=ROOT / "backend/tests")
 
-    assert resolve_app_root(ROOT / "tests") == ROOT
+    assert resolve_app_root(ROOT / "backend/tests") == ROOT
     assert app_root == ROOT
     assert model_root == ROOT.parent / DEFAULT_MODEL_REPOSITORY_NAME
 
@@ -102,7 +102,7 @@ def test_parser_accepts_explicit_model_repo():
 
 
 def test_explicit_relative_model_repo_resolves_from_invocation_directory():
-    invocation_root = ROOT / "tests"
+    invocation_root = ROOT / "backend/tests"
     app_root, model_root = resolve_runtime_roots(
         Path("../alternate-model"), start=invocation_root
     )

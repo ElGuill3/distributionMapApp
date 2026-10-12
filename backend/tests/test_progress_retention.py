@@ -5,8 +5,13 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.test_api_query_validation import gif_patches, query
-from tests.test_progress_lifecycle import MISSING, TEMP_URL, generate, sse_events
+from backend.tests.test_api_query_validation import gif_patches, query
+from backend.tests.test_progress_lifecycle import (
+    MISSING,
+    TEMP_URL,
+    generate,
+    sse_events,
+)
 
 
 @pytest.fixture

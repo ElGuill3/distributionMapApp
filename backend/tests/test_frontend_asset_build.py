@@ -4,7 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_public_stylesheet_url_retains_exact_bytes_and_mime_type(tmp_path, monkeypatch):

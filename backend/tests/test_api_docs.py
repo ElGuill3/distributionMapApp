@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 OPENAPI_YAML = ROOT / "openapi.yaml"
 GENERATE_SCRIPT = ROOT / "scripts" / "generate_schemas.py"
 

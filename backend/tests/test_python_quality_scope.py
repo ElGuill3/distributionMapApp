@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.mark.parametrize("name", ["lint", "format", "coverage"])
@@ -62,8 +62,8 @@ def test_quality_scope_and_exit_contract(tmp_path, name, exit_code):
             "--cov=extensions",
             "--cov-report=term-missing",
             "--cov-report=html:htmlcov",
-            "--ignore=tests/integration",
-            "tests/",
+            "--ignore=backend/tests/integration",
+            "backend/tests/",
         ]
         assert "Packages: app, backend, config, extensions\n" in result.stdout
         assert "Coverage report complete" in result.stdout

@@ -582,8 +582,6 @@ distributionMapApp/
 ├── tsconfig.json             # Configuración del compilador TypeScript
 ├── openapi.yaml              # Especificación OpenAPI 3.1.0 de la API REST
 │
-├── tests/                    # Pruebas Python (pytest)
-│
 ├── backend/                  # Paquetes de implementación del backend
 │   ├── routes/                   # Blueprints Flask — endpoints de la API REST
 │   │   ├── gif_routes.py         # GET /api/<var>-gif-bbox
@@ -604,6 +602,7 @@ distributionMapApp/
 │   │   ├── gif_service.py        # Descarga GIF desde GEE, anotación con PIL, caché, limpieza
 │   │   ├── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
 │   │   └── export_service.py     # Generación de exportación ZIP (CSV + GIFs + metadatos)
+│   ├── tests/                # Pruebas Python y fixtures aislados (pytest)
 │   └── scrapers/             # Scrapers automáticos para datos locales
 │       ├── base.py               # Clase base abstracta de Scraper
 │       ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA

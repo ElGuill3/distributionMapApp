@@ -5,7 +5,7 @@
 exclude = [
     "static/**",
     "scripts/**",
-    "tests/**",
+    "backend/tests/**",
     "__pycache__/**",
     ".git/**",
     ".pytest_cache/**",

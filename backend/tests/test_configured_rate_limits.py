@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from tests.test_app_startup import snapshot as _snapshot
+from backend.tests.test_app_startup import snapshot as _snapshot
 
 
 @pytest.fixture
@@ -37,7 +37,7 @@ PROBE = r"""
 import json, os, runpy, warnings
 from unittest.mock import patch
 warnings.simplefilter("ignore", UserWarning)
-next(runpy.run_path("tests/conftest.py")["mock_modules"].__wrapped__())
+next(runpy.run_path("backend/tests/conftest.py")["mock_modules"].__wrapped__())
 import app as module
 import requests
 module.app.config["INITIALIZE_RUNTIME"] = False

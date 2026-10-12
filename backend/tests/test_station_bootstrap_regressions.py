@@ -2,8 +2,8 @@
 
 import pytest
 
+from backend.tests.test_station_bootstrap import VALID_CSV
 from scripts import bootstrap_stations
-from tests.test_station_bootstrap import VALID_CSV
 
 
 @pytest.fixture

@@ -15,7 +15,7 @@ from pathlib import Path
 
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SCENARIO_ROOT = ROOT / ".cache" / "flood-palette-runtime" / "pytest"
 
 # GeoTIFF sintético 4x4: valores FHI 0-110, nodata=-9999 en (3,0) y (0,1).

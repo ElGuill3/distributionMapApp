@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from tests.test_app_startup import snapshot as _snapshot
+from backend.tests.test_app_startup import snapshot as _snapshot
 
 
 @pytest.fixture

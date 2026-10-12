@@ -4,8 +4,8 @@ from contextlib import ExitStack
 
 import pytest
 
-from tests.test_api_bbox_validation import TS_ROUTES, ts_patch
-from tests.test_api_query_validation import (
+from backend.tests.test_api_bbox_validation import TS_ROUTES, ts_patch
+from backend.tests.test_api_query_validation import (
     ROUTES,
     first_progress_event,
     gif_patches,

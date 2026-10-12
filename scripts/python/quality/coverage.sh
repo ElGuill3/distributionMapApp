@@ -51,7 +51,7 @@ set +e
 # Use 'python -m pytest' to ensure we use the same interpreter as the dependency checks
 # This avoids mismatches when pytest is installed in a different environment
 # 
-# First-pass scope: unit tests only (--ignore=tests/integration)
+# First-pass scope: unit tests only (--ignore=backend/tests/integration)
 # This aligns with the first-pass guardrail spec which excludes complex environment setup
 python -m pytest --cov=app \
        --cov=backend \
@@ -59,8 +59,8 @@ python -m pytest --cov=app \
        --cov=extensions \
        --cov-report=term-missing \
        --cov-report=html:htmlcov \
-       --ignore=tests/integration \
-       tests/
+       --ignore=backend/tests/integration \
+       backend/tests/
 
 PYTEST_EXIT=$?
 

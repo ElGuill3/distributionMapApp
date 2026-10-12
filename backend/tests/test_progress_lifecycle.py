@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.test_api_query_validation import gif_patches, query
+from backend.tests.test_api_query_validation import gif_patches, query
 
 TEMP_URL = "/api/era5-temp-gif-bbox"
 SOIL_URL = "/api/era5-soil-gif-bbox"

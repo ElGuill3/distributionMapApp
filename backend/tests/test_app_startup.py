@@ -9,14 +9,14 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 PROBE = r"""
 import json, os, runpy, time, warnings
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 warnings.simplefilter("ignore", UserWarning)
-fixtures = runpy.run_path("tests/conftest.py")
+fixtures = runpy.run_path("backend/tests/conftest.py")
 next(fixtures["mock_modules"].__wrapped__())
 import config
 mode = os.environ["STARTUP_PROBE"]
@@ -63,7 +63,7 @@ def snapshot(tmp_path):
             target = tmp_path / source.relative_to(ROOT)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
-    for relative in ("tests/conftest.py", "templates/scalar.html"):
+    for relative in ("backend/tests/conftest.py", "templates/scalar.html"):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, target)

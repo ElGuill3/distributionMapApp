@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tests.test_api_query_validation import (
+from backend.tests.test_api_query_validation import (
     first_progress_event,
     gif_patches,
     query,
