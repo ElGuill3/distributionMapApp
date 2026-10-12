@@ -1,5 +1,5 @@
 """
-Tests de unidad para services/export_service.py.
+Tests de unidad para backend/services/export_service.py.
 
 Patrón: Arrange → Act → Assert.
 """
@@ -9,8 +9,7 @@ from io import BytesIO
 
 import pytest
 
-from services.export_service import create_export_zip, serialize_series_to_csv
-
+from backend.services.export_service import create_export_zip, serialize_series_to_csv
 
 # ---------------------------------------------------------------------------
 # serialize_series_to_csv
@@ -249,7 +248,7 @@ class TestCreateExportZip:
         gif_file.write_bytes(b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x02\x00\x00\x00b!\xf9\x04\x01\x05\x00\x01\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00;\x00")
 
         # Redirigir STATIC_DIR al tmp_path — patch en el módulo donde se usa
-        monkeypatch.setattr("services.export_service.STATIC_DIR", tmp_path)
+        monkeypatch.setattr("backend.services.export_service.STATIC_DIR", tmp_path)
 
         csv = "date,ndvi\n2020-03-01,0.45\n"
         zip_bytes = create_export_zip(
@@ -274,7 +273,7 @@ class TestCreateExportZip:
         gif_file = gif_dir / "ndvi_test.gif"
         gif_file.write_bytes(b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x02\x00\x00\x00b!\xf9\x04\x01\x05\x00\x01\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00;\x00")
 
-        monkeypatch.setattr("services.export_service.STATIC_DIR", tmp_path)
+        monkeypatch.setattr("backend.services.export_service.STATIC_DIR", tmp_path)
 
         zip_bytes = create_export_zip(
             csv_content="date,ndvi\n",

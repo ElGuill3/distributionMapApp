@@ -8,8 +8,8 @@ import time
 
 from flask import Blueprint, Response, stream_with_context
 
+from backend.services.gif_service import get_progress_queue, remove_progress_queue
 from config import SSE_TASK_QUEUE_TIMEOUT_S, SSE_WAIT_ATTEMPTS
-from services.gif_service import get_progress_queue, remove_progress_queue
 
 progress_bp = Blueprint("progress", __name__)
 

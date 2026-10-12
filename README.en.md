@@ -243,7 +243,7 @@ To facilitate offline analysis, the system offers:
                                     │ HTTP / SSE
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                        Flask Backend (Python 3)                        │
-│    routes/  →  gee/  →  services/                                     │
+│    routes/ → backend/gee/ → backend/services/                         │
 └─────────────┬──────────────────────────────────────────┬───────────────┘
               │ earthengine-api                          │ Shared Volume
 ┌─────────────▼─────────────┐              ┌─────────────▼───────────────┐
@@ -574,6 +574,10 @@ distributionMapApp/
 │   │   ├── water.py              # Water bodies — Sentinel-2 SR (NDWI)
 │   │   ├── flood_risk.py         # Renders FHI maps from local GeoTIFFs
 │   │   └── utils.py              # Shared utils: bbox validation, seasons, GIF dimensions
+│   ├── services/
+│   │   ├── gif_service.py        # Downloads GEE GIFs, annotates with PIL, cache & cleanup
+│   │   ├── station_service.py    # Reads and preprocesses local station CSVs
+│   │   └── export_service.py     # Decoupled ZIP bundle exports (CSV + GIFs + metadata)
 │   └── scrapers/             # Automatic scrapers for local data
 │       ├── base.py               # Abstract Base Scraper class
 │       ├── conagua.py            # FTP scraper for CONAGUA station data
@@ -587,11 +591,6 @@ distributionMapApp/
 │   ├── station_routes.py     # GET /api/local-station-level-range
 │   ├── progress_routes.py    # GET /api/gif-progress/<task_id> (SSE)
 │   └── export_routes.py      # POST /api/export/bundle
-│
-├── services/
-│   ├── gif_service.py        # Downloads GEE GIFs, annotates with PIL, cache & cleanup
-│   ├── station_service.py    # Reads and preprocesses local station CSVs
-│   └── export_service.py     # Decoupled ZIP bundle exports (CSV + GIFs + metadata)
 │
 ├── data/
 │   ├── mapa_riesgo/

@@ -249,7 +249,7 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
                                     │ HTTP / SSE
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                       Backend Flask (Python 3)                         │
-│    routes/  →  gee/  →  services/                                       │
+│    routes/ → backend/gee/ → backend/services/                           │
 └─────────────┬──────────────────────────────────────────┬───────────────┘
               │ earthengine-api                          │ Shared Volume
 ┌─────────────▼─────────────┐              ┌─────────────▼───────────────┐
@@ -593,6 +593,10 @@ distributionMapApp/
 │   │   ├── water.py              # Cuerpos de agua — Sentinel-2 SR (NDWI)
 │   │   ├── flood_risk.py         # Renderizado de mapas FHI desde GeoTIFFs locales
 │   │   └── utils.py              # Funciones compartidas: validación bbox, temporadas, dims GIF
+│   ├── services/
+│   │   ├── gif_service.py        # Descarga GIF desde GEE, anotación con PIL, caché, limpieza
+│   │   ├── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
+│   │   └── export_service.py     # Generación de exportación ZIP (CSV + GIFs + metadatos)
 │   └── scrapers/             # Scrapers automáticos para datos locales
 │       ├── base.py               # Clase base abstracta de Scraper
 │       ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA
@@ -606,11 +610,6 @@ distributionMapApp/
 │   ├── station_routes.py     # GET /api/local-station-level-range
 │   ├── progress_routes.py    # GET /api/gif-progress/<task_id>  (SSE)
 │   └── export_routes.py      # POST /api/export/bundle
-│
-├── services/
-│   ├── gif_service.py        # Descarga GIF desde GEE, anotación con PIL, caché, limpieza
-│   ├── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
-│   └── export_service.py     # Generación de exportación ZIP (CSV + GIFs + metadatos)
 │
 ├── data/
 │   ├── mapa_riesgo/

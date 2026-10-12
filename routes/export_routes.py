@@ -16,13 +16,13 @@ from flask import Blueprint, Response, jsonify, request
 from pydantic import ValidationError
 
 from backend.gee.schemas import ExportRequestSchema
-from config import RATE_LIMITS, STATIC_DIR
-from extensions import limiter
-from services.export_service import (
+from backend.services.export_service import (
     create_export_zip,
     resolve_export_gif,
     serialize_series_to_csv,
 )
+from config import RATE_LIMITS, STATIC_DIR
+from extensions import limiter
 
 logger = logging.getLogger(__name__)
 

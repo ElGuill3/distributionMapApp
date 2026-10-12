@@ -37,13 +37,13 @@ from backend.gee.temperature import (
     build_era5_temp_timeseries_bbox,
 )
 from backend.gee.utils import check_max_10_years, season_to_dates
-from config import GIFS_DIR, RATE_LIMITS
-from extensions import limiter
-from services.gif_service import (
+from backend.services.gif_service import (
     add_dates_to_gif,
     create_progress_queue,
     finish_progress_queue,
 )
+from config import GIFS_DIR, RATE_LIMITS
+from extensions import limiter
 
 gif_bp = Blueprint("gif", __name__)
 

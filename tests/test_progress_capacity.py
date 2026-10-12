@@ -21,7 +21,7 @@ def client(monkeypatch):
 
 @pytest.mark.parametrize("limit", [1, 2])
 def test_registry_keeps_newest_within_capacity(client, limit):
-    from services import gif_service as service
+    from backend.services import gif_service as service
 
     with patch.object(service, "SSE_MAX_PROGRESS_TASKS", limit, create=True):
         for index in range(limit + 1):
@@ -38,7 +38,7 @@ def test_registry_keeps_newest_within_capacity(client, limit):
 def test_message_buffer_discards_oldest_but_retains_terminal_without_blocking(
     client, limit
 ):
-    from services import gif_service as service
+    from backend.services import gif_service as service
 
     def many_frames(**kwargs):
         for index in range(10):
@@ -59,7 +59,7 @@ def test_message_buffer_discards_oldest_but_retains_terminal_without_blocking(
 
 
 def test_capacity_prefers_completed_entry_over_running_producer(client):
-    from services import gif_service as service
+    from backend.services import gif_service as service
 
     with patch.object(service, "SSE_MAX_PROGRESS_TASKS", 2, create=True):
         with ExitStack() as stack:

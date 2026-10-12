@@ -22,7 +22,7 @@ import config
 mode = os.environ["STARTUP_PROBE"]
 with patch("config.prepare_runtime_directories") as directories, \
      patch("ee.Initialize") as earth_engine, \
-     patch("services.gif_service.start_cleanup_daemon") as cleanup, \
+     patch("backend.services.gif_service.start_cleanup_daemon") as cleanup, \
      patch("logging.basicConfig") as logging_setup:
     if mode == "startup_failure":
         earth_engine.side_effect = RuntimeError("synthetic EE failure")
@@ -58,7 +58,7 @@ with patch("config.prepare_runtime_directories") as directories, \
 def snapshot(tmp_path):
     for filename in ("app.py", "config.py", "extensions.py"):
         shutil.copy2(ROOT / filename, tmp_path / filename)
-    for directory in ("backend", "routes", "services"):
+    for directory in ("backend", "routes"):
         for source in (ROOT / directory).rglob("*.py"):
             target = tmp_path / source.relative_to(ROOT)
             target.parent.mkdir(parents=True, exist_ok=True)

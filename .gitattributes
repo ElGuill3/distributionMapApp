@@ -4,5 +4,5 @@ routes/gif_routes.py whitespace=cr-at-eol
 
 routes/timeseries_routes.py whitespace=cr-at-eol
 routes/progress_routes.py whitespace=cr-at-eol
-services/gif_service.py whitespace=cr-at-eol
-gee/flood_risk.py whitespace=cr-at-eol
+backend/services/gif_service.py whitespace=cr-at-eol
+backend/gee/flood_risk.py whitespace=cr-at-eol

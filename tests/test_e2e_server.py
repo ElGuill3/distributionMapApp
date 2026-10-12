@@ -36,7 +36,11 @@ with app.test_client() as client:
     assert css.data == (server_path.parents[2] / 'src/styles/styles.css').read_bytes()
 assert 'ee' not in sys.modules
 assert 'app' not in sys.modules
-assert 'services.gif_service' not in sys.modules
+assert not [
+    name
+    for name in sys.modules
+    if name == "services" or name.startswith(("services.", "backend.services"))
+]
 print(json.dumps({'status': 'PASS', 'limits': limits}, sort_keys=True))
 """
 

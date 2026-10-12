@@ -21,7 +21,7 @@ def client(monkeypatch):
 
 @pytest.mark.parametrize("failure", [False, True])
 def test_completed_queue_expires_at_retention_boundary(client, failure):
-    from services import gif_service
+    from backend.services import gif_service
 
     task = f"retention-boundary-{failure}"
     with patch.object(gif_service.time, "monotonic", return_value=100) as clock:
@@ -36,7 +36,7 @@ def test_completed_queue_expires_at_retention_boundary(client, failure):
 
 
 def test_late_subscriber_inside_retention_keeps_progress(client):
-    from services import gif_service
+    from backend.services import gif_service
 
     with patch.object(gif_service.time, "monotonic", return_value=100) as clock:
         generate(client, TEMP_URL, "retention-late")
@@ -47,7 +47,7 @@ def test_late_subscriber_inside_retention_keeps_progress(client):
 
 
 def test_ongoing_producer_does_not_expire_or_inherit_old_completion(client):
-    from services import gif_service
+    from backend.services import gif_service
 
     task = "retention-replacement"
     with patch.object(gif_service.time, "monotonic", return_value=100) as clock:
@@ -74,7 +74,7 @@ def test_ongoing_producer_does_not_expire_or_inherit_old_completion(client):
 
 
 def test_finished_queue_is_swept_without_subscriber_by_cleanup_daemon(client):
-    from services import gif_service
+    from backend.services import gif_service
 
     task = "retention-periodic"
     with patch.object(gif_service.time, "monotonic", return_value=100) as clock:
