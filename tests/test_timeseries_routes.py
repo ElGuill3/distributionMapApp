@@ -25,7 +25,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
+from backend.gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
 
 
 # ---------------------------------------------------------------------------
@@ -362,7 +362,7 @@ class TestTimeseriesPipelineRegression:
         Regression: era5-temp/era5-soil/imerg-precip/water-timeseries-bbox
         todos usan check_max_10_years en el pipeline → rango > 10 años → 400.
         """
-        from gee.utils import check_max_10_years
+        from backend.gee.utils import check_max_10_years
 
         # 14 años de rango
         err = check_max_10_years("2010-01-01", "2024-01-01")
@@ -371,21 +371,21 @@ class TestTimeseriesPipelineRegression:
 
     def test_check_max_10_years_accepts_10_years(self) -> None:
         """Regression: exactamente 10 años es aceptado."""
-        from gee.utils import check_max_10_years
+        from backend.gee.utils import check_max_10_years
 
         err = check_max_10_years("2010-01-01", "2020-01-01")
         assert err is None
 
     def test_check_max_10_years_accepts_valid_range(self) -> None:
         """Regression: rango válido < 10 años es aceptado."""
-        from gee.utils import check_max_10_years
+        from backend.gee.utils import check_max_10_years
 
         err = check_max_10_years("2020-01-01", "2024-01-01")
         assert err is None
 
     def test_check_max_10_years_rejects_end_before_start(self) -> None:
         """Regression: end < start → 400."""
-        from gee.utils import check_max_10_years
+        from backend.gee.utils import check_max_10_years
 
         err = check_max_10_years("2024-01-01", "2020-01-01")
         assert err is not None

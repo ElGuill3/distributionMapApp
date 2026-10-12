@@ -15,7 +15,7 @@ Breaking change cubierto:
 import pytest
 from pydantic import ValidationError
 
-from gee.schemas import MuniQuerySchema, MUNI_KEYS
+from backend.gee.schemas import MuniQuerySchema, MUNI_KEYS
 
 
 # ---------------------------------------------------------------------------

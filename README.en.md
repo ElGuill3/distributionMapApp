@@ -565,16 +565,15 @@ distributionMapApp/
 │
 ├── tests/                    # Unit, integration (Vitest/pytest), and E2E (Playwright) tests
 │
-├── gee/                      # Google Earth Engine processing modules
-│   ├── ndvi.py               # NDVI — MODIS MOD13Q1
-│   ├── temperature.py        # Temperature — ERA5-Land (Kelvin → Celsius)
-│   ├── soil.py               # Soil moisture — ERA5-Land
-│   ├── precipitation.py      # Daily precipitation — CHIRPS
-│   ├── water.py              # Water bodies — Sentinel-2 SR (NDWI)
-│   ├── flood_risk.py         # Renders FHI maps from local GeoTIFFs
-│   └── utils.py              # Shared utils: bbox validation, seasons, GIF dimensions
-│
 ├── backend/                  # Backend implementation packages
+│   ├── gee/                      # Google Earth Engine processing modules
+│   │   ├── ndvi.py               # NDVI — MODIS MOD13Q1
+│   │   ├── temperature.py        # Temperature — ERA5-Land (Kelvin → Celsius)
+│   │   ├── soil.py               # Soil moisture — ERA5-Land
+│   │   ├── precipitation.py      # Daily precipitation — CHIRPS
+│   │   ├── water.py              # Water bodies — Sentinel-2 SR (NDWI)
+│   │   ├── flood_risk.py         # Renders FHI maps from local GeoTIFFs
+│   │   └── utils.py              # Shared utils: bbox validation, seasons, GIF dimensions
 │   └── scrapers/             # Automatic scrapers for local data
 │       ├── base.py               # Abstract Base Scraper class
 │       ├── conagua.py            # FTP scraper for CONAGUA station data

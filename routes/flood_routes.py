@@ -10,9 +10,14 @@ from extensions import limiter
 
 logger = logging.getLogger(__name__)
 
+from backend.gee.flood_risk import render_flood_risk_png
+from backend.gee.schemas import (
+    BBoxSchema,
+    DateRangeSchema,
+    MuniQuerySchema,
+    _parse_bbox_str,
+)
 from config import MUNICIPAL_TIFS, RATE_LIMITS
-from gee.flood_risk import render_flood_risk_png
-from gee.schemas import MuniQuerySchema, BBoxSchema, DateRangeSchema, _parse_bbox_str
 
 flood_bp = Blueprint("flood", __name__)
 
@@ -105,7 +110,7 @@ def flood_detection() -> Response:
         return jsonify({"error": f"fechas inválidas: {e}"}), 400
 
     try:
-        from gee.water import detect_floods_bbox
+        from backend.gee.water import detect_floods_bbox
         res = detect_floods_bbox(
             start=start_out,
             end=end_out,
@@ -170,7 +175,7 @@ def flood_stats() -> Response:
         return jsonify({"error": f"fechas inválidas: {e}"}), 400
 
     try:
-        from gee.water import calculate_flood_area
+        from backend.gee.water import calculate_flood_area
         total_ha = calculate_flood_area(
             start=start_out,
             end=end_out,

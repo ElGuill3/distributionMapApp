@@ -6,19 +6,19 @@ import json
 
 from flask import Blueprint, Response, jsonify, request
 
-from config import RATE_LIMITS
-from extensions import limiter
-from gee.ndvi import build_ndvi_timeseries_bbox
-from gee.precipitation import build_chirps_precip_timeseries_bbox
-from gee.schemas import (
+from backend.gee.ndvi import build_ndvi_timeseries_bbox
+from backend.gee.precipitation import build_chirps_precip_timeseries_bbox
+from backend.gee.schemas import (
     BBoxSchema,
     DateRangeSchema,
     _parse_bbox_str,
     validate_bbox_values,
 )
-from gee.soil import build_era5_soil_timeseries_bbox
-from gee.temperature import build_era5_temp_timeseries_bbox
-from gee.utils import check_max_10_years, season_to_dates
+from backend.gee.soil import build_era5_soil_timeseries_bbox
+from backend.gee.temperature import build_era5_temp_timeseries_bbox
+from backend.gee.utils import check_max_10_years, season_to_dates
+from config import RATE_LIMITS
+from extensions import limiter
 
 ts_bp = Blueprint("ts", __name__)
 

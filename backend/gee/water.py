@@ -7,8 +7,8 @@ Soporta dos satélites:
 
 import ee
 
+from backend.gee.utils import compute_gif_dims, validate_bbox
 from config import BASE_PIXELS_S2, MAX_SPAN_DEG_S2
-from gee.utils import compute_gif_dims, validate_bbox
 
 _FRAMES_PER_SECOND = 2
 _CLOUD_FILTER = 60  # máximo % nubosidad permitido para Landsat

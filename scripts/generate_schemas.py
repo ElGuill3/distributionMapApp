@@ -16,19 +16,20 @@ manually-maintained schemas like ErrorResponse), and writes back.
 """
 
 import sys
-import yaml
 
-# Ensure project root is on sys.path so we can import gee.schemas
+# Ensure project root is on sys.path so we can import backend.gee.schemas
 from pathlib import Path
+
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from gee.schemas import (
+from backend.gee.schemas import (
     BBoxSchema,
     DateRangeSchema,
-    StationQuerySchema,
-    MuniQuerySchema,
     ExportRequestSchema,
+    MuniQuerySchema,
+    StationQuerySchema,
 )
 
 SCHEMA_MODELS = [

@@ -26,7 +26,7 @@ def test_flood_detection_success(client):
         "threshold": -15.5
     }
 
-    with patch("gee.water.detect_floods_bbox", return_value=mock_res) as mock_detect:
+    with patch("backend.gee.water.detect_floods_bbox", return_value=mock_res) as mock_detect:
         response = client.get(
             f"/api/flood-detection?start=2020-01-01&end=2020-12-31&bbox={SMALL_BBOX_URL}&satellite=sentinel1&auto=true"
         )
@@ -46,7 +46,7 @@ def test_flood_detection_success(client):
 
 def test_flood_detection_no_images(client):
     """Verifica que retorne 404 si no hay imágenes en el rango o zona."""
-    with patch("gee.water.detect_floods_bbox", return_value=None):
+    with patch("backend.gee.water.detect_floods_bbox", return_value=None):
         response = client.get(
             f"/api/flood-detection?start=2020-01-01&end=2020-12-31&bbox={SMALL_BBOX_URL}&satellite=sentinel1"
         )
@@ -73,7 +73,7 @@ def test_flood_detection_invalid_params(client):
 
 def test_flood_stats_success(client):
     """Verifica que el cálculo de área retorne las hectáreas correctamente."""
-    with patch("gee.water.calculate_flood_area", return_value=124.56) as mock_calc:
+    with patch("backend.gee.water.calculate_flood_area", return_value=124.56) as mock_calc:
         response = client.get(
             f"/api/flood-stats?start=2020-01-01&end=2020-12-31&bbox={SMALL_BBOX_URL}&satellite=landsat&auto=false&threshold=-14.0"
         )

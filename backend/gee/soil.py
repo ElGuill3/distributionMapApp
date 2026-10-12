@@ -1,60 +1,57 @@
 """
-Módulo GEE para Temperatura del Aire a 2 m (ERA5-Land).
+Módulo GEE para Humedad Volumétrica del Suelo (ERA5-Land, capa 1).
 
 Colección : ECMWF/ERA5_LAND/DAILY_AGGR
-Banda     : temperature_2m (Kelvin → Celsius restando 273.15)
+Banda     : volumetric_soil_water_layer_1 (m³/m³ × 100 → %)
 Período   : diario
 """
 
 import ee
 
+from backend.gee.utils import build_base_collection, compute_gif_dims, validate_bbox
 from config import BASE_PIXELS_PER_FRAME, ERA5_LAND_DAILY
-from gee.utils import build_base_collection, compute_gif_dims, validate_bbox
 
-_BAND = "temperature_2m"
+_BAND = "volumetric_soil_water_layer_1"
 _FRAMES_PER_SECOND = 3
 _REDUCE_SCALE = 10_000  # metros — resolución nativa ERA5 ≈ 9 km
 
 _VIS_PARAMS: dict = {
     "min": 0.0,
-    "max": 35.0,
+    "max": 60.0,
     "palette": [
-        "000080",
-        "0000d9",
-        "4000ff",
-        "0080ff",
-        "00ffff",
-        "00ff80",
-        "80ff00",
-        "daff00",
-        "ffff00",
-        "ffb000",
-        "ff4f00",
-        "ff0000",
+        "552200",
+        "8c510a",
+        "bf812d",
+        "dfc27d",
+        "f6e8c3",
+        "c7eae5",
+        "80cdc1",
+        "35978f",
+        "01665e",
     ],
 }
 
 
-def build_era5_temp_gif_bbox(
+def build_era5_soil_gif_bbox(
     start: str,
     end: str,
     bbox: list[float],
     ratio: float | None = None,
 ) -> str | None:
     """
-    Genera la URL de un GIF animado de temperatura del aire (ERA5-Land).
+    Genera la URL de un GIF animado de humedad del suelo (ERA5-Land, 0–7 cm).
 
-    La banda temperature_2m está en Kelvin; se convierte a Celsius y se
-    enmascara fuera del rango –20 °C a 50 °C.
+    La banda volumetric_soil_water_layer_1 está en m³/m³; se multiplica por 100
+    para expresarla como porcentaje y se enmascara fuera del rango 0–100 %.
 
     Args:
         start : Fecha de inicio 'YYYY-MM-DD'.
         end   : Fecha de fin 'YYYY-MM-DD'.
         bbox  : [minLon, minLat, maxLon, maxLat].
-        ratio : Relación ancho/alto del GIF. Si es None se usa imagen cuadrada.
+        ratio : Relación ancho/alto del GIF.
 
     Returns:
-        URL del GIF en GEE, o None si no hay datos para ese período/región.
+        URL del GIF en GEE, o None si no hay datos.
     """
     validate_bbox(bbox)
 
@@ -65,15 +62,15 @@ def build_era5_temp_gif_bbox(
     if n_frames == 0:
         return None
 
-    def _to_celsius_and_mask(img: ee.Image) -> ee.Image:
-        temp_c = img.subtract(273.15)
-        mask = temp_c.gte(-20).And(temp_c.lte(50))
-        return temp_c.updateMask(mask).copyProperties(img, ["system:time_start"])
+    def _to_percent_and_mask(img: ee.Image) -> ee.Image:
+        sm_pct = img.multiply(100)
+        mask = sm_pct.gte(0).And(sm_pct.lte(100))
+        return sm_pct.updateMask(mask).copyProperties(img, ["system:time_start"])
 
-    col_c = col.map(_to_celsius_and_mask)
+    col_p = col.map(_to_percent_and_mask)
     dims = compute_gif_dims(n_frames, ratio, BASE_PIXELS_PER_FRAME)
 
-    return col_c.getVideoThumbURL(
+    return col_p.getVideoThumbURL(
         {
             "region": region,
             "dimensions": dims,
@@ -86,13 +83,13 @@ def build_era5_temp_gif_bbox(
     )
 
 
-def build_era5_temp_timeseries_bbox(
+def build_era5_soil_timeseries_bbox(
     start: str,
     end: str,
     bbox: list[float],
 ) -> tuple[list[str], list[float]]:
     """
-    Calcula la temperatura media diaria (°C) en el bbox.
+    Calcula la humedad media diaria del suelo (%) en el bbox.
 
     Args:
         start : Fecha de inicio 'YYYY-MM-DD'.
@@ -100,7 +97,7 @@ def build_era5_temp_timeseries_bbox(
         bbox  : [minLon, minLat, maxLon, maxLat].
 
     Returns:
-        Tupla (fechas, temperaturas_celsius). Ambas listas vacías si no hay datos.
+        Tupla (fechas, valores_porcentaje). Ambas listas vacías si no hay datos.
     """
     validate_bbox(bbox)
 
@@ -111,27 +108,25 @@ def build_era5_temp_timeseries_bbox(
         return [], []
 
     def _daily_mean_feature(img: ee.Image) -> ee.Feature:
-        temp_c = img.subtract(273.15)
-        mask = temp_c.gte(-20).And(temp_c.lte(50))
-        temp_c = temp_c.updateMask(mask)
         mean_val = (
             ee.Number(
-                temp_c.reduceRegion(
+                img.reduceRegion(
                     reducer=ee.Reducer.mean(),
                     geometry=region,
                     scale=_REDUCE_SCALE,
                     maxPixels=1e7,
                 ).get(_BAND)
             )
-            .max(-20)
-            .min(50)
+            .max(0)
+            .min(1)
+            .multiply(100)
         )
         date_str = ee.Date(img.get("system:time_start")).format("YYYY-MM-dd")
-        return ee.Feature(None, {"date": date_str, "temp_c": mean_val})
+        return ee.Feature(None, {"date": date_str, "soil_pct": mean_val})
 
     fc = col.map(_daily_mean_feature)
     dates = fc.aggregate_array("date").getInfo()
-    vals = fc.aggregate_array("temp_c").getInfo()
+    vals = fc.aggregate_array("soil_pct").getInfo()
 
     out_dates: list[str] = []
     out_vals: list[float] = []

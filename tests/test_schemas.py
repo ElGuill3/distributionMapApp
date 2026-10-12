@@ -11,7 +11,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
+from backend.gee.schemas import BBoxSchema, DateRangeSchema, _parse_bbox_str
 
 
 # ---------------------------------------------------------------------------

@@ -19,7 +19,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from gee.schemas import LocalStationQuerySchema, StationQuerySchema
+from backend.gee.schemas import LocalStationQuerySchema, StationQuerySchema
 
 
 # ---------------------------------------------------------------------------

@@ -75,7 +75,7 @@ try:
         )
         result = {"status": resp.status_code, "body": resp.get_json()}
     else:
-        from gee.flood_risk import render_flood_risk_png
+        from backend.gee.flood_risk import render_flood_risk_png
         url, bbox = render_flood_risk_png(tif_path, palette)
         png_rel = str((flood_maps / Path(url).name).relative_to(base))
         result = {"ok": True, "url": url, "bbox": list(bbox), "png": png_rel}

@@ -8,8 +8,8 @@ Período   : cada 16 días
 
 import ee
 
+from backend.gee.utils import build_base_collection, compute_gif_dims, validate_bbox
 from config import BASE_PIXELS_PER_FRAME, MODIS_NDVI
-from gee.utils import build_base_collection, compute_gif_dims, validate_bbox
 
 # Parámetros de visualización para el GIF
 _VIS_PARAMS: dict = {
