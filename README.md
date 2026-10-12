@@ -807,3 +807,5 @@ El refactor no cambió el comportamiento visible de la aplicación ni los contra
 | [Sentinel-2 SR Harmonized](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED) | Cuerpos de agua (NDWI), 10 m |
 | [CONAGUA / IMTA](https://www.gob.mx/conagua) | Datos hidrométricos de estaciones locales |
 | [Google Earth Engine](https://earthengine.google.com/) | Plataforma de procesamiento satelital en la nube |
+
+El alcance verificado de la auditoría, las hipótesis descartadas y los límites operativos están en [el informe de evidencia](odd/reports/audit-hardening-evidence.md).

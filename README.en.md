@@ -766,3 +766,5 @@ The frontend architecture was structured following a **Spec-Driven Development (
 | [Sentinel-2 SR Harmonized](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED) | Water bodies (NDWI), 10 m |
 | [CONAGUA / IMTA](https://www.gob.mx/conagua) | Local hydrometric and meteorological station data |
 | [Google Earth Engine](https://earthengine.google.com/) | Cloud geospatial processing engine |
+
+The verified audit scope, hypothesis dispositions and operational boundaries are recorded in [the evidence report](odd/reports/audit-hardening-evidence.md).
