@@ -226,7 +226,7 @@ def api_docs_spec():
     """Serve the raw OpenAPI 3.1 specification as YAML."""
     import yaml
 
-    spec_path = BASE_DIR / "openapi.yaml"
+    spec_path = BASE_DIR / "backend" / "openapi.yaml"
     with open(spec_path) as f:
         content = yaml.safe_load(f)
     return app.response_class(
