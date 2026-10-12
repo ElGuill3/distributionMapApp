@@ -15,7 +15,7 @@ class ConaguaScraper(BaseScraper):
         self.password = username  # Credenciales idénticas al nombre de usuario (ej. hidros/hidros)
         self.host = "sih.conagua.gob.mx"
         self.stations = [s.upper() for s in stations if s]
-        self.output_dir = output_dir or (BASE_DIR / "data" / "stations" / self.username)
+        self.output_dir = output_dir or (BASE_DIR / "backend" / "data" / "stations" / self.username)
 
     def _download_via_https(self, station: str) -> bool:
         category = self.username.capitalize()  # "Hidros" o "Climas"

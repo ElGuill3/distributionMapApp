@@ -17,7 +17,7 @@ def station_root(tmp_path, monkeypatch):
     monkeypatch.setattr(bootstrap_stations, "CONAGUA_HIDROS_STATIONS", ["BDCTB"])
     monkeypatch.setattr(bootstrap_stations, "CONAGUA_CLIMAS_STATIONS", [])
     monkeypatch.setattr(bootstrap_stations.ConaguaScraper, "scrape", lambda _self: None)
-    return tmp_path / "data/stations"
+    return tmp_path / "backend/data/stations"
 
 
 def test_successful_download_is_available_before_bootstrap_returns(

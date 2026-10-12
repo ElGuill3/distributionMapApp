@@ -31,7 +31,7 @@ def test_rainfall_download_is_normalized_without_changing_observations(
 
     monkeypatch.setattr(bootstrap_stations.ConaguaScraper, "scrape", download)
     assert bootstrap_stations.main([]) == 0
-    saved = tmp_path / "data/stations/climas/BDCTB.csv"
+    saved = tmp_path / "backend/data/stations/climas/BDCTB.csv"
     assert saved.read_bytes() == CSV.encode("utf-8")
     captured = capsys.readouterr()
     assert captured.out == "Stations: 1 refreshed; 1 usable.\n"

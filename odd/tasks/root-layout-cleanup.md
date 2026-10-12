@@ -14,8 +14,8 @@ Branch `refactor/root-layout-cleanup`. Root keeps project manifests, lockfiles, 
 - S8: `uv run distribution-map` keeps working from the repository root; root `.env` keeps being loaded; every unit is a separate small commit with the Python and frontend suites passing.
 
 ## Tasks
-- T1 [S6] inline; pending
-- T2 [S5,S8] inline; pending
+- T1 [S6] inline; done; commit `c4e61a9`; git check-ignore confirms all three paths ignored; local files kept
+- T2 [S5,S8] inline; done; RED 15 data-path failures, GREEN 26 focused, full Python 649 PASS (--basetemp .cache); real config: 16 FHI tifs and 4 local stations resolve under backend/data
 - T3 [S3,S8] inline; pending
 - T4 [S2,S8] inline; pending
 - T5 [S4,S8] inline; pending (build-typescript.mjs -> frontend/scripts/)

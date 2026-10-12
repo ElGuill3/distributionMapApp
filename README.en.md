@@ -44,7 +44,7 @@ without altering observations. Valid accented text is preserved. Downloads only 
 if they contain metadata for a station with known coordinates and at least one
 valid date and measurement. If any download fails, the command warns and uses
 available usable local data. If no usable station remains, it exits with code 2
-without starting Flask. Data stays in the Git-ignored `data/stations/` directory;
+without starting Flask. Data stays in the Git-ignored `backend/data/stations/` directory;
 startup may take longer while CONAGUA responds or the downloader tries FTP.
 Startup prints downloader progress and per-station rejection reasons to stderr,
 including missing files, invalid metadata, unrecognized measurement columns
@@ -436,7 +436,7 @@ Make sure `.env` contains your correct Google Cloud project ID (`GEE_PROJECT`).
 
 ### 5. Local Station Data
 
-The files `SPTTB.csv` and `BDCTB.csv` must be placed in the `data/stations/` directory. Expected format:
+The files `SPTTB.csv` and `BDCTB.csv` must be placed in the `backend/data/stations/` directory. Expected format:
 
 ```
 <lines 1–6: metadata (automatically skipped)>
@@ -450,7 +450,7 @@ If you need to add new stations, register them in `config.py` under `LOCAL_STATI
 
 ### 6. Verify Flood Risk Maps
 
-The FHI GeoTIFFs must be placed in `data/mapa_riesgo/municipios/` with the filename `fhi_<municipio>_100m.tif`. The repository already includes the 16 municipalities of Tabasco.
+The FHI GeoTIFFs must be placed in `backend/data/mapa_riesgo/municipios/` with the filename `fhi_<municipio>_100m.tif`. The repository already includes the 16 municipalities of Tabasco.
 
 ---
 

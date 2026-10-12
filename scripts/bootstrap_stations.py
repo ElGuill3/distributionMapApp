@@ -143,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.INFO, format="%(levelname)s %(name)s: %(message)s"
     )
-    root = BASE_DIR / "data" / "stations"
+    root = BASE_DIR / "backend" / "data" / "stations"
     root.mkdir(parents=True, exist_ok=True)
     refreshed = 0
     failures = []

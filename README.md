@@ -45,7 +45,7 @@ ni el texto correctamente acentuado. Solo se reemplazan los CSV locales si conti
 estación con coordenadas conocidas y al menos una fecha con una medición válida.
 Si alguna descarga falla, el comando advierte y usa los datos locales utilizables.
 Si no hay ninguna estación utilizable, termina con código 2 sin iniciar Flask.
-Los datos permanecen en `data/stations/` (fuera de Git); el arranque puede tardar
+Los datos permanecen en `backend/data/stations/` (fuera de Git); el arranque puede tardar
 mientras CONAGUA responde o el descargador intenta su alternativa FTP.
 El arranque muestra el progreso del descargador y el motivo de rechazo de cada
 estación en stderr: archivo no descargado, metadatos inválidos, columna de
@@ -455,7 +455,7 @@ Editá `.env` o `config.py` y configurá el nombre de tu proyecto de Google Clou
 
 ### 5. Datos de estaciones locales
 
-Los archivos `SPTTB.csv` y `BDCTB.csv` deben estar en la carpeta `data/stations/`. El formato esperado:
+Los archivos `SPTTB.csv` y `BDCTB.csv` deben estar en la carpeta `backend/data/stations/`. El formato esperado:
 
 ```
 <línea 1–6: metadatos (se omiten automáticamente)>
@@ -469,7 +469,7 @@ Si necesitás agregar nuevas estaciones, registralas en `config.py` bajo `LOCAL_
 
 ### 6. Verificar datos de riesgo de inundación
 
-Los GeoTIFFs del índice FHI deben estar en `data/mapa_riesgo/municipios/` con el nombre `fhi_<municipio>_100m.tif`. El repositorio ya incluye los 16 municipios de Tabasco.
+Los GeoTIFFs del índice FHI deben estar en `backend/data/mapa_riesgo/municipios/` con el nombre `fhi_<municipio>_100m.tif`. El repositorio ya incluye los 16 municipios de Tabasco.
 
 ---
 

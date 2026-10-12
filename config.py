@@ -87,7 +87,7 @@ BASE_DIR = (
 STATIC_DIR = BASE_DIR / "static"
 GIFS_DIR = STATIC_DIR / "gifs"
 FLOOD_MAPS_DIR = STATIC_DIR / "flood_maps"
-DATA_DIR = BASE_DIR / "data" / "mapa_riesgo" / "municipios"
+DATA_DIR = BASE_DIR / "backend" / "data" / "mapa_riesgo" / "municipios"
 
 def prepare_runtime_directories() -> None:
     """Create writable application directories during real startup only."""
@@ -164,7 +164,7 @@ def _load_local_stations() -> dict[str, dict]:
             return text
 
     stations = {}
-    stations_dir = BASE_DIR / "data" / "stations"
+    stations_dir = BASE_DIR / "backend" / "data" / "stations"
     if not stations_dir.exists():
         return stations
 

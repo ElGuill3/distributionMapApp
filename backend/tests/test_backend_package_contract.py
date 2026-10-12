@@ -26,9 +26,9 @@ assert issubclass(SmnWeatherScraper, BaseScraper)
 assert not any(n in ("app", "ee", "scrapers") for n in sys.modules)
 assert Path(config.BASE_DIR) == Path(sys.argv[1])
 root = Path(sys.argv[1])
-assert Path(config.DATA_DIR) == root / "data" / "mapa_riesgo" / "municipios"
+assert Path(config.DATA_DIR) == root / "backend" / "data" / "mapa_riesgo" / "municipios"
 assert ConaguaScraper("hidros", ["bdctb"]).output_dir == (
-    root / "data" / "stations" / "hidros"
+    root / "backend" / "data" / "stations" / "hidros"
 )
 assert Path(config.STATIC_DIR) == Path(sys.argv[1]) / "static"
 assert list(Path(sys.argv[1]).iterdir()) == []
