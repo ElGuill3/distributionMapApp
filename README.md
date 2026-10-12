@@ -593,11 +593,12 @@ distributionMapApp/
 │   ├── flood_risk.py         # Renderizado de mapas FHI desde GeoTIFFs locales
 │   └── utils.py              # Funciones compartidas: validación bbox, temporadas, dims GIF
 │
-├── scrapers/                 # Módulo de scrapers automáticos para datos locales
-│   ├── base.py               # Clase base abstracta de Scraper
-│   ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA
-│   ├── smn.py                # Scraper stub para datos de SMN
-│   └── runner.py             # Daemon planificador de tareas (APScheduler)
+├── backend/                  # Paquetes de implementación del backend
+│   └── scrapers/             # Scrapers automáticos para datos locales
+│       ├── base.py               # Clase base abstracta de Scraper
+│       ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA
+│       ├── smn.py                # Scraper stub para datos de SMN
+│       └── runner.py             # Daemon planificador de tareas (APScheduler)
 │
 ├── routes/                   # Blueprints Flask — endpoints de la API REST
 │   ├── gif_routes.py         # GET /api/<var>-gif-bbox

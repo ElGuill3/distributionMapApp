@@ -1,5 +1,5 @@
 import logging
-from scrapers.base import BaseScraper
+from backend.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
 

@@ -17,13 +17,13 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+from backend.scrapers.conagua import ConaguaScraper
 from config import (
     BASE_DIR,
     CONAGUA_CLIMAS_STATIONS,
     CONAGUA_HIDROS_STATIONS,
     STATION_COORDS,
 )
-from scrapers.conagua import ConaguaScraper
 
 logger = logging.getLogger(__name__)
 

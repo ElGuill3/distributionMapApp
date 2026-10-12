@@ -2,10 +2,10 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
-from scrapers.conagua import ConaguaScraper
+from backend.scrapers.conagua import ConaguaScraper
 
 class TestConaguaScraper:
-    @patch("scrapers.conagua.requests.get")
+    @patch("backend.scrapers.conagua.requests.get")
     def test_conagua_scraper_successful_download(self, mock_get, tmp_path: Path) -> None:
         # Mock de requests.get para que falle y obligue a usar el fallback de FTP
         mock_get.side_effect = Exception("Simulated connection error")
@@ -23,7 +23,7 @@ class TestConaguaScraper:
             
         mock_ftp_instance.retrbinary.side_effect = mock_retrbinary
 
-        with patch("scrapers.conagua.FTP") as mock_ftp_class:
+        with patch("backend.scrapers.conagua.FTP") as mock_ftp_class:
             mock_ftp_class.return_value.__enter__.return_value = mock_ftp_instance
             
             scraper = ConaguaScraper("hidros", stations, output_dir=output_dir)
@@ -46,7 +46,7 @@ class TestConaguaScraper:
             temp_files = list(output_dir.glob("*.tmp"))
             assert len(temp_files) == 0
 
-    @patch("scrapers.conagua.requests.get")
+    @patch("backend.scrapers.conagua.requests.get")
     def test_conagua_scraper_station_not_found(self, mock_get, tmp_path: Path) -> None:
         # Mock de requests.get para que falle y obligue a usar el fallback de FTP
         mock_get.side_effect = Exception("Simulated connection error")
@@ -56,7 +56,7 @@ class TestConaguaScraper:
         mock_ftp_instance = MagicMock()
         mock_ftp_instance.nlst.return_value = ["BDCTB.CSV", "SPTTB.CSV"]
 
-        with patch("scrapers.conagua.FTP") as mock_ftp_class:
+        with patch("backend.scrapers.conagua.FTP") as mock_ftp_class:
             mock_ftp_class.return_value.__enter__.return_value = mock_ftp_instance
             
             scraper = ConaguaScraper("hidros", stations, output_dir=output_dir)
@@ -66,7 +66,7 @@ class TestConaguaScraper:
             mock_ftp_instance.retrbinary.assert_not_called()
             assert not (output_dir / "UNKNOWN.csv").exists()
 
-    @patch("scrapers.conagua.requests.get")
+    @patch("backend.scrapers.conagua.requests.get")
     def test_conagua_scraper_successful_download_https(self, mock_get, tmp_path: Path) -> None:
         stations = ["BDCTB"]
         output_dir = tmp_path / "stations"
