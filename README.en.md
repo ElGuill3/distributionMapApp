@@ -598,34 +598,26 @@ distributionMapApp/
 │
 ├── static/                   # Files served directly to the browser
 │   ├── main.js               # Compiled JavaScript from TypeScript
-│   ├── styles.css            # Published copy of src/styles/styles.css
+│   ├── styles.css            # Published copy of frontend/src/styles/styles.css
 │   ├── gifs/                 # Generated GIFs (temp cache, automatically cleaned)
 │   └── flood_maps/           # Rendered risk map PNGs
 │
-├── frontend/
-│   └── src/styles/              # Authored stylesheets (copied to static/ by build:ts)
-│       └── styles.css            # Main stylesheet source
+├── frontend/                        # Browser sources and tests
+│   ├── src/
+│   │   ├── styles/styles.css        # Authored styles published to static/ by build:ts
+│   │   └── ts/                      # TypeScript compiled to static/
+│   │       ├── main.ts              # Composition root and initialization
+│   │       ├── apiClient.ts         # Typed HTTP client
+│   │       ├── config.ts            # URLs, seasons and UI configuration
+│   │       ├── state/               # Shared map state
+│   │       ├── modes/               # Normal, comparison and flood modes
+│   │       ├── sidebar/             # Sidebar controls
+│   │       ├── map/                 # Leaflet overlays
+│   │       ├── ui/                  # GIFs, charts and progress
+│   │       └── utils/               # Dates, limits and text escaping
+│   └── tests/unit/                  # Source-only Vitest tests (no prior build)
 │
-├── src/ts/                   # TypeScript source code (compiles to static/)
-│   ├── main.ts               # Composition root — orchestrator and wiring
-│   ├── apiClient.ts          # Typed HTTP client — backend calls
-│   ├── config.ts             # UI constants, seasons, endpoint URLs
-│   ├── types.ts              # TypeScript API typings and interfaces
-│   ├── state/
-│   │   └── mapState.ts       # Global state store (bbox, mode, variables, players)
-│   ├── modes/                # Sub-modules for each operation mode
-│   │   ├── normalMode.ts     # Normal Mode logic
-│   │   ├── compareMode.ts    # Comparison Mode logic
-│   │   └── floodRiskMode.ts  # Flood Risk Mode logic
-│   ├── map/
-│   │   └── overlays.ts       # Leaflet overlay control and colorbars
-│   ├── ui/
-│   │   ├── gifPlayer.ts      # GIF frame decoder and playback controller
-│   │   ├── chart.ts          # Plotly chart wrapper
-│   │   └── progress.ts       # Progress bar modal overlay
-│   └── listeners/
-│       └── variableListeners.ts # Variable listener factory
-│
+
 └── templates/
     ├── index.html            # Main HTML layout template
     └── scalar.html           # Interactive API docs (Scalar UI template)

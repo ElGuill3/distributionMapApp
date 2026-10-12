@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Season } from '../../frontend/src/ts/types.js';
+import type { Season } from '../../src/ts/types.js';
 
 // Test the pure opacity conversion logic
 describe('opacity control', () => {

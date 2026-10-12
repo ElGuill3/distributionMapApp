@@ -617,34 +617,26 @@ distributionMapApp/
 │
 ├── static/                   # Archivos servidos directamente al navegador
 │   ├── main.js               # JavaScript compilado desde TypeScript
-│   ├── styles.css            # Copia publicada de src/styles/styles.css
+│   ├── styles.css            # Copia publicada de frontend/src/styles/styles.css
 │   ├── gifs/                 # GIFs generados (caché temporal, se limpian automáticamente)
 │   └── flood_maps/           # PNGs de mapas de riesgo renderizados
 │
-├── frontend/
-│   └── src/styles/              # Estilos fuente (build:ts los copia a static/)
-│       └── styles.css            # Hoja de estilos principal fuente
+├── frontend/                        # Fuentes y pruebas del navegador
+│   ├── src/
+│   │   ├── styles/styles.css        # Estilos fuente publicados en static/ por build:ts
+│   │   └── ts/                      # TypeScript compilado en static/
+│   │       ├── main.ts              # Composition root e inicialización
+│   │       ├── apiClient.ts         # Cliente HTTP tipado
+│   │       ├── config.ts            # URLs, temporadas y configuración UI
+│   │       ├── state/               # Estado compartido del mapa
+│   │       ├── modes/               # Modos normal, comparación e inundaciones
+│   │       ├── sidebar/             # Controles del panel lateral
+│   │       ├── map/                 # Overlays de Leaflet
+│   │       ├── ui/                  # GIFs, gráficas y progreso
+│   │       └── utils/               # Fechas, límites y escape de texto
+│   └── tests/unit/                  # Pruebas Vitest sobre fuentes (sin build previo)
 │
-├── src/ts/                   # Código fuente TypeScript (se compila a static/)
-│   ├── main.ts               # Composition root — orquestador, inicializa módulos y wiring
-│   ├── apiClient.ts          # Cliente HTTP tipado — todas las llamadas al backend
-│   ├── config.ts             # URLs de endpoints, años disponibles, temporadas, constantes UI
-│   ├── types.ts              # Tipos TypeScript e interfaces de la API
-│   ├── state/
-│   │   └── mapState.ts       # Store de estado global (bbox, modo, variable, series, players)
-│   ├── modes/                # Lógica de cada modo de operación
-│   │   ├── normalMode.ts     # Modo normal: generación de GIF y gráfica para panel A
-│   │   ├── compareMode.ts    # Modo comparativa: paneles A/B, sincronización, mapB
-│   │   └── floodRiskMode.ts  # Modo riesgo de inundación: overlays FHI por municipio
-│   ├── map/
-│   │   └── overlays.ts       # Control de overlays Leaflet y barras de colores (colorbars)
-│   ├── ui/
-│   │   ├── gifPlayer.ts      # Decodificación y reproducción de GIFs frame a frame
-│   │   ├── chart.ts          # Renderizado de gráficas con Plotly
-│   │   └── progress.ts       # Indicador de progreso (modal overlay)
-│   └── listeners/
-│       └── variableListeners.ts  # Factory de listeners para controles de variables
-│
+
 └── templates/
     ├── index.html            # Template HTML principal
     └── scalar.html           # Plantilla interactiva de documentación interactiva API (Scalar UI)

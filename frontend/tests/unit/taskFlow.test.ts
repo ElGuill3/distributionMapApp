@@ -42,7 +42,7 @@ global.document = {
 };
 
 // Import mapState to reset it between tests
-import * as mapState from '../../frontend/src/ts/state/mapState.js';
+import * as mapState from '../../src/ts/state/mapState.js';
 
 // Import the module after mocking
 describe('TaskFlowController', () => {
@@ -61,7 +61,7 @@ describe('TaskFlowController', () => {
     mapState.resetState();
 
     // Get the singleton (it will use the fresh mapState)
-    const module = await import('../../frontend/src/ts/sidebar/taskFlow.js');
+    const module = await import('../../src/ts/sidebar/taskFlow.js');
     taskFlowController = module.taskFlowController;
 
     // Reset UI state

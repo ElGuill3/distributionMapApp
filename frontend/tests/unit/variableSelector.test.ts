@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as mapState from '../../frontend/src/ts/state/mapState.js';
+import * as mapState from '../../src/ts/state/mapState.js';
 
 // Simple DOM mock
 global.document = {
@@ -30,11 +30,11 @@ describe('VariableSelector', () => {
     mapState.resetState();
 
     // Import fresh instances
-    const tfModule = await import('../../frontend/src/ts/sidebar/taskFlow.js');
+    const tfModule = await import('../../src/ts/sidebar/taskFlow.js');
     taskFlowController = tfModule.taskFlowController;
     taskFlowController.reset();
 
-    const module = await import('../../frontend/src/ts/sidebar/variableSelector.js');
+    const module = await import('../../src/ts/sidebar/variableSelector.js');
     variableSelector = module.variableSelector;
 
     // Reset state

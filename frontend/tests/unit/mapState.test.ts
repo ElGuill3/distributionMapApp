@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as mapState from '../../frontend/src/ts/state/mapState.js';
+import * as mapState from '../../src/ts/state/mapState.js';
 
 describe('mapState', () => {
   beforeEach(() => {
