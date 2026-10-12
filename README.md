@@ -249,7 +249,7 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
                                     │ HTTP / SSE
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                       Backend Flask (Python 3)                         │
-│    routes/ → backend/gee/ → backend/services/                           │
+│    backend/routes/ → backend/gee/ → backend/services/                   │
 └─────────────┬──────────────────────────────────────────┬───────────────┘
               │ earthengine-api                          │ Shared Volume
 ┌─────────────▼─────────────┐              ┌─────────────▼───────────────┐
@@ -585,6 +585,13 @@ distributionMapApp/
 ├── tests/                    # Suite de pruebas unitarias, integración (Vitest/pytest) y E2E (Playwright)
 │
 ├── backend/                  # Paquetes de implementación del backend
+│   ├── routes/                   # Blueprints Flask — endpoints de la API REST
+│   │   ├── gif_routes.py         # GET /api/<var>-gif-bbox
+│   │   ├── timeseries_routes.py  # GET /api/<var>-timeseries-bbox
+│   │   ├── flood_routes.py       # GET /api/flood-risk-municipio
+│   │   ├── station_routes.py     # GET /api/local-station-level-range
+│   │   ├── progress_routes.py    # GET /api/gif-progress/<task_id>  (SSE)
+│   │   └── export_routes.py      # POST /api/export/bundle
 │   ├── gee/                      # Módulos de procesamiento con Google Earth Engine
 │   │   ├── ndvi.py               # NDVI — MODIS MOD13Q1
 │   │   ├── temperature.py        # Temperatura — ERA5-Land (Kelvin → Celsius)
@@ -602,14 +609,6 @@ distributionMapApp/
 │       ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA
 │       ├── smn.py                # Scraper stub para datos de SMN
 │       └── runner.py             # Daemon planificador de tareas (APScheduler)
-│
-├── routes/                   # Blueprints Flask — endpoints de la API REST
-│   ├── gif_routes.py         # GET /api/<var>-gif-bbox
-│   ├── timeseries_routes.py  # GET /api/<var>-timeseries-bbox
-│   ├── flood_routes.py       # GET /api/flood-risk-municipio
-│   ├── station_routes.py     # GET /api/local-station-level-range
-│   ├── progress_routes.py    # GET /api/gif-progress/<task_id>  (SSE)
-│   └── export_routes.py      # POST /api/export/bundle
 │
 ├── data/
 │   ├── mapa_riesgo/

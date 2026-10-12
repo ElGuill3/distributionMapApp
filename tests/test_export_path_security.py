@@ -7,8 +7,8 @@ from io import BytesIO
 import pytest
 from flask import Flask
 
+import backend.routes.export_routes as route
 import backend.services.export_service as service
-import routes.export_routes as route
 
 
 @pytest.fixture

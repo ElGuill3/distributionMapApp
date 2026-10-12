@@ -64,10 +64,10 @@ class TestRateLimitBasicFunctionality:
         """Request dentro del límite devuelve 200."""
         mock_dir, mock_gif, mock_ts, mock_add = _gif_mocks()
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             response = client.get(
                 f"/api/ndvi-gif-bbox?start=2020-01-01&end=2020-12-31&bbox={SMALL_BBOX_URL}"
@@ -157,7 +157,9 @@ class TestRateLimitSeparateEndpoints:
 
     def test_timeseries_endpoint_has_rate_limit(self, client) -> None:
         """Timeseries endpoint está decorado con rate limit y responde 200."""
-        with patch("routes.timeseries_routes.build_ndvi_timeseries_bbox") as mock_ts:
+        with patch(
+            "backend.routes.timeseries_routes.build_ndvi_timeseries_bbox"
+        ) as mock_ts:
             mock_ts.return_value = (["2020-01-01"], [0.5])
 
             response = client.get(

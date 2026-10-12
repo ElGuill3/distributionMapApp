@@ -15,7 +15,7 @@ import pytest
 from flask import Flask
 from flask.testing import FlaskClient
 
-from routes.export_routes import export_bp
+from backend.routes.export_routes import export_bp
 
 
 def create_test_app() -> Flask:

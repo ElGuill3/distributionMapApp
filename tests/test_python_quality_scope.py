@@ -57,7 +57,6 @@ def test_quality_scope_and_exit_contract(tmp_path, name, exit_code):
             "-m",
             "pytest",
             "--cov=app",
-            "--cov=routes",
             "--cov=backend",
             "--cov=config",
             "--cov=extensions",
@@ -66,26 +65,22 @@ def test_quality_scope_and_exit_contract(tmp_path, name, exit_code):
             "--ignore=tests/integration",
             "tests/",
         ]
-        assert "Packages: app, routes, backend, config, extensions\n" in result.stdout
+        assert "Packages: app, backend, config, extensions\n" in result.stdout
         assert "Coverage report complete" in result.stdout
     else:
         flags = ["check"] if name == "lint" else ["format", "--check"]
         assert args == flags + [
             "app.py",
-            "routes/",
             "backend/",
             "config.py",
             "extensions.py",
         ]
-        assert (
-            "Scope: app/, routes/, backend/, config.py, extensions.py\n"
-            in result.stdout
-        )
+        assert "Scope: app/, backend/, config.py, extensions.py\n" in result.stdout
         assert ("check complete" in result.stdout) is (exit_code == 0)
     if name == "coverage":
         heading = (
             "Running Python test coverage...\n"
-            "Packages: app, routes, backend, config, extensions\n"
+            "Packages: app, backend, config, extensions\n"
             "Scope: Unit tests only (excludes integration tests with external deps)\n\n"
         )
         ending = (
@@ -97,7 +92,7 @@ def test_quality_scope_and_exit_contract(tmp_path, name, exit_code):
     else:
         heading = (
             f"Running Python {name} check with Ruff...\n"
-            "Scope: app/, routes/, backend/, config.py, extensions.py\n\n"
+            "Scope: app/, backend/, config.py, extensions.py\n\n"
         )
         completion = (
             "Lint check complete"

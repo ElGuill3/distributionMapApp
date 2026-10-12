@@ -119,7 +119,10 @@ def client(monkeypatch):
 def ts_patch(stack, variable):
     series = MagicMock(return_value=(["2020-07-01"], [0.5]))
     stack.enter_context(
-        patch(f"routes.timeseries_routes.build_{variable}_timeseries_bbox", series)
+        patch(
+            f"backend.routes.timeseries_routes.build_{variable}_timeseries_bbox",
+            series,
+        )
     )
     return series
 

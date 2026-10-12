@@ -41,12 +41,14 @@ def gif_patches(stack, variable):
     gif = MagicMock(return_value="https://ee.example/test.gif")
     series = MagicMock(return_value=(["2020-07-01"], [0.5]))
     annotate = MagicMock()
-    stack.enter_context(patch(f"routes.gif_routes.build_{variable}_gif_bbox", gif))
     stack.enter_context(
-        patch(f"routes.gif_routes.build_{variable}_timeseries_bbox", series)
+        patch(f"backend.routes.gif_routes.build_{variable}_gif_bbox", gif)
     )
-    stack.enter_context(patch("routes.gif_routes.add_dates_to_gif", annotate))
-    stack.enter_context(patch("routes.gif_routes.GIFS_DIR", directory))
+    stack.enter_context(
+        patch(f"backend.routes.gif_routes.build_{variable}_timeseries_bbox", series)
+    )
+    stack.enter_context(patch("backend.routes.gif_routes.add_dates_to_gif", annotate))
+    stack.enter_context(patch("backend.routes.gif_routes.GIFS_DIR", directory))
     return directory, gif, series, annotate
 
 
@@ -54,8 +56,8 @@ def first_progress_event(client, task_id):
     # Limit waiting and make the public queue reader nonblocking if a rejected
     # request incorrectly registered a queue. Never inspect its private registry.
     with (
-        patch("routes.progress_routes.SSE_WAIT_ATTEMPTS", 1),
-        patch("routes.progress_routes.q_module.Queue.get", side_effect=Empty),
+        patch("backend.routes.progress_routes.SSE_WAIT_ATTEMPTS", 1),
+        patch("backend.routes.progress_routes.q_module.Queue.get", side_effect=Empty),
     ):
         response = client.get(f"/api/gif-progress/{task_id}", buffered=False)
         try:

@@ -243,7 +243,7 @@ To facilitate offline analysis, the system offers:
                                     │ HTTP / SSE
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                        Flask Backend (Python 3)                        │
-│    routes/ → backend/gee/ → backend/services/                         │
+│    backend/routes/ → backend/gee/ → backend/services/                 │
 └─────────────┬──────────────────────────────────────────┬───────────────┘
               │ earthengine-api                          │ Shared Volume
 ┌─────────────▼─────────────┐              ┌─────────────▼───────────────┐
@@ -566,6 +566,13 @@ distributionMapApp/
 ├── tests/                    # Unit, integration (Vitest/pytest), and E2E (Playwright) tests
 │
 ├── backend/                  # Backend implementation packages
+│   ├── routes/                   # Flask Blueprints — REST API endpoints
+│   │   ├── gif_routes.py         # GET /api/<var>-gif-bbox
+│   │   ├── timeseries_routes.py  # GET /api/<var>-timeseries-bbox
+│   │   ├── flood_routes.py       # GET /api/flood-risk-municipio
+│   │   ├── station_routes.py     # GET /api/local-station-level-range
+│   │   ├── progress_routes.py    # GET /api/gif-progress/<task_id> (SSE)
+│   │   └── export_routes.py      # POST /api/export/bundle
 │   ├── gee/                      # Google Earth Engine processing modules
 │   │   ├── ndvi.py               # NDVI — MODIS MOD13Q1
 │   │   ├── temperature.py        # Temperature — ERA5-Land (Kelvin → Celsius)
@@ -583,14 +590,6 @@ distributionMapApp/
 │       ├── conagua.py            # FTP scraper for CONAGUA station data
 │       ├── smn.py                # Stub scraper for SMN data
 │       └── runner.py             # Scheduled runner daemon (APScheduler)
-│
-├── routes/                   # Flask Blueprints — REST API endpoints
-│   ├── gif_routes.py         # GET /api/<var>-gif-bbox
-│   ├── timeseries_routes.py  # GET /api/<var>-timeseries-bbox
-│   ├── flood_routes.py       # GET /api/flood-risk-municipio
-│   ├── station_routes.py     # GET /api/local-station-level-range
-│   ├── progress_routes.py    # GET /api/gif-progress/<task_id> (SSE)
-│   └── export_routes.py      # POST /api/export/bundle
 │
 ├── data/
 │   ├── mapa_riesgo/

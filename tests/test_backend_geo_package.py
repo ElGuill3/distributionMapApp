@@ -3,9 +3,9 @@
 
 def test_route_schemas_are_owned_by_backend_geo_package():
     from backend.gee.schemas import BBoxSchema, ExportRequestSchema
-    from routes.export_routes import ExportRequestSchema as ExportRouteSchema
-    from routes.gif_routes import BBoxSchema as GifBBoxSchema
-    from routes.timeseries_routes import BBoxSchema as SeriesBBoxSchema
+    from backend.routes.export_routes import ExportRequestSchema as ExportRouteSchema
+    from backend.routes.gif_routes import BBoxSchema as GifBBoxSchema
+    from backend.routes.timeseries_routes import BBoxSchema as SeriesBBoxSchema
 
     assert BBoxSchema is GifBBoxSchema is SeriesBBoxSchema
     assert ExportRequestSchema is ExportRouteSchema

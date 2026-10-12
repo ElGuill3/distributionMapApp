@@ -8,7 +8,7 @@ Verifica que _gif_pipeline:
 
 Usa Flask test client con mocks de GEE para evitar dependencias externas.
 
-Nota: Los mock paths usan 'routes.gif_routes.*' (no 'gee.ndvi.*') porque
+Nota: Los mock paths usan 'backend.routes.gif_routes.*' (no 'gee.ndvi.*') porque
 gif_routes importa las funciones con 'from X import Y', y hay que patchear
 la referencia en el módulo que la usa, no en el módulo de origen.
 """
@@ -97,10 +97,11 @@ class TestGifPipelineCacheHit:
         """Cache hit: build_gif_fn NO debe ser llamado cuando el archivo existe."""
         mock_dir, _, mock_build_gif, mock_build_ts = _make_cache_hit_mocks(sample_dates)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_build_ts), \
-             patch("routes.gif_routes.add_dates_to_gif"), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox",
+                   mock_build_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif"), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             client.get(f"{NDVI_ENDPOINT}&bbox={SMALL_BBOX_URL}")
 
@@ -110,10 +111,11 @@ class TestGifPipelineCacheHit:
         """Cache hit: build_ts_fn DEBE ser llamado para obtener datos de respuesta."""
         mock_dir, _, mock_build_gif, mock_build_ts = _make_cache_hit_mocks(sample_dates)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_build_ts), \
-             patch("routes.gif_routes.add_dates_to_gif"), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox",
+                   mock_build_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif"), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             client.get(f"{NDVI_ENDPOINT}&bbox={SMALL_BBOX_URL}")
 
@@ -123,10 +125,11 @@ class TestGifPipelineCacheHit:
         """Cache hit: la respuesta debe tener gifUrl, bbox, dates y valores."""
         mock_dir, _, mock_build_gif, mock_build_ts = _make_cache_hit_mocks(sample_dates)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_build_ts), \
-             patch("routes.gif_routes.add_dates_to_gif"), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox",
+                   mock_build_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif"), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             response = client.get(f"{NDVI_ENDPOINT}&bbox={SMALL_BBOX_URL}")
             data = json.loads(response.get_data(as_text=True))
@@ -141,10 +144,11 @@ class TestGifPipelineCacheHit:
         """Cache hit: gifUrl debe apuntar al archivo existente."""
         mock_dir, _, mock_build_gif, mock_build_ts = _make_cache_hit_mocks(sample_dates)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_build_ts), \
-             patch("routes.gif_routes.add_dates_to_gif"), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox",
+                   mock_build_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif"), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             response = client.get(f"{NDVI_ENDPOINT}&bbox={SMALL_BBOX_URL}")
             data = json.loads(response.get_data(as_text=True))
@@ -164,10 +168,11 @@ class TestGifPipelineCacheHit:
         mock_build_ts = MagicMock(return_value=sample_dates)
         mock_add = MagicMock(return_value=None)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_build_ts), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox",
+                   mock_build_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             client.get(f"{NDVI_ENDPOINT}&bbox={SMALL_BBOX_URL}")
 
@@ -192,10 +197,11 @@ class TestGifPipelineCacheMiss:
         """Cache miss: build_gif_fn DEBE ser llamado cuando el archivo no existe."""
         mock_dir, _, mock_build_gif, mock_build_ts, mock_add = _make_cache_miss_mocks(sample_dates)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_build_ts), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox",
+                   mock_build_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             client.get(f"{NDVI_ENDPOINT}&bbox={SMALL_BBOX_URL}")
 
@@ -206,10 +212,11 @@ class TestGifPipelineCacheMiss:
         """Cache miss: add_dates_to_gif DEBE ser llamado para generar el archivo."""
         mock_dir, _, mock_build_gif, mock_build_ts, mock_add = _make_cache_miss_mocks(sample_dates)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_build_ts), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_build_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox",
+                   mock_build_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             client.get(f"{NDVI_ENDPOINT}&bbox={SMALL_BBOX_URL}")
 

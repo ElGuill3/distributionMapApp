@@ -6,10 +6,10 @@
 set -e
 
 echo "Running Python format check with Ruff..."
-echo "Scope: app/, routes/, backend/, config.py, extensions.py"
+echo "Scope: app/, backend/, config.py, extensions.py"
 echo ""
 
-ruff format --check app.py routes/ backend/ config.py extensions.py
+ruff format --check app.py backend/ config.py extensions.py
 
 echo ""
 echo "Format check complete - no formatting changes needed"

@@ -9,7 +9,7 @@ Verifica que el hook inject_cache_headers() de app.py inyecta correctamente:
 
 Usa la app real de app.py y las políticas reales de config.py.
 
-Nota: Los mock paths usan 'routes.xxx.*' (no 'gee.*.*') porque
+Nota: Los mock paths usan 'backend.routes.xxx.*' (no 'gee.*.*') porque
 cada módulo importa las funciones con 'from X import Y', y hay que patchear
 la referencia en el módulo que la usa, no en el módulo de origen.
 """
@@ -63,10 +63,10 @@ class TestCacheHeadersGifEndpoints:
         """GIF endpoint tiene Cache-Control: public, max-age=3600."""
         mock_dir, mock_gif, mock_ts, mock_add = _gif_mocks()
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             response = client.get(
                 f"/api/ndvi-gif-bbox?start=2020-01-01&end=2020-12-31&bbox={SMALL_BBOX_URL}"
@@ -79,10 +79,10 @@ class TestCacheHeadersGifEndpoints:
         """GIF endpoint tiene ETag basado en MD5 del contenido."""
         mock_dir, mock_gif, mock_ts, mock_add = _gif_mocks()
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             response = client.get(
                 f"/api/ndvi-gif-bbox?start=2020-01-01&end=2020-12-31&bbox={SMALL_BBOX_URL}"
@@ -98,10 +98,10 @@ class TestCacheHeadersGifEndpoints:
         """ETag es consistente para el mismo contenido."""
         mock_dir, mock_gif, mock_ts, mock_add = _gif_mocks()
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             url = f"/api/ndvi-gif-bbox?start=2020-01-01&end=2020-12-31&bbox={SMALL_BBOX_URL}"
             response1 = client.get(url)
@@ -117,7 +117,9 @@ class TestCacheHeadersTimeseriesEndpoints:
 
     def test_ndvi_timeseries_has_cache_control_300(self, client) -> None:
         """Timeseries endpoint tiene Cache-Control: public, max-age=300."""
-        with patch("routes.timeseries_routes.build_ndvi_timeseries_bbox") as mock_ts:
+        with patch(
+            "backend.routes.timeseries_routes.build_ndvi_timeseries_bbox"
+        ) as mock_ts:
             mock_ts.return_value = (["2020-01-01"], [0.5])
 
             response = client.get(
@@ -129,7 +131,9 @@ class TestCacheHeadersTimeseriesEndpoints:
 
     def test_ndvi_timeseries_has_etag(self, client) -> None:
         """Timeseries endpoint tiene ETag basado en MD5 del contenido."""
-        with patch("routes.timeseries_routes.build_ndvi_timeseries_bbox") as mock_ts:
+        with patch(
+            "backend.routes.timeseries_routes.build_ndvi_timeseries_bbox"
+        ) as mock_ts:
             mock_ts.return_value = (["2020-01-01"], [0.5])
 
             response = client.get(
@@ -149,7 +153,7 @@ class TestCacheHeadersFloodRiskEndpoints:
 
     def test_flood_risk_has_cache_control_86400(self, client) -> None:
         """Flood risk endpoint tiene Cache-Control: public, max-age=86400."""
-        with patch("routes.flood_routes.render_flood_risk_png") as mock_render:
+        with patch("backend.routes.flood_routes.render_flood_risk_png") as mock_render:
             mock_render.return_value = ("/static/flood_maps/centla.png", [-92.0, 17.5, -91.0, 18.5])
 
             response = client.get("/api/flood-risk-municipio?muni=centla")
@@ -159,7 +163,7 @@ class TestCacheHeadersFloodRiskEndpoints:
 
     def test_flood_risk_has_no_etag(self, client) -> None:
         """Flood risk endpoint NO tiene ETag (use_etag=False)."""
-        with patch("routes.flood_routes.render_flood_risk_png") as mock_render:
+        with patch("backend.routes.flood_routes.render_flood_risk_png") as mock_render:
             mock_render.return_value = ("/static/flood_maps/centla.png", [-92.0, 17.5, -91.0, 18.5])
 
             response = client.get("/api/flood-risk-municipio?muni=centla")
@@ -270,10 +274,10 @@ class TestCacheHeadersContentVariations:
 
         mock_dir, mock_gif, mock_ts, mock_add = _gif_mocks(dates1)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_gif), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir):
 
             url = f"/api/ndvi-gif-bbox?start=2020-01-01&end=2020-12-31&bbox={SMALL_BBOX_URL}"
             response1 = client.get(url)
@@ -282,10 +286,10 @@ class TestCacheHeadersContentVariations:
         # Segundo request con contenido diferente
         mock_dir2, mock_gif2, mock_ts2, mock_add2 = _gif_mocks(dates2)
 
-        with patch("routes.gif_routes.build_ndvi_gif_bbox", mock_gif2), \
-             patch("routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts2), \
-             patch("routes.gif_routes.add_dates_to_gif", mock_add2), \
-             patch("routes.gif_routes.GIFS_DIR", mock_dir2):
+        with patch("backend.routes.gif_routes.build_ndvi_gif_bbox", mock_gif2), \
+             patch("backend.routes.gif_routes.build_ndvi_timeseries_bbox", mock_ts2), \
+             patch("backend.routes.gif_routes.add_dates_to_gif", mock_add2), \
+             patch("backend.routes.gif_routes.GIFS_DIR", mock_dir2):
 
             response2 = client.get(url)
             etag2 = response2.headers.get("ETag")

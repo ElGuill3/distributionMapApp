@@ -58,7 +58,7 @@ with patch("config.prepare_runtime_directories") as directories, \
 def snapshot(tmp_path):
     for filename in ("app.py", "config.py", "extensions.py"):
         shutil.copy2(ROOT / filename, tmp_path / filename)
-    for directory in ("backend", "routes"):
+    for directory in ("backend",):
         for source in (ROOT / directory).rglob("*.py"):
             target = tmp_path / source.relative_to(ROOT)
             target.parent.mkdir(parents=True, exist_ok=True)

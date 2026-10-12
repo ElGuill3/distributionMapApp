@@ -46,7 +46,7 @@ def parse(chunk):
 
 def sse_events(client, task_id):
     """Consume un stream SSE público acotado y devuelve sus chunks."""
-    with patch("routes.progress_routes.SSE_WAIT_ATTEMPTS", 1):
+    with patch("backend.routes.progress_routes.SSE_WAIT_ATTEMPTS", 1):
         response = client.get(f"/api/gif-progress/{task_id}", buffered=False)
         assert response.status_code == 200
         assert response.mimetype == "text/event-stream"
@@ -144,8 +144,8 @@ def test_missing_task_message_unchanged(client):
 
 
 def test_queue_get_uses_configured_timeout(client):
-    from routes import progress_routes
-    from routes.progress_routes import q_module
+    from backend.routes import progress_routes
+    from backend.routes.progress_routes import q_module
 
     task_id = "sse-timeout"
     generate(client, TEMP_URL, task_id)
@@ -176,7 +176,7 @@ def test_queue_get_uses_configured_timeout(client):
 
 
 def test_stream_exception_still_cleans_queue(client):
-    from routes import progress_routes
+    from backend.routes import progress_routes
 
     task_id = "sse-exception"
 

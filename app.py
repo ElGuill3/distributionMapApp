@@ -44,16 +44,17 @@ DEPENDENCY_PREFLIGHT = os.getenv("_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT") == 
 # ---------------------------------------------------------------------------
 # Blueprints
 # ---------------------------------------------------------------------------
+from backend.routes.export_routes import export_bp
+from backend.routes.flood_routes import flood_bp
+from backend.routes.gif_routes import gif_bp
+from backend.routes.progress_routes import progress_bp
+from backend.routes.station_routes import station_bp
+from backend.routes.timeseries_routes import ts_bp
+
 # ---------------------------------------------------------------------------
 # Limpieza automática de GIFs en segundo plano
 # ---------------------------------------------------------------------------
 from backend.services.gif_service import start_cleanup_daemon
-from routes.export_routes import export_bp
-from routes.flood_routes import flood_bp
-from routes.gif_routes import gif_bp
-from routes.progress_routes import progress_bp
-from routes.station_routes import station_bp
-from routes.timeseries_routes import ts_bp
 
 # ---------------------------------------------------------------------------
 # Aplicación Flask
