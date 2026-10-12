@@ -65,6 +65,23 @@ The documented single-worker/threaded deployment command was not exercised becau
 - Baseline source Ruff debt remains **116 findings**, test Ruff debt **70**, and source formatting reports **17 files that would change**. These are not clean-quality claims; newly introduced findings were corrected before closure.
 - The unchanged Flask-Limiter in-memory-storage warning remains an operational warning.
 
+## Final cross-stack acceptance
+
+Functional acceptance was run at `3521185` (implementation completed at `ad66b91`); subsequent changes are documentary only.
+
+| Check | Observed result |
+| --- | --- |
+| Default `.venv/bin/python -m pytest -q` | Exit 0; 649 passed in 64.49s; unchanged Flask-Limiter warning. |
+| `npm run quality:ts` | ESLint and Prettier checks passed. |
+| `./node_modules/.bin/tsc --noEmit` | Exit 0. |
+| `npm run build:ts` | Exit 0; all 40 published JS/CSS filenames and hashes match the pre-organization manifest. |
+| `npm test` in a private tracked-source-only checkout | Exit 0; all 249 passed; `static/` absent before and after execution. Installed Node dependencies were reused without installation. |
+| Portable Chromium `npm run test:e2e` | Exit 0; all 13 passed in 53.8s through the provider-free managed loopback server. |
+| Layout/root interfaces and review workload | Canonical source/test locations and unchanged root launchers verified; all 35 work-unit commits through `3521185` were at most 400 authored changed lines, largest 377. Pure unchanged renames counted separately. |
+
+Logs and owned test artifacts are preserved in `.cache/final-audit/` and `.cache/frontend-layout-checks/`.
+Independent evidence for high-risk units is retained in the session-owned proof snapshots; no failed evidence was deleted.
+
 ## Not claimed
 
 No real Earth Engine initialization, cloud processing/download, scraper execution, production deployment, multiworker SSE support, push, pull request or merge was performed.
