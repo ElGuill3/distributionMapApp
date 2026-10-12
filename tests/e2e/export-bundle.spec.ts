@@ -101,25 +101,28 @@ test.describe('export bundle — export-bundle', () => {
     expect(btnType).toBe('submit');
   });
 
-  test('error modal can be appended to DOM via showErrorModal flow', async ({
-    page,
-  }) => {
-    await page.goto('/templates/index.html');
-    await page.waitForSelector('#map', { timeout: 15_000 });
-
-    // Simulate what showErrorModal does: create and append the error modal.
-    // This verifies the error modal DOM structure is correct and attachable.
+  test('application validation feedback leaves export disabled', async ({ page }) => {
+    await page.route('**/api/**', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+    );
+    await page.goto('/templates/index.html', { waitUntil: 'domcontentloaded' });
+    await expect
+      .poll(() => page.locator('#tflow-year-select option').count(), { timeout: 15000 })
+      .toBeGreaterThan(1);
     await page.evaluate(() => {
-      const modal = document.createElement('div');
-      modal.id = 'error-modal';
-      modal.setAttribute('role', 'alertdialog');
-      modal.setAttribute('aria-modal', 'true');
-      modal.style.position = 'fixed';
-      modal.style.top = '0';
-      document.body.appendChild(modal);
+      document.dispatchEvent(
+        new CustomEvent('tflowGenerateAnimation', {
+          detail: { variable: 'ndvi', year: 2020, season: 'spring' },
+        })
+      );
     });
-
-    const modal = page.locator('#error-modal');
-    await expect(modal).toBeAttached();
+    const modal = page.getByRole('alertdialog');
+    await expect(modal.locator('.modal-error')).toBeVisible();
+    await expect(modal).toContainText('Sin área seleccionada');
+    await expect(page.locator('#btnExportAnalysis')).toBeDisabled();
+    await expect(page.locator('#export-toolbar')).toBeHidden();
+    await modal.getByRole('button', { name: 'Cerrar' }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await expect(page.locator('#btnExportAnalysis')).toBeDisabled();
   });
 });

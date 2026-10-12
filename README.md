@@ -719,7 +719,7 @@ El runner inicia `tests/e2e/server.py --port 8080` en loopback, renderiza Jinja 
 
 Para un navegador portable compatible ya preparado, usá `PLAYWRIGHT_EXECUTABLE_PATH=/ruta/absoluta/a/chromium npm run test:e2e`, o la instalación Chromium predeterminada de Playwright. Para un servidor en ejecución elegido explícitamente: `BASE_URL=http://127.0.0.1:5000 SKIP_WEB_SERVER=1 npm run test:e2e`; esto abandona el límite de APIs sintéticas.
 
-Los tests E2E verifican que ningún flujo de usuario dispara `window.alert` sin reemplazarlo por feedback accesible.
+Las pruebas de acciones ejercitan el evento público de generación, el modal real (Cerrar/Escape) y el dibujo Leaflet seguido del botón Generar ante un fallo sintético del proveedor. Verifican fechas/bbox, recuperación y exportación deshabilitada, sin `window.alert`. Los casos de estilos de la barra no prueban una exportación completa; el procesamiento real y las descargas ZIP/PNG quedan fuera de esta suite.
 
 ### Comandos de calidad
 

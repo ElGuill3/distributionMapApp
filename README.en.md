@@ -695,6 +695,8 @@ The runner starts `tests/e2e/server.py --port 8080` on loopback with real Jinja 
 
 Use `PLAYWRIGHT_EXECUTABLE_PATH=/absolute/path/to/chromium npm run test:e2e` for an already provisioned compatible portable browser, or the default Playwright Chromium installation. For an explicitly selected running server, use `BASE_URL=http://127.0.0.1:5000 SKIP_WEB_SERVER=1 npm run test:e2e`; this opts out of the synthetic API boundary.
 
+The action checks exercise the public generation event, actual modal close/Escape, and Leaflet drawing plus the Generate button against a synthetic provider failure. They assert dates/bbox, recovery, and export remaining disabled. CSS-only toolbar checks are not end-to-end export proof; real provider processing and ZIP/PNG downloads remain outside this browser suite.
+
 ### Quality Tools
 
 **Python** — Coverage, linting, and formatting checks using `pytest-cov` and `ruff`.
