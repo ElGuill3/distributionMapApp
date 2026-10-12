@@ -582,7 +582,7 @@ distributionMapApp/
 ├── tsconfig.json             # Configuración del compilador TypeScript
 ├── openapi.yaml              # Especificación OpenAPI 3.1.0 de la API REST
 │
-├── tests/                    # Suite de pruebas unitarias, integración (Vitest/pytest) y E2E (Playwright)
+├── tests/                    # Pruebas Python (pytest)
 │
 ├── backend/                  # Paquetes de implementación del backend
 │   ├── routes/                   # Blueprints Flask — endpoints de la API REST
@@ -634,7 +634,9 @@ distributionMapApp/
 │   │       ├── map/                 # Overlays de Leaflet
 │   │       ├── ui/                  # GIFs, gráficas y progreso
 │   │       └── utils/               # Fechas, límites y escape de texto
-│   └── tests/unit/                  # Pruebas Vitest sobre fuentes (sin build previo)
+│   └── tests/
+│       ├── unit/                    # Pruebas Vitest sobre fuentes (sin build previo)
+│       └── e2e/                     # Playwright y servidor de pruebas sin proveedores
 │
 
 └── templates/
@@ -706,7 +708,7 @@ npm run test:e2e
 npm run test:e2e:ui
 ```
 
-El runner inicia `tests/e2e/server.py --port 8080` en loopback, renderiza Jinja y los límites validados sin importar proveedores de la aplicación. Las APIs responden HTTP 503 salvo que la prueba las simule en el navegador. Las dependencias CDN siguen necesitando red. Nunca se reutiliza silenciosamente un servidor existente.
+El runner inicia `frontend/tests/e2e/server.py --port 8080` en loopback, renderiza Jinja y los límites validados sin importar proveedores de la aplicación. Las APIs responden HTTP 503 salvo que la prueba las simule en el navegador. Las dependencias CDN siguen necesitando red. Nunca se reutiliza silenciosamente un servidor existente.
 
 Para un navegador portable compatible ya preparado, usá `PLAYWRIGHT_EXECUTABLE_PATH=/ruta/absoluta/a/chromium npm run test:e2e`, o la instalación Chromium predeterminada de Playwright. Para un servidor en ejecución elegido explícitamente: `BASE_URL=http://127.0.0.1:5000 SKIP_WEB_SERVER=1 npm run test:e2e`; esto abandona el límite de APIs sintéticas.
 

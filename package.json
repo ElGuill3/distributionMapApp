@@ -9,8 +9,8 @@
     "test:watch": "vitest",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
-    "lint:ts": "eslint frontend/src/ts/ frontend/tests/ tests/",
-    "format:ts": "prettier --check \"frontend/src/ts/**/*.ts\" \"frontend/tests/**/*.ts\" \"tests/**/*.ts\"",
+    "lint:ts": "eslint frontend/src/ts/ frontend/tests/",
+    "format:ts": "prettier --check \"frontend/src/ts/**/*.ts\" \"frontend/tests/**/*.ts\"",
     "quality:ts": "npm run lint:ts && npm run format:ts"
   },
   "keywords": [],

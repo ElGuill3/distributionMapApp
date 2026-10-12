@@ -563,7 +563,7 @@ distributionMapApp/
 ├── tsconfig.json             # TypeScript compiler settings
 ├── openapi.yaml              # OpenAPI 3.1.0 REST API specification
 │
-├── tests/                    # Unit, integration (Vitest/pytest), and E2E (Playwright) tests
+├── tests/                    # Python tests (pytest)
 │
 ├── backend/                  # Backend implementation packages
 │   ├── routes/                   # Flask Blueprints — REST API endpoints
@@ -615,7 +615,9 @@ distributionMapApp/
 │   │       ├── map/                 # Leaflet overlays
 │   │       ├── ui/                  # GIFs, charts and progress
 │   │       └── utils/               # Dates, limits and text escaping
-│   └── tests/unit/                  # Source-only Vitest tests (no prior build)
+│   └── tests/
+│       ├── unit/                    # Source-only Vitest tests (no prior build)
+│       └── e2e/                     # Playwright and provider-free test server
 │
 
 └── templates/
@@ -682,7 +684,7 @@ npm run test:e2e
 npm run test:e2e:ui
 ```
 
-The runner starts `tests/e2e/server.py --port 8080` on loopback with real Jinja rendering and validated runtime limits, without application providers. API calls return HTTP 503 unless mocked by the browser test. CDN dependencies still require network access. An existing server is never silently reused.
+The runner starts `frontend/tests/e2e/server.py --port 8080` on loopback with real Jinja rendering and validated runtime limits, without application providers. API calls return HTTP 503 unless mocked by the browser test. CDN dependencies still require network access. An existing server is never silently reused.
 
 Use `PLAYWRIGHT_EXECUTABLE_PATH=/absolute/path/to/chromium npm run test:e2e` for an already provisioned compatible portable browser, or the default Playwright Chromium installation. For an explicitly selected running server, use `BASE_URL=http://127.0.0.1:5000 SKIP_WEB_SERVER=1 npm run test:e2e`; this opts out of the synthetic API boundary.
 

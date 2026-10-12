@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 import config  # noqa: E402

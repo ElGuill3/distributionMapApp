@@ -10,7 +10,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './frontend/tests/e2e',
   fullyParallel: false,
   timeout: 30_000,
   expect: {
@@ -33,7 +33,7 @@ export default defineConfig({
   webServer: process.env.SKIP_WEB_SERVER
     ? undefined
     : {
-        command: '.venv/bin/python tests/e2e/server.py --port 8080',
+        command: '.venv/bin/python frontend/tests/e2e/server.py --port 8080',
         url: 'http://127.0.0.1:8080/templates/index.html',
         reuseExistingServer: false,
         timeout: 10_000,

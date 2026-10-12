@@ -20,7 +20,7 @@ export default [
   },
   // Test files - use lint-specific tsconfig that includes tests
   {
-    files: ['frontend/tests/**/*.ts', 'tests/**/*.ts'],
+    files: ['frontend/tests/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {

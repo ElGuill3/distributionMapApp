@@ -33,7 +33,7 @@ with app.test_client() as client:
             'error': 'Synthetic E2E server: mock API requests in the browser.'}
     css = client.get('/static/styles.css?v=1.0.1')
     assert css.status_code == 200 and css.mimetype == 'text/css'
-    css_source = server_path.parents[2] / 'frontend/src/styles/styles.css'
+    css_source = server_path.parents[3] / 'frontend/src/styles/styles.css'
     assert css.data == css_source.read_bytes()
 assert 'ee' not in sys.modules
 assert 'app' not in sys.modules
@@ -57,7 +57,7 @@ def test_e2e_server_renders_limits_and_never_invokes_api_providers(tmp_path):
         MAX_SPAN_DEG_S2="1.5",
     )
     result = subprocess.run(
-        [sys.executable, "-c", PROBE, str(ROOT / "tests/e2e/server.py")],
+        [sys.executable, "-c", PROBE, str(ROOT / "frontend/tests/e2e/server.py")],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -76,7 +76,7 @@ def test_e2e_server_renders_limits_and_never_invokes_api_providers(tmp_path):
 
 def test_e2e_server_cli_documents_loopback_port():
     result = subprocess.run(
-        [sys.executable, "tests/e2e/server.py", "--help"],
+        [sys.executable, "frontend/tests/e2e/server.py", "--help"],
         cwd=ROOT,
         capture_output=True,
         text=True,
