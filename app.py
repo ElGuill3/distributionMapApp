@@ -35,6 +35,7 @@ from config import (
     GEE_PROJECT,
     RATE_LIMITS,
     STATIC_DIR,
+    TEMPLATES_DIR,
     prepare_runtime_directories,
 )
 from extensions import limiter
@@ -62,7 +63,7 @@ from backend.services.gif_service import start_cleanup_daemon
 app = Flask(
     __name__,
     static_folder=str(STATIC_DIR),
-    template_folder="templates",
+    template_folder=str(TEMPLATES_DIR),
 )
 
 app.config["INITIALIZE_RUNTIME"] = True

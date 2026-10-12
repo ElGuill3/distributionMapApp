@@ -87,7 +87,7 @@ def http_probe(snapshot, category, path, cap, mode):
     )
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
-    assert (snapshot / "static/gifs/old.gif").read_text() == "synthetic-gif"
+    assert (snapshot / "frontend/static/gifs/old.gif").read_text() == "synthetic-gif"
     return json.loads(result.stdout)
 
 
@@ -134,4 +134,4 @@ def test_invalid_quota_fails_closed_without_echoing_value(snapshot, category, va
         f"ValueError: {key} must specify positive request rates.\n"
     )
     assert "bad-sensitive-token" not in result.stderr
-    assert (snapshot / "static/gifs/old.gif").read_text() == "synthetic-gif"
+    assert (snapshot / "frontend/static/gifs/old.gif").read_text() == "synthetic-gif"

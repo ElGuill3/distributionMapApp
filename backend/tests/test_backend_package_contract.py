@@ -30,7 +30,7 @@ assert Path(config.DATA_DIR) == root / "backend" / "data" / "mapa_riesgo" / "mun
 assert ConaguaScraper("hidros", ["bdctb"]).output_dir == (
     root / "backend" / "data" / "stations" / "hidros"
 )
-assert Path(config.STATIC_DIR) == Path(sys.argv[1]) / "static"
+assert Path(config.STATIC_DIR) == Path(sys.argv[1]) / "frontend" / "static"
 assert list(Path(sys.argv[1]).iterdir()) == []
 print(json.dumps({"base": str(config.BASE_DIR), "package": backend.__name__}))
 """

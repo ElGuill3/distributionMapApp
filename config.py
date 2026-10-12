@@ -84,7 +84,8 @@ BASE_DIR = (
     if _base_override
     else Path(os.path.dirname(os.path.abspath(__file__)))
 )
-STATIC_DIR = BASE_DIR / "static"
+STATIC_DIR = BASE_DIR / "frontend" / "static"
+TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
 GIFS_DIR = STATIC_DIR / "gifs"
 FLOOD_MAPS_DIR = STATIC_DIR / "flood_maps"
 DATA_DIR = BASE_DIR / "backend" / "data" / "mapa_riesgo" / "municipios"

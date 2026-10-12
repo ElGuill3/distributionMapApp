@@ -2,7 +2,7 @@
  * Límites de procesamiento del servidor para el cliente — distributionMapApp.
  *
  * El backend inyecta sus límites configurados como JSON numérico en
- * templates/index.html (script #runtime-limits, antes del módulo principal).
+ * frontend/templates/index.html (script #runtime-limits, antes del módulo principal).
  * Este módulo los lee una sola vez al cargar, valida que sean números finitos
  * positivos y expone las mismas precondiciones que aplica el backend, que
  * sigue siendo autoritativo.

@@ -123,7 +123,7 @@ def test_gee_flood_route_renders_default_palette_and_reuses_cache(tmp_path):
         "mapUrl": "/static/flood_maps/floodrisk_fhi_centla_100m_gee_flood.png",
         "bbox": [-92.0, 17.96, -91.96, 18.0],
     }
-    assert "static/flood_maps/floodrisk_fhi_centla_100m_gee_flood.png" in data["after"]
+    assert "frontend/static/flood_maps/floodrisk_fhi_centla_100m_gee_flood.png" in data["after"]
     # Segunda llamada: misma URL y ningún archivo nuevo (reuso del cache antiguo).
     data2 = _run_cold(tmp_path, "gee_flood", "route")
     assert data2["result"] == data["result"]
@@ -138,7 +138,7 @@ def test_valid_matplotlib_palette_route_renders(tmp_path):
         "mapUrl": "/static/flood_maps/floodrisk_fhi_centla_100m_viridis.png",
         "bbox": [-92.0, 17.96, -91.96, 18.0],
     }
-    assert "static/flood_maps/floodrisk_fhi_centla_100m_viridis.png" in data["after"]
+    assert "frontend/static/flood_maps/floodrisk_fhi_centla_100m_viridis.png" in data["after"]
 
 
 def test_invalid_palette_route_rejected_without_side_effects(tmp_path):
@@ -163,7 +163,7 @@ def test_traversal_palette_creates_nothing_outside_output(tmp_path):
     assert data["after"] == data["before"]
     base = tmp_path / "base"
     would_be = (
-        base / "static" / "flood_maps" / f"floodrisk_fhi_centla_100m_{palette}.png"
+        base / "frontend" / "static" / "flood_maps" / f"floodrisk_fhi_centla_100m_{palette}.png"
     )
     target = would_be.resolve()
     assert ROOT / ".cache" in target.parents  # la sonda nunca sale de .cache

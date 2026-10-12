@@ -1,5 +1,5 @@
 # Prettier ignore patterns
-static/
+frontend/static/
 node_modules/
 dist/
 build/

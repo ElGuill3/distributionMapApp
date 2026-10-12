@@ -37,7 +37,7 @@ def probe(snapshot, overrides):
         check=False,
         timeout=10,
     )
-    assert (snapshot / "static/gifs/old.gif").read_text() == "synthetic-gif"
+    assert (snapshot / "frontend/static/gifs/old.gif").read_text() == "synthetic-gif"
     return result
 
 

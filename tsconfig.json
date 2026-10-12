@@ -3,7 +3,7 @@
   "compilerOptions": {
     // File Layout
     "rootDir": "frontend/src/ts",
-    "outDir": "static",
+    "outDir": "frontend/static",
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module

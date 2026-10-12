@@ -1,6 +1,6 @@
 #!/bin/bash
 # Python coverage script - reports test coverage for authored source only
-# Excludes: static/, scripts/, tests/
+# Excludes: frontend/static/, scripts/, tests/
 # First-pass scope: unit tests only (excludes integration tests with environment-specific deps)
 # Compliant with repo development setup: requires requirements.txt deps to be installed
 

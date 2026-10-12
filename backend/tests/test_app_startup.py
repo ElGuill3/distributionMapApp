@@ -50,7 +50,7 @@ with patch("config.prepare_runtime_directories") as directories, \
     print(json.dumps({"directories": directories.call_count,
         "ee": earth_engine.call_count, "cleanup": cleanup.call_count,
         "logging": logging_setup.call_count, "failure": failure,
-        "statuses": statuses, "gif": Path("static/gifs/old.gif").read_text()}))
+        "statuses": statuses, "gif": Path("frontend/static/gifs/old.gif").read_text()}))
 """
 
 
@@ -63,11 +63,11 @@ def snapshot(tmp_path):
             target = tmp_path / source.relative_to(ROOT)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
-    for relative in ("backend/tests/conftest.py", "templates/scalar.html"):
+    for relative in ("backend/tests/conftest.py", "frontend/templates/scalar.html"):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, target)
-    marker = tmp_path / "static/gifs/old.gif"
+    marker = tmp_path / "frontend/static/gifs/old.gif"
     marker.parent.mkdir(parents=True)
     marker.write_text("synthetic-gif", encoding="utf-8")
     os.utime(marker, (1, 1))
@@ -175,7 +175,7 @@ def test_launcher_startup_failure_exits_before_serving(snapshot):
     assert result.returncode == 1
     assert result.stdout == ""
     assert result.stderr.endswith("RuntimeError: synthetic EE failure\n")
-    assert (snapshot / "static/gifs/old.gif").read_text() == "synthetic-gif"
+    assert (snapshot / "frontend/static/gifs/old.gif").read_text() == "synthetic-gif"
 
 
 def test_ee_failure_does_not_start_cleanup(snapshot):

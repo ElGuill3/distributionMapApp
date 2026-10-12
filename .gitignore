@@ -38,24 +38,24 @@ build/
 # Caché y archivos generados en runtime
 # ---------------------------------------------------------------------------
 # GIFs generados por GEE (limpieza automática cada 60 min)
-static/gifs/
+frontend/static/gifs/
 
 # Mapas de riesgo renderizados desde GeoTIFFs (servidor o GEE)
-static/flood_maps/
+frontend/static/flood_maps/
 
 # ---------------------------------------------------------------------------
-# Frontend build output (src/ts/ + src/styles/ → static/)
+# Frontend build output (frontend/src/ts/ + frontend/src/styles/ → frontend/static/)
 # Se regeneran con: npm run build:ts
 # ---------------------------------------------------------------------------
-/static/styles.css
-/static/*.js
-/static/*.js.map
-/static/*.d.ts
-/static/*.d.ts.map
-static/**/*.js
-static/**/*.d.ts
-static/**/*.js.map
-static/**/*.d.ts.map
+/frontend/static/styles.css
+/frontend/static/*.js
+/frontend/static/*.js.map
+/frontend/static/*.d.ts
+/frontend/static/*.d.ts.map
+frontend/static/**/*.js
+frontend/static/**/*.d.ts
+frontend/static/**/*.js.map
+frontend/static/**/*.d.ts.map
 
 # ---------------------------------------------------------------------------
 # Documentación/scripts auxiliares (no parte del core)

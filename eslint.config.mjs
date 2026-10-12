@@ -36,7 +36,7 @@ export default [
   {
     // Explicitly ignore excluded paths
     ignores: [
-      'static/**',
+      'frontend/static/**',
       'node_modules/**',
       'dist/**',
       'build/**',

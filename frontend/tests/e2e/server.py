@@ -15,8 +15,8 @@ import config  # noqa: E402
 def create_e2e_app():
     app = Flask(
         __name__,
-        static_folder=str(ROOT / "static"),
-        template_folder=str(ROOT / "templates"),
+        static_folder=str(ROOT / "frontend" / "static"),
+        template_folder=str(ROOT / "frontend" / "templates"),
     )
 
     @app.get("/")

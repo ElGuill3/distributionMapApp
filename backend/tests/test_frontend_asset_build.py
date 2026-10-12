@@ -28,8 +28,8 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
         "scripts",
         "frontend/src/ts",
         "frontend/src/styles",
-        "static/vendor",
-        "static/gifs",
+        "frontend/static/vendor",
+        "frontend/static/gifs",
     ):
         (tmp_path / folder).mkdir(parents=True, exist_ok=True)
     (tmp_path / "scripts/build-typescript.mjs").write_bytes(
@@ -45,7 +45,7 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
                     "target": "ES2020",
                     "module": "ES2020",
                     "rootDir": "frontend/src/ts",
-                    "outDir": "static",
+                    "outDir": "frontend/static",
                     "types": [],
                     "skipLibCheck": True,
                 },
@@ -56,14 +56,14 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
     (tmp_path / "frontend/src/ts/main.ts").write_text("export const proof = 42;\n")
     css = b"/* synthetic authored stylesheet */\nbody { color: teal; }\n"
     (tmp_path / "frontend/src/styles/styles.css").write_bytes(css)
-    (tmp_path / "static/styles.css").write_bytes(b"stale stylesheet")
+    (tmp_path / "frontend/static/styles.css").write_bytes(b"stale stylesheet")
     preserved = {
-        "static/vendor/icons.mjs": b"export const icon = 1;\n",
-        "static/gifs/owned.gif": b"GIF89a-owned-sentinel",
+        "frontend/static/vendor/icons.mjs": b"export const icon = 1;\n",
+        "frontend/static/gifs/owned.gif": b"GIF89a-owned-sentinel",
     }
     for name, content in preserved.items():
         (tmp_path / name).write_bytes(content)
-    (tmp_path / "static/obsolete.js").write_bytes(b"stale generated code")
+    (tmp_path / "frontend/static/obsolete.js").write_bytes(b"stale generated code")
     result = subprocess.run(
         ["node", "scripts/build-typescript.mjs"],
         cwd=tmp_path,
@@ -74,9 +74,9 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
     assert result.returncode == 0, result.stderr
     assert result.stdout == ""
     assert result.stderr == ""
-    assert (tmp_path / "static/styles.css").read_bytes() == css
-    assert "export const proof = 42;" in (tmp_path / "static/main.js").read_text()
-    assert not (tmp_path / "static/obsolete.js").exists()
+    assert (tmp_path / "frontend/static/styles.css").read_bytes() == css
+    assert "export const proof = 42;" in (tmp_path / "frontend/static/main.js").read_text()
+    assert not (tmp_path / "frontend/static/obsolete.js").exists()
     for name, content in preserved.items():
         assert (tmp_path / name).read_bytes() == content
     again = subprocess.run(
@@ -88,6 +88,6 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
     )
     assert again.returncode == 0, again.stderr
     assert again.stdout == again.stderr == ""
-    assert (tmp_path / "static/styles.css").read_bytes() == css
+    assert (tmp_path / "frontend/static/styles.css").read_bytes() == css
     for name, content in preserved.items():
         assert (tmp_path / name).read_bytes() == content

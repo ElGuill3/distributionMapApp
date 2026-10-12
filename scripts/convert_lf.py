@@ -1,7 +1,7 @@
 import os
 
 files = [
-    'templates/index.html',
+    'frontend/templates/index.html',
     'frontend/src/ts/types.ts',
     'frontend/src/ts/state/mapState.ts',
     'frontend/src/ts/apiClient.ts',
