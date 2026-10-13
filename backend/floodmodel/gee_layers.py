@@ -156,3 +156,34 @@ def download(
             dst.write(np.moveaxis(block, -1, 0).astype("float32"), window=window)
     partial.replace(output)
     return output
+
+
+BOUNDARIES_ASSET = "FAO/GAUL/2025/level2"
+
+
+def boundaries_geojson(info: dict) -> dict:
+    """Keep only the municipality name and GAUL code of each feature."""
+    features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "name": f["properties"]["GAUL2_NAME"],
+                "code": f["properties"]["GAUL2_CODE"],
+            },
+            "geometry": f["geometry"],
+        }
+        for f in info["features"]
+    ]
+    return {"type": "FeatureCollection", "features": features}
+
+
+def fetch_boundaries(state: str = "Tabasco", *, max_error_m: float = 20.0) -> dict:
+    """Municipalities of ``state`` from FAO GAUL 2025, simplified, in WGS 84."""
+    import ee
+
+    collection = (
+        ee.FeatureCollection(BOUNDARIES_ASSET)
+        .filter(ee.Filter.eq("GAUL1_NAME", state))
+        .map(lambda f: f.simplify(max_error_m))
+    )
+    return boundaries_geojson(collection.getInfo())

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -29,6 +30,19 @@ def main(argv: list[str] | None = None) -> int:
     aux.add_argument("--resolution", type=float, default=15.0)
     cond = steps.add_parser("terrain-condition", help="Fill gaps and mark water")
     cond.add_argument("--resolution", type=float, default=15.0)
+    steps.add_parser("boundaries", help="Municipality boundaries (FAO GAUL 2025)")
+    stack = steps.add_parser(
+        "stack", help="Terrain + Earth Engine features on one grid"
+    )
+    stack.add_argument("--terrain-resolution", type=float, default=15.0)
+    stack.add_argument("--resolution", type=float, default=30.0)
+    steps.add_parser("labels", help="Flooded / dry / excluded cells from CENAPRED")
+    train = steps.add_parser("train", help="Spatial CV, final model and prediction")
+    train.add_argument("--per-class", type=int, default=150_000)
+    train.add_argument("--block-km", type=float, default=5.0)
+    train.add_argument("--folds", type=int, default=5)
+    train.add_argument("--drop", nargs="*", default=[], help="Features to leave out")
+    train.add_argument("--name", default="lightgbm", help="Output name prefix")
     features = steps.add_parser("gee-features", help="Earth Engine layers on the grid")
     features.add_argument("--resolution", type=float, default=30.0)
     args = parser.parse_args(argv)
@@ -113,6 +127,109 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(
             f"Conditioned DEM (LiDAR-MERIT bias {out['bias_m']:.2f} m) -> {out['dem']}"
+        )
+        return 0
+    if args.step == "boundaries":
+        import ee
+
+        from backend import config
+        from backend.floodmodel import gee_layers
+
+        ee.Initialize(project=config.GEE_PROJECT)
+        out = args.work_dir / "boundaries" / "municipalities.geojson"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        data = gee_layers.fetch_boundaries()
+        out.write_text(json.dumps(data))
+        print(f"Boundaries: {len(data['features'])} municipalities -> {out}")
+        return 0
+    if args.step == "stack":
+        from backend.floodmodel import model
+
+        tdir = args.work_dir / "terrain" / f"{args.terrain_resolution:g}m"
+        dem = (
+            args.work_dir
+            / "terrain"
+            / f"conditioned_{args.terrain_resolution:g}m"
+            / "dem_conditioned.tif"
+        )
+        out = model.stack_features(
+            {
+                "elevation": (dem, "average"),
+                "hand": (tdir / "hand.tif", "average"),
+                "hand_min": (tdir / "hand.tif", "min"),
+                "slope": (tdir / "slope.tif", "average"),
+                "twi": (tdir / "twi.tif", "average"),
+                "flow_acc": (tdir / "flow_acc.tif", "max"),
+            },
+            args.work_dir / "features" / f"gee_{args.resolution:g}m.tif",
+            args.work_dir / "features" / f"stack_{args.resolution:g}m.tif",
+        )
+        print(f"Feature stack -> {out}")
+        return 0
+    if args.step == "labels":
+        from shapely.geometry import mapping, shape
+        from shapely.ops import unary_union
+
+        from backend.floodmodel import cenapred, model
+
+        bounds = json.loads(
+            (args.work_dir / "boundaries" / "municipalities.geojson").read_text()
+        )
+        state = mapping(unary_union([shape(f["geometry"]) for f in bounds["features"]]))
+        events = [
+            args.work_dir / "inventory" / f"{name}.geojson"
+            for name in cenapred.FLOOD_EVENTS
+        ]
+        out = model.label_raster(
+            events,
+            args.work_dir / "features" / "stack_30m.tif",
+            args.work_dir / "features" / "labels_30m.tif",
+            state=state,
+        )
+        print(f"Labels -> {out}")
+        return 0
+    if args.step == "train":
+        import joblib
+
+        from backend.floodmodel import model
+
+        feat = args.work_dir / "features"
+        stack_path, labels_path = feat / "stack_30m.tif", feat / "labels_30m.tif"
+        block_cells = max(1, round(args.block_km * 1000 / 30))
+        sample = model.sample_training(
+            stack_path, labels_path, per_class=args.per_class, block_cells=block_cells
+        )
+        keep = [i for i, n in enumerate(sample["feature_names"]) if n not in args.drop]
+        names = [sample["feature_names"][i] for i in keep]
+        sample["features"] = sample["features"][:, keep]
+        report = model.cross_validate(
+            sample["features"],
+            sample["labels"],
+            sample["groups"],
+            feature_names=names,
+            n_splits=args.folds,
+        )
+        fitted = model.fit(sample["features"], sample["labels"], feature_names=names)
+        out_dir = args.work_dir / "model" / args.name
+        out_dir.mkdir(parents=True, exist_ok=True)
+        joblib.dump(fitted, out_dir / "model.joblib")
+        for fold in report["folds"]:
+            fold["train_groups"] = len(fold["train_groups"])
+            fold["test_groups"] = len(fold["test_groups"])
+        report.update(
+            per_class=args.per_class,
+            block_km=args.block_km,
+            n=int(sample["labels"].size),
+            dropped=args.drop,
+        )
+        (out_dir / "cv_report.json").write_text(json.dumps(report, indent=2))
+        prob = model.predict(
+            fitted, stack_path, labels_path, out_dir / "susceptibility_30m.tif"
+        )
+        mean = report["mean"]
+        print(
+            f"CV ROC AUC {mean['roc_auc']:.3f}  PR AUC {mean['pr_auc']:.3f}  "
+            f"Brier {mean['brier']:.3f} -> {prob}"
         )
         return 0
     if args.step == "gee-features":

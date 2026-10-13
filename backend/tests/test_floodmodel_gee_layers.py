@@ -76,3 +76,22 @@ def test_grid_from_dem_aligns_to_target_resolution(tmp_path):
 
     assert (grid.left, grid.top, grid.res) == (500, 900, 30)
     assert (grid.width, grid.height) == (4, 2)
+
+
+def test_boundaries_to_geojson_keeps_names_and_codes():
+    info = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                "properties": {"GAUL2_NAME": "Teapa", "GAUL2_CODE": 118090, "DISP_EN": "x"},
+            }
+        ],
+    }
+
+    out = gee_layers.boundaries_geojson(info)
+
+    feature = out["features"][0]
+    assert feature["properties"] == {"name": "Teapa", "code": 118090}
+    assert feature["geometry"]["type"] == "Polygon"
