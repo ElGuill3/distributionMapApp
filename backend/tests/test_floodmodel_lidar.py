@@ -54,7 +54,9 @@ def test_download_tiles_skips_valid_zips_and_replaces_corrupt_ones(tmp_path):
         fetched.append(url)
         return _zip_bytes()
 
-    summary = lidar.download_tiles([good, bad, new], tmp_path, fetch=fetch, workers=2, backoff_s=0)
+    summary = lidar.download_tiles(
+        [good, bad, new], tmp_path, fetch=fetch, workers=2, backoff_s=0
+    )
 
     assert sorted(fetched) == ["https://example/2_gr.zip", "https://example/3_gr.zip"]
     assert summary == {"skipped": 1, "downloaded": 2, "failed": []}
@@ -69,7 +71,9 @@ def test_download_tiles_reports_failures_without_leaving_partial_files(tmp_path)
     def fetch(_url):
         return b"not a zip"
 
-    summary = lidar.download_tiles([tile], tmp_path, fetch=fetch, workers=1, retries=2, backoff_s=0)
+    summary = lidar.download_tiles(
+        [tile], tmp_path, fetch=fetch, workers=1, retries=2, backoff_s=0
+    )
 
     assert summary == {"skipped": 0, "downloaded": 0, "failed": ["D4"]}
     assert list(tmp_path.iterdir()) == []
