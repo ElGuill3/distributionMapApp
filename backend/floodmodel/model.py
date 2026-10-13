@@ -248,6 +248,11 @@ def _frame(features: np.ndarray, names: list[str]):
     return pd.DataFrame(features, columns=names)
 
 
+def training_params(seed: int = 0, params=None) -> dict:
+    """LightGBM settings actually used, recorded in each model report."""
+    return {**DEFAULT_PARAMS, **(params or {}), "random_state": seed}
+
+
 def fit(features, labels, *, feature_names: list[str], seed: int = 0, params=None):
     from lightgbm import LGBMClassifier
 
@@ -431,12 +436,14 @@ def score_events(scores: dict, events: dict) -> dict:
     for source, score in scores.items():
         score = np.asarray(score, dtype="float64")
         for event, truth in events.items():
-            truth = np.asarray(truth).astype(int)
-            ok = np.isfinite(score)
+            truth = np.asarray(truth, dtype="float64")
+            # Raw rasters carry NODATA (finite) and unlabelled truth as NaN.
+            ok = np.isfinite(score) & (score != NODATA) & np.isfinite(truth)
+            y = truth[ok].astype(int)
             table.setdefault(source, {})[event] = {
-                "roc_auc": float(roc_auc_score(truth[ok], score[ok])),
-                "pr_auc": float(average_precision_score(truth[ok], score[ok])),
-                "base_rate": float(truth[ok].mean()),
+                "roc_auc": float(roc_auc_score(y, score[ok])),
+                "pr_auc": float(average_precision_score(y, score[ok])),
+                "base_rate": float(y.mean()),
                 "n": int(ok.sum()),
             }
     return table

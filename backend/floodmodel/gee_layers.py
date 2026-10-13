@@ -10,6 +10,7 @@ Layers (all public, credited in the README):
 from __future__ import annotations
 
 import math
+import warnings
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -174,8 +175,11 @@ def download(
 BOUNDARIES_ASSET = "FAO/GAUL/2025/level2"
 
 
-def _polygonal(geometry: dict) -> dict:
-    """Polygon parts only: simplification can leave stray LineStrings behind."""
+def _polygonal(geometry: dict) -> dict | None:
+    """Polygon parts only: simplification can leave stray LineStrings behind.
+
+    Returns None when no polygon survives, so the caller can drop the feature.
+    """
     if geometry["type"] != "GeometryCollection":
         return geometry
     polygons = []
@@ -184,22 +188,29 @@ def _polygonal(geometry: dict) -> dict:
             polygons.append(part["coordinates"])
         elif part["type"] == "MultiPolygon":
             polygons.extend(part["coordinates"])
-    return {"type": "MultiPolygon", "coordinates": polygons}
+    return {"type": "MultiPolygon", "coordinates": polygons} if polygons else None
 
 
 def boundaries_geojson(info: dict) -> dict:
-    """Keep only the municipality name and GAUL code of each feature."""
-    features = [
-        {
-            "type": "Feature",
-            "properties": {
-                "name": f["properties"]["GAUL2_NAME"],
-                "code": f["properties"]["GAUL2_CODE"],
-            },
-            "geometry": _polygonal(f["geometry"]),
-        }
-        for f in info["features"]
-    ]
+    """Keep only the municipality name and GAUL code of each feature.
+
+    Features whose simplified geometry has no polygon left are dropped with a
+    warning instead of publishing an empty MultiPolygon.
+    """
+    features = []
+    for f in info["features"]:
+        geometry = _polygonal(f["geometry"])
+        name = f["properties"]["GAUL2_NAME"]
+        if geometry is None:
+            warnings.warn(f"{name}: no polygon left after simplification; dropped")
+            continue
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {"name": name, "code": f["properties"]["GAUL2_CODE"]},
+                "geometry": geometry,
+            }
+        )
     return {"type": "FeatureCollection", "features": features}
 
 

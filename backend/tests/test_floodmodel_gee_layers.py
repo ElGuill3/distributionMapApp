@@ -124,3 +124,25 @@ def test_boundaries_to_geojson_drops_stray_lines_from_simplified_shapes():
     geometry = gee_layers.boundaries_geojson(info)["features"][0]["geometry"]
 
     assert geometry == {"type": "MultiPolygon", "coordinates": [square, square, square]}
+
+
+def test_boundaries_to_geojson_drops_features_left_without_polygons():
+    info = {
+        "features": [
+            {
+                "geometry": {
+                    "type": "GeometryCollection",
+                    "geometries": [{"type": "LineString", "coordinates": [[0, 0], [1, 1]]}],
+                },
+                "properties": {"GAUL2_NAME": "Solo línea", "GAUL2_CODE": 1},
+            },
+            {
+                "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                "properties": {"GAUL2_NAME": "Bien", "GAUL2_CODE": 2},
+            },
+        ]
+    }
+
+    names = [f["properties"]["name"] for f in gee_layers.boundaries_geojson(info)["features"]]
+
+    assert names == ["Bien"]

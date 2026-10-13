@@ -125,3 +125,98 @@ def test_municipality_stats_report_class_shares_and_mean_score(tmp_path):
     assert este["area_km2"] == pytest.approx(3.0)
     assert este["rank"] == 1 and oeste["rank"] == 2
     json.dumps(stats)  # serialisable
+
+
+def test_classify_refuses_a_score_raster_without_valid_cells(tmp_path):
+    _write(tmp_path / "score.tif", np.full((4, 4), NODATA, dtype="float32"), 0, 40, 10)
+
+    with pytest.raises(ValueError, match="no valid cells"):
+        publish.classify(tmp_path / "score.tif", tmp_path / "classes.tif")
+
+
+def _boundaries(features):
+    return {"type": "FeatureCollection", "features": features}
+
+
+def _square_feature(name, x0, y0, size, **extra):
+    ring = [[x0, y0], [x0 + size, y0], [x0 + size, y0 - size], [x0, y0 - size], [x0, y0]]
+    props = {"name": name, "code": 1, **extra}
+    return {"type": "Feature", "properties": props, "geometry": {"type": "Polygon", "coordinates": [ring]}}
+
+
+def test_municipality_stats_publish_a_fixed_schema(tmp_path):
+    classes = np.array([[3, 3], [0, 0]], dtype="uint8")
+    score = np.array([[0.5, 0.5], [NODATA, NODATA]], dtype="float32")
+    x0, y0 = 500000.0, 2000000.0
+    _write(tmp_path / "classes.tif", classes, x0, y0, 1000, nodata=0, dtype="uint8")
+    _write(tmp_path / "score.tif", score, x0, y0, 1000)
+    scored = _square_feature("Con datos", x0, y0, 2000, GAUL2_CODE=9, DISP_EN="x")
+    empty = _square_feature("Sin datos", x0 + 5000, y0, 1000)
+
+    stats = publish.municipality_stats(
+        tmp_path / "classes.tif", tmp_path / "score.tif", _boundaries([scored, empty]), crs=UTM15
+    )
+
+    keys = {"name", "code", "area_km2", "class_share", "high_share", "mean_score", "rank"}
+    for feature in stats["features"]:
+        assert set(feature["properties"]) == keys
+    by_name = {f["properties"]["name"]: f["properties"] for f in stats["features"]}
+    assert by_name["Con datos"]["rank"] == 1
+    assert by_name["Sin datos"]["rank"] is None
+    assert by_name["Sin datos"]["mean_score"] is None
+
+
+def _work_dir(tmp_path):
+    work = tmp_path / "work"
+    (work / "model").mkdir(parents=True)
+    (work / "boundaries").mkdir()
+    score = np.tile(np.linspace(0, 1, 40, dtype="float32"), (40, 1))
+    _write(work / "model" / "susceptibility_30m.tif", score, 500000.0, 2000000.0, 30)
+    feature = _square_feature("Uno", 500000.0, 2000000.0, 1200)
+    import json as _json
+
+    from pyproj import Transformer
+
+    to_wgs = Transformer.from_crs(UTM15, "EPSG:4326", always_xy=True).transform
+    ring = [list(to_wgs(x, y)) for x, y in feature["geometry"]["coordinates"][0]]
+    feature["geometry"]["coordinates"] = [ring]
+    (work / "boundaries" / "municipalities.geojson").write_text(_json.dumps(_boundaries([feature])))
+    return work
+
+
+def test_publish_replaces_the_output_and_drops_stale_tiles(tmp_path):
+    work = _work_dir(tmp_path)
+    out = tmp_path / "flood_risk"
+    stale = out / "tiles" / "3" / "0" / "0.png"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"old")
+
+    result = publish.publish(work, out, zooms=range(10, 12))
+
+    assert not stale.exists()
+    pngs = list((out / "tiles").rglob("*.png"))
+    assert len(pngs) == result["tiles"] > 0
+    assert (out / "metadata.json").exists() and (out / "municipalities.geojson").exists()
+
+
+def test_publish_failure_leaves_the_previous_output_untouched(tmp_path):
+    work = _work_dir(tmp_path)
+    (work / "boundaries" / "municipalities.geojson").unlink()
+    out = tmp_path / "flood_risk"
+    out.mkdir()
+    (out / "metadata.json").write_text('{"old": true}')
+
+    with pytest.raises(FileNotFoundError, match="municipalities.geojson"):
+        publish.publish(work, out, zooms=[10])
+
+    assert (out / "metadata.json").read_text() == '{"old": true}'
+    assert not (out / "tiles").exists()  # nothing half-written into the served dir
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["flood_risk", "work"]
+
+
+def test_publish_reports_a_missing_ensemble_score(tmp_path):
+    work = _work_dir(tmp_path)
+    (work / "model" / "susceptibility_30m.tif").unlink()
+
+    with pytest.raises(FileNotFoundError, match="susceptibility_30m.tif.*final"):
+        publish.publish(work, tmp_path / "flood_risk", zooms=[10])
