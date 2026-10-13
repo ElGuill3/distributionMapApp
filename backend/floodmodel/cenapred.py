@@ -32,7 +32,7 @@ FLOOD_EVENTS = {
 }
 # Layers whose full-resolution geometry makes the server fail (HTTP 500); they
 # are generalized server-side by this many degrees (~33 m, below the 30 m grid).
-GENERALIZE_DEGREES = {113: 0.0003}
+GENERALIZE_DEGREES = {113: 0.0003, 115: 0.0003, 131: 0.0003}
 SUSCEPTIBILITY_REFERENCES = {
     "susceptibility_pnud_2018": 115,
     "susceptibility_ipcet_pnud_2022": 131,

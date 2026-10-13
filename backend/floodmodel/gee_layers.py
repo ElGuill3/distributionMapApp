@@ -125,15 +125,28 @@ def ee_compute(image) -> Callable[[dict, list[str]], np.ndarray]:
     return compute
 
 
+# computePixels rejects requests above 48 MiB; keep a margin for overhead.
+MAX_REQUEST_BYTES = 40 * 1024 * 1024
+
+
+def auto_chunk(n_bands: int, *, largest: int = 1024) -> int:
+    """Largest power-of-two block whose float32 request fits the limit."""
+    chunk = largest
+    while chunk > 64 and chunk * chunk * n_bands * 4 > MAX_REQUEST_BYTES:
+        chunk //= 2
+    return chunk
+
+
 def download(
     compute: Callable[[dict, list[str]], np.ndarray],
     bands: list[str],
     grid: Grid,
     output: Path,
     *,
-    chunk: int = 1024,
+    chunk: int | None = None,
 ) -> Path:
     """Fetch ``bands`` chunk by chunk, writing each block straight to disk."""
+    chunk = chunk or auto_chunk(len(bands))
     output.parent.mkdir(parents=True, exist_ok=True)
     profile = {
         "driver": "GTiff",
@@ -156,3 +169,83 @@ def download(
             dst.write(np.moveaxis(block, -1, 0).astype("float32"), window=window)
     partial.replace(output)
     return output
+
+
+BOUNDARIES_ASSET = "FAO/GAUL/2025/level2"
+
+
+def boundaries_geojson(info: dict) -> dict:
+    """Keep only the municipality name and GAUL code of each feature."""
+    features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "name": f["properties"]["GAUL2_NAME"],
+                "code": f["properties"]["GAUL2_CODE"],
+            },
+            "geometry": f["geometry"],
+        }
+        for f in info["features"]
+    ]
+    return {"type": "FeatureCollection", "features": features}
+
+
+def fetch_boundaries(state: str = "Tabasco", *, max_error_m: float = 20.0) -> dict:
+    """Municipalities of ``state`` from FAO GAUL 2025, simplified, in WGS 84."""
+    import ee
+
+    collection = (
+        ee.FeatureCollection(BOUNDARIES_ASSET)
+        .filter(ee.Filter.eq("GAUL1_NAME", state))
+        .map(lambda f: f.simplify(max_error_m))
+    )
+    return boundaries_geojson(collection.getInfo())
+
+
+# Sentinel-1 change detection, calibrated against CENAPRED's 2020 polygons
+# (IoU 0.35): dark in the wet season and darker than the same year's dry season.
+S1_WET_MONTHS = ("06-01", "12-31")
+S1_DRY_MONTHS = ("02-01", "05-31")
+S1_WET_DB = -13.0
+S1_DROP_DB = -1.5
+S1_MAX_HAND_M = 20.0
+
+
+def s1_season_image(years: list[int], region):
+    """One 0/1 band per year: flooded during that year's wet season."""
+    import ee
+
+    def collection(start: str, end: str):
+        return (
+            ee.ImageCollection("COPERNICUS/S1_GRD")
+            .filterBounds(region)
+            .filterDate(start, end)
+            .filter(ee.Filter.eq("instrumentMode", "IW"))
+            .filter(ee.Filter.listContains("transmitterReceiverPolarisation", "VV"))
+            .select("VV")
+        )
+
+    permanent = (
+        ee.Image("JRC/GSW1_4/GlobalSurfaceWater").select("occurrence").unmask(0).gt(50)
+    )
+    hand = ee.Image("MERIT/Hydro/v1_0_1").select("hnd")
+    bands = []
+    for year in years:
+        wet = (
+            collection(f"{year}-{S1_WET_MONTHS[0]}", f"{year}-{S1_WET_MONTHS[1]}")
+            .reduce(ee.Reducer.percentile([10]))
+            .focalMedian(30, "circle", "meters")
+        )
+        dry = (
+            collection(f"{year}-{S1_DRY_MONTHS[0]}", f"{year}-{S1_DRY_MONTHS[1]}")
+            .median()
+            .focalMedian(30, "circle", "meters")
+        )
+        flooded = (
+            wet.lt(S1_WET_DB)
+            .And(wet.subtract(dry).lt(S1_DROP_DB))
+            .And(hand.lt(S1_MAX_HAND_M))
+            .And(permanent.Not())
+        )
+        bands.append(flooded.unmask(0).rename(f"s1_{year}"))
+    return ee.Image.cat(bands).toFloat()

@@ -76,3 +76,28 @@ def test_grid_from_dem_aligns_to_target_resolution(tmp_path):
 
     assert (grid.left, grid.top, grid.res) == (500, 900, 30)
     assert (grid.width, grid.height) == (4, 2)
+
+
+def test_boundaries_to_geojson_keeps_names_and_codes():
+    info = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                "properties": {"GAUL2_NAME": "Teapa", "GAUL2_CODE": 118090, "DISP_EN": "x"},
+            }
+        ],
+    }
+
+    out = gee_layers.boundaries_geojson(info)
+
+    feature = out["features"][0]
+    assert feature["properties"] == {"name": "Teapa", "code": 118090}
+    assert feature["geometry"]["type"] == "Polygon"
+
+
+@pytest.mark.parametrize(("bands", "chunk"), [(1, 1024), (7, 1024), (11, 512), (40, 512), (41, 256)])
+def test_auto_chunk_keeps_each_request_under_the_earth_engine_limit(bands, chunk):
+    assert gee_layers.auto_chunk(bands) == chunk
+    assert chunk * chunk * bands * 4 <= gee_layers.MAX_REQUEST_BYTES
