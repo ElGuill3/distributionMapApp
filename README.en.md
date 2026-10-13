@@ -273,6 +273,28 @@ To facilitate offline analysis, the system offers:
 - Animation controls are locked to prevent overlay conflicts.
 - Risk layers can be combined across multiple municipalities simultaneously.
 
+**Flood Detection Mode**:
+- Detects surface water inside the drawn area (max 4°×4°) for any date range.
+- Satellite choice: Sentinel-1 (radar, 10 m, 2015–2024) or Landsat (optical, 30 m, 2000–2024).
+- Automatic threshold (dynamic percentile) or manual (default −18.0).
+- Shows the flood layer over a satellite background, a legend with opacity control and the flooded area in hectares.
+
+Special modes are mutually exclusive: clicking the active mode again returns to normal
+mode, and clicking another special mode switches to it directly (the previous one is
+turned off).
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Normal
+    Normal --> Comparison: Compare years
+    Normal --> Risk: Risk map
+    Normal --> Floods: Floods
+    Comparison --> Normal: click again
+    Risk --> Normal: click again
+    Floods --> Normal: click again
+```
+
 ### Other Technical Features
 
 - Spatial selection using a rectangle drawn on the map (max. 8°×8°; 4°×4° for Sentinel-2).
@@ -360,28 +382,55 @@ Generation progress uses **Server-Sent Events (SSE)** at `/api/gif-progress/<tas
 
 ### Frontend Architecture
 
-The TypeScript code in `frontend/src/ts/` is organized by responsibility:
+The TypeScript code in `frontend/src/ts/` is organized by responsibility. `main.ts`
+composes everything; sidebar modules are loaded lazily:
 
-```
-src/ts/
-├── main.ts               # Composition root — orchestrates initialization and wiring
-├── apiClient.ts          # Typed HTTP client — all backend API requests
-├── config.ts             # Endpoint URLs, available years, seasons, UI constants
-├── types.ts              # API TypeScript interfaces (GifResponse, TimeseriesResponse, etc.)
-├── state/
-│   └── mapState.ts       # Global state store — bbox, mode, variable, series, players
-└── modes/
-    ├── normalMode.ts     # Normal mode logic (GIF generation + Panel A chart)
-    ├── compareMode.ts    # Comparison mode logic (Paneles A/B, sync, mapB)
-    └── floodRiskMode.ts  # Risk mode logic (FHI overlays by municipality)
+```mermaid
+flowchart LR
+    main["main.ts<br/>composition root"]
+    subgraph modes["modes/"]
+        normal["normalMode<br/>normalGeneration"]
+        compare["compareMode"]
+        risk["floodRiskMode"]
+        inund["inundacionesMode"]
+    end
+    subgraph sidebar["sidebar/ (lazy loaded)"]
+        side["taskFlow · variableSelector<br/>configPanel · modoSection"]
+    end
+    subgraph ui["ui/"]
+        uimods["gifPlayer · chart · progress<br/>stationPopup · bdctbForecast<br/>fieldErrors · icons"]
+    end
+    state[("state/mapState")]
+    api["apiClient · config · types<br/>errorMap"]
+    map["map/overlays"]
+    utils["utils/<br/>seasonDates · processingLimits · html"]
+    main --> modes
+    main -. "import()" .-> sidebar
+    main --> ui
+    modes --> state
+    sidebar --> state
+    modes --> ui
+    modes --> api
+    modes --> map
+    modes --> utils
 ```
 
-- **`main.ts`** initializes the Leaflet map, mode modules, and listeners. It contains no business logic.
-- **`apiClient.ts`** encapsulates all `fetch()` calls, including SSE progress and typed error handling.
+| Module | Responsibility |
+|---|---|
+| `main.ts` | Initializes Leaflet and wires modes and controls; holds no business logic. |
+| `apiClient.ts`, `config.ts`, `types.ts`, `errorMap.ts` | Typed backend requests, endpoints, API types and error translation. |
+| `state/mapState.ts` | Session state: bbox, active mode, variable, series and animation players. |
+| `modes/` | Behavior of each mode: normal, comparison, risk and floods. |
+| `sidebar/` | Sidebar step flow, variable selector, configuration and mode selection. |
+| `ui/` | GIF player, Plotly charts, progress, station popups and BDCTB forecast. |
+| `map/overlays.ts` | Leaflet overlay layers. |
+| `utils/` | Season dates (UTC), processing limits and text escaping. |
+
+**Generation and animation lifecycle:**
+
 - **`mapState.ts`** holds session state: selected bbox, active mode, loaded time series, and references to animation players (`GifPlayer`, `SyncPlayer`, `SoloPlayer`). `GifPlayer` owns its frame blob URLs: reloading releases replaced frames, disposing invalidates pending loads, and a failed or superseded load releases its candidate frames without replacing the current animation.
 - **`normalMode.ts`** gives each generation its own lifecycle: obsolete responses, decode completions and SSE callbacks cannot replace or clear newer state. Clearing/reinitializing the mode invalidates pending generations; the existing animation stays owned until a current replacement has decoded successfully. Frame seasons and years use the API's UTC calendar dates, independently of the browser's timezone. `normalGeneration.ts` uses the same captured ownership check for error feedback and the payload-free `generationComplete` event, so obsolete completions cannot unlock a newer request, including clear/mode changes between promise resolution and its continuation.
 - **`compareMode.ts`** owns generations per panel, so A and B can finish independently. Shared progress belongs to the latest pending request; clearing a panel or leaving/reinitializing comparison invalidates obsolete work. Failed/stale decoded candidates are disposed without replacing owned frames, and late B view-sync callbacks cannot restore cleared state.
-- **`modes/*.ts`** contain specific behavior for each mode of operation and access state exclusively through `mapState`.
 
 ---
 
@@ -618,6 +667,17 @@ Open your browser and navigate to: **http://127.0.0.1:5000**
 3. The colorbar shows the risk scale (0 = very low, 100 = critical).
 4. Uncheck a municipality to remove its layer.
 5. Click **"Mapa de riesgo"** again to exit the mode.
+
+---
+
+### Flood Detection Mode
+
+1. Draw a rectangle over the area to analyze and click **"Inundaciones"** (Floods) in the sidebar.
+2. Pick the **satellite**: Sentinel-1 (radar, 2015–2024) or Landsat (optical, 2000–2024).
+3. Set **Fecha Inicio** (start date) and **Fecha Fin** (end date).
+4. Pick the **Modo de Umbral** (threshold mode): automatic (dynamic percentile) or manual with your own value.
+5. Click **"Visualizar Inundación"**: the detected water layer and satellite background are added, and the legend shows the flooded area in hectares.
+6. Click **"Inundaciones"** again to exit (its layers and legend are removed).
 
 ---
 

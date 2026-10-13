@@ -279,6 +279,27 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 - Los controles de animación quedan bloqueados para evitar superposiciones.
 - Las capas de riesgo se pueden combinar con múltiples municipios simultáneamente.
 
+**Modo detección de inundaciones**:
+- Detecta agua superficial en el área dibujada (máx. 4°×4°) para un rango de fechas libre.
+- Satélite a elegir: Sentinel-1 (radar, 10 m, 2015–2024) o Landsat (óptico, 30 m, 2000–2024).
+- Umbral automático (percentil dinámico) o manual (por defecto −18,0).
+- Muestra la capa de inundación con su fondo satelital, una leyenda con control de opacidad y el área inundada en hectáreas.
+
+Los modos especiales son excluyentes: volver a pulsar el modo activo regresa al modo
+normal, y pulsar otro modo especial cambia directamente a él (el anterior se desactiva).
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Normal
+    Normal --> Comparativa: Comparar años
+    Normal --> Riesgo: Mapa de riesgo
+    Normal --> Inundaciones: Inundaciones
+    Comparativa --> Normal: pulsar de nuevo
+    Riesgo --> Normal: pulsar de nuevo
+    Inundaciones --> Normal: pulsar de nuevo
+```
+
 ### Otras características técnicas
 
 - Selección espacial mediante rectángulo dibujado en el mapa (máx. 8°×8°; 4°×4° para Sentinel-2).
@@ -366,28 +387,55 @@ El progreso de generación usa **Server-Sent Events (SSE)** en `/api/gif-progres
 
 ### Arquitectura del frontend
 
-El código TypeScript en `frontend/src/ts/` está organizado por responsabilidad:
+El código TypeScript en `frontend/src/ts/` está organizado por responsabilidad. `main.ts`
+compone todo; los módulos del panel lateral se cargan de forma diferida:
 
-```
-src/ts/
-├── main.ts               # Composition root — orquesta inicialización y wiring de módulos
-├── apiClient.ts          # Cliente HTTP tipado — todas las peticiones al backend
-├── config.ts             # URLs de endpoints, años disponibles, temporadas
-├── types.ts              # Interfaces de la API (GifResponse, TimeseriesResponse, etc.)
-├── state/
-│   └── mapState.ts       # Store de estado global — bbox, modo, variable, series, players
-└── modes/
-    ├── normalMode.ts     # Lógica del modo normal (generación de GIF + gráfica panel A)
-    ├── compareMode.ts     # Lógica del modo comparativa (paneles A/B, sync, mapB)
-    └── floodRiskMode.ts  # Lógica del modo riesgo (overlays FHI por municipio)
+```mermaid
+flowchart LR
+    main["main.ts<br/>composition root"]
+    subgraph modes["modes/"]
+        normal["normalMode<br/>normalGeneration"]
+        compare["compareMode"]
+        risk["floodRiskMode"]
+        inund["inundacionesMode"]
+    end
+    subgraph sidebar["sidebar/ (carga diferida)"]
+        side["taskFlow · variableSelector<br/>configPanel · modoSection"]
+    end
+    subgraph ui["ui/"]
+        uimods["gifPlayer · chart · progress<br/>stationPopup · bdctbForecast<br/>fieldErrors · icons"]
+    end
+    state[("state/mapState")]
+    api["apiClient · config · types<br/>errorMap"]
+    map["map/overlays"]
+    utils["utils/<br/>seasonDates · processingLimits · html"]
+    main --> modes
+    main -. "import()" .-> sidebar
+    main --> ui
+    modes --> state
+    sidebar --> state
+    modes --> ui
+    modes --> api
+    modes --> map
+    modes --> utils
 ```
 
-- **`main.ts`** inicializa el mapa Leaflet, los módulos de modo y el sistema de listeners. No contiene lógica de negocio de ningún modo.
-- **`apiClient.ts`** encapsula todos los `fetch()` al backend, incluyendo SSE de progreso y manejo de errores tipados.
+| Módulo | Responsabilidad |
+|---|---|
+| `main.ts` | Inicializa Leaflet, conecta los modos y los controles; no tiene lógica de negocio. |
+| `apiClient.ts`, `config.ts`, `types.ts`, `errorMap.ts` | Peticiones tipadas al backend, endpoints, tipos de la API y traducción de errores. |
+| `state/mapState.ts` | Estado de la sesión: bbox, modo activo, variable, series y players de animación. |
+| `modes/` | Comportamiento de cada modo: normal, comparativa, riesgo e inundaciones. |
+| `sidebar/` | Flujo de pasos del panel lateral, selector de variable, configuración y selección de modo. |
+| `ui/` | Reproductor de GIFs, gráficas Plotly, progreso, popups de estaciones y pronóstico BDCTB. |
+| `map/overlays.ts` | Capas superpuestas de Leaflet. |
+| `utils/` | Fechas de temporada (UTC), límites de procesamiento y escape de texto. |
+
+**Ciclo de vida de las generaciones y animaciones:**
+
 - **`mapState.ts`** mantiene el estado de la sesión: bbox seleccionado, modo activo, series temporales cargadas y referencias a los players de animación (GifPlayer, SyncPlayer, SoloPlayer). `GifPlayer` es dueño de las URLs blob de sus frames: recargar libera los frames reemplazados, disponer invalida cargas pendientes y una carga fallida u obsoleta libera sus frames candidatos sin reemplazar la animación actual.
 - **`normalMode.ts`** asigna un ciclo de vida a cada generación: respuestas, decodificaciones y callbacks SSE obsoletos no pueden reemplazar ni limpiar el estado más nuevo. Limpiar/reinicializar el modo invalida generaciones pendientes; la animación existente conserva sus recursos hasta que se decodifica correctamente un reemplazo vigente. Las estaciones y los años de los frames usan las fechas calendario UTC de la API, independientemente de la zona horaria del navegador. `normalGeneration.ts` reutiliza esa comprobación de propiedad para informar errores y emitir el evento sin datos `generationComplete`: las finalizaciones obsoletas no desbloquean una solicitud más nueva, incluso si se limpia/cambia el modo entre resolver la promesa y ejecutar su continuación.
 - **`compareMode.ts`** administra las generaciones por panel para que A y B terminen independientemente. El progreso compartido pertenece a la última solicitud pendiente; limpiar un panel o salir/reinicializar la comparación invalida trabajo obsoleto. Las decodificaciones fallidas/obsoletas liberan sus candidatos sin reemplazar los frames vigentes, y los callbacks tardíos de sincronización de B no restauran el estado limpiado.
-- **`modes/*.ts`** contienen el comportamiento específico de cada modo de operación y acceden al estado exclusivamente a través de `mapState`.
 
 ---
 
@@ -637,6 +685,17 @@ Accede desde el navegador a: **http://127.0.0.1:5000**
 3. La barra de colores muestra la escala de riesgo (0 = muy bajo, 100 = crítico).
 4. Para desactivar una capa, desmarca la casilla correspondiente.
 5. Para salir del modo, vuelve a pulsar **"Mapa de riesgo"** (las capas activas se eliminan).
+
+---
+
+### Modo detección de inundaciones
+
+1. Dibuja un rectángulo sobre la zona a analizar y pulsa **"Inundaciones"** en el panel lateral.
+2. Elige el **satélite**: Sentinel-1 (radar, 2015–2024) o Landsat (óptico, 2000–2024).
+3. Define **Fecha Inicio** y **Fecha Fin**.
+4. Elige el **Modo de Umbral**: automático (percentil dinámico) o manual con un valor propio.
+5. Pulsa **"Visualizar Inundación"**: se agregan la capa de agua detectada y el fondo satelital, y la leyenda muestra el área inundada en hectáreas.
+6. Para salir, vuelve a pulsar **"Inundaciones"** (se eliminan sus capas y la leyenda).
 
 ---
 

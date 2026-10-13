@@ -11,7 +11,7 @@ Branch `docs/refresh-mermaid`. Both languages change together in every commit.
 
 ## Tasks
 - D1 [S1-S4] inline; done; architecture flowchart, launcher startup flow, forecast stack topology, station download flow, GIF request sequence (es+en); scraper daemon text corrected (runner.py not started, HTTPS first, FTP fallback); cache-hit note corrected (time series still queried); 10/10 diagrams rendered with mermaid-cli 11
-- D2 [S1-S4] inline; pending (frontend: module graph replacing ASCII tree, modes incl. flood detection, module notes)
+- D2 [S1-S4] inline; done; mode state diagram, flood detection mode documented (features + usage, Sentinel-1/Landsat, 4°×4°, auto/manual threshold), frontend module graph + responsibility table replace ASCII tree (es+en); 14/14 diagrams rendered
 - D3 [S1] inline; pending (reference: variables, requirements/deps, env table, stations, endpoints, dev notes, deployment, future work, credits)
 
 ## Log
