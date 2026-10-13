@@ -1,8 +1,14 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import postcss from 'postcss';
 
-const CSS_PATH = process.env.STYLES_CSS_PATH ?? 'frontend/src/styles/styles.css';
+// Resolved from this file so the test does not depend on the working directory;
+// STYLES_CSS_PATH lets a check run against another copy of the stylesheet.
+const CSS_PATH =
+  process.env.STYLES_CSS_PATH ??
+  fileURLToPath(new URL('../../src/styles/styles.css', import.meta.url));
 
 /** Flat rules repeated verbatim (selector + declarations) in the same context. */
 function exactDuplicateRules(css: string): string[] {
