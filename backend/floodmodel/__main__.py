@@ -42,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
     seasons.add_argument("--last", type=int, default=2025)
     steps.add_parser("final", help="Train both models and build the ensemble map")
     steps.add_parser("validate", help="Score held-out models on unseen floods")
+    pub = steps.add_parser("publish", help="Classes, XYZ tiles and stats for the app")
+    pub.add_argument("--out", type=Path, default=Path("backend/data/flood_risk"))
     features = steps.add_parser("gee-features", help="Earth Engine layers on the grid")
     features.add_argument("--resolution", type=float, default=30.0)
     args = parser.parse_args(argv)
@@ -210,6 +212,13 @@ def main(argv: list[str] | None = None) -> int:
         from backend.floodmodel import pipeline
 
         print(f"Susceptibility -> {pipeline.final(args.work_dir)}")
+        return 0
+    if args.step == "publish":
+        from backend.floodmodel import publish
+
+        result = publish.publish(args.work_dir, args.out)
+        print(f"Published {result['tiles']} tiles -> {args.out}")
+        print(f"Class breaks: {result['breaks']}")
         return 0
     if args.step == "validate":
         from backend.floodmodel import pipeline

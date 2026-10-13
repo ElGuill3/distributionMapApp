@@ -101,3 +101,26 @@ def test_boundaries_to_geojson_keeps_names_and_codes():
 def test_auto_chunk_keeps_each_request_under_the_earth_engine_limit(bands, chunk):
     assert gee_layers.auto_chunk(bands) == chunk
     assert chunk * chunk * bands * 4 <= gee_layers.MAX_REQUEST_BYTES
+
+
+def test_boundaries_to_geojson_drops_stray_lines_from_simplified_shapes():
+    square = [[[0, 0], [1, 0], [1, 1], [0, 0]]]
+    info = {
+        "features": [
+            {
+                "geometry": {
+                    "type": "GeometryCollection",
+                    "geometries": [
+                        {"type": "LineString", "coordinates": [[0, 0], [2, 2]]},
+                        {"type": "Polygon", "coordinates": square},
+                        {"type": "MultiPolygon", "coordinates": [square, square]},
+                    ],
+                },
+                "properties": {"GAUL2_NAME": "Cárdenas", "GAUL2_CODE": 1},
+            }
+        ]
+    }
+
+    geometry = gee_layers.boundaries_geojson(info)["features"][0]["geometry"]
+
+    assert geometry == {"type": "MultiPolygon", "coordinates": [square, square, square]}

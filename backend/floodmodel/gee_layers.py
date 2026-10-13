@@ -174,6 +174,19 @@ def download(
 BOUNDARIES_ASSET = "FAO/GAUL/2025/level2"
 
 
+def _polygonal(geometry: dict) -> dict:
+    """Polygon parts only: simplification can leave stray LineStrings behind."""
+    if geometry["type"] != "GeometryCollection":
+        return geometry
+    polygons = []
+    for part in geometry["geometries"]:
+        if part["type"] == "Polygon":
+            polygons.append(part["coordinates"])
+        elif part["type"] == "MultiPolygon":
+            polygons.extend(part["coordinates"])
+    return {"type": "MultiPolygon", "coordinates": polygons}
+
+
 def boundaries_geojson(info: dict) -> dict:
     """Keep only the municipality name and GAUL code of each feature."""
     features = [
@@ -183,7 +196,7 @@ def boundaries_geojson(info: dict) -> dict:
                 "name": f["properties"]["GAUL2_NAME"],
                 "code": f["properties"]["GAUL2_CODE"],
             },
-            "geometry": f["geometry"],
+            "geometry": _polygonal(f["geometry"]),
         }
         for f in info["features"]
     ]
