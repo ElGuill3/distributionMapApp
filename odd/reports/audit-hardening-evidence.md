@@ -49,6 +49,8 @@ The Python wheel packages `scripts`; `distribution-map` locates and runs an appl
 It is not a standalone wheel containing the Flask application, templates, static assets and data.
 Root `app.py`, `config.py`, `extensions.py`, npm manifests and launch/build entrypoints remain canonical.
 
+> Update (root layout cleanup, `odd/tasks/root-layout-cleanup.md`): the Flask modules moved to `backend/`, the launcher to `backend/scripts/`, and the wheel now uses `only-include = ["backend/__init__.py", "backend/scripts"]` with entry point `backend.scripts.run_app:main`. It is still a scripts-only wheel that runs an application checkout.
+
 ### Preflight/deployment limits
 
 Preflight checks the local Python/Node/build/port/bootstrap prerequisites; it does not certify every CDN or vendor file.

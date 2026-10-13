@@ -574,15 +574,19 @@ También puedes hacer clic sobre el marcador de una estación en el mapa y pulsa
 ```
 distributionMapApp/
 │
-├── app.py                    # Punto de entrada Flask: inicializa GEE, registra blueprints
-├── config.py                 # Constantes globales: rutas, colecciones GEE, límites, estaciones
 ├── pyproject.toml            # Dependencias y metadata del proyecto Python (gestionado por uv)
 ├── uv.lock                   # Lockfile de dependencias Python (gestionado por uv)
 ├── package.json              # Dependencias Node y scripts de compilación TS
 ├── tsconfig.json             # Configuración del compilador TypeScript
-├── openapi.yaml              # Especificación OpenAPI 3.1.0 de la API REST
+├── .env.example              # Plantilla de variables de entorno (.env vive en la raíz)
+│                             # + configuración de herramientas: eslint, prettier, vitest, playwright, ruff
 │
-├── backend/                  # Paquetes de implementación del backend
+├── backend/                  # Aplicación Flask y código del servidor
+│   ├── app.py                    # Punto de entrada Flask: inicializa GEE, registra blueprints
+│   ├── config.py                 # Constantes globales: rutas, colecciones GEE, límites, estaciones
+│   ├── extensions.py             # Limitador de solicitudes compartido (Flask-Limiter)
+│   ├── app_preflight.py          # Preflight de dependencias y credenciales de Earth Engine
+│   ├── openapi.yaml              # Especificación OpenAPI 3.1.0 de la API REST
 │   ├── routes/                   # Blueprints Flask — endpoints de la API REST
 │   │   ├── gif_routes.py         # GET /api/<var>-gif-bbox
 │   │   ├── timeseries_routes.py  # GET /api/<var>-timeseries-bbox
@@ -602,45 +606,48 @@ distributionMapApp/
 │   │   ├── gif_service.py        # Descarga GIF desde GEE, anotación con PIL, caché, limpieza
 │   │   ├── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
 │   │   └── export_service.py     # Generación de exportación ZIP (CSV + GIFs + metadatos)
-│   ├── tests/                # Pruebas Python y fixtures aislados (pytest)
-│   └── scrapers/             # Scrapers automáticos para datos locales
-│       ├── base.py               # Clase base abstracta de Scraper
-│       ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA
-│       ├── smn.py                # Scraper stub para datos de SMN
-│       └── runner.py             # Daemon planificador de tareas (APScheduler)
+│   ├── scrapers/                 # Scrapers automáticos para datos locales
+│   │   ├── base.py               # Clase base abstracta de Scraper
+│   │   ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA
+│   │   ├── smn.py                # Scraper stub para datos de SMN
+│   │   └── runner.py             # Daemon planificador de tareas (APScheduler)
+│   ├── scripts/                  # Lanzador `distribution-map` y utilidades de mantenimiento
+│   │   ├── run_app.py            # Comando `uv run distribution-map`
+│   │   ├── bootstrap_stations.py # Descarga inicial de estaciones
+│   │   ├── generate_schemas.py   # Esquemas Pydantic → openapi.yaml
+│   │   └── quality/              # coverage.sh, lint.sh, format.sh
+│   ├── data/
+│   │   ├── mapa_riesgo/
+│   │   │   └── municipios/       # GeoTIFFs FHI por municipio (fhi_<municipio>_100m.tif)
+│   │   └── stations/             # Series de nivel locales (descargadas por los scrapers)
+│   └── tests/                    # Pruebas Python y fixtures aislados (pytest)
 │
-├── data/
-│   ├── mapa_riesgo/
-│   │   └── municipios/       # GeoTIFFs FHI por municipio (fhi_<municipio>_100m.tif)
-│   └── stations/             # Series de nivel locales (descargadas por los scrapers)
-│
-├── static/                   # Archivos servidos directamente al navegador
-│   ├── main.js               # JavaScript compilado desde TypeScript
-│   ├── styles.css            # Copia publicada de frontend/src/styles/styles.css
-│   ├── gifs/                 # GIFs generados (caché temporal, se limpian automáticamente)
-│   └── flood_maps/           # PNGs de mapas de riesgo renderizados
-│
-├── frontend/                        # Fuentes y pruebas del navegador
-│   ├── src/
-│   │   ├── styles/styles.css        # Estilos fuente publicados en static/ por build:ts
-│   │   └── ts/                      # TypeScript compilado en static/
-│   │       ├── main.ts              # Composition root e inicialización
-│   │       ├── apiClient.ts         # Cliente HTTP tipado
-│   │       ├── config.ts            # URLs, temporadas y configuración UI
-│   │       ├── state/               # Estado compartido del mapa
-│   │       ├── modes/               # Modos normal, comparación e inundaciones
-│   │       ├── sidebar/             # Controles del panel lateral
-│   │       ├── map/                 # Overlays de Leaflet
-│   │       ├── ui/                  # GIFs, gráficas y progreso
-│   │       └── utils/               # Fechas, límites y escape de texto
-│   └── tests/
-│       ├── unit/                    # Pruebas Vitest sobre fuentes (sin build previo)
-│       └── e2e/                     # Playwright y servidor de pruebas sin proveedores
-│
-
-└── templates/
-    ├── index.html            # Template HTML principal
-    └── scalar.html           # Plantilla interactiva de documentación interactiva API (Scalar UI)
+└── frontend/                        # Interfaz del navegador
+    ├── templates/
+    │   ├── index.html               # Template HTML principal
+    │   └── scalar.html              # Documentación interactiva de la API (Scalar UI)
+    ├── static/                      # Archivos servidos en /static/
+    │   ├── vendor/ y assets/        # Librerías de terceros e imágenes versionadas
+    │   ├── main.js                  # JavaScript compilado desde TypeScript (generado)
+    │   ├── styles.css               # Copia publicada de src/styles/styles.css (generado)
+    │   ├── gifs/                    # GIFs generados (caché temporal, se limpian automáticamente)
+    │   └── flood_maps/              # PNGs de mapas de riesgo renderizados
+    ├── scripts/build-typescript.mjs # Build limpio de TypeScript (`npm run build:ts`)
+    ├── src/
+    │   ├── styles/styles.css        # Estilos fuente publicados en static/ por build:ts
+    │   └── ts/                      # TypeScript compilado en static/
+    │       ├── main.ts              # Composition root e inicialización
+    │       ├── apiClient.ts         # Cliente HTTP tipado
+    │       ├── config.ts            # URLs, temporadas y configuración UI
+    │       ├── state/               # Estado compartido del mapa
+    │       ├── modes/               # Modos normal, comparación e inundaciones
+    │       ├── sidebar/             # Controles del panel lateral
+    │       ├── map/                 # Overlays de Leaflet
+    │       ├── ui/                  # GIFs, gráficas y progreso
+    │       └── utils/               # Fechas, límites y escape de texto
+    └── tests/
+        ├── unit/                    # Pruebas Vitest sobre fuentes (sin build previo)
+        └── e2e/                     # Playwright y servidor de pruebas sin proveedores
 ```
 
 ---
@@ -693,7 +700,7 @@ npm run watch:ts
 La aplicación cuenta con un stack de testing bipartito:
 
 **Vitest** — tests unitarios y de integración en TypeScript:
-Los tests importan directamente el TypeScript fuente y funcionan sin JavaScript generado en `static/`. La aplicación sigue necesitando la compilación para servirse.
+Los tests importan directamente el TypeScript fuente y funcionan sin JavaScript generado en `frontend/static/`. La aplicación sigue necesitando la compilación para servirse.
 ```bash
 npm test              # todos los tests
 npm run test:watch   # modo watch (reacciona a cambios)
@@ -728,7 +735,7 @@ uv run backend/scripts/quality/format.sh    # Ejecuta ruff format --check
 
 Notas:
 - Estos comandos están pensados como **guardrails** iniciales: reportan baseline, no corrigen el repo automáticamente.
-- La primera pasada excluye `static/`, `scripts/` y tests Python para evitar ruido de revisión.
+- La primera pasada excluye `frontend/static/`, `backend/scripts/` y tests Python para evitar ruido de revisión.
 - Si usás `uv run`, `uv` se asegura de que el entorno esté levantado correctamente antes de correr el script.
 
 **TypeScript** — lint y format check con ESLint + Prettier:
@@ -740,7 +747,7 @@ npm run quality:ts   # Corre lint + format check
 ```
 
 Notas:
-- La configuración excluye `static/` y otros artefactos generados para no mezclar código fuente con build output.
+- La configuración excluye `frontend/static/` y otros artefactos generados para no mezclar código fuente con build output.
 - Esta etapa no hace auto-fix ni reformateo masivo; primero expone la baseline del proyecto.
 
 ### Límites de la API de Google Earth Engine

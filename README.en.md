@@ -555,15 +555,19 @@ You can also click a station marker on the map and choose **"Ver datos 2000–20
 ```
 distributionMapApp/
 │
-├── app.py                    # Flask entry point: initializes GEE, registers blueprints
-├── config.py                 # Global constants: paths, GEE collections, limits, stations
 ├── pyproject.toml            # Python project dependencies and metadata (managed by uv)
 ├── uv.lock                   # Python dependency lockfile (managed by uv)
 ├── package.json              # Node dependencies and TS compile scripts
 ├── tsconfig.json             # TypeScript compiler settings
-├── openapi.yaml              # OpenAPI 3.1.0 REST API specification
+├── .env.example              # Environment variable template (.env lives at the root)
+│                             # + tool configs: eslint, prettier, vitest, playwright, ruff
 │
-├── backend/                  # Backend implementation packages
+├── backend/                  # Flask application and server code
+│   ├── app.py                    # Flask entry point: initializes GEE, registers blueprints
+│   ├── config.py                 # Global constants: paths, GEE collections, limits, stations
+│   ├── extensions.py             # Shared request limiter (Flask-Limiter)
+│   ├── app_preflight.py          # Dependency and Earth Engine credential preflight
+│   ├── openapi.yaml              # OpenAPI 3.1.0 REST API specification
 │   ├── routes/                   # Flask Blueprints — REST API endpoints
 │   │   ├── gif_routes.py         # GET /api/<var>-gif-bbox
 │   │   ├── timeseries_routes.py  # GET /api/<var>-timeseries-bbox
@@ -583,45 +587,48 @@ distributionMapApp/
 │   │   ├── gif_service.py        # Downloads GEE GIFs, annotates with PIL, cache & cleanup
 │   │   ├── station_service.py    # Reads and preprocesses local station CSVs
 │   │   └── export_service.py     # Decoupled ZIP bundle exports (CSV + GIFs + metadata)
-│   ├── tests/                # Python tests and isolated fixtures (pytest)
-│   └── scrapers/             # Automatic scrapers for local data
-│       ├── base.py               # Abstract Base Scraper class
-│       ├── conagua.py            # FTP scraper for CONAGUA station data
-│       ├── smn.py                # Stub scraper for SMN data
-│       └── runner.py             # Scheduled runner daemon (APScheduler)
+│   ├── scrapers/                 # Automatic scrapers for local data
+│   │   ├── base.py               # Abstract Base Scraper class
+│   │   ├── conagua.py            # FTP scraper for CONAGUA station data
+│   │   ├── smn.py                # Stub scraper for SMN data
+│   │   └── runner.py             # Scheduled runner daemon (APScheduler)
+│   ├── scripts/                  # `distribution-map` launcher and maintenance utilities
+│   │   ├── run_app.py            # `uv run distribution-map` command
+│   │   ├── bootstrap_stations.py # Initial station download
+│   │   ├── generate_schemas.py   # Pydantic schemas → openapi.yaml
+│   │   └── quality/              # coverage.sh, lint.sh, format.sh
+│   ├── data/
+│   │   ├── mapa_riesgo/
+│   │   │   └── municipios/       # Municipal FHI GeoTIFFs (fhi_<municipio>_100m.tif)
+│   │   └── stations/             # Local level series (downloaded by scrapers)
+│   └── tests/                    # Python tests and isolated fixtures (pytest)
 │
-├── data/
-│   ├── mapa_riesgo/
-│   │   └── municipios/       # Municipal FHI GeoTIFFs (fhi_<municipio>_100m.tif)
-│   └── stations/             # Local level series (downloaded by scrapers)
-│
-├── static/                   # Files served directly to the browser
-│   ├── main.js               # Compiled JavaScript from TypeScript
-│   ├── styles.css            # Published copy of frontend/src/styles/styles.css
-│   ├── gifs/                 # Generated GIFs (temp cache, automatically cleaned)
-│   └── flood_maps/           # Rendered risk map PNGs
-│
-├── frontend/                        # Browser sources and tests
-│   ├── src/
-│   │   ├── styles/styles.css        # Authored styles published to static/ by build:ts
-│   │   └── ts/                      # TypeScript compiled to static/
-│   │       ├── main.ts              # Composition root and initialization
-│   │       ├── apiClient.ts         # Typed HTTP client
-│   │       ├── config.ts            # URLs, seasons and UI configuration
-│   │       ├── state/               # Shared map state
-│   │       ├── modes/               # Normal, comparison and flood modes
-│   │       ├── sidebar/             # Sidebar controls
-│   │       ├── map/                 # Leaflet overlays
-│   │       ├── ui/                  # GIFs, charts and progress
-│   │       └── utils/               # Dates, limits and text escaping
-│   └── tests/
-│       ├── unit/                    # Source-only Vitest tests (no prior build)
-│       └── e2e/                     # Playwright and provider-free test server
-│
-
-└── templates/
-    ├── index.html            # Main HTML layout template
-    └── scalar.html           # Interactive API docs (Scalar UI template)
+└── frontend/                        # Browser interface
+    ├── templates/
+    │   ├── index.html               # Main HTML layout template
+    │   └── scalar.html              # Interactive API docs (Scalar UI template)
+    ├── static/                      # Files served under /static/
+    │   ├── vendor/ and assets/      # Third-party libraries and versioned images
+    │   ├── main.js                  # Compiled JavaScript from TypeScript (generated)
+    │   ├── styles.css               # Published copy of src/styles/styles.css (generated)
+    │   ├── gifs/                    # Generated GIFs (temp cache, automatically cleaned)
+    │   └── flood_maps/              # Rendered risk map PNGs
+    ├── scripts/build-typescript.mjs # Clean TypeScript build (`npm run build:ts`)
+    ├── src/
+    │   ├── styles/styles.css        # Authored styles published to static/ by build:ts
+    │   └── ts/                      # TypeScript compiled to static/
+    │       ├── main.ts              # Composition root and initialization
+    │       ├── apiClient.ts         # Typed HTTP client
+    │       ├── config.ts            # URLs, seasons and UI configuration
+    │       ├── state/               # Shared map state
+    │       ├── modes/               # Normal, comparison and flood modes
+    │       ├── sidebar/             # Sidebar controls
+    │       ├── map/                 # Leaflet overlays
+    │       ├── ui/                  # GIFs, charts and progress
+    │       └── utils/               # Dates, limits and text escaping
+    └── tests/
+        ├── unit/                    # Source-only Vitest tests (no prior build)
+        └── e2e/                     # Playwright and provider-free test server
 ```
 
 ---
@@ -669,7 +676,7 @@ npm run watch:ts
 ### Testing Stack
 
 **Vitest** — unit and integration tests:
-Tests import authored TypeScript directly and run without generated `static/` JavaScript. Build output is still required to serve the application.
+Tests import authored TypeScript directly and run without generated `frontend/static/` JavaScript. Build output is still required to serve the application.
 ```bash
 npm test              # runs all tests
 npm run test:watch    # watch mode
