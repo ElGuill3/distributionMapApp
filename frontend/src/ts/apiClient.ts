@@ -244,19 +244,6 @@ export function extractTimeseriesValues(
 }
 
 // ---------------------------------------------------------------------------
-// Utilidades para construir URLs de descarga (hoy sin uso en la interfaz)
-// ---------------------------------------------------------------------------
-
-/** Construye la URL de descarga directa para un archivo en el backend. */
-export function buildDownloadUrl(
-  endpoint: string,
-  params: Record<string, string>
-): string {
-  const searchParams = new URLSearchParams(params);
-  return `${endpoint}?${searchParams.toString()}`;
-}
-
-// ---------------------------------------------------------------------------
 // Export bundle
 // ---------------------------------------------------------------------------
 
