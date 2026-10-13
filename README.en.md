@@ -214,7 +214,7 @@ with Sentinel-1 (radar, 2015–2024) or Landsat (optical, 2000–2024).
 
 - Flood susceptibility for all of Tabasco (17 municipalities) at 30 m, in 5 state-relative classes (area quintiles), with a colour-blind safe YlGnBu palette.
 - The index is the equal-weight rank average of a gradient boosting model trained on CENAPRED floods (2011, 2020), a model trained on Sentinel-1 seasonal flooding (2015–2025) and JRC 100-year flood depth. Terrain: hydrologically conditioned INEGI 5 m LiDAR (HAND, slope, TWI).
-- Validated on floods the model never saw: on the 2011 flood it beats JRC depth (ROC 0.778 vs 0.766), and on the 2023–2025 Sentinel-1 seasons it beats both JRC and the official IPCET-PNUD 2022 map (ROC ~0.72 vs ~0.61). On 2011 IPCET scores higher (0.892), probably because it was calibrated on that event. Details in `backend/data/flood_risk/metadata.json`.
+- Validated on floods the model never saw: on the 2011 flood it beats JRC depth (ROC 0.778 vs 0.766), and on the 2023–2025 Sentinel-1 seasons it beats both JRC and the official IPCET-PNUD 2022 map (ROC ~0.72 vs ~0.61). On 2011 IPCET scores higher (0.892), probably because it was calibrated on that event. Details in `backend/data/flood_risk/metadata.json` and in the [technical report, in Spanish](odd/reports/flood-susceptibility-model.md) ([PDF](odd/reports/flood-susceptibility-model/informe.pdf)).
 - Served as static XYZ tiles: the app does no processing at startup or on click.
 
 ### Local Hydrological Stations
@@ -641,11 +641,12 @@ To rebuild it from public sources (downloads ~5 GB into `.cache/`, which is not 
 ```bash
 uv sync --group floodmodel
 uv run python -m backend.floodmodel lidar-index && uv run python -m backend.floodmodel lidar-download
-uv run python -m backend.floodmodel terrain-mosaic --resolution 15
+uv run python -m backend.floodmodel boundaries
+uv run python -m backend.floodmodel terrain-mosaic --resolution 15 && uv run python -m backend.floodmodel cem
 uv run python -m backend.floodmodel terrain-aux && uv run python -m backend.floodmodel terrain-condition
 uv run python -m backend.floodmodel terrain-derivatives --resolution 15 --conditioned
 uv run python -m backend.floodmodel inventory && uv run python -m backend.floodmodel gee-features
-uv run python -m backend.floodmodel boundaries && uv run python -m backend.floodmodel stack
+uv run python -m backend.floodmodel stack
 uv run python -m backend.floodmodel labels && uv run python -m backend.floodmodel s1-seasons
 uv run python -m backend.floodmodel validate && uv run python -m backend.floodmodel final
 uv run python -m backend.floodmodel publish
@@ -992,6 +993,7 @@ The frontend architecture was structured following a **Spec-Driven Development (
 | [CHIRPS Daily](https://developers.google.com/earth-engine/datasets/catalog/UCSB-CHG_CHIRPS_DAILY) | Daily precipitation, ~5.5 km |
 | [Sentinel-1 GRD](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD) | Radar flood detection (VH), 10 m; 2015–2025 seasonal flooding for the susceptibility map |
 | [INEGI, 5 m LiDAR DEM](https://www.inegi.org.mx/temas/relieve/continental/) | Susceptibility map terrain (2007 flight, 2012 edition) |
+| [INEGI, Continuo de Elevaciones Mexicano 3.0](https://www.inegi.org.mx/app/geo2/elevacionesmex/) | 15 m fill for LiDAR gaps |
 | [CENAPRED, Atlas Nacional de Riesgos](http://www.atlasnacionalderiesgos.gob.mx/) | Observed 2011 and 2020 floods; PNUD 2018 and IPCET-PNUD 2022 maps used for comparison only |
 | [JRC/CEMS GloFAS Flood Hazard v2.1](https://developers.google.com/earth-engine/datasets/catalog/JRC_CEMS_GLOFAS_FloodHazard_v2_1) | Flood depth by return period |
 | [MERIT Hydro](https://developers.google.com/earth-engine/datasets/catalog/MERIT_Hydro_v1_0_1) | Upstream area and LiDAR gap filling |
