@@ -52,19 +52,19 @@ insert_after(
     ),
 )
 insert_after(
-    "## Producto publicado\n",
+    "## Resultados\n",
     figure(
         "figures/mapa_clases.png",
-        "Mapa publicado: clases de susceptibilidad (quintiles de superficie del estado) "
+        "Mapa de susceptibilidad: clases (quintiles de superficie del estado) "
         "y límites municipales (FAO GAUL 2025).",
     ),
 )
 insert_after(
-    "El orden del ranking sigue el puntaje medio, no el %. Las áreas excluyen el agua permanente.\n",
+    "una ficha por municipio y una vista por municipio.\n",
     figure(
         "figures/app_detalle.jpg",
-        "La aplicación en modo riesgo: capa estatal a 30 m, ficha de Nacajuca y lectura "
-        "de la clase bajo el cursor.",
+        "Consulta interactiva del mapa: capa estatal a 30 m, ficha de Nacajuca y "
+        "lectura de la clase bajo el cursor.",
     )
     + figure(
         "figures/app_municipios.jpg",
