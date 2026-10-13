@@ -200,11 +200,13 @@ El estado de Tabasco presenta una alta variabilidad hidrológica y climática, l
 | Temperatura del aire a 2 m | ERA5-Land (ECMWF) | Diario | 2000–2024 |
 | Humedad del suelo (0–7 cm) | ERA5-Land (ECMWF) | Diario | 2000–2024 |
 | Precipitación diaria | CHIRPS (UCSB) | Diario | 2000–2024 |
-| Cuerpos de agua superficial | Sentinel-2 SR | ~5 días | 2015–2024 |
 
 Cada variable genera:
 - Un **GIF animado** superpuesto al mapa, con la fecha de cada imagen.
 - Una **gráfica temporal** (media espacial en la región seleccionada) con Plotly.
+
+La detección de agua superficial no es una variable animada: se hace en el
+**modo detección de inundaciones** con Sentinel-1 (radar, 2015–2024) o Landsat (óptico, 2000–2024).
 
 ### Mapa de riesgo de inundación
 
@@ -302,10 +304,10 @@ stateDiagram-v2
 
 ### Otras características técnicas
 
-- Selección espacial mediante rectángulo dibujado en el mapa (máx. 8°×8°; 4°×4° para Sentinel-2).
+- Selección espacial mediante rectángulo dibujado en el mapa (máx. 8°×8°; 4°×4° en detección de inundaciones).
 - Temporadas: Invierno (dic–feb), Primavera (mar–may), Verano (jun–ago), Otoño (sep–nov), Año completo.
 - Rango máximo por petición: 10 años.
-- Caché de GIFs en disco con limpieza automática cada 60 minutos.
+- Caché de GIFs en disco: se eliminan los de más de 60 minutos y la limpieza se ejecuta cada 10 minutos.
 - Sidebar colapsable para maximizar el área del mapa.
 
 ---
@@ -457,12 +459,13 @@ flowchart LR
 
 **Dependencias Node** (ver `package.json`):
 
-```
-vitest           # tests unitarios e integración (TypeScript)
-playwright       # tests E2E en navegador
-typescript
-@types/leaflet
-```
+| Tipo | Paquetes |
+|---|---|
+| Ejecución | `leaflet`, `gifuct-js`, `lucide` |
+| Desarrollo | `typescript`, `@types/leaflet`, `@types/node`, `vitest`, `@vitest/browser`, `jsdom`, `jszip`, `@playwright/test`, `playwright`, `eslint`, `@eslint/js`, `typescript-eslint`, `prettier` |
+
+En el navegador, Leaflet, Leaflet.draw, Plotly, gifuct-js y JSZip se cargan desde CDN
+(`frontend/templates/index.html`).
 
 ---
 
@@ -525,17 +528,17 @@ cp .env.example .env
 |---|---|---|
 | `GEE_PROJECT` | `inundaciones-proyecto` | ID del proyecto de Google Cloud con la API de Earth Engine habilitada. |
 | `FLASK_DEBUG` | `false` | Activa el modo debug de Flask si se establece en `true`. |
-| `CONAGUA_HIDROS_STATIONS` | `BDCTB,SPTTB` | Claves de las estaciones hidrométricas a scrapear (separadas por comas). |
-| `CONAGUA_CLIMAS_STATIONS` | *(vacío)* | Claves de las estaciones climatológicas a scrapear (separadas por comas). |
+| `CONAGUA_HIDROS_STATIONS` | `BDCTB,SPTTB` | Claves de las estaciones hidrométricas a descargar (separadas por comas). |
+| `CONAGUA_CLIMAS_STATIONS` | `BDCTB,SPTTB` | Claves de las estaciones climatológicas a descargar (separadas por comas). |
 | `MAX_SPAN_DEG` | `8.0` | Extensión espacial máxima permitida en grados para peticiones GEE. |
 | `MAX_YEARS_RANGE` | `10.0` | Rango de fechas máximo permitido en años para peticiones GEE. |
-| `MAX_SPAN_DEG_S2` | `4.0` | Límite restrictivo en grados para Sentinel-2 (debido a alta resolución). |
+| `MAX_SPAN_DEG_S2` | `4.0` | Extensión máxima en grados para la detección de inundaciones (Sentinel-1 y Landsat). |
 | `MAX_TOTAL_PIXELS` | `26000000` | Límite máximo de píxeles para procesamiento GEE. |
 | `BASE_PIXELS_PER_FRAME` | `589824` | Tamaño base de píxeles por frame de animación (768x768). |
 | `BASE_PIXELS_S2` | `262144` | Tamaño base de píxeles por frame para Sentinel-2 (512x512). |
 | `MIN_GIF_DIM` | `256` | Dimensión mínima en píxeles permitida para el GIF generado. |
 | `GIF_MAX_AGE_MINUTES` | `60` | Edad máxima en minutos de los GIFs en caché antes de ser eliminados. |
-| `GIF_CLEANUP_INTERVAL_S` | `600` | Intervalo del daemon de limpieza en segundos (por defecto 10 minutos). |
+| `GIF_CLEANUP_INTERVAL_S` | `600` | Intervalo del hilo de limpieza de GIFs en segundos (10 minutos). |
 | `GEE_MODIS_NDVI` | `MODIS/061/MOD13Q1` | ID del dataset de NDVI en Google Earth Engine. |
 | `GEE_ERA5_LAND_DAILY` | `ECMWF/ERA5_LAND/DAILY_AGGR` | ID del dataset de temperatura y humedad del suelo de ERA5-Land. |
 | `GEE_CHIRPS_DAILY` | `UCSB-CHG/CHIRPS/DAILY` | ID del dataset de precipitación CHIRPS. |
@@ -548,20 +551,20 @@ cp .env.example .env
 | `RATE_LIMIT_FLOOD_STATS` | `30/minute` | Estadísticas de inundación, por IP. |
 | `RATE_LIMIT_STATION` | `60/minute` | Cada endpoint de estaciones, por IP. |
 | `RATE_LIMIT_FORECAST` | `60/minute` | Proxy de pronóstico, por IP. |
+| `GIF_DOWNLOAD_TIMEOUT_S` | `120` | Timeout en segundos para descargar el GIF desde Earth Engine. |
+| `SSE_TASK_QUEUE_TIMEOUT_S` | `60` | Segundos entre comentarios keep-alive del canal SSE. |
+| `SSE_WAIT_ATTEMPTS` | `100` | Intentos (cada 0,1 s) para encontrar la cola de una tarea antes de responder "Tarea no encontrada". |
+| `SSE_PROGRESS_RETENTION_S` | `3600` | Retención del progreso terminado (ver la tabla de SSE en Arquitectura técnica). |
+| `SSE_MAX_PROGRESS_TASKS` | `1024` | Máximo de tareas de progreso registradas. |
+| `SSE_MAX_PROGRESS_MESSAGES` | `128` | Máximo de mensajes por tarea. |
+| `BDCTB_FORECAST_API_BASE_URL` | `http://127.0.0.1:8765` | API local de pronóstico usada por el proxy `/api/v1/forecasts/bdctb`. |
+| `BASE_DIR_OVERRIDE` | *(sin definir)* | Raíz alternativa del proyecto para datos y archivos estáticos (usada por los tests). |
 
 Los límites `MAX_SPAN_DEG`, `MAX_YEARS_RANGE` y `MAX_SPAN_DEG_S2` deben ser números finitos positivos (se permiten fracciones). Valores vacíos, malformados, cero, negativos, NaN o infinitos impiden el arranque con `<ENV_KEY> must be a finite number greater than zero.`, sin mostrar el valor. Los valores predeterminados siguen siendo 8°, 10 años y 4°, respectivamente.
 
 La página HTML incorpora solo estos tres límites numéricos como JSON antes de cargar los módulos del cliente. El dibujo de áreas usa la extensión configurada y conserva la exportación `MAX_SPAN_DEG`; un contexto ausente o malformado usa los valores predeterminados. Los pedidos normales y de comparación verifican la extensión y el rango de años UTC antes de cambiar la animación o el progreso. La detección de inundaciones verifica `MAX_SPAN_DEG_S2` para ambos satélites antes de limpiar capas o deshabilitar el botón. Los pedidos rechazados conservan la vista y no envían solicitudes HTTP/SSE. La validación del servidor sigue siendo la autoridad; recargá la página después de cambiar la configuración.
 
 Las cuotas usan la notación de Flask-Limiter (por ejemplo, `1/minute` o `10/minute;100/hour`). Todos los conteos deben ser positivos. Valores vacíos o inválidos impiden el arranque con `<ENV_KEY> must specify positive request rates.`, sin mostrar el valor, incluso con el limitador desactivado. Las cuotas son independientes por endpoint/IP, locales al proceso y cuentan también solicitudes HTTP rechazadas. Exceder la cuota devuelve el JSON HTTP 429 existente con `Cache-Control: no-store`.
-| `RATE_LIMIT_GIF` | `30/minute` | Límite de peticiones para generación de GIFs. |
-| `RATE_LIMIT_TIMESERIES` | `60/minute` | Límite de peticiones para descarga de series temporales. |
-| `RATE_LIMIT_EXPORT` | `10/minute` | Límite de peticiones para exportación de ZIPs. |
-| `RATE_LIMIT_FLOOD` | `60/minute` | Límite de peticiones para mapas de riesgo. |
-| `RATE_LIMIT_STATION` | `60/minute` | Límite de peticiones para datos de estaciones locales. |
-| `GIF_DOWNLOAD_TIMEOUT_S` | `120` | Timeout para la descarga de GIFs desde Earth Engine. |
-| `SSE_TASK_QUEUE_TIMEOUT_S` | `60` | Timeout de la cola SSE para el canal de progreso. |
-| `SSE_WAIT_ATTEMPTS` | `100` | Intentos de espera para registrar la cola en el progress endpoint. |
 
 ---
 
@@ -577,7 +580,7 @@ Seguí las instrucciones en pantalla. Tras autenticarte, verificá que funcione:
 python -c "import ee; ee.Initialize(); print('GEE OK')"
 ```
 
-Editá `.env` o `backend/config.py` y configurá el nombre de tu proyecto de Google Cloud (`GEE_PROJECT`).
+Editá `.env` y configurá el ID de tu proyecto de Google Cloud (`GEE_PROJECT`).
 
 > **¿No tenés proyecto GEE?** Ve a [console.cloud.google.com](https://console.cloud.google.com), creá un proyecto, habilitá la API *Earth Engine* y anotá el ID del proyecto.
 
@@ -585,7 +588,10 @@ Editá `.env` o `backend/config.py` y configurá el nombre de tu proyecto de Goo
 
 ### 5. Datos de estaciones locales
 
-Los archivos `SPTTB.csv` y `BDCTB.csv` deben estar en la carpeta `backend/data/stations/`. El formato esperado:
+`uv run distribution-map` descarga las estaciones al iniciar, así que normalmente no hace
+falta copiar nada. Los CSV quedan en `backend/data/stations/hidros/` y
+`backend/data/stations/climas/` (también se aceptan directamente en `backend/data/stations/`).
+El formato esperado:
 
 ```
 <línea 1–6: metadatos (se omiten automáticamente)>
@@ -593,7 +599,11 @@ Fecha,Nivel(m),...
 YYYY-MM-DD,valor,...
 ```
 
-Si necesitás agregar nuevas estaciones, registralas en `backend/config.py` bajo `LOCAL_STATIONS`.
+`LOCAL_STATIONS` se construye automáticamente a partir de esos CSV. Para agregar una estación:
+
+1. Agregá su clave a `CONAGUA_HIDROS_STATIONS` o `CONAGUA_CLIMAS_STATIONS` en `.env`.
+2. Registrá sus coordenadas en `STATION_COORDS` dentro de `backend/config.py`; las estaciones
+   sin coordenadas conocidas se rechazan al descargar.
 
 ---
 
@@ -662,8 +672,6 @@ Accede desde el navegador a: **http://127.0.0.1:5000**
 6. El GIF se superpone automáticamente al mapa. Debajo del mapa aparece la **gráfica temporal** de la media espacial para la región seleccionada.
 7. Usa la **barra de controles** en la parte inferior para reproducir, pausar, avanzar por frames y cambiar la velocidad.
 8. Para limpiar y comenzar de nuevo, pulsa el botón **"Limpiar"** en la barra de herramientas superior.
-
-> **Nota sobre Sentinel-2 (cuerpos de agua):** el área máxima permitida es 4°×4° debido a la alta resolución (10 m) de este sensor.
 
 ---
 
@@ -740,8 +748,9 @@ distributionMapApp/
 │   │   ├── temperature.py        # Temperatura — ERA5-Land (Kelvin → Celsius)
 │   │   ├── soil.py               # Humedad del suelo — ERA5-Land
 │   │   ├── precipitation.py      # Precipitación diaria — CHIRPS
-│   │   ├── water.py              # Cuerpos de agua — Sentinel-2 SR (NDWI)
+│   │   ├── water.py              # Detección de inundaciones — Sentinel-1 (VH) y Landsat (MNDWI)
 │   │   ├── flood_risk.py         # Renderizado de mapas FHI desde GeoTIFFs locales
+│   │   ├── schemas.py            # Esquemas Pydantic de validación de parámetros
 │   │   └── utils.py              # Funciones compartidas: validación bbox, temporadas, dims GIF
 │   ├── services/
 │   │   ├── gif_service.py        # Descarga GIF desde GEE, anotación con PIL, caché, limpieza
@@ -756,6 +765,7 @@ distributionMapApp/
 │   │   ├── run_app.py            # Comando `uv run distribution-map`
 │   │   ├── bootstrap_stations.py # Descarga inicial de estaciones
 │   │   ├── generate_schemas.py   # Esquemas Pydantic → openapi.yaml
+│   │   ├── convert_lf.py         # Normaliza finales de línea a LF
 │   │   └── quality/              # coverage.sh, lint.sh, format.sh
 │   ├── data/
 │   │   ├── mapa_riesgo/
@@ -797,18 +807,21 @@ distributionMapApp/
 
 | Endpoint | Método | Parámetros principales | Respuesta |
 |---|---|---|---|
-| `GET /api/ndvi-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, ndvi[] }` |
-| `GET /api/era5-temp-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, temp[] }` |
-| `GET /api/era5-soil-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, soil_pct[] }` |
-| `GET /api/imerg-precip-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, precip_mm[] }` |
-| `GET /api/water-gif-bbox` | `GET` | `start`, `end`, `bbox`, `task_id` | `{ gifUrl, bbox, dates, water_ha[] }` |
-| `GET /api/<var>-timeseries-bbox` | `GET` | `start`, `end`, `bbox` | `{ dates, bbox, <valores>[] }` |
-| `GET /api/gif-progress/<task_id>` | `GET` | — | SSE: `{ progress: 0–100, message }` |
-| `GET /api/flood-risk-municipio` | `GET` | `muni` | `{ mapUrl, bbox }` |
-| `GET /api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, dates, level_m[] }` |
-| `POST /api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | Archivo ZIP (datos CSV + GIFs + metadatos) |
-| `GET /api/docs` | `GET` | — | Interfaz de Scalar UI con la documentación interactiva de la API |
-| `GET /api/docs/openapi.yaml` | `GET` | — | Especificación OpenAPI 3.1.0 del sistema en formato YAML |
+| `/api/ndvi-gif-bbox` | `GET` | `start`, `end` o `year` + `season`, `bbox`, `ratio`, `task_id` | `{ gifUrl, bbox, dates, ndvi[] }` |
+| `/api/era5-temp-gif-bbox` | `GET` | ídem | `{ gifUrl, bbox, dates, temp[] }` |
+| `/api/era5-soil-gif-bbox` | `GET` | ídem | `{ gifUrl, bbox, dates, soil_pct[] }` |
+| `/api/imerg-precip-gif-bbox` | `GET` | ídem | `{ gifUrl, bbox, dates, precip_mm[] }` |
+| `/api/{ndvi,era5-temp,era5-soil,imerg-precip}-timeseries-bbox` | `GET` | `start`, `end` o `year` + `season`, `bbox` | `{ dates, bbox, <valores>[] }` |
+| `/api/gif-progress/<task_id>` | `GET` | — | SSE: `{ progress: 0–100 o -1, message }` |
+| `/api/flood-risk-municipio` | `GET` | `muni`, `palette` (opcional) | `{ mapUrl, bbox }` |
+| `/api/flood-detection` | `GET` | `start`, `end`, `bbox`, `satellite` (`sentinel1`/`landsat`), `auto`, `threshold` | `{ satellite, computed_threshold, background_layer, water_layer, … }` |
+| `/api/flood-stats` | `GET` | mismos que `/api/flood-detection` | `{ total_ha }` |
+| `/api/local-stations` | `GET` | — | Catálogo `{ <id>: { name, type, coords, station_name, municipio } }` |
+| `/api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, type, dates, value[], unit, level_m[], precip_mm[] }` |
+| `/api/v1/forecasts/bdctb` | `GET` | — | Proxy a la API local de pronóstico (`503` hasta que exista una caché válida) |
+| `/api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | Archivo ZIP (CSV + GIFs + metadatos) |
+| `/api/docs` | `GET` | — | Documentación interactiva (Scalar UI) |
+| `/api/docs/openapi.yaml` | `GET` | — | Especificación OpenAPI 3.1.0 en YAML |
 
 **Parámetros comunes:**
 - `start` / `end`: fechas en formato `YYYY-MM-DD`. Todas las rutas GIF y de series temporales, incluyendo NDVI, también aceptan `year` + `season`; el par explícito completo tiene prioridad, de lo contrario el modo estacional reemplaza el par.
@@ -816,7 +829,7 @@ distributionMapApp/
 - `ratio`: relación ancho/alto del GIF; debe ser un número positivo y finito.
 - `task_id`: identificador único de tarea para el canal SSE de progreso.
 - `muni`: clave del municipio (p. ej. `centla`, `macuspana`, `tenosique`).
-- `station`: clave de la estación (`SPTTB` o `BDCTB`).
+- `station`: identificador de la estación con sufijo de tipo (`BDCTB_hidro`, `BDCTB_clima`, `SPTTB_hidro`, `SPTTB_clima`); el catálogo completo lo devuelve `/api/local-stations`.
 
 ---
 
@@ -894,36 +907,32 @@ Notas:
 ### Límites de la API de Google Earth Engine
 
 - **Rango de fechas máximo por petición:** 10 años.
-- **Tamaño máximo del bounding box:** 8°×8° para todas las variables excepto Sentinel-2, que se limita a 4°×4° debido a su resolución de 10 m.
+- **Tamaño máximo del bounding box:** 8°×8° para las animaciones y 4°×4° para la detección de inundaciones.
 - **Píxeles máximos totales:** 26,000,000 (el sistema ajusta automáticamente las dimensiones del GIF).
 - El tiempo de respuesta de GEE varía entre 15 segundos y varios minutos dependiendo del tamaño de la región, la variable y el período.
 
 ### Caché de GIFs
 
-Los GIFs generados se almacenan en `frontend/static/gifs/` con el nombre `<variable>_<start>_<end>_<hash>.gif`. Se eliminan automáticamente cuando superan los **60 minutos de antigüedad** (configurable en `backend/config.py` mediante `GIF_MAX_AGE_MINUTES`).
+Los GIFs generados se almacenan en `frontend/static/gifs/` con el nombre `<variable>_<start>_<end>_<hash-del-bbox>.gif`. Un hilo de limpieza corre cada `GIF_CLEANUP_INTERVAL_S` segundos (10 minutos) y borra los que superan `GIF_MAX_AGE_MINUTES` (60 minutos). Ambos valores se configuran en `.env`.
 
-### Despliegue en producción
+### Ciclo de vida del runtime
 
-Importar `backend.app` construye las rutas Flask sin iniciar Earth Engine, crear directorios de ejecución ni lanzar la limpieza de GIFs. `uv run distribution-map` y `python -m backend.app` inicializan antes de servir; WSGI `backend.app:app` inicializa en la primera solicitud. `initialize_runtime()` es local al proceso y seguro entre hilos: llamadas repetidas no duplican la limpieza, y un fallo de EE impide iniciarla. El preflight de dependencias nunca inicia el runtime.
+La aplicación está pensada para ejecutarse localmente con `uv run distribution-map`; no se
+incluye configuración de servidores, proxies ni despliegue.
+
+Importar `backend.app` construye las rutas Flask sin iniciar Earth Engine, crear directorios de ejecución ni lanzar la limpieza de GIFs. `uv run distribution-map` y `python -m backend.app` inicializan antes de servir (este último escucha en `0.0.0.0:5000`); un servidor WSGI que cargue `backend.app:app` inicializa en la primera solicitud. `initialize_runtime()` es local al proceso y seguro entre hilos: llamadas repetidas no duplican la limpieza, y un fallo de EE impide iniciarla. El preflight de dependencias nunca inicia el runtime.
 
 Los tests sintéticos usan `app.config["INITIALIZE_RUNTIME"] = False` para desactivar el arranque por solicitud. Las llamadas explícitas al inicializador siguen necesitando proveedores simulados y archivos aislados.
 
-Para un entorno de producción se recomienda:
-
-```bash
-pip install gunicorn
-gunicorn --workers 1 --threads 4 -b 0.0.0.0:8000 backend.app:app
-```
-
-Mantener un worker para el registro SSE local al proceso; los hilos permiten atender SSE mientras se genera el GIF. No escalar este comando a varios workers/réplicas sin implementar antes un backend de progreso compartido. Configurar los timeouts del servidor/proxy para solicitudes de generación que pueden tardar varios minutos.
-
-Junto con un servidor proxy inverso (Nginx o Apache) que sirva los archivos estáticos directamente.
+El registro de progreso SSE es local al proceso: cualquier forma de servir la aplicación tiene
+que usar **un solo proceso** con varios hilos, o el progreso de una generación no llegará al
+cliente.
 
 ---
 
 ## Notas de diseño
 
-La reorganización del código frontend siguió un ciclo de **Spec-Driven Development (SDD)**. El archivo `main.ts`, que originalmente contenía toda la lógica de aplicación (~1334 líneas), se dividió en módulos con responsabilidades claras:
+La reorganización del código frontend siguió un ciclo de **Spec-Driven Development (SDD)**. El archivo `main.ts`, que originalmente contenía toda la lógica de aplicación, se dividió en módulos con responsabilidades claras:
 
 - **`main.ts`** actúa como *composition root*: solo inicializa los módulos, mantiene referencias DOM de infraestructura y delega todo comportamiento de negocio a los módulos de modo.
 
@@ -931,7 +940,7 @@ La reorganización del código frontend siguió un ciclo de **Spec-Driven Develo
 
 - **`state/mapState.ts`** provee un store de estado mutable tipado con funciones de lectura/escritura para bbox, modo de operación, variables, series temporales, players de animación y overlays de mapa.
 
-- **`modes/`** encapsula la lógica de cada modo de operación (`normalMode`, `compareMode`, `floodRiskMode`) de forma que agregar un nuevo modo no requiere modificar `main.ts`, solo crear un nuevo archivo en este directorio.
+- **`modes/`** encapsula la lógica de cada modo de operación (`normalMode`, `compareMode`, `floodRiskMode`, `inundacionesMode`); agregar un modo implica crear su módulo y registrarlo en `main.ts` y en `sidebar/modoSection.ts`.
 
 El refactor no cambió el comportamiento visible de la aplicación ni los contratos de la API con el backend.
 
@@ -939,7 +948,8 @@ El refactor no cambió el comportamiento visible de la aplicación ni los contra
 
 ## Posibles mejoras futuras
 
-- Exportar series temporales y datos de estaciones a CSV desde la interfaz.
+- Exportar series sueltas a CSV sin empaquetarlas en el ZIP de análisis.
+- Mantener las estaciones actualizadas automáticamente mientras la aplicación corre (hoy el planificador `backend/scrapers/runner.py` se inicia a mano).
 - Incorporar más estaciones hidrológicas o fuentes de datos locales.
 - Soporte para selección por polígono irregular (no solo rectángulo).
 
@@ -952,7 +962,8 @@ El refactor no cambió el comportamiento visible de la aplicación ni los contra
 | [MODIS MOD13Q1](https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD13Q1) | NDVI, resolución 250 m, cada 16 días |
 | [ERA5-Land Daily](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_DAILY_AGGR) | Temperatura del aire y humedad del suelo, ~9 km |
 | [CHIRPS Daily](https://developers.google.com/earth-engine/datasets/catalog/UCSB-CHG_CHIRPS_DAILY) | Precipitación diaria, ~5.5 km |
-| [Sentinel-2 SR Harmonized](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED) | Cuerpos de agua (NDWI), 10 m |
+| [Sentinel-1 GRD](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD) | Detección de inundaciones por radar (VH), 10 m |
+| [Landsat 5/7/8/9 Collection 2 L2](https://developers.google.com/earth-engine/datasets/catalog/landsat) | Detección de inundaciones óptica (MNDWI), 30 m |
 | [CONAGUA / IMTA](https://www.gob.mx/conagua) | Datos hidrométricos de estaciones locales |
 | [Google Earth Engine](https://earthengine.google.com/) | Plataforma de procesamiento satelital en la nube |
 
