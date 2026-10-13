@@ -5,3 +5,6 @@ dist/
 build/
 *.d.ts
 package-lock.json
+
+# Jinja templates: Prettier does not understand {{ }} / {% %} syntax
+frontend/templates/

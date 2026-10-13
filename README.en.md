@@ -906,12 +906,12 @@ uv run backend/scripts/quality/lint.sh
 uv run backend/scripts/quality/format.sh
 ```
 
-**TypeScript** — Linting and formatting checks using ESLint and Prettier.
+**TypeScript and CSS** — Linting and formatting checks using ESLint and Prettier.
 
 ```bash
-npm run lint:ts
-npm run format:ts
-npm run quality:ts
+npm run lint:ts      # ESLint over frontend/src/ts and frontend/tests
+npm run format:ts    # Prettier check over the TypeScript and authored CSS
+npm run quality:ts   # Lint + format check
 ```
 
 ### Google Earth Engine API Limits

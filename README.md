@@ -922,11 +922,11 @@ Notas:
 - La primera pasada excluye `frontend/static/`, `backend/scripts/` y tests Python para evitar ruido de revisión.
 - Si usás `uv run`, `uv` se asegura de que el entorno esté levantado correctamente antes de correr el script.
 
-**TypeScript** — lint y format check con ESLint + Prettier:
+**TypeScript y CSS** — lint y format check con ESLint + Prettier:
 
 ```bash
-npm run lint:ts      # Ejecuta ESLint sobre src/ts y tests TS permitidos
-npm run format:ts    # Ejecuta Prettier en modo check
+npm run lint:ts      # Ejecuta ESLint sobre frontend/src/ts y frontend/tests
+npm run format:ts    # Prettier en modo check sobre el TypeScript y el CSS fuente
 npm run quality:ts   # Corre lint + format check
 ```
 
