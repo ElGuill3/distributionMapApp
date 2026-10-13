@@ -33,6 +33,26 @@ Antes de ejecutarlo, prepare:
   predeterminadas de aplicación de gcloud (normalmente
   `~/.config/gcloud/application_default_credentials.json`).
 
+El arranque sigue estos pasos; cualquier fallo termina con código 2 y un mensaje
+seguro, sin dejar procesos a medias:
+
+```mermaid
+flowchart TD
+    start(["uv run distribution-map"]) --> lock{"¿Otro supervisor activo?"}
+    lock -- sí --> fail(["Termina con código 2"])
+    lock -- no --> files{"¿.venv, tsc, Node.js<br/>y puerto 5000 libre?"}
+    files -- no --> fail
+    files -- sí --> pre["Preflight: python -m backend.app_preflight<br/>GEE_PROJECT + credenciales de Earth Engine"]
+    pre -- falla --> fail
+    pre -- ok --> boot["Descarga de estaciones<br/>python -m backend.scripts.bootstrap_stations"]
+    boot -- "ninguna estación utilizable" --> fail
+    boot -- ok --> build["Build del frontend<br/>node frontend/scripts/build-typescript.mjs"]
+    build -- falla --> fail
+    build -- ok --> flask["flask --app backend.app run<br/>http://127.0.0.1:5000"]
+    flask --> logs[("Registros en<br/>.cache/bdctb-local-app/logs/")]
+    flask -- Ctrl+C --> stop(["Detiene el backend"])
+```
+
 El comando valida primero esos requisitos, ejecuta una descarga inicial de las
 estaciones CONAGUA configuradas en `CONAGUA_HIDROS_STATIONS` y
 `CONAGUA_CLIMAS_STATIONS`, compila el frontend y después sirve la aplicación en
@@ -69,6 +89,17 @@ del comando público:
 ```bash
 .venv/bin/python backend/scripts/run_local_forecast_stack.py
 .venv/bin/python backend/scripts/run_local_forecast_stack.py --model-repo /ruta/al/repositorio
+```
+
+```mermaid
+flowchart LR
+    sup["backend/scripts/run_local_forecast_stack.py"] --> app["Aplicación Flask<br/>127.0.0.1:5000"]
+    sup --> api["API de pronóstico<br/>127.0.0.1:8765"]
+    sup --> worker["Worker automático<br/>(revisa cada ~15 min)"]
+    browser(["Navegador"]) --> app
+    app -- "proxy /api/v1/forecasts/bdctb" --> api
+    worker -- escribe --> cache[("var/forecasts/bdctb/latest-v1.json")]
+    api -- lee --> cache
 ```
 
 El modelo es una dependencia local explícita y permanece en un repositorio
@@ -186,19 +217,39 @@ Cada variable genera:
 
 - **San Pedro — SPTTB** (lat 17.79°, lon −91.16°): estación del río San Pedro, Balancán.
 - **Boca del Cerro — BDCTB** (lat 17.43°, lon −91.48°): estación del río Usumacinta, Tenosique.
-- Los datos se actualizan dinámicamente mediante el servicio daemon de scrapers o se leen desde archivos CSV locales. Se aplica interpolación temporal para huecos de hasta 7 días.
+- Los datos se descargan de CONAGUA al iniciar la aplicación y se leen desde los CSV locales en `backend/data/stations/`. Se aplica interpolación temporal para huecos de hasta 7 días.
 - Sus marcadores aparecen en el mapa cuando no hay animación activa; al pulsar sobre ellos se puede cargar su serie completa (2000–2024).
 
-### Servicio Daemon de Scrapers
+### Descarga de estaciones CONAGUA
 
-El proyecto incluye un módulo para automatizar la obtención de datos locales directamente de los servidores de CONAGUA y SMN:
-- **Descargas FTP automáticas**: Se conecta al servidor FTP de CONAGUA (`sih.conagua.gob.mx`) para descargar los datos de nivel de las estaciones configuradas en formato CSV.
-- **Planificador de Tareas**: Utiliza `APScheduler` para ejecutar descargas automáticas:
-  - Datos de CONAGUA Hidros: Todos los lunes a las 02:00 AM.
-  - Datos de CONAGUA Climas: Todos los lunes a las 02:30 AM.
-  - Datos del SMN (Stub): Cada hora.
-- **Ejecución al inicio (Bootstrap)**: Corre inmediatamente todos los scrapers configurados al iniciar el contenedor para asegurar que los datos estén al día.
-- **Escritura Atómica**: Las descargas FTP se guardan de forma atómica para evitar corrupción de datos si la conexión se interrumpe.
+Cada `uv run distribution-map` descarga una vez las estaciones configuradas antes de
+servir la aplicación (`backend/scripts/bootstrap_stations.py`):
+
+- **HTTPS primero, FTP como alternativa**: se consulta
+  `https://sih.conagua.gob.mx/basedatos/<Hidros|Climas>/<ESTACION>.csv` y, si falla, el
+  servidor FTP de CONAGUA.
+- **Validación antes de reemplazar**: un CSV nuevo solo reemplaza al local si tiene
+  metadatos de una estación con coordenadas conocidas y al menos una fecha con una
+  medición válida.
+- **Escritura atómica**: las descargas se preparan en una carpeta temporal y se mueven
+  con `os.replace`, así una conexión interrumpida nunca deja un CSV a medias.
+
+```mermaid
+flowchart TD
+    cfg["CONAGUA_HIDROS_STATIONS<br/>CONAGUA_CLIMAS_STATIONS"] --> dl["Descarga a carpeta temporal<br/>HTTPS → FTP"]
+    dl --> valid{"¿Metadatos, coordenadas conocidas<br/>y una medición válida?"}
+    valid -- sí --> replace["Normaliza a UTF-8 y reemplaza<br/>backend/data/stations/&lt;hidros|climas&gt;/"]
+    valid -- no --> keep["Advierte en stderr y conserva<br/>el CSV local anterior"]
+    replace --> usable{"¿Hay al menos una<br/>estación utilizable?"}
+    keep --> usable
+    usable -- sí --> ok(["Continúa el arranque"])
+    usable -- no --> abort(["Termina con código 2"])
+```
+
+`backend/scrapers/runner.py` contiene además un planificador opcional con APScheduler
+(CONAGUA Hidros los lunes a las 02:00, Climas a las 02:30 y un stub de SMN cada hora).
+El lanzador **no** lo inicia; si se quiere mantener las estaciones al día mientras la
+aplicación corre, se ejecuta aparte con `uv run python -m backend.scrapers.runner`.
 
 ### Renderizado seguro de texto en el navegador
 
@@ -240,34 +291,65 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 
 ## Arquitectura técnica
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                               Navegador                                │
-│    TypeScript + Leaflet  │  Plotly.js  │  gifuct-js  │  Scalar UI      │
-│    (mapa, controles UI, animación frame a frame, documentación API)    │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ HTTP / SSE
-┌───────────────────────────────────▼────────────────────────────────────┐
-│                       Backend Flask (Python 3)                         │
-│    backend/routes/ → backend/gee/ → backend/services/                   │
-└─────────────┬──────────────────────────────────────────┬───────────────┘
-              │ earthengine-api                          │ Shared Volume
-┌─────────────▼─────────────┐              ┌─────────────▼───────────────┐
-│ Google Earth Engine (nube)│              │  Servicio Daemon de Scraper │
-│ MODIS · ERA5 · Sentinel-2 │              │  (APScheduler + FTP)        │
-└───────────────────────────┘              └─────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph browser["Navegador"]
+        ui["TypeScript + Leaflet + Leaflet.draw<br/>Plotly.js · gifuct-js · Scalar UI"]
+    end
+    subgraph flask["Backend Flask — backend/app.py"]
+        routes["backend/routes/<br/>blueprints de la API"]
+        gee["backend/gee/<br/>colecciones y validación"]
+        services["backend/services/<br/>GIFs, estaciones, exportación"]
+        routes --> gee
+        routes --> services
+    end
+    subgraph disk["Disco local"]
+        gifs[("frontend/static/gifs/<br/>frontend/static/flood_maps/")]
+        stations[("backend/data/stations/")]
+        fhi[("backend/data/mapa_riesgo/")]
+    end
+    ui -- "HTTP / SSE" --> routes
+    gee -- earthengine-api --> earth[("Google Earth Engine<br/>MODIS · ERA5-Land · CHIRPS<br/>Landsat · Sentinel-1")]
+    services --> gifs
+    services --> stations
+    gee --> fhi
+    boot["Arranque: bootstrap_stations<br/>(una vez por inicio)"] -- "HTTPS / FTP" --> conagua[("CONAGUA")]
+    boot --> stations
 ```
 
-**Flujo de una petición típica:**
+**Flujo de una petición típica de animación:**
 
-1. El usuario dibuja un rectángulo en el mapa y elige variable, año y temporada.
-2. El frontend envía dos peticiones en paralelo:
-   - `GET /api/<variable>-gif-bbox` — genera el GIF animado.
-   - `GET /api/<variable>-timeseries-bbox` — obtiene la serie temporal.
-3. El backend consulta la colección GEE correspondiente, filtra por fecha y región, y solicita el GIF a través de `getVideoThumbURL`.
-4. El GIF se descarga desde GEE, PIL superpone la fecha en cada frame, y el archivo se guarda en `frontend/static/gifs/`.
-5. El backend responde con `{ gifUrl, bbox, dates, <valores> }`.
-6. El frontend superpone el GIF sobre el mapa Leaflet usando `L.imageOverlay` y renderiza la gráfica con Plotly.
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant FE as Frontend (TypeScript)
+    participant API as Flask
+    participant GEE as Google Earth Engine
+    U->>FE: Dibuja el área y elige variable, año y temporada
+    par Animación
+        FE->>API: GET /api/{variable}-gif-bbox?task_id=…
+    and Progreso
+        FE->>API: EventSource /api/gif-progress/{task_id}
+    and Serie temporal
+        FE->>API: GET /api/{variable}-timeseries-bbox
+    end
+    alt El GIF ya existe en frontend/static/gifs/
+        API->>GEE: Serie de fechas y valores
+        API-->>FE: { gifUrl, bbox, dates, valores }
+    else Hay que generarlo
+        API->>GEE: getVideoThumbURL + serie de fechas
+        GEE-->>API: GIF original y valores
+        API->>API: PIL agrega la fecha a cada frame
+        API-->>FE: SSE { progress, message } … 100
+        API-->>FE: { gifUrl, bbox, dates, valores }
+    end
+    FE->>FE: gifuct-js decodifica los frames
+    FE->>U: Cada frame se pinta con L.imageOverlay y la serie con Plotly
+```
+
+El nombre del GIF en caché combina variable, fechas y un hash del bbox: repetir la misma
+consulta reutiliza el GIF del disco sin regenerarlo, aunque la serie temporal se vuelve a
+consultar en Earth Engine.
 
 El progreso de generación usa **Server-Sent Events (SSE)** en `/api/gif-progress/<task_id>`. El registro es **local al proceso**: usar un proceso de aplicación con hilos concurrentes permite que la generación y SSE accedan al mismo registro.
 
