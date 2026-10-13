@@ -73,7 +73,7 @@ El plan era trabajar a 10 m. El relleno de depresiones por costo mínimo (*least
 
 ### 3.2 Acondicionamiento hidrológico
 
-El LiDAR de INEGI **no tiene datos sobre ríos y lagunas** y deja huecos de cobertura. Si no se corrige, el HAND (altura sobre el drenaje más cercano) queda referido a cauces equivocados.
+El LiDAR de INEGI **no tiene datos sobre ríos y lagunas** (el láser no vuelve del agua), deja huecos donde no hubo vuelo y guarda el mar como una superficie plana a 0.0 m (ese último detalle explica el error de §3.3). Si no se corrige, el HAND (altura sobre el drenaje más cercano) queda referido a cauces equivocados.
 
 1. Los huecos se rellenan primero con el CEM 3.0 de INEGI (15 m) y, donde tampoco hay CEM, con MERIT (~90 m). Cada fuente se corrige por su sesgo vertical mediano respecto del LiDAR: **−0.40 m** para el CEM y **−1.64 m** para MERIT.
 2. El agua (ocurrencia JRC ≥ 50 % o área de drenaje MERIT ≥ 500 km²) se incorpora a la red de drenaje.
