@@ -6,4 +6,3 @@ backend/routes/gif_routes.py whitespace=cr-at-eol
 backend/routes/timeseries_routes.py whitespace=cr-at-eol
 backend/routes/progress_routes.py whitespace=cr-at-eol
 backend/services/gif_service.py whitespace=cr-at-eol
-backend/gee/flood_risk.py whitespace=cr-at-eol

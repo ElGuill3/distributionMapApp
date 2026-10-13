@@ -21,7 +21,6 @@ EXPECTED_URL_RULES = frozenset(
         "/api/era5-temp-timeseries-bbox",
         "/api/export/bundle",
         "/api/flood-detection",
-        "/api/flood-risk-municipio",
         "/api/flood-risk/metadata",
         "/api/flood-risk/municipalities",
         "/api/flood-risk/tiles/<int:z>/<int:x>/<int:y>.png",

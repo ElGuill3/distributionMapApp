@@ -31,7 +31,7 @@ def mock_modules():
     mock_ee_module.Algorithm = MagicMock()
     sys.modules["ee"] = mock_ee_module
 
-    # Mock de rasterio (usado por gee.flood_risk)
+    # Mock de rasterio
     mock_rasterio = MagicMock()
     sys.modules["rasterio"] = mock_rasterio
 

@@ -73,13 +73,13 @@ class TestOpenApiSpec:
         assert "title" in spec["info"]
         assert "version" in spec["info"]
 
-    def test_openapi_yaml_has_15_paths(self):
+    def test_openapi_yaml_has_17_paths(self):
         """The spec documents exactly 15 endpoints."""
         with open(OPENAPI_YAML) as f:
             spec = yaml.safe_load(f)
         paths = spec.get("paths", {})
-        assert len(paths) == 15, (
-            f"Expected 15 paths, got {len(paths)}: {list(paths.keys())}"
+        assert len(paths) == 17, (
+            f"Expected 17 paths, got {len(paths)}: {list(paths.keys())}"
         )
 
     def test_bdctb_forecast_proxy_contract_is_closed(self):
@@ -127,7 +127,6 @@ class TestOpenApiSpec:
         schemas = spec.get("components", {}).get("schemas", {})
         assert "ErrorResponse" in schemas
         assert "BBoxSchema" in schemas
-        assert "MuniQuerySchema" in schemas
 
 
 class TestSchemaDrift:
@@ -160,13 +159,12 @@ class TestSchemaDrift:
         committed = spec.get("components", {}).get("schemas", {})
 
         # Compare just the schemas that generate_schemas.py is expected to generate
-        # (BBoxSchema, DateRangeSchema, StationQuerySchema, MuniQuerySchema,
+        # (BBoxSchema, DateRangeSchema, StationQuerySchema,
         #  ExportRequestSchema, SeriesDataSchema, ExportBundleMetadataSchema)
         expected_keys = [
             "BBoxSchema",
             "DateRangeSchema",
             "StationQuerySchema",
-            "MuniQuerySchema",
             "ExportRequestSchema",
             "SeriesDataSchema",
             "ExportBundleMetadataSchema",

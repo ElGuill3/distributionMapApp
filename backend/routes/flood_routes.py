@@ -1,5 +1,5 @@
 """
-Blueprint 'flood' — endpoint de mapas de riesgo de inundación por municipio.
+Blueprint 'flood' — susceptibilidad publicada y detección de inundaciones.
 """
 
 import json
@@ -7,13 +7,11 @@ import logging
 
 from flask import Blueprint, Response, abort, jsonify, request, send_from_directory
 
-from backend.config import FLOOD_RISK_DIR, MUNICIPAL_TIFS, RATE_LIMITS
+from backend.config import FLOOD_RISK_DIR, RATE_LIMITS
 from backend.extensions import limiter
-from backend.gee.flood_risk import render_flood_risk_png
 from backend.gee.schemas import (
     BBoxSchema,
     DateRangeSchema,
-    MuniQuerySchema,
     _parse_bbox_str,
 )
 
@@ -46,45 +44,6 @@ def flood_risk_tile(z: int, x: int, y: int) -> Response:
     if not (tiles / str(z) / str(x) / f"{y}.png").is_file():
         abort(404)
     return send_from_directory(tiles, f"{z}/{x}/{y}.png", mimetype="image/png")
-
-
-@flood_bp.get("/api/flood-risk-municipio")
-@limiter.limit(RATE_LIMITS["flood"])
-def flood_risk_municipio() -> Response:
-    """
-    Genera (o usa el caché local) el PNG de riesgo de inundación para el municipio.
-
-    Query params:
-        muni    : clave del municipio (p. ej. 'centla').
-        palette : paleta de colores (default 'gee_flood').
-
-    Returns:
-        JSON { mapUrl, bbox } con la URL relativa del PNG y su bounding box.
-    """
-    muni_raw = request.args.get("muni")
-    palette_raw = request.args.get("palette", "gee_flood")
-
-    if not muni_raw:
-        return jsonify({"error": "Parámetro muni es requerido."}), 400
-
-    try:
-        query = MuniQuerySchema(muni=muni_raw, palette=palette_raw)
-    except Exception as e:
-        return jsonify({"error": f"municipio inválido: {e}"}), 400
-
-    tif_path = MUNICIPAL_TIFS.get(query.muni)
-    if tif_path is None:
-        return jsonify({"error": "Municipio no soportado."}), 400
-
-    try:
-        map_url, bbox = render_flood_risk_png(tif_path, query.palette)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.exception("Error en flood_risk_municipio: %s", e)
-        return jsonify({"error": "Error interno al generar el mapa de riesgo."}), 500
-
-    return jsonify({"mapUrl": map_url, "bbox": bbox})
 
 
 @flood_bp.get("/api/flood-detection")

@@ -218,10 +218,10 @@ La detección de agua superficial no es una variable animada: se hace en el
 
 ### Mapa de riesgo de inundación
 
-- Índice de Peligro de Inundación (FHI) por municipio, en escala 0–100.
-- 16 municipios de Tabasco disponibles, desde GeoTIFFs locales a 100 m de resolución.
-- Paleta de colores: verde (bajo riesgo) → amarillo → naranja → rojo (riesgo crítico).
-- La API municipal también acepta nombres de paletas registradas en Matplotlib (por ejemplo, `palette=viridis`), resueltos mediante el registro actual; los colores FHI predeterminados y las URLs de PNG cacheados se conservan.
+- Susceptibilidad a inundación de todo Tabasco (17 municipios) a 30 m, en 5 clases relativas al estado (quintiles de superficie), con paleta YlGnBu apta para daltonismo.
+- El índice combina, con pesos iguales sobre rangos, un modelo de gradient boosting entrenado con las inundaciones de CENAPRED (2011, 2020), otro entrenado con la inundación estacional detectada por Sentinel-1 (2015–2025) y la profundidad JRC para 100 años. Terreno: LiDAR 5 m de INEGI acondicionado hidrológicamente (HAND, pendiente, TWI).
+- Validado con eventos que el modelo no vio: supera a la profundidad JRC y al mapa oficial IPCET-PNUD 2022 (detalle en `backend/data/flood_risk/metadata.json`).
+- Se sirve como tiles XYZ estáticos: la app no procesa nada al arrancar ni al hacer clic.
 
 ### Estaciones hidrológicas locales
 
@@ -347,15 +347,16 @@ flowchart TB
         routes --> services
     end
     subgraph disk["Disco local"]
-        gifs[("frontend/static/gifs/<br/>frontend/static/flood_maps/")]
+        gifs[("frontend/static/gifs/")]
         stations[("backend/data/stations/")]
-        fhi[("backend/data/mapa_riesgo/")]
+        fhi[("backend/data/flood_risk/<br/>tiles XYZ y estadísticas")]
     end
     ui -- "HTTP / SSE" --> routes
     gee -- earthengine-api --> earth[("Google Earth Engine<br/>MODIS · ERA5-Land · CHIRPS<br/>Landsat · Sentinel-1")]
     services --> gifs
     services --> stations
-    gee --> fhi
+    routes --> fhi
+    pipeline["backend/floodmodel/<br/>pipeline offline"] -. "publish" .-> fhi
     boot["Arranque: bootstrap_stations<br/>(una vez por inicio)"] -- "HTTPS / FTP" --> conagua[("CONAGUA")]
     boot --> stations
     style browser fill:transparent,stroke-dasharray:6 4
@@ -637,9 +638,26 @@ YYYY-MM-DD,valor,...
 
 ---
 
-### 6. Verificar datos de riesgo de inundación
+### 6. Mapa de susceptibilidad a inundación
 
-Los GeoTIFFs del índice FHI deben estar en `backend/data/mapa_riesgo/municipios/` con el nombre `fhi_<municipio>_100m.tif`. El repositorio ya incluye los 16 municipios de Tabasco.
+El repositorio ya incluye el mapa publicado en `backend/data/flood_risk/` (tiles, estadísticas por municipio y metadatos); no hace falta generarlo para usar la app.
+
+Para regenerarlo desde las fuentes públicas (descarga ~5 GB en `.cache/`, que no se versiona) instalá el grupo de dependencias del pipeline y corré los pasos en orden:
+
+```bash
+uv sync --group floodmodel
+uv run python -m backend.floodmodel lidar-index && uv run python -m backend.floodmodel lidar-download
+uv run python -m backend.floodmodel terrain-mosaic --resolution 15
+uv run python -m backend.floodmodel terrain-aux && uv run python -m backend.floodmodel terrain-condition
+uv run python -m backend.floodmodel terrain-derivatives --resolution 15 --conditioned
+uv run python -m backend.floodmodel inventory && uv run python -m backend.floodmodel gee-features
+uv run python -m backend.floodmodel boundaries && uv run python -m backend.floodmodel stack
+uv run python -m backend.floodmodel labels && uv run python -m backend.floodmodel s1-seasons
+uv run python -m backend.floodmodel validate && uv run python -m backend.floodmodel final
+uv run python -m backend.floodmodel publish
+```
+
+Los pasos de Earth Engine requieren `GEE_PROJECT` y credenciales (paso 4). La hidrología a 15 m usa ~8 GB de RAM.
 
 ---
 
@@ -718,11 +736,11 @@ Accede desde el navegador a: **http://127.0.0.1:5000**
 
 ### Modo mapa de riesgo de inundación
 
-1. Pulsa **"Mapa de riesgo"** en el panel lateral. Los controles de animación quedan bloqueados.
-2. Activa uno o varios municipios marcando sus casillas. Las capas FHI se superponen al mapa.
-3. La barra de colores muestra la escala de riesgo (0 = muy bajo, 100 = crítico).
-4. Para desactivar una capa, desmarca la casilla correspondiente.
-5. Para salir del modo, vuelve a pulsar **"Mapa de riesgo"** (las capas activas se eliminan).
+1. Pulsa **"Mapa de riesgo"** en el panel lateral. Los controles de animación quedan bloqueados y aparece la susceptibilidad de todo el estado con su leyenda.
+2. Pasa el cursor sobre el mapa: abajo a la izquierda se lee la clase y el municipio de ese punto.
+3. Marca un municipio para enfocarlo y ver su ficha (reparto por clase, % en susceptibilidad alta o muy alta y lugar en el estado).
+4. En **Vista** elige **Por municipio** para ver la coropleta del % de superficie en susceptibilidad alta o muy alta.
+5. Para salir del modo, vuelve a pulsar **"Mapa de riesgo"**.
 
 ---
 
@@ -769,7 +787,7 @@ distributionMapApp/
 │   ├── routes/                   # Blueprints Flask — endpoints de la API REST
 │   │   ├── gif_routes.py         # GET /api/<var>-gif-bbox
 │   │   ├── timeseries_routes.py  # GET /api/<var>-timeseries-bbox
-│   │   ├── flood_routes.py       # GET /api/flood-risk-municipio
+│   │   ├── flood_routes.py       # GET /api/flood-risk/*, /api/flood-detection, /api/flood-stats
 │   │   ├── station_routes.py     # GET /api/local-station-level-range
 │   │   ├── progress_routes.py    # GET /api/gif-progress/<task_id>  (SSE)
 │   │   └── export_routes.py      # POST /api/export/bundle
@@ -779,13 +797,18 @@ distributionMapApp/
 │   │   ├── soil.py               # Humedad del suelo — ERA5-Land
 │   │   ├── precipitation.py      # Precipitación diaria — CHIRPS
 │   │   ├── water.py              # Detección de inundaciones — Sentinel-1 (VH) y Landsat (MNDWI)
-│   │   ├── flood_risk.py         # Renderizado de mapas FHI desde GeoTIFFs locales
 │   │   ├── schemas.py            # Esquemas Pydantic de validación de parámetros
 │   │   └── utils.py              # Funciones compartidas: validación bbox, temporadas, dims GIF
 │   ├── services/
 │   │   ├── gif_service.py        # Descarga GIF desde GEE, anotación con PIL, caché, limpieza
 │   │   ├── station_service.py    # Lectura y preprocesado de CSV de estaciones locales
 │   │   └── export_service.py     # Generación de exportación ZIP (CSV + GIFs + metadatos)
+│   ├── floodmodel/               # Pipeline offline del mapa de susceptibilidad (grupo `floodmodel`)
+│   │   ├── lidar.py, terrain.py  # LiDAR INEGI: descarga, mosaico, acondicionamiento, HAND
+│   │   ├── cenapred.py           # Inventario de inundaciones y mapas oficiales de CENAPRED
+│   │   ├── gee_layers.py         # Capas Earth Engine, temporadas Sentinel-1, límites GAUL
+│   │   ├── model.py, pipeline.py # Etiquetas, LightGBM, ensamble y validación con eventos no vistos
+│   │   └── publish.py            # Clases, tiles XYZ y estadísticas por municipio
 │   ├── scrapers/                 # Scrapers automáticos para datos locales
 │   │   ├── base.py               # Clase base abstracta de Scraper
 │   │   ├── conagua.py            # Scraper FTP para estaciones climatológicas e hidrométricas de CONAGUA
@@ -798,8 +821,7 @@ distributionMapApp/
 │   │   ├── convert_lf.py         # Normaliza finales de línea a LF
 │   │   └── quality/              # coverage.sh, lint.sh, format.sh
 │   ├── data/
-│   │   ├── mapa_riesgo/
-│   │   │   └── municipios/       # GeoTIFFs FHI por municipio (fhi_<municipio>_100m.tif)
+│   │   ├── flood_risk/           # Mapa publicado: tiles/{z}/{x}/{y}.png, municipalities.geojson, metadata.json
 │   │   └── stations/             # Series de nivel locales (descargadas por los scrapers)
 │   └── tests/                    # Pruebas Python y fixtures aislados (pytest)
 │
@@ -811,8 +833,7 @@ distributionMapApp/
     │   ├── vendor/ y assets/        # Librerías de terceros e imágenes versionadas
     │   ├── main.js                  # JavaScript compilado desde TypeScript (generado)
     │   ├── styles.css               # Copia publicada de src/styles/styles.css (generado)
-    │   ├── gifs/                    # GIFs generados (caché temporal, se limpian automáticamente)
-    │   └── flood_maps/              # PNGs de mapas de riesgo renderizados
+    │   └── gifs/                    # GIFs generados (caché temporal, se limpian automáticamente)
     ├── scripts/build-typescript.mjs # Build limpio de TypeScript (`npm run build:ts`)
     ├── src/
     │   ├── styles/styles.css        # Estilos fuente publicados en static/ por build:ts
@@ -843,7 +864,9 @@ distributionMapApp/
 | `/api/imerg-precip-gif-bbox` | `GET` | ídem | `{ gifUrl, bbox, dates, precip_mm[] }` |
 | `/api/{ndvi,era5-temp,era5-soil,imerg-precip}-timeseries-bbox` | `GET` | `start`, `end` o `year` + `season`, `bbox` | `{ dates, bbox, <valores>[] }` |
 | `/api/gif-progress/<task_id>` | `GET` | — | SSE: `{ progress: 0–100 o -1, message }` |
-| `/api/flood-risk-municipio` | `GET` | `muni`, `palette` (opcional) | `{ mapUrl, bbox }` |
+| `/api/flood-risk/metadata` | `GET` | — | `{ classes, tiles, bounds, sources, validation }` |
+| `/api/flood-risk/municipalities` | `GET` | — | GeoJSON con `class_share`, `high_share`, `mean_score`, `rank` |
+| `/api/flood-risk/tiles/{z}/{x}/{y}.png` | `GET` | — | Tile PNG (z 7–12) |
 | `/api/flood-detection` | `GET` | `start`, `end`, `bbox`, `satellite` (`sentinel1`/`landsat`), `auto`, `threshold` | `{ satellite, computed_threshold, background_layer, water_layer, … }` |
 | `/api/flood-stats` | `GET` | mismos que `/api/flood-detection` | `{ total_ha }` |
 | `/api/local-stations` | `GET` | — | Catálogo `{ <id>: { name, type, coords, station_name, municipio } }` |
@@ -992,7 +1015,14 @@ El refactor no cambió el comportamiento visible de la aplicación ni los contra
 | [MODIS MOD13Q1](https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD13Q1) | NDVI, resolución 250 m, cada 16 días |
 | [ERA5-Land Daily](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_DAILY_AGGR) | Temperatura del aire y humedad del suelo, ~9 km |
 | [CHIRPS Daily](https://developers.google.com/earth-engine/datasets/catalog/UCSB-CHG_CHIRPS_DAILY) | Precipitación diaria, ~5.5 km |
-| [Sentinel-1 GRD](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD) | Detección de inundaciones por radar (VH), 10 m |
+| [Sentinel-1 GRD](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD) | Detección de inundaciones por radar (VH), 10 m; inundación estacional 2015–2025 del mapa de susceptibilidad |
+| [INEGI, MDE LiDAR 5 m](https://www.inegi.org.mx/temas/relieve/continental/) | Terreno del mapa de susceptibilidad (vuelo 2007, edición 2012) |
+| [CENAPRED, Atlas Nacional de Riesgos](http://www.atlasnacionalderiesgos.gob.mx/) | Inundaciones observadas 2011 y 2020; mapas PNUD 2018 e IPCET-PNUD 2022 usados solo para comparar |
+| [JRC/CEMS GloFAS Flood Hazard v2.1](https://developers.google.com/earth-engine/datasets/catalog/JRC_CEMS_GLOFAS_FloodHazard_v2_1) | Profundidad de inundación por periodo de retorno |
+| [MERIT Hydro](https://developers.google.com/earth-engine/datasets/catalog/MERIT_Hydro_v1_0_1) | Área de drenaje y relleno de huecos del LiDAR |
+| [JRC Global Surface Water](https://developers.google.com/earth-engine/datasets/catalog/JRC_GSW1_4_GlobalSurfaceWater) | Agua permanente |
+| [ESA WorldCover](https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v200) | Uso de suelo |
+| [FAO GAUL 2025](https://developers.google.com/earth-engine/datasets/catalog/FAO_GAUL_2025_level2) | Límites municipales |
 | [Landsat 5/7/8/9 Collection 2 L2](https://developers.google.com/earth-engine/datasets/catalog/landsat) | Detección de inundaciones óptica (MNDWI), 30 m |
 | [CONAGUA / IMTA](https://www.gob.mx/conagua) | Datos hidrométricos de estaciones locales |
 | [Google Earth Engine](https://earthengine.google.com/) | Plataforma de procesamiento satelital en la nube |

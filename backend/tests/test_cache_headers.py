@@ -153,22 +153,16 @@ class TestCacheHeadersFloodRiskEndpoints:
 
     def test_flood_risk_has_cache_control_86400(self, client) -> None:
         """Flood risk endpoint tiene Cache-Control: public, max-age=86400."""
-        with patch("backend.routes.flood_routes.render_flood_risk_png") as mock_render:
-            mock_render.return_value = ("/static/flood_maps/centla.png", [-92.0, 17.5, -91.0, 18.5])
-
-            response = client.get("/api/flood-risk-municipio?muni=centla")
-            assert response.status_code == 200
-            assert "Cache-Control" in response.headers
-            assert response.headers["Cache-Control"] == "public, max-age=86400"
+        response = client.get("/api/flood-risk/metadata")
+        assert response.status_code == 200
+        assert "Cache-Control" in response.headers
+        assert response.headers["Cache-Control"] == "public, max-age=86400"
 
     def test_flood_risk_has_no_etag(self, client) -> None:
         """Flood risk endpoint NO tiene ETag (use_etag=False)."""
-        with patch("backend.routes.flood_routes.render_flood_risk_png") as mock_render:
-            mock_render.return_value = ("/static/flood_maps/centla.png", [-92.0, 17.5, -91.0, 18.5])
-
-            response = client.get("/api/flood-risk-municipio?muni=centla")
-            assert response.status_code == 200
-            assert "ETag" not in response.headers
+        response = client.get("/api/flood-risk/metadata")
+        assert response.status_code == 200
+        assert "ETag" not in response.headers
 
 
 class TestCacheHeadersUnconfiguredRoutes:

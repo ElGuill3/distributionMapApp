@@ -25,7 +25,6 @@ CASES = [
     ("timeseries", "/api/era5-soil-timeseries-bbox", 60),
     ("timeseries", "/api/imerg-precip-timeseries-bbox", 60),
     ("export", "/api/export/bundle", 10),
-    ("flood", "/api/flood-risk-municipio", 60),
     ("flood", "/api/flood-detection", 60),
     ("flood_stats", "/api/flood-stats", 30),
     ("station", "/api/local-stations", 60),

@@ -83,8 +83,6 @@ BASE_DIR = (
 STATIC_DIR = BASE_DIR / "frontend" / "static"
 TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
 GIFS_DIR = STATIC_DIR / "gifs"
-FLOOD_MAPS_DIR = STATIC_DIR / "flood_maps"
-DATA_DIR = BASE_DIR / "backend" / "data" / "mapa_riesgo" / "municipios"
 # Published flood susceptibility (tiles, municipality stats, metadata),
 # produced offline by `python -m backend.floodmodel publish`.
 FLOOD_RISK_DIR = BASE_DIR / "backend" / "data" / "flood_risk"
@@ -93,7 +91,6 @@ FLOOD_RISK_DIR = BASE_DIR / "backend" / "data" / "flood_risk"
 def prepare_runtime_directories() -> None:
     """Create writable application directories during real startup only."""
     GIFS_DIR.mkdir(parents=True, exist_ok=True)
-    FLOOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -124,28 +121,6 @@ MAX_TOTAL_PIXELS = _env_int("MAX_TOTAL_PIXELS", 26_000_000)
 BASE_PIXELS_PER_FRAME = _env_int("BASE_PIXELS_PER_FRAME", 768 * 768)
 BASE_PIXELS_S2 = _env_int("BASE_PIXELS_S2", 512 * 512)  # Base Sentinel-2
 MIN_GIF_DIM = _env_int("MIN_GIF_DIM", 256)
-
-# ---------------------------------------------------------------------------
-# GeoTIFFs de riesgo por municipio
-# ---------------------------------------------------------------------------
-MUNICIPAL_TIFS = {
-    "balancan": DATA_DIR / "fhi_balancan_100m.tif",
-    "cardenas": DATA_DIR / "fhi_cardenas_100m.tif",
-    "centla": DATA_DIR / "fhi_centla_100m.tif",
-    "centro": DATA_DIR / "fhi_centro_100m.tif",
-    "comalcalco": DATA_DIR / "fhi_comalcalco_100m.tif",
-    "cunduacan": DATA_DIR / "fhi_cunduacan_100m.tif",
-    "emiliano_zapata": DATA_DIR / "fhi_emiliano_zapata_100m.tif",
-    "huimanguillo": DATA_DIR / "fhi_huimanguillo_100m.tif",
-    "jalapa": DATA_DIR / "fhi_jalapa_100m.tif",
-    "jalpa_de_mendez": DATA_DIR / "fhi_jalpa_de_mendez_100m.tif",
-    "jonuta": DATA_DIR / "fhi_jonuta_100m.tif",
-    "macuspana": DATA_DIR / "fhi_macuspana_100m.tif",
-    "nacajuca": DATA_DIR / "fhi_nacajuca_100m.tif",
-    "paraiso": DATA_DIR / "fhi_paraiso_100m.tif",
-    "tacotalpa": DATA_DIR / "fhi_tacotalpa_100m.tif",
-    "tenosique": DATA_DIR / "fhi_tenosique_100m.tif",
-}
 
 # ---------------------------------------------------------------------------
 # Estaciones hidrometeorológicas locales

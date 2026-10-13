@@ -913,64 +913,115 @@ paths:
       x-cache-policy:
         max_age: 300
         etag: true
-  /api/flood-risk-municipio:
+  /api/flood-risk/metadata:
     get:
-      operationId: getFloodRiskMunicipio
-      summary: Flood risk map by municipality
-      description: 'Generate (or retrieve cached) a flood risk PNG map for the given
-        municipality. Returns JSON with the map URL and bounding box.
+      operationId: getFloodRiskMetadata
+      summary: Flood susceptibility map metadata
+      description: 'Classes, palette, XYZ tile template, bounds, data sources and
+        held-out validation scores of the published statewide flood susceptibility
+        map. The map is produced offline by `python -m backend.floodmodel publish`.
 
         '
       tags:
       - Flood Risk
-      parameters:
-      - name: muni
-        in: query
-        required: true
-        schema:
-          $ref: '#/components/schemas/MuniQuerySchema/properties/muni'
-        description: 'Municipality key. Must be one of the 16 supported municipalities:
-          balancan, cardenas, centla, centro, comalcalco, cunduacan, emiliano_zapata,
-          huimanguillo, jalapa, jalpa_de_mendez, jonuta, macuspana, nacajuca, paraiso,
-          tacotalpa, tenosique.
-
-          '
-      - name: palette
-        in: query
-        required: false
-        schema:
-          type: string
-          default: gee_flood
-        description: Color palette for the risk map (default "gee_flood").
       responses:
         '200':
-          description: Flood risk map data.
+          description: Map metadata.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  mapUrl:
-                    type: string
-                    description: Relative URL to the generated PNG.
-                  bbox:
+                  classes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        value:
+                          type: integer
+                        label:
+                          type: string
+                        color:
+                          type: string
+                  tiles:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        example: /api/flood-risk/tiles/{z}/{x}/{y}.png
+                      minzoom:
+                        type: integer
+                      maxzoom:
+                        type: integer
+                  bounds:
                     type: array
                     items:
                       type: number
-                    description: Bounding box of the municipality.
-        '400':
-          description: Invalid municipality or missing parameters.
+                  sources:
+                    type: array
+                    items:
+                      type: string
+      x-cache-policy:
+        max_age: 86400
+        etag: false
+  /api/flood-risk/municipalities:
+    get:
+      operationId: getFloodRiskMunicipalities
+      summary: Municipality flood susceptibility statistics
+      description: 'GeoJSON FeatureCollection of the 17 municipalities of Tabasco
+        with area, share of each susceptibility class, share of high or very high
+        susceptibility, mean score and statewide rank.
+
+        '
+      tags:
+      - Flood Risk
+      responses:
+        '200':
+          description: Municipalities with statistics.
           content:
-            application/json:
+            application/geo+json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error.
+                type: object
+      x-cache-policy:
+        max_age: 86400
+        etag: false
+  /api/flood-risk/tiles/{z}/{x}/{y}.png:
+    get:
+      operationId: getFloodRiskTile
+      summary: Flood susceptibility XYZ tile
+      description: 'Pre-rendered paletted PNG tile (Web Mercator, zoom 7-12). Pixel
+        colours match the metadata classes; transparent pixels have no data. Not
+        rate limited.
+
+        '
+      tags:
+      - Flood Risk
+      parameters:
+      - name: z
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: x
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: y
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: PNG tile.
           content:
-            application/json:
+            image/png:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-      x-rate-limit: 60/minute
+                type: string
+                format: binary
+        '404':
+          description: Tile outside the published set.
       x-cache-policy:
         max_age: 86400
         etag: false
@@ -1267,37 +1318,6 @@ components:
       - start
       - end
       title: StationQuerySchema
-      type: object
-    MuniQuerySchema:
-      description: Schema para endpoints de riesgo por municipio.
-      properties:
-        muni:
-          enum:
-          - balancan
-          - cardenas
-          - centla
-          - centro
-          - comalcalco
-          - cunduacan
-          - emiliano_zapata
-          - huimanguillo
-          - jalapa
-          - jalpa_de_mendez
-          - jonuta
-          - macuspana
-          - nacajuca
-          - paraiso
-          - tacotalpa
-          - tenosique
-          title: Muni
-          type: string
-        palette:
-          default: gee_flood
-          title: Palette
-          type: string
-      required:
-      - muni
-      title: MuniQuerySchema
       type: object
     ExportRequestSchema:
       description: 'Schema para validar peticiones al endpoint de export bundle.

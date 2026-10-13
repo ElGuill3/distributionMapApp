@@ -185,34 +185,6 @@ class LocalStationQuerySchema(BaseModel):
         return self
 
 
-# ALERT: Keep in sync with MUNICIPAL_TIFS keys in config.py
-MUNI_KEYS = Literal[
-    "balancan",
-    "cardenas",
-    "centla",
-    "centro",
-    "comalcalco",
-    "cunduacan",
-    "emiliano_zapata",
-    "huimanguillo",
-    "jalapa",
-    "jalpa_de_mendez",
-    "jonuta",
-    "macuspana",
-    "nacajuca",
-    "paraiso",
-    "tacotalpa",
-    "tenosique",
-]
-
-
-class MuniQuerySchema(BaseModel):
-    """Schema para endpoints de riesgo por municipio."""
-
-    muni: MUNI_KEYS
-    palette: str = "gee_flood"
-
-
 class ExportBundleMetadataSchema(BaseModel):
     """Schema para metadatos específicos del export ZIP."""
 

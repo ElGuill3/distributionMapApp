@@ -41,7 +41,6 @@ build/
 frontend/static/gifs/
 
 # Mapas de riesgo renderizados desde GeoTIFFs (servidor o GEE)
-frontend/static/flood_maps/
 
 # ---------------------------------------------------------------------------
 # Frontend build output (frontend/src/ts/ + frontend/src/styles/ → frontend/static/)
