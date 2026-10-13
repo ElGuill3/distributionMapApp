@@ -27,7 +27,7 @@ export function setActiveOverlay(overlay: L.ImageOverlay | null): void {
   activeOverlay = overlay;
 }
 
-export const municipalFloodOverlays: Record<string, L.ImageOverlay> = {};
+export const municipalFloodOverlays: Record<string, L.Layer> = {};
 
 /**
  * Sets the opacity of the active GIF overlay.
@@ -46,7 +46,9 @@ export function setOverlayOpacity(opacity: number): void {
 // Colorbars
 // ---------------------------------------------------------------------------
 
-export let allColorbars: Partial<Record<VariableKey | 'flood', L.Control>> = {};
+export type ColorbarKey = VariableKey | 'flood' | 'floodMunicipal';
+
+export let allColorbars: Partial<Record<ColorbarKey, L.Control>> = {};
 
 /**
  * Crea e inicializa todos los controles de colorbar.
@@ -59,6 +61,7 @@ export function buildColorbars(): void {
     soil: _makeColorbar('soil-colorbar', _soilHtml()),
     precip: _makeColorbar('precip-colorbar', _precipHtml()),
     flood: _makeColorbar('flood-risk-colorbar', _floodHtml()),
+    floodMunicipal: _makeColorbar('flood-risk-colorbar', _floodMunicipalHtml()),
   };
 }
 
@@ -68,12 +71,12 @@ export function buildColorbars(): void {
  * (útil al mover la colorbar entre paneles en modo comparativa).
  *
  * @param targetMap    - Mapa donde se mostrará la colorbar activa.
- * @param variable     - Variable activa o 'flood'. null desactiva todas.
+ * @param variable     - Variable activa, 'flood' o 'floodMunicipal'. null desactiva todas.
  * @param removeFromMap - Mapa adicional del que eliminar todos los controles.
  */
 export function switchColorbar(
   targetMap: L.Map,
-  variable: VariableKey | 'flood' | null,
+  variable: ColorbarKey | null,
   removeFromMap?: L.Map
 ): void {
   for (const [key, ctrl] of Object.entries(allColorbars)) {
@@ -190,14 +193,35 @@ function _precipHtml(): string {
     </div>`;
 }
 
-function _floodHtml(): string {
+function _floodMunicipalHtml(): string {
+  const rows = [5, 4, 3, 2, 1]
+    .map(
+      value =>
+        `<div class="flood-legend-row"><span class="flood-swatch flood-swatch-${value}"></span>${(value - 1) * 20} – ${value * 20}%</div>`
+    )
+    .join('');
   return `
-    <div class="flood-risk-colorbar-scale"></div>
-    <div class="flood-risk-colorbar-labels">
-      <span class="colorbar-label-item" data-tooltip="Crítico">80 – 100</span>
-      <span class="colorbar-label-item" data-tooltip="Muy alto">60 – 80</span>
-      <span class="colorbar-label-item" data-tooltip="Alto">40 – 60</span>
-      <span class="colorbar-label-item" data-tooltip="Moderado">20 – 40</span>
-      <span class="colorbar-label-item" data-tooltip="Bajo">0 – 20</span>
-    </div>`;
+    <div class="flood-legend-title">% de superficie en susceptibilidad alta o muy alta</div>
+    ${rows}
+    <div class="flood-legend-note">Haz clic en un municipio para ver su resumen.</div>`;
+}
+
+function _floodHtml(): string {
+  const classes: Array<[number, string]> = [
+    [5, 'Muy alta'],
+    [4, 'Alta'],
+    [3, 'Media'],
+    [2, 'Baja'],
+    [1, 'Muy baja'],
+  ];
+  const rows = classes
+    .map(
+      ([value, label]) =>
+        `<div class="flood-legend-row"><span class="flood-swatch flood-swatch-${value}"></span>${label}</div>`
+    )
+    .join('');
+  return `
+    <div class="flood-legend-title">Susceptibilidad a inundación</div>
+    ${rows}
+    <div class="flood-legend-note">Clases relativas al estado (quintiles de superficie). No es profundidad ni probabilidad.</div>`;
 }

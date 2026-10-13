@@ -13,13 +13,13 @@ import type {
   GifResponse,
   TimeseriesResponse,
   StationResponse,
-  FloodRiskResponse,
   VariableKey,
   SeriesData,
   LocalStationsResponse,
 } from './types.js';
 import { VARIABLE_DATA_KEY } from './types.js';
 import { GIF_ENDPOINT, TS_ENDPOINT } from './config.js';
+import type { FloodRiskMetadata, MunicipalityFeature } from './map/floodRiskLayer.js';
 
 // ---------------------------------------------------------------------------
 // Helpers internos
@@ -154,29 +154,19 @@ export async function fetchGifAndSeriesForPanel(
 // Riesgo de inundación por municipio
 // ---------------------------------------------------------------------------
 
-export interface FetchFloodRiskOptions {
-  municipio: string;
+/** Metadata of the published flood susceptibility map (classes, tiles, sources). */
+export async function fetchFloodRiskMetadata(): Promise<FloodRiskMetadata> {
+  const resp = await fetch('/api/flood-risk/metadata');
+  if (!resp.ok) throw new Error('No se pudo cargar el mapa de susceptibilidad.');
+  return (await resp.json()) as FloodRiskMetadata;
 }
 
-/**
- * Obtiene el mapa de riesgo de inundación para un municipio.
- *
- * @returns FloodRiskResponse con mapUrl y bbox
- * @throws Error si la respuesta no es OK
- */
-export async function fetchFloodRisk(
-  options: FetchFloodRiskOptions
-): Promise<FloodRiskResponse & { error?: string }> {
-  const resp = await fetch(
-    `/api/flood-risk-municipio?muni=${encodeURIComponent(options.municipio)}`
-  );
-  const data = (await resp.json()) as FloodRiskResponse & { error?: string };
-
-  if (!resp.ok) {
-    throw new Error(data.error ?? 'Error generando mapa de riesgo por municipio.');
-  }
-
-  return data;
+/** Municipality boundaries with susceptibility stats. */
+export async function fetchFloodRiskMunicipalities(): Promise<MunicipalityFeature[]> {
+  const resp = await fetch('/api/flood-risk/municipalities');
+  if (!resp.ok) throw new Error('No se pudieron cargar los municipios.');
+  const data = (await resp.json()) as { features: MunicipalityFeature[] };
+  return data.features;
 }
 
 // ---------------------------------------------------------------------------

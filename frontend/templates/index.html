@@ -228,6 +228,12 @@
           </button>
         </div>
 
+        <fieldset class="flood-view-toggle">
+          <legend class="tflow-label">Vista</legend>
+          <label><input type="radio" name="flood-view" value="detail" checked> Detalle</label>
+          <label><input type="radio" name="flood-view" value="municipal"> Por municipio</label>
+        </fieldset>
+
         <div class="municipios-grid">
           <label><input type="checkbox" class="chk-flood-muni" data-muni="balancan"> Balancán</label>
           <label><input type="checkbox" class="chk-flood-muni" data-muni="cardenas"> Cárdenas</label>
@@ -244,6 +250,7 @@
           <label><input type="checkbox" class="chk-flood-muni" data-muni="nacajuca"> Nacajuca</label>
           <label><input type="checkbox" class="chk-flood-muni" data-muni="paraiso"> Paraíso</label>
           <label><input type="checkbox" class="chk-flood-muni" data-muni="tacotalpa"> Tacotalpa</label>
+          <label><input type="checkbox" class="chk-flood-muni" data-muni="teapa"> Teapa</label>
           <label><input type="checkbox" class="chk-flood-muni" data-muni="tenosique"> Tenosique</label>
         </div>
 
@@ -253,8 +260,9 @@
           cada mapa.
         </p>
         <p class="hint flood-risk-mode-hint hidden">
-          En modo riesgo los controles de animación están bloqueados.
-          Activa los municipios para visualizar su riesgo de inundación.
+          En modo riesgo los controles de animación están bloqueados. El mapa
+          muestra la susceptibilidad de todo el estado; pasa el cursor para ver
+          la clase y marca un municipio para ver su resumen.
         </p>
 
         <!-- Panel de Inundaciones -->
