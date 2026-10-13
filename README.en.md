@@ -37,6 +37,10 @@ Startup follows these steps; any failure exits with code 2 and a safe message, w
 leaving half-started processes behind:
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart TD
     start(["uv run distribution-map"]) --> lock{"Another supervisor running?"}
     lock -- yes --> fail(["Exit with code 2"])
@@ -91,6 +95,10 @@ target of the public command:
 ```
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart LR
     sup["backend/scripts/run_local_forecast_stack.py"] --> app["Flask application<br/>127.0.0.1:5000"]
     sup --> api["Forecast API<br/>127.0.0.1:8765"]
@@ -231,6 +239,10 @@ the application (`backend/scripts/bootstrap_stations.py`):
   `os.replace`, so an interrupted connection never leaves a half-written CSV.
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart TD
     cfg["CONAGUA_HIDROS_STATIONS<br/>CONAGUA_CLIMAS_STATIONS"] --> dl["Download to a temporary folder<br/>HTTPS → FTP"]
     dl --> valid{"Metadata, known coordinates<br/>and one valid measurement?"}
@@ -286,6 +298,10 @@ mode, and clicking another special mode switches to it directly (the previous on
 turned off).
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 stateDiagram-v2
     direction LR
     [*] --> Normal
@@ -310,6 +326,10 @@ stateDiagram-v2
 ## Technical Architecture
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart TB
     subgraph browser["Browser"]
         ui["TypeScript + Leaflet + Leaflet.draw<br/>Plotly.js · gifuct-js · Scalar UI"]
@@ -333,6 +353,9 @@ flowchart TB
     gee --> fhi
     boot["Startup: bootstrap_stations<br/>(once per start)"] -- "HTTPS / FTP" --> conagua[("CONAGUA")]
     boot --> stations
+    style browser fill:transparent,stroke-dasharray:6 4
+    style flask fill:transparent,stroke-dasharray:6 4
+    style disk fill:transparent,stroke-dasharray:6 4
 ```
 
 **Typical animation request flow:**
@@ -388,6 +411,10 @@ The TypeScript code in `frontend/src/ts/` is organized by responsibility. `main.
 composes everything; sidebar modules are loaded lazily:
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart LR
     main["main.ts<br/>composition root"]
     subgraph modes["modes/"]
@@ -415,6 +442,9 @@ flowchart LR
     modes --> api
     modes --> map
     modes --> utils
+    style modes fill:transparent,stroke-dasharray:6 4
+    style sidebar fill:transparent,stroke-dasharray:6 4
+    style ui fill:transparent,stroke-dasharray:6 4
 ```
 
 | Module | Responsibility |

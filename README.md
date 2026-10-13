@@ -37,6 +37,10 @@ El arranque sigue estos pasos; cualquier fallo termina con código 2 y un mensaj
 seguro, sin dejar procesos a medias:
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart TD
     start(["uv run distribution-map"]) --> lock{"¿Otro supervisor activo?"}
     lock -- sí --> fail(["Termina con código 2"])
@@ -92,6 +96,10 @@ del comando público:
 ```
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart LR
     sup["backend/scripts/run_local_forecast_stack.py"] --> app["Aplicación Flask<br/>127.0.0.1:5000"]
     sup --> api["API de pronóstico<br/>127.0.0.1:8765"]
@@ -237,6 +245,10 @@ servir la aplicación (`backend/scripts/bootstrap_stations.py`):
   con `os.replace`, así una conexión interrumpida nunca deja un CSV a medias.
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart TD
     cfg["CONAGUA_HIDROS_STATIONS<br/>CONAGUA_CLIMAS_STATIONS"] --> dl["Descarga a carpeta temporal<br/>HTTPS → FTP"]
     dl --> valid{"¿Metadatos, coordenadas conocidas<br/>y una medición válida?"}
@@ -291,6 +303,10 @@ Los modos especiales son excluyentes: volver a pulsar el modo activo regresa al 
 normal, y pulsar otro modo especial cambia directamente a él (el anterior se desactiva).
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 stateDiagram-v2
     direction LR
     [*] --> Normal
@@ -315,6 +331,10 @@ stateDiagram-v2
 ## Arquitectura técnica
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart TB
     subgraph browser["Navegador"]
         ui["TypeScript + Leaflet + Leaflet.draw<br/>Plotly.js · gifuct-js · Scalar UI"]
@@ -338,6 +358,9 @@ flowchart TB
     gee --> fhi
     boot["Arranque: bootstrap_stations<br/>(una vez por inicio)"] -- "HTTPS / FTP" --> conagua[("CONAGUA")]
     boot --> stations
+    style browser fill:transparent,stroke-dasharray:6 4
+    style flask fill:transparent,stroke-dasharray:6 4
+    style disk fill:transparent,stroke-dasharray:6 4
 ```
 
 **Flujo de una petición típica de animación:**
@@ -393,6 +416,10 @@ El código TypeScript en `frontend/src/ts/` está organizado por responsabilidad
 compone todo; los módulos del panel lateral se cargan de forma diferida:
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart LR
     main["main.ts<br/>composition root"]
     subgraph modes["modes/"]
@@ -420,6 +447,9 @@ flowchart LR
     modes --> api
     modes --> map
     modes --> utils
+    style modes fill:transparent,stroke-dasharray:6 4
+    style sidebar fill:transparent,stroke-dasharray:6 4
+    style ui fill:transparent,stroke-dasharray:6 4
 ```
 
 | Módulo | Responsabilidad |
