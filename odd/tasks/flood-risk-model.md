@@ -22,7 +22,7 @@ Branch `feat/flood-risk-model`. Pipeline runs offline once; the app only serves 
 - R5 [S1] inline; done (6e00db0) — model.py (feature stack, labels, spatial blocks, sampling, LightGBM CV, strip-wise predict), 7 model tests; spatial CV ROC 0.885 but event hold-out ties JRC (L10-L12)
 - R5b [S1] inline; done — S1 seasonal flood labels (calibrated change detection), pipeline.py final/validate, rank-average ensemble (extreme model + seasonal model + JRC); validation.json: ensemble ROC/PR 2011 0.778/0.108 (JRC 0.767/0.091), S1 2023-25 0.722/0.270, 0.714/0.178, 0.723/0.275 (IPCET 0.608-0.625); 11 new unit tests
 - R6 [S2,S4,S5] inline; done — publish.py: equal-area quintile classes (YlGnBu), 916 paletted XYZ tiles z7-z12 (7.7 MB vs 32 MB old TIFFs), municipalities.geojson stats, metadata.json; 6 tests
-- R7 [S4,S5] inline; pending — backend serving + frontend statewide layer, legend, palette, readout
+- R7 [S4,S5] inline; done — /api/flood-risk/{metadata,municipalities,tiles} static routes (tiles rate-limit exempt, 24h cache); frontend statewide tile layer, 5-class YlGnBu legend, hover readout from tile pixel colour, municipality checkbox -> outline + stats card, Teapa added (17); 7 backend + 10 vitest + 1 e2e tests
 - R8 [S5] inline; pending — municipality choropleth and stats
 - R10 [S8] inline; pending — Spanish methods/results report: Markdown (required) + LaTeX academic template (optional)
 - R9 [S6,S7] inline; pending — docs, credits, retire old FHI TIFFs, findings report

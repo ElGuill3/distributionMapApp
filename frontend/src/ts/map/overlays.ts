@@ -27,7 +27,7 @@ export function setActiveOverlay(overlay: L.ImageOverlay | null): void {
   activeOverlay = overlay;
 }
 
-export const municipalFloodOverlays: Record<string, L.ImageOverlay> = {};
+export const municipalFloodOverlays: Record<string, L.Layer> = {};
 
 /**
  * Sets the opacity of the active GIF overlay.
@@ -191,13 +191,21 @@ function _precipHtml(): string {
 }
 
 function _floodHtml(): string {
+  const classes: Array<[number, string]> = [
+    [5, 'Muy alta'],
+    [4, 'Alta'],
+    [3, 'Media'],
+    [2, 'Baja'],
+    [1, 'Muy baja'],
+  ];
+  const rows = classes
+    .map(
+      ([value, label]) =>
+        `<div class="flood-legend-row"><span class="flood-swatch flood-swatch-${value}"></span>${label}</div>`
+    )
+    .join('');
   return `
-    <div class="flood-risk-colorbar-scale"></div>
-    <div class="flood-risk-colorbar-labels">
-      <span class="colorbar-label-item" data-tooltip="Crítico">80 – 100</span>
-      <span class="colorbar-label-item" data-tooltip="Muy alto">60 – 80</span>
-      <span class="colorbar-label-item" data-tooltip="Alto">40 – 60</span>
-      <span class="colorbar-label-item" data-tooltip="Moderado">20 – 40</span>
-      <span class="colorbar-label-item" data-tooltip="Bajo">0 – 20</span>
-    </div>`;
+    <div class="flood-legend-title">Susceptibilidad a inundación</div>
+    ${rows}
+    <div class="flood-legend-note">Clases relativas al estado (quintiles de superficie). No es profundidad ni probabilidad.</div>`;
 }

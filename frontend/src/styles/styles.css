@@ -1885,6 +1885,1491 @@ html.theme-transitioning #chart-b {
   color: var(--sidebar-fg);
 }
 
+.flood-risk-colorbar {
+  flex-direction: column;
+  gap: 3px;
+  max-width: 190px;
+  color: var(--sidebar-fg);
+}
+
+.flood-legend-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.flood-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flood-legend-note {
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  opacity: 0.8;
+}
+
+/* ColorBrewer YlGnBu, same palette as the published tiles (publish.PALETTE). */
+.flood-swatch {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 2px;
+}
+
+.flood-swatch-1 {
+  background: #ffffcc;
+}
+
+.flood-swatch-2 {
+  background: #a1dab4;
+}
+
+.flood-swatch-3 {
+  background: #41b6c4;
+}
+
+.flood-swatch-4 {
+  background: #2c7fb8;
+}
+
+.flood-swatch-5 {
+  background: #253494;
+}
+
+.flood-readout {
+  background: var(--colorbar-bg);
+  color: var(--sidebar-fg);
+  padding: 4px 8px;
+  border-radius: 4px;
+  box-shadow: var(--shadow-sm);
+  font-size: 12px;
+  min-width: 180px;
+}
+
+.flood-muni-outline {
+  stroke: #e6550d;
+}
+
+.flood-muni-card {
+  min-width: 210px;
+  font-size: 12px;
+}
+
+.flood-muni-meta {
+  margin: 2px 0 6px;
+  opacity: 0.85;
+}
+
+.flood-muni-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flood-muni-label {
+  flex: 1;
+}
+
+.flood-muni-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.municipios-grid {
+  display: none;
+}
+
+body.flood-risk-mode-active .municipios-grid {
+  display: grid;
+}
+
+/* ------------------------------------------------------------------ */
+/* Task Flow disabled states                                           */
+/* ------------------------------------------------------------------ */
+
+/* PR2: Task flow steps disabled during compare/flood modes via ModoSection */
+.tflow-step.disabled {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--gray-400);
+  margin: 0;
+}
+
+/* ==========================================================================
+   Button Hierarchy
+   ========================================================================== */
+
+/* Primary Action Button - Filled, high contrast */
+.primary-action {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--btn-primary-bg);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.1s ease;
+  font-weight: 500;
+  font-size: var(--text-base);
+}
+
+.primary-action:hover:not(:disabled) {
+  background: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
+}
+
+.primary-action:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.primary-action:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border: 1px dashed var(--btn-disabled-border);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* Destructive Button - Subdued, light tint */
+.destructive-btn {
+  align-self: flex-end;
+  padding: 0.35rem 0.75rem;
+  font-size: var(--text-base);
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--btn-destructive-border);
+  background: var(--btn-destructive-bg);
+  color: var(--btn-destructive-fg);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.destructive-btn:hover:not(:disabled) {
+  background: var(--btn-destructive-hover-bg);
+  border-color: var(--btn-destructive-hover-border);
+  color: var(--btn-destructive-hover-fg);
+}
+
+.destructive-btn:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border: 1px dashed var(--btn-disabled-border);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+#sidebarRestore {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--sidebar-border);
+  background-color: var(--surface-bg);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+#sidebarRestore:hover {
+  background-color: var(--gray-100);
+}
+
+#sidebarRestore svg {
+  width: 16px;
+  height: 16px;
+}
+
+#sidebarRestore .icon-menu {
+  display: none;
+}
+
+#sidebarRestore .icon-close {
+  display: block;
+}
+
+body.sidebar-collapsed #sidebarRestore .icon-menu {
+  display: block;
+}
+
+body.sidebar-collapsed #sidebarRestore .icon-close {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Contenedor principal del visor (mapas + controles + gráficas) */
+.main-viewer-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}
+
+/* Contenedor de mapas + gráficas */
+#map-and-chart {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Panel individual (A o B) */
+.map-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+/* Etiqueta de panel (visible solo en compare mode) */
+.panel-label {
+  display: none;
+  background: var(--btn-primary-bg);
+  color: var(--gray-0);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--btn-primary-hover);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* Panel B oculto por defecto */
+#map-panel-b {
+  display: none;
+  border-left: 2px solid var(--btn-primary-hover);
+}
+
+/* Modo comparativa: mostrar panel B y etiquetas */
+body.compare-mode-active #map-panel-b {
+  display: flex;
+}
+
+body.compare-mode-active .panel-label {
+  display: block;
+}
+
+/* ==========================================================================
+   PR1: Map Overlay Topbar (topbar above map)
+   ========================================================================== */
+
+/* Topbar container — positioned above the map inside .map-panel */
+.map-overlay-topbar {
+  display: none; /* hidden until animation loaded, toggled via JS class */
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--colorbar-bg);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--sidebar-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  color: var(--sidebar-fg);
+  flex-shrink: 0;
+  z-index: 400;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    color 220ms ease;
+}
+
+/* Show topbar when animation is loaded */
+body.animation-loaded .map-overlay-topbar {
+  display: flex;
+}
+
+/* Playback row: play/pause + slider + frame label + speed */
+.topbar-playback {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.topbar-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--btn-primary-bg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.topbar-btn:hover {
+  background: var(--gray-100);
+}
+
+.topbar-btn svg,
+.topbar-layer-btn svg,
+.player-btn svg,
+#tflow-draw-btn svg,
+.tflow-clear-btn svg,
+.topbar-draw-icon,
+.tflow-draw-icon,
+.theme-toggle-btn svg,
+#sidebarRestore svg {
+  flex-shrink: 0;
+  display: block;
+}
+
+.topbar-btn svg,
+.player-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.topbar-layer-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+#tflow-draw-btn svg,
+.tflow-clear-btn svg,
+.topbar-draw-icon,
+.tflow-draw-icon,
+.theme-toggle-btn svg,
+#sidebarRestore svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.topbar-play-btn {
+  color: var(--btn-primary-bg);
+}
+
+.topbar-slider {
+  flex: 1;
+  accent-color: var(--btn-primary-bg);
+  height: 4px;
+  cursor: pointer;
+}
+
+.topbar-frame-label {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--gray-400);
+  min-width: 50px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-speed-select {
+  flex-shrink: 0;
+  padding: 0.15rem 0.3rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--sidebar-fg);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Layer toggle row */
+.topbar-layer-toggles {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--sidebar-border);
+  margin: 0 4px;
+  align-self: center;
+}
+
+/* PR2: Opacity slider row in topbar */
+.topbar-opacity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar-opacity-label {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+
+.topbar-opacity-slider {
+  flex: 1;
+  accent-color: var(--btn-primary-bg);
+  height: 4px;
+  cursor: pointer;
+  max-width: 120px;
+}
+
+.topbar-opacity-value {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  min-width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-layer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-500);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.topbar-layer-btn:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+.topbar-layer-btn[aria-pressed='true'] {
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
+  color: var(--gray-0);
+}
+
+.topbar-layer-btn[aria-pressed='true']:hover {
+  background: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
+}
+
+/* Floating date label overlay on the map */
+.animation-date-label {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 600;
+  padding: 0.3rem 0.8rem;
+  background: var(--surface-bg);
+  color: var(--surface-fg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+  display: none;
+  box-shadow: var(--shadow-sm);
+}
+
+body.animation-loaded .animation-date-label {
+  display: block;
+}
+
+/* Leaflet draw tooltip — match app design tokens */
+.leaflet-draw-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important; /* Premium dark slate background */
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: var(--radius-md) !important;
+  color: #ffffff !important;
+  font:
+    12px/18px system-ui,
+    sans-serif !important;
+  padding: 4px 8px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.leaflet-draw-tooltip span,
+.leaflet-draw-tooltip-subtext {
+  color: #ffffff !important;
+}
+
+.leaflet-draw-tooltip:before {
+  border-right-color: rgba(15, 23, 42, 0.95) !important;
+}
+
+.leaflet-error-draw-tooltip {
+  background-color: #7f1d1d !important;
+  border-color: #991b1b !important;
+  color: #fecaca !important;
+}
+
+.leaflet-error-draw-tooltip:before {
+  border-right-color: #991b1b !important;
+}
+
+/* Leaflet draw actions (edit/delete buttons after drawing) */
+.leaflet-draw-actions a {
+  background-color: var(--gray-600) !important;
+  border-left: 1px solid var(--gray-500) !important;
+  color: var(--gray-0) !important;
+  font:
+    11px/19px system-ui,
+    sans-serif !important;
+  height: 28px !important;
+}
+
+.leaflet-draw-actions a:hover {
+  background-color: var(--gray-500) !important;
+}
+
+/* Hide leaflet-draw controls from the map since we use our custom sidebar controls */
+.leaflet-draw {
+  display: none !important;
+}
+
+/* Unified Leaflet zoom controls styling matching the application theme */
+.leaflet-bar {
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid var(--sidebar-border) !important;
+  background-color: var(--surface-bg) !important;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
+}
+
+.leaflet-bar a {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease !important;
+}
+
+.leaflet-bar a:first-child {
+  border-bottom: 1px solid var(--sidebar-border) !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: var(--gray-100) !important;
+  color: var(--text-primary) !important;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+/* Leaflet draw toolbar overrides — match app design */
+.leaflet-draw-toolbar a {
+  /* PR1: Override leaflet-draw buttons to match app button sizing */
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  border: 1px solid var(--sidebar-border) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--surface-bg) !important;
+  transition: background 0.15s ease !important;
+}
+
+.leaflet-draw-toolbar a:hover {
+  background: var(--gray-100) !important;
+}
+
+.leaflet-draw-toolbar a:focus {
+  outline: 2px solid var(--btn-primary-bg);
+  outline-offset: 1px;
+}
+
+.leaflet-draw-toolbar a.leaflet-disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+/* Dark mode for topbar */
+:root[data-theme='dark'] .map-overlay-topbar {
+  background: rgba(17, 24, 39, 0.92);
+  border-bottom-color: var(--gray-200);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .map-overlay-topbar {
+    background: rgba(17, 24, 39, 0.92);
+    border-bottom-color: var(--gray-200);
+  }
+}
+
+:root[data-theme='dark'] .leaflet-draw-toolbar a {
+  background: var(--gray-800) !important;
+  border-color: var(--gray-600) !important;
+  color: var(--text-primary) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .leaflet-draw-toolbar a {
+    background: var(--gray-800) !important;
+    border-color: var(--gray-600) !important;
+    color: var(--text-primary) !important;
+  }
+}
+
+:root[data-theme='dark'] .leaflet-draw-toolbar a:hover {
+  background: var(--gray-700) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .leaflet-draw-toolbar a:hover {
+    background: var(--gray-700) !important;
+  }
+}
+
+:root[data-theme='dark'] .leaflet-draw-actions a {
+  background-color: var(--gray-600) !important;
+  color: var(--gray-200) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .leaflet-draw-actions a {
+    background-color: var(--gray-600) !important;
+    color: var(--gray-200) !important;
+  }
+}
+
+:root[data-theme='dark'] .leaflet-draw-actions a:hover {
+  background-color: var(--gray-500) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .leaflet-draw-actions a:hover {
+    background-color: var(--gray-500) !important;
+  }
+}
+
+:root[data-theme='dark'] .leaflet-draw-toolbar a.leaflet-disabled {
+  background: var(--gray-700) !important;
+  border-color: var(--gray-600) !important;
+  opacity: 0.4 !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .leaflet-draw-toolbar a.leaflet-disabled {
+    background: var(--gray-700) !important;
+    border-color: var(--gray-600) !important;
+    opacity: 0.4 !important;
+  }
+}
+
+/* Custom Leaflet station icon styles */
+.custom-station-icon {
+  background: none !important;
+  border: none !important;
+}
+
+.station-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  border: 2px solid white;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  color: white;
+}
+
+.station-icon:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+.station-icon-hidro {
+  background-color: #7c3aed; /* Púrpura/violeta */
+}
+
+.station-icon-clima {
+  background-color: #0284c7; /* Celeste/azul claro */
+}
+
+.station-icon svg {
+  display: block;
+}
+
+/* PR3: Hide old #player-controls when new topbar is active */
+body.animation-loaded #player-controls {
+  display: none !important;
+}
+
+/* Player controls: barra fija al fondo del área de mapas */
+#player-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  background: var(--colorbar-bg);
+  backdrop-filter: blur(4px);
+  border-top: 1px solid var(--sidebar-border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  color: var(--sidebar-fg);
+}
+
+.player-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--btn-primary-bg);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.player-btn:hover {
+  background: var(--gray-100);
+}
+
+.player-step-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.player-slider {
+  flex: 1;
+  accent-color: var(--btn-primary-bg);
+  height: 4px;
+  cursor: pointer;
+}
+
+.player-frame-label {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--gray-400);
+  min-width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-speed-select {
+  flex-shrink: 0;
+  padding: 0.15rem 0.3rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--sidebar-fg);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mapa arriba dentro del panel */
+#map,
+#map-b {
+  flex: 7;
+  width: 100%;
+  position: relative;
+}
+
+/* Contenedor de la gráfica: segunda fila del panel */
+#ndvi-chart-container,
+#chart-b-container {
+  flex: 3;
+  width: 100%;
+  min-width: 0;
+  min-height: 220px;
+  border-top: 1px solid var(--sidebar-border);
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease;
+}
+
+/* En modo comparativa siempre mostramos el chart-container A (para los controles) */
+body.compare-mode-active #ndvi-chart-container {
+  display: flex !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Controles de comparativa en el área de gráficas                     */
+/* ------------------------------------------------------------------ */
+
+.compare-panel-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface-bg);
+  border-bottom: 1px solid var(--sky-400);
+  flex-shrink: 0;
+}
+
+.compare-panel-var-label {
+  font-size: var(--text-sm);
+  color: var(--btn-primary-bg);
+}
+
+.compare-panel-var-label strong {
+  font-weight: 700;
+}
+
+.compare-selects-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.compare-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 110px;
+}
+
+.compare-select-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--btn-primary-bg);
+}
+
+.compare-select-group select {
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sky-400);
+  font-size: 0.85rem;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  min-width: 110px;
+}
+
+.compare-select-group select:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border-style: dashed;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.compare-generate-btn {
+  align-self: flex-end;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Etiqueta panel A en modo comparativa — sky */
+body.compare-mode-active #map-panel-a .panel-label {
+  background: var(--btn-primary-bg);
+  color: var(--gray-0);
+  border-bottom-color: var(--btn-primary-hover);
+}
+
+/* Etiqueta panel B en modo comparativa — slate (contraste) */
+body.compare-mode-active #map-panel-b .panel-label {
+  background: var(--gray-500);
+  color: var(--gray-0);
+  border-bottom-color: var(--gray-600);
+}
+
+/* Borde separador panel B en modo comparativa */
+body.compare-mode-active #map-panel-b {
+  border-left-color: var(--gray-500);
+}
+
+/* Controles panel B — fondo slate muy suave */
+#compare-controls-b {
+  background: var(--surface-bg);
+  border-bottom-color: var(--gray-200);
+}
+
+#compare-controls-b .compare-select-group label {
+  color: var(--gray-500);
+}
+
+#compare-controls-b .compare-select-group select {
+  border-color: var(--gray-300);
+}
+
+/* Popup de marcadores de estaciones - Moderno, Compacto y Adaptable al Tema */
+.station-popup-content {
+  font-family: inherit;
+  padding: 0;
+  min-width: 180px;
+}
+
+.station-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.station-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.station-badge-hidro {
+  background-color: rgba(3, 105, 161, 0.12);
+  color: var(--sky-500);
+  border: 1px solid rgba(3, 105, 161, 0.2);
+}
+
+.station-badge-clima {
+  background-color: rgba(45, 212, 191, 0.12);
+  color: var(--teal-600);
+  border: 1px solid rgba(45, 212, 191, 0.2);
+}
+
+.station-popup-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--surface-fg);
+  margin: 0 0 0.3rem 0;
+  line-height: 1.25;
+}
+
+.station-popup-meta {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin-bottom: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.station-popup-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.station-popup-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--btn-primary-fg) !important;
+  background-color: var(--btn-primary-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  text-decoration: none !important;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+}
+
+.station-popup-btn:hover {
+  background-color: var(--btn-primary-hover);
+  color: var(--btn-primary-fg) !important;
+}
+
+.station-popup-btn:active {
+  transform: scale(0.98);
+}
+
+.station-forecast-link {
+  margin-top: 0.4rem;
+  background: #0e7490;
+}
+
+.forecast-dialog {
+  width: min(760px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 0;
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-lg);
+  color: var(--surface-fg);
+  background: var(--surface-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.forecast-dialog::backdrop {
+  background: var(--modal-backdrop);
+  backdrop-filter: blur(3px);
+}
+
+.forecast-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem 0.8rem;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.forecast-dialog-header h2,
+.forecast-eyebrow {
+  margin: 0;
+}
+
+.forecast-eyebrow {
+  color: #0e7490;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.forecast-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.forecast-state,
+.forecast-content {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.forecast-state:empty {
+  display: none;
+}
+
+.forecast-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  color: var(--gray-400);
+  font-size: 0.78rem;
+}
+
+.forecast-fresh,
+.forecast-stale,
+.forecast-demo {
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.4rem;
+  font-weight: 700;
+}
+
+.forecast-fresh {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+.forecast-stale {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+}
+.forecast-demo {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+.forecast-chart {
+  width: 100%;
+  height: clamp(280px, 48vh, 430px);
+  margin-top: 0.75rem;
+}
+
+.forecast-warning {
+  margin: 0.75rem 0 0;
+  padding: 0.7rem 0.8rem;
+  border-left: 3px solid #d97706;
+  background: rgba(217, 119, 6, 0.1);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 540px) {
+  .forecast-dialog {
+    width: 100vw;
+    max-width: none;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .forecast-dialog-header,
+  .forecast-state,
+  .forecast-content {
+    padding-left: 0.8rem;
+    padding-right: 0.8rem;
+  }
+  .forecast-chart {
+    height: 300px;
+  }
+}
+
+/* Popup de Leaflet: reemplaza el contenedor nativo para soportar el modo oscuro */
+.leaflet-popup-content-wrapper {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--surface-fg) !important;
+  border: 1px solid var(--sidebar-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 10px 12px !important;
+  color: var(--surface-fg) !important;
+}
+
+.leaflet-popup-tip {
+  background-color: var(--sidebar-bg) !important;
+  border-left: 1px solid var(--sidebar-border);
+  border-bottom: 1px solid var(--sidebar-border);
+  box-shadow: var(--shadow-md) !important;
+}
+
+.leaflet-popup-close-button {
+  color: var(--gray-400) !important;
+  padding: 6px 6px 0 0 !important;
+  font-size: 14px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: var(--surface-fg) !important;
+  background: transparent !important;
+}
+
+/* Checkboxes de estaciones en controles de comparativa */
+.compare-station-checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--gray-200);
+  margin-top: 0.1rem;
+}
+
+.compare-station-checks-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--btn-primary-bg);
+}
+
+#compare-controls-b .compare-station-checks-label {
+  color: var(--gray-500);
+}
+
+.compare-station-checks label {
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+/* Ocultar contenedor de gráfica hasta que haya datos */
+.hidden {
+  display: none !important;
+}
+
+/* Plotly usa todo el ancho del div */
+#ndvi-chart,
+#chart-b {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+html.theme-transitioning #ndvi-chart,
+html.theme-transitioning #chart-b {
+  opacity: 0.97;
+  transform: translateY(0);
+}
+
+/* ------------------------------------------------------------------ */
+/* Barra de herramientas del modo comparativa (en la sidebar)          */
+/* ------------------------------------------------------------------ */
+
+.compare-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.compare-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--sidebar-fg);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.compare-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--gray-300);
+  transition: color 0.2s ease;
+}
+
+.compare-toggle-btn:hover {
+  background: var(--gray-100);
+  border-color: var(--sky-400);
+}
+
+.compare-toggle-btn[aria-pressed='true'] {
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
+  color: var(--gray-0);
+}
+
+.compare-toggle-btn[aria-pressed='true'] svg {
+  color: var(--sky-400);
+}
+
+/* Flood risk toggle activo — acento teal */
+.flood-risk-toggle-btn[aria-pressed='true'] {
+  background: var(--teal-600);
+  border-color: var(--teal-600);
+  color: var(--gray-0);
+}
+
+.flood-risk-toggle-btn[aria-pressed='true'] svg {
+  color: var(--teal-400);
+}
+
+.compare-mode-hint,
+.flood-risk-mode-hint {
+  font-size: var(--text-sm);
+  color: var(--btn-primary-bg);
+  margin: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ajuste del control Leaflet para alineación con el botón de sidebar */
+.leaflet-left {
+  margin-left: 0;
+}
+
+.leaflet-left .leaflet-control {
+  margin-left: 12px;
+}
+
+.leaflet-left .leaflet-control-zoom {
+  margin-top: 52px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: min(280px, 70vw);
+  }
+}
+
+/* ==========================================================================
+   Colorbars (with theming)
+   ========================================================================== */
+
+.ndvi-colorbar,
+.temp-colorbar,
+.soil-colorbar,
+.precip-colorbar,
+.flood-risk-colorbar {
+  display: flex;
+  align-items: stretch;
+  background: var(--colorbar-bg);
+  padding: 6px;
+  border-radius: 4px;
+  box-shadow: var(--shadow-sm);
+  font-size: 12px;
+  margin-right: 8px;
+  transition:
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease;
+}
+
+.ndvi-colorbar-scale {
+  width: 14px;
+  height: 140px;
+  border: 1px solid var(--gray-300);
+  background: linear-gradient(
+    to top,
+    #a50026 0%,
+    #d73027 25%,
+    #ffffbf 50%,
+    #a6d96a 75%,
+    #006837 100%
+  );
+  margin-right: 6px;
+}
+
+.ndvi-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sidebar-fg);
+}
+
+.temp-colorbar-scale {
+  width: 14px;
+  height: 160px;
+  border: 1px solid var(--gray-300);
+  background: linear-gradient(
+    to top,
+    #000080 0%,
+    #0000d9 10%,
+    #4000ff 20%,
+    #0080ff 30%,
+    #00ffff 40%,
+    #00ff80 50%,
+    #80ff00 60%,
+    #daff00 70%,
+    #ffff00 80%,
+    #ffb000 90%,
+    #ff0000 100%
+  );
+  margin-right: 6px;
+}
+
+.temp-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sidebar-fg);
+}
+
+.soil-colorbar-scale {
+  width: 14px;
+  height: 140px;
+  border: 1px solid var(--gray-300);
+  background: linear-gradient(
+    to top,
+    #552200 0%,
+    #8c510a 12.5%,
+    #bf812d 25%,
+    #dfc27d 37.5%,
+    #f6e8c3 50%,
+    #c7eae5 62.5%,
+    #80cdc1 75%,
+    #35978f 87.5%,
+    #01665e 100%
+  );
+  margin-right: 6px;
+}
+
+.soil-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sidebar-fg);
+}
+
+.precip-colorbar-scale {
+  width: 14px;
+  height: 160px;
+  border: 1px solid var(--gray-300);
+  background: linear-gradient(
+    to top,
+    #ffffff 0%,
+    #b3d9ff 20%,
+    #4da6ff 40%,
+    #0066ff 55%,
+    #0044aa 70%,
+    #880000 85%,
+    #ff0000 100%
+  );
+  margin-right: 6px;
+}
+
+.precip-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sidebar-fg);
+}
+
 .flood-risk-colorbar-scale {
   width: 14px;
   height: 140px;

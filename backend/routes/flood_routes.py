@@ -2,11 +2,12 @@
 Blueprint 'flood' — endpoint de mapas de riesgo de inundación por municipio.
 """
 
+import json
 import logging
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, abort, jsonify, request, send_from_directory
 
-from backend.config import MUNICIPAL_TIFS, RATE_LIMITS
+from backend.config import FLOOD_RISK_DIR, MUNICIPAL_TIFS, RATE_LIMITS
 from backend.extensions import limiter
 from backend.gee.flood_risk import render_flood_risk_png
 from backend.gee.schemas import (
@@ -19,6 +20,32 @@ from backend.gee.schemas import (
 logger = logging.getLogger(__name__)
 
 flood_bp = Blueprint("flood", __name__)
+
+
+@flood_bp.get("/api/flood-risk/metadata")
+def flood_risk_metadata() -> Response:
+    """Classes, palette, tile template, sources and validation of the map."""
+    metadata = json.loads((FLOOD_RISK_DIR / "metadata.json").read_text("utf-8"))
+    metadata["tiles"]["url"] = "/api/flood-risk/" + metadata["tiles"]["url"]
+    return jsonify(metadata)
+
+
+@flood_bp.get("/api/flood-risk/municipalities")
+def flood_risk_municipalities() -> Response:
+    """Municipality boundaries with class shares, mean score and rank."""
+    return send_from_directory(
+        FLOOD_RISK_DIR, "municipalities.geojson", mimetype="application/geo+json"
+    )
+
+
+@flood_bp.get("/api/flood-risk/tiles/<int:z>/<int:x>/<int:y>.png")
+@limiter.exempt  # static files; a single map view requests dozens of tiles
+def flood_risk_tile(z: int, x: int, y: int) -> Response:
+    """Pre-rendered susceptibility tile (paletted PNG, Web Mercator)."""
+    tiles = FLOOD_RISK_DIR / "tiles"
+    if not (tiles / str(z) / str(x) / f"{y}.png").is_file():
+        abort(404)
+    return send_from_directory(tiles, f"{z}/{x}/{y}.png", mimetype="image/png")
 
 
 @flood_bp.get("/api/flood-risk-municipio")

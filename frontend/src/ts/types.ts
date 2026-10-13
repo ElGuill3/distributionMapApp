@@ -68,12 +68,6 @@ export interface LocalStationInfo {
 
 export type LocalStationsResponse = Record<string, LocalStationInfo>;
 
-/** Respuesta de /api/flood-risk-municipio */
-export interface FloodRiskResponse {
-  mapUrl: string;
-  bbox: BBox;
-}
-
 /** Respuesta de error genérica */
 export interface ApiError {
   error: string;

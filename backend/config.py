@@ -85,6 +85,9 @@ TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
 GIFS_DIR = STATIC_DIR / "gifs"
 FLOOD_MAPS_DIR = STATIC_DIR / "flood_maps"
 DATA_DIR = BASE_DIR / "backend" / "data" / "mapa_riesgo" / "municipios"
+# Published flood susceptibility (tiles, municipality stats, metadata),
+# produced offline by `python -m backend.floodmodel publish`.
+FLOOD_RISK_DIR = BASE_DIR / "backend" / "data" / "flood_risk"
 
 
 def prepare_runtime_directories() -> None:
