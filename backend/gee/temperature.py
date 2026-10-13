@@ -8,8 +8,8 @@ Período   : diario
 
 import ee
 
+from backend.config import BASE_PIXELS_PER_FRAME, ERA5_LAND_DAILY
 from backend.gee.utils import build_base_collection, compute_gif_dims, validate_bbox
-from config import BASE_PIXELS_PER_FRAME, ERA5_LAND_DAILY
 
 _BAND = "temperature_2m"
 _FRAMES_PER_SECOND = 3

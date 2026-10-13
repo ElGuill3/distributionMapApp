@@ -8,7 +8,7 @@ import re
 
 import pytest
 
-from config import BASE_PIXELS_PER_FRAME, MIN_GIF_DIM
+from backend.config import BASE_PIXELS_PER_FRAME, MIN_GIF_DIM
 from backend.gee.utils import (
     check_max_10_years,
     compute_gif_dims,

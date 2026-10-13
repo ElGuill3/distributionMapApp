@@ -202,7 +202,7 @@ Station names, municipality labels, station IDs and inundation legend values are
 
 To facilitate offline analysis, the system offers:
 - **Analysis ZIP**: Exports a ZIP package containing the active time series data in CSV format, along with the animation GIFs and analysis metadata.
-  GIF paths must stay within `static/gifs/` and end in `.gif`; `gifs/name.gif` and `/static/gifs/name.gif` are accepted. Traversal, absolute paths, other files and escaping symlinks return HTTP 400; a missing permitted GIF returns HTTP 404.
+  GIF paths must stay within `frontend/static/gifs/` and end in `.gif`; `gifs/name.gif` and `/static/gifs/name.gif` are accepted. Traversal, absolute paths, other files and escaping symlinks return HTTP 400; a missing permitted GIF returns HTTP 404.
 
 ### Operation Modes
 
@@ -259,7 +259,7 @@ To facilitate offline analysis, the system offers:
    - `GET /api/<variable>-gif-bbox` — generates the animated GIF.
    - `GET /api/<variable>-timeseries-bbox` — retrieves the time series.
 3. The backend queries the corresponding GEE collection, filters by date and region, and requests the GIF via `getVideoThumbURL`.
-4. The GIF is downloaded from GEE, PIL overlays the date on each frame, and the file is saved in `static/gifs/`.
+4. The GIF is downloaded from GEE, PIL overlays the date on each frame, and the file is saved in `frontend/static/gifs/`.
 5. The backend responds with `{ gifUrl, bbox, dates, <values> }`.
 6. The frontend overlays the GIF on the Leaflet map using `L.imageOverlay` and renders the chart using Plotly.
 
@@ -361,7 +361,7 @@ source .venv/bin/activate
 
 Or you can run any command directly using `uv run`:
 ```bash
-uv run app.py
+uv run python -m backend.app
 ```
 
 ---
@@ -444,7 +444,7 @@ Fecha,Nivel(m),...
 YYYY-MM-DD,value,...
 ```
 
-If you need to add new stations, register them in `config.py` under `LOCAL_STATIONS`.
+If you need to add new stations, register them in `backend/config.py` under `LOCAL_STATIONS`.
 
 ---
 
@@ -496,7 +496,7 @@ npm run test:e2e:ui
 ### Start the Application
 
 ```bash
-python app.py
+python -m backend.app
 ```
 
 Open your browser and navigate to: **http://127.0.0.1:5000**
@@ -716,11 +716,11 @@ npm run quality:ts
 
 ### GIF Cache
 
-GIFs are cached under `static/gifs/` and cleared by the daemon when they exceed **60 minutes of age** (`GIF_MAX_AGE_MINUTES` in `config.py`).
+GIFs are cached under `frontend/static/gifs/` and cleared by the daemon when they exceed **60 minutes of age** (`GIF_MAX_AGE_MINUTES` in `backend/config.py`).
 
 ### Runtime Initialization
 
-Importing `app` constructs Flask routes without starting Earth Engine, creating runtime directories or launching GIF cleanup. `uv run distribution-map` and `python app.py` initialize before serving; WSGI `app:app` initializes on its first request. `initialize_runtime()` is process-local and thread-safe: repeated calls do not start duplicate cleanup threads, and EE failure prevents cleanup startup. Dependency preflight never initializes runtime.
+Importing `backend.app` constructs Flask routes without starting Earth Engine, creating runtime directories or launching GIF cleanup. `uv run distribution-map` and `python -m backend.app` initialize before serving; WSGI `backend.app:app` initializes on its first request. `initialize_runtime()` is process-local and thread-safe: repeated calls do not start duplicate cleanup threads, and EE failure prevents cleanup startup. Dependency preflight never initializes runtime.
 
 Synthetic tests set `app.config["INITIALIZE_RUNTIME"] = False` to disable request-triggered startup. Explicit initializer calls still require mocked providers and isolated files.
 
@@ -728,7 +728,7 @@ Synthetic tests set `app.config["INITIALIZE_RUNTIME"] = False` to disable reques
 
 ```bash
 pip install gunicorn
-gunicorn --workers 1 --threads 4 -b 0.0.0.0:8000 app:app
+gunicorn --workers 1 --threads 4 -b 0.0.0.0:8000 backend.app:app
 ```
 
 Keep one worker for the process-local SSE registry; threads allow the SSE request to run while GIF generation is in progress. Do not scale this command to multiple workers/replicas without first adding a shared progress backend. Configure server/proxy timeouts for generation requests, which can take several minutes.

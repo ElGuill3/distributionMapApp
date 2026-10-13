@@ -1,1 +1,1 @@
-"""Backend implementation packages; runtime composition remains at the root."""
+"""Backend package: Flask app composition, configuration and implementation modules."""

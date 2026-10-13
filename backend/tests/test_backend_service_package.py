@@ -2,7 +2,7 @@
 
 
 def test_route_helpers_share_backend_service_package_identities():
-    from app import start_cleanup_daemon as app_cleanup_daemon
+    from backend.app import start_cleanup_daemon as app_cleanup_daemon
     from backend.routes.export_routes import (
         create_export_zip as export_route_zip,
     )

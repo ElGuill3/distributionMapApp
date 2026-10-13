@@ -25,7 +25,7 @@ class FakeUpstream:
 
 @pytest.fixture
 def client():
-    from app import app
+    from backend.app import app
 
     app.config["TESTING"] = True
     return app.test_client()
@@ -34,7 +34,7 @@ def client():
 def test_proxies_success_with_bounded_request_options(client):
     payload = {"schema_version": "bdctb-forecast/v1"}
     with patch(
-        "app.requests.get",
+        "backend.app.requests.get",
         return_value=FakeUpstream(200, json.dumps(payload).encode()),
     ) as get:
         response = client.get("/api/v1/forecasts/bdctb")
@@ -54,7 +54,7 @@ def test_proxies_success_with_bounded_request_options(client):
 def test_preserves_forecast_unavailable_response(client):
     payload = {"error": {"code": "forecast_unavailable"}}
     with patch(
-        "app.requests.get",
+        "backend.app.requests.get",
         return_value=FakeUpstream(503, json.dumps(payload).encode()),
     ):
         response = client.get("/api/v1/forecasts/bdctb")
@@ -65,7 +65,7 @@ def test_preserves_forecast_unavailable_response(client):
 
 def test_rejects_oversized_response(client):
     with patch(
-        "app.requests.get", return_value=FakeUpstream(200, b"x" * (64 * 1024 + 1))
+        "backend.app.requests.get", return_value=FakeUpstream(200, b"x" * (64 * 1024 + 1))
     ):
         response = client.get("/api/v1/forecasts/bdctb")
 
@@ -74,7 +74,7 @@ def test_rejects_oversized_response(client):
 
 
 def test_maps_timeout_without_exposing_upstream_details(client):
-    with patch("app.requests.get", side_effect=requests.Timeout("private detail")):
+    with patch("backend.app.requests.get", side_effect=requests.Timeout("private detail")):
         response = client.get("/api/v1/forecasts/bdctb")
 
     assert response.status_code == 504
@@ -83,7 +83,7 @@ def test_maps_timeout_without_exposing_upstream_details(client):
 
 def test_maps_connection_failure_without_exposing_upstream_details(client):
     with patch(
-        "app.requests.get", side_effect=requests.ConnectionError("private detail")
+        "backend.app.requests.get", side_effect=requests.ConnectionError("private detail")
     ):
         response = client.get("/api/v1/forecasts/bdctb")
 
@@ -93,7 +93,7 @@ def test_maps_connection_failure_without_exposing_upstream_details(client):
 
 def test_maps_unexpected_upstream_status_without_exposing_body(client):
     with patch(
-        "app.requests.get", return_value=FakeUpstream(500, b"private upstream body")
+        "backend.app.requests.get", return_value=FakeUpstream(500, b"private upstream body")
     ):
         response = client.get("/api/v1/forecasts/bdctb")
 
@@ -102,13 +102,13 @@ def test_maps_unexpected_upstream_status_without_exposing_body(client):
 
 
 def test_rejects_request_61_before_contacting_upstream(client, monkeypatch):
-    from extensions import limiter
+    from backend.extensions import limiter
 
     monkeypatch.setattr(limiter, "enabled", True)
     limiter.reset()
     try:
         with patch(
-            "app.requests.get",
+            "backend.app.requests.get",
             return_value=FakeUpstream(200, b'{"schema_version":"bdctb-forecast/v1"}'),
         ) as get:
             responses = [client.get("/api/v1/forecasts/bdctb") for _ in range(61)]

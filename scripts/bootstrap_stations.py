@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from backend.scrapers.conagua import ConaguaScraper
-from config import (
+from backend.config import (
     BASE_DIR,
     CONAGUA_CLIMAS_STATIONS,
     CONAGUA_HIDROS_STATIONS,

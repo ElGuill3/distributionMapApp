@@ -27,7 +27,7 @@ class TestApiDocsServe:
     def client(self):
         """Flask test client using the real app."""
         # Import only after mock_modules has run
-        from app import app as flask_app
+        from backend.app import app as flask_app
 
         flask_app.config["TESTING"] = True
         with flask_app.test_client() as client:

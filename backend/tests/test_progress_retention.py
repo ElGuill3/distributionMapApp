@@ -16,8 +16,8 @@ from backend.tests.test_progress_lifecycle import (
 
 @pytest.fixture
 def client(monkeypatch):
-    from app import app
-    from extensions import limiter
+    from backend.app import app
+    from backend.extensions import limiter
 
     monkeypatch.setitem(app.config, "TESTING", True)
     monkeypatch.setattr(limiter, "enabled", False)

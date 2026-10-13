@@ -13,7 +13,7 @@ SMALL_BBOX_URL = "[-92.0,17.0,-91.0,18.0]"
 @pytest.fixture
 def client():
     """Cliente de test Flask con app real."""
-    from app import app
+    from backend.app import app
     app.config["TESTING"] = True
     return app.test_client()
 

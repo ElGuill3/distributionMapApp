@@ -1,6 +1,6 @@
 """Public blueprint ownership at the canonical backend.routes package boundary."""
 
-import app as app_module
+import backend.app as app_module
 from backend.routes.export_routes import export_bp
 from backend.routes.flood_routes import flood_bp
 from backend.routes.gif_routes import gif_bp

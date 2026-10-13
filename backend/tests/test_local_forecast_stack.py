@@ -257,7 +257,7 @@ def test_app_preflight_imports_real_boundary_without_runtime_side_effects(tmp_pa
             sys.executable,
             "-c",
             (
-                "import app_preflight, threading; "
+                "from backend import app_preflight; import threading; "
                 "result = app_preflight.main(); "
                 "raise SystemExit(result if threading.active_count() == 1 else 9)"
             ),

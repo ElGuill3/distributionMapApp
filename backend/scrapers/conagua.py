@@ -5,7 +5,7 @@ from ftplib import FTP
 from pathlib import Path
 import requests
 from backend.scrapers.base import BaseScraper
-from config import BASE_DIR
+from backend.config import BASE_DIR
 
 logger = logging.getLogger(__name__)
 

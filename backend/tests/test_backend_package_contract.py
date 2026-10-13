@@ -19,11 +19,11 @@ from backend.scrapers.base import BaseScraper
 from backend.scrapers.conagua import ConaguaScraper
 from backend.scrapers.smn import SmnWeatherScraper
 from scripts.bootstrap_stations import ConaguaScraper as bootstrap_scraper
-import config
+from backend import config
 assert bootstrap_scraper is ConaguaScraper
 assert issubclass(ConaguaScraper, BaseScraper)
 assert issubclass(SmnWeatherScraper, BaseScraper)
-assert not any(n in ("app", "ee", "scrapers") for n in sys.modules)
+assert not any(n in ("app", "backend.app", "ee", "scrapers") for n in sys.modules)
 assert Path(config.BASE_DIR) == Path(sys.argv[1])
 root = Path(sys.argv[1])
 assert Path(config.DATA_DIR) == root / "backend" / "data" / "mapa_riesgo" / "municipios"

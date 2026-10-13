@@ -4,10 +4,10 @@ Blueprint 'station' — endpoint de series temporales de estaciones hidrológica
 
 from flask import Blueprint, Response, jsonify, request
 
+from backend.config import LOCAL_STATIONS, RATE_LIMITS
+from backend.extensions import limiter
 from backend.gee.schemas import LocalStationQuerySchema
 from backend.services.station_service import read_station_level_timeseries
-from config import LOCAL_STATIONS, RATE_LIMITS
-from extensions import limiter
 
 station_bp = Blueprint("station", __name__)
 

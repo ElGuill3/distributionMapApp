@@ -8,7 +8,7 @@ se hace en app.py vía `limiter.init_app(app)`.
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from config import RATE_LIMIT_ENABLED
+from backend.config import RATE_LIMIT_ENABLED
 
 limiter = Limiter(
     key_func=get_remote_address,

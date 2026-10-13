@@ -1,5 +1,5 @@
 import os
-from config import _env_list
+from backend.config import _env_list
 
 class TestConfigEnvList:
     def test_env_list_default(self) -> None:

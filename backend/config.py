@@ -82,7 +82,7 @@ _base_override = os.getenv("BASE_DIR_OVERRIDE")
 BASE_DIR = (
     Path(_base_override)
     if _base_override
-    else Path(os.path.dirname(os.path.abspath(__file__)))
+    else Path(__file__).resolve().parent.parent
 )
 STATIC_DIR = BASE_DIR / "frontend" / "static"
 TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"

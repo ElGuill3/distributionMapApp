@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import ee
 
-from config import (
+from backend.config import (
     BASE_PIXELS_PER_FRAME,
     MAX_SPAN_DEG,
     MAX_TOTAL_PIXELS,

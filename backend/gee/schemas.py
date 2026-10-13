@@ -12,7 +12,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from config import MAX_YEARS_RANGE
+from backend.config import MAX_YEARS_RANGE
 
 
 class BBoxSchema(BaseModel):
@@ -142,7 +142,7 @@ class LocalStationQuerySchema(BaseModel):
     @field_validator("station_id")
     @classmethod
     def validate_station_id(cls, v: str) -> str:
-        from config import LOCAL_STATIONS
+        from backend.config import LOCAL_STATIONS
         if not LOCAL_STATIONS:
             # Fallback para tests unitarios cuando no hay archivos CSV en el entorno de prueba
             known_fallback = {"SPTTB", "BDCTB", "SPTTB_hidro", "BDCTB_hidro", "SPTTB_clima", "BDCTB_clima"}

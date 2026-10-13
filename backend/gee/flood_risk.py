@@ -21,7 +21,7 @@ from matplotlib import colormaps
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from PIL import Image as PILImage
 
-from config import FLOOD_MAPS_DIR
+from backend.config import FLOOD_MAPS_DIR
 
 # Colores en formato hex para la paleta FHI (mismos que GEE)
 _FHI_COLORS_HEX = [

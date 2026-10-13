@@ -88,7 +88,7 @@ def test_app_spec_binds_loopback_and_injects_no_model_configuration(tmp_path):
         "-m",
         "flask",
         "--app",
-        "app",
+        "backend.app",
         "run",
         "--host",
         APP_HOST,

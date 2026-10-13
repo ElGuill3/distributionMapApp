@@ -17,7 +17,7 @@ def snapshot(tmp_path):
 
 DEFAULTS = {"MAX_SPAN_DEG": 8.0, "MAX_YEARS_RANGE": 10.0, "MAX_SPAN_DEG_S2": 4.0}
 IMPORT = (
-    "import config, json; print(json.dumps({k: getattr(config,k) for k in "
+    "from backend import config; import json; print(json.dumps({k: getattr(config,k) for k in "
     + repr(list(DEFAULTS))
     + "}))"
 )

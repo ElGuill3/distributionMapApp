@@ -5,10 +5,10 @@
 set -e
 
 echo "Running Python lint check with Ruff..."
-echo "Scope: app/, backend/, config.py, extensions.py"
+echo "Scope: backend/"
 echo ""
 
-ruff check app.py backend/ config.py extensions.py
+ruff check backend/
 
 echo ""
 echo "Lint check complete"

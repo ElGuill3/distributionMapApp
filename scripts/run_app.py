@@ -187,7 +187,7 @@ def app_process_spec(settings: AppSettings) -> ProcessSpec:
         "-m",
         "flask",
         "--app",
-        "app",
+        "backend.app",
         "run",
         "--host",
         APP_HOST,

@@ -38,7 +38,7 @@ import json, os, runpy, warnings
 from unittest.mock import patch
 warnings.simplefilter("ignore", UserWarning)
 next(runpy.run_path("backend/tests/conftest.py")["mock_modules"].__wrapped__())
-import app as module
+import backend.app as module
 import requests
 module.app.config["INITIALIZE_RUNTIME"] = False
 path = os.environ["LIMIT_PATH"]
@@ -120,7 +120,7 @@ def test_invalid_quota_fails_closed_without_echoing_value(snapshot, category, va
     key = "RATE_LIMIT_" + category.upper()
     env[key] = value
     result = subprocess.run(
-        [sys.executable, "-c", "import config"],
+        [sys.executable, "-c", "from backend import config"],
         cwd=snapshot,
         env=env,
         capture_output=True,

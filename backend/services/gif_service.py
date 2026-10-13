@@ -18,7 +18,7 @@ import requests
 from PIL import Image as PILImage
 from PIL import ImageDraw, ImageFont, ImageSequence
 
-from config import (
+from backend.config import (
     GIF_CLEANUP_INTERVAL_S,
     GIF_DOWNLOAD_TIMEOUT_S,
     GIF_MAX_AGE_MINUTES,

@@ -42,7 +42,7 @@ def verify_app_runtime() -> None:
     previous = os.environ.get(PREFLIGHT_ENV)
     os.environ[PREFLIGHT_ENV] = "1"
     try:
-        importlib.import_module("app")
+        importlib.import_module("backend.app")
     except Exception as exc:
         raise AppPreflightError(
             "application dependency boundary is unavailable"

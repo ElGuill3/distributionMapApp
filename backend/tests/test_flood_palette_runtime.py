@@ -26,7 +26,7 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, __import__("os").environ["PALETTE_PROBE_ROOT"])
 
-import config
+from backend import config
 
 base = Path(config.BASE_DIR)
 flood_maps = config.FLOOD_MAPS_DIR
@@ -66,7 +66,7 @@ before = snapshot()
 try:
     if mode == "route":
         sys.modules["ee"] = MagicMock()
-        import app as app_module
+        import backend.app as app_module
         app_module.app.config["INITIALIZE_RUNTIME"] = False
         client = app_module.app.test_client()
         from urllib.parse import quote

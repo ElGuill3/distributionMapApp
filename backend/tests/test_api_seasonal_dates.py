@@ -26,8 +26,8 @@ NDVI_ROUTES = [route for route in ALL_ROUTES if route[0] == "ndvi"]
 
 @pytest.fixture
 def client(monkeypatch):
-    from app import app
-    from extensions import limiter
+    from backend.app import app
+    from backend.extensions import limiter
 
     monkeypatch.setitem(app.config, "TESTING", True)
     monkeypatch.setattr(limiter, "enabled", False)

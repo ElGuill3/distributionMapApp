@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_public_stylesheet_url_retains_exact_bytes_and_mime_type(tmp_path, monkeypatch):
-    from app import app
+    from backend.app import app
 
     css = (ROOT / "frontend/src/styles/styles.css").read_bytes()
     (tmp_path / "styles.css").write_bytes(css)

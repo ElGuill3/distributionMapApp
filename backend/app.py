@@ -26,8 +26,8 @@ from flask import (
     send_from_directory,
 )
 
-import config
-from config import (
+from backend import config
+from backend.config import (
     BASE_DIR,
     BDCTB_FORECAST_API_BASE_URL,
     CACHE_POLICIES,
@@ -38,7 +38,7 @@ from config import (
     TEMPLATES_DIR,
     prepare_runtime_directories,
 )
-from extensions import limiter
+from backend.extensions import limiter
 
 DEPENDENCY_PREFLIGHT = os.getenv("_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT") == "1"
 

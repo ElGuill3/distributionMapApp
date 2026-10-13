@@ -37,6 +37,7 @@ with app.test_client() as client:
     assert css.data == css_source.read_bytes()
 assert 'ee' not in sys.modules
 assert 'app' not in sys.modules
+assert 'backend.app' not in sys.modules
 assert not [
     name
     for name in sys.modules

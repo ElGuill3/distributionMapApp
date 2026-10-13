@@ -31,7 +31,7 @@ NDVI_ENDPOINT = "/api/ndvi-gif-bbox?start=2020-01-01&end=2020-12-31"
 @pytest.fixture
 def client():
     """Cliente de test Flask con app real."""
-    from app import app
+    from backend.app import app
     app.config["TESTING"] = True
     return app.test_client()
 

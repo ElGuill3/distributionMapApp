@@ -208,7 +208,7 @@ Los nombres de estaciones, municipios, identificadores y valores de la leyenda d
 
 Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 - **ZIP de Análisis**: Exporta un paquete ZIP con los datos de las series temporales activas en formato CSV, junto a los GIFs de animación y metadatos del análisis.
-  Las rutas deben permanecer dentro de `static/gifs/` y terminar en `.gif`; se aceptan `gifs/nombre.gif` y `/static/gifs/nombre.gif`. Rutas con traversal, absolutas, otros archivos y enlaces simbólicos que escapen del directorio devuelven HTTP 400; un GIF permitido ausente devuelve HTTP 404.
+  Las rutas deben permanecer dentro de `frontend/static/gifs/` y terminar en `.gif`; se aceptan `gifs/nombre.gif` y `/static/gifs/nombre.gif`. Rutas con traversal, absolutas, otros archivos y enlaces simbólicos que escapen del directorio devuelven HTTP 400; un GIF permitido ausente devuelve HTTP 404.
 
 ### Modos de operación
 
@@ -265,7 +265,7 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
    - `GET /api/<variable>-gif-bbox` — genera el GIF animado.
    - `GET /api/<variable>-timeseries-bbox` — obtiene la serie temporal.
 3. El backend consulta la colección GEE correspondiente, filtra por fecha y región, y solicita el GIF a través de `getVideoThumbURL`.
-4. El GIF se descarga desde GEE, PIL superpone la fecha en cada frame, y el archivo se guarda en `static/gifs/`.
+4. El GIF se descarga desde GEE, PIL superpone la fecha en cada frame, y el archivo se guarda en `frontend/static/gifs/`.
 5. El backend responde con `{ gifUrl, bbox, dates, <valores> }`.
 6. El frontend superpone el GIF sobre el mapa Leaflet usando `L.imageOverlay` y renderiza la gráfica con Plotly.
 
@@ -371,7 +371,7 @@ source .venv/bin/activate
 
 O podés ejecutar directamente cualquier comando usando `uv run`:
 ```bash
-uv run app.py
+uv run python -m backend.app
 ```
 
 
@@ -447,7 +447,7 @@ Seguí las instrucciones en pantalla. Tras autenticarte, verificá que funcione:
 python -c "import ee; ee.Initialize(); print('GEE OK')"
 ```
 
-Editá `.env` o `config.py` y configurá el nombre de tu proyecto de Google Cloud (`GEE_PROJECT`).
+Editá `.env` o `backend/config.py` y configurá el nombre de tu proyecto de Google Cloud (`GEE_PROJECT`).
 
 > **¿No tenés proyecto GEE?** Ve a [console.cloud.google.com](https://console.cloud.google.com), creá un proyecto, habilitá la API *Earth Engine* y anotá el ID del proyecto.
 
@@ -463,7 +463,7 @@ Fecha,Nivel(m),...
 YYYY-MM-DD,valor,...
 ```
 
-Si necesitás agregar nuevas estaciones, registralas en `config.py` bajo `LOCAL_STATIONS`.
+Si necesitás agregar nuevas estaciones, registralas en `backend/config.py` bajo `LOCAL_STATIONS`.
 
 ---
 
@@ -515,7 +515,7 @@ npm run test:e2e:ui
 ### Iniciar la aplicación
 
 ```bash
-python app.py
+python -m backend.app
 ```
 
 Accede desde el navegador a: **http://127.0.0.1:5000**
@@ -752,11 +752,11 @@ Notas:
 
 ### Caché de GIFs
 
-Los GIFs generados se almacenan en `static/gifs/` con el nombre `<variable>_<start>_<end>_<hash>.gif`. Se eliminan automáticamente cuando superan los **60 minutos de antigüedad** (configurable en `config.py` mediante `GIF_MAX_AGE_MINUTES`).
+Los GIFs generados se almacenan en `frontend/static/gifs/` con el nombre `<variable>_<start>_<end>_<hash>.gif`. Se eliminan automáticamente cuando superan los **60 minutos de antigüedad** (configurable en `backend/config.py` mediante `GIF_MAX_AGE_MINUTES`).
 
 ### Despliegue en producción
 
-Importar `app` construye las rutas Flask sin iniciar Earth Engine, crear directorios de ejecución ni lanzar la limpieza de GIFs. `uv run distribution-map` y `python app.py` inicializan antes de servir; WSGI `app:app` inicializa en la primera solicitud. `initialize_runtime()` es local al proceso y seguro entre hilos: llamadas repetidas no duplican la limpieza, y un fallo de EE impide iniciarla. El preflight de dependencias nunca inicia el runtime.
+Importar `backend.app` construye las rutas Flask sin iniciar Earth Engine, crear directorios de ejecución ni lanzar la limpieza de GIFs. `uv run distribution-map` y `python -m backend.app` inicializan antes de servir; WSGI `backend.app:app` inicializa en la primera solicitud. `initialize_runtime()` es local al proceso y seguro entre hilos: llamadas repetidas no duplican la limpieza, y un fallo de EE impide iniciarla. El preflight de dependencias nunca inicia el runtime.
 
 Los tests sintéticos usan `app.config["INITIALIZE_RUNTIME"] = False` para desactivar el arranque por solicitud. Las llamadas explícitas al inicializador siguen necesitando proveedores simulados y archivos aislados.
 
@@ -764,7 +764,7 @@ Para un entorno de producción se recomienda:
 
 ```bash
 pip install gunicorn
-gunicorn --workers 1 --threads 4 -b 0.0.0.0:8000 app:app
+gunicorn --workers 1 --threads 4 -b 0.0.0.0:8000 backend.app:app
 ```
 
 Mantener un worker para el registro SSE local al proceso; los hilos permiten atender SSE mientras se genera el GIF. No escalar este comando a varios workers/réplicas sin implementar antes un backend de progreso compartido. Configurar los timeouts del servidor/proxy para solicitudes de generación que pueden tardar varios minutos.

@@ -5,13 +5,13 @@ import re
 
 import pytest
 
-from config import MAX_SPAN_DEG, MAX_SPAN_DEG_S2, MAX_YEARS_RANGE
+from backend.config import MAX_SPAN_DEG, MAX_SPAN_DEG_S2, MAX_YEARS_RANGE
 
 
 @pytest.fixture
 def client():
     """Cliente de test Flask con app real (conftest desactiva boot/rate)."""
-    from app import app
+    from backend.app import app
 
     app.config["TESTING"] = True
     return app.test_client()
@@ -53,7 +53,7 @@ def test_runtime_limits_script_precedes_deferred_module(client):
 
 
 def test_server_context_overrides_client_limit_values(client, monkeypatch):
-    import config
+    from backend import config
 
     monkeypatch.setattr(config, "MAX_SPAN_DEG", 5.5)
     monkeypatch.setattr(config, "MAX_YEARS_RANGE", 2.25)

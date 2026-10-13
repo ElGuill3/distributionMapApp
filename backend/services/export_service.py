@@ -13,7 +13,7 @@ from io import BytesIO
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from config import STATIC_DIR
+from backend.config import STATIC_DIR
 
 logger = logging.getLogger(__name__)
 

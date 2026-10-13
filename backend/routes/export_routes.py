@@ -15,14 +15,14 @@ from io import BytesIO
 from flask import Blueprint, Response, jsonify, request
 from pydantic import ValidationError
 
+from backend.config import RATE_LIMITS, STATIC_DIR
+from backend.extensions import limiter
 from backend.gee.schemas import ExportRequestSchema
 from backend.services.export_service import (
     create_export_zip,
     resolve_export_gif,
     serialize_series_to_csv,
 )
-from config import RATE_LIMITS, STATIC_DIR
-from extensions import limiter
 
 logger = logging.getLogger(__name__)
 

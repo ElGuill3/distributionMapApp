@@ -26,7 +26,7 @@ SMALL_BBOX_URL = "[-92.0,17.0,-91.0,18.0]"
 @pytest.fixture
 def client():
     """Cliente de test Flask con app real."""
-    from app import app
+    from backend.app import app
     app.config["TESTING"] = True
     return app.test_client()
 
@@ -82,7 +82,7 @@ class TestRateLimitConfiguration:
 
     def test_config_has_rate_limits(self) -> None:
         """Verifica que config.py tiene RATE_LIMITS definido."""
-        from config import RATE_LIMITS, RATE_LIMIT_ENABLED
+        from backend.config import RATE_LIMITS, RATE_LIMIT_ENABLED
 
         assert RATE_LIMIT_ENABLED is not None, "RATE_LIMIT_ENABLED debe estar definido"
         assert isinstance(RATE_LIMITS, dict), "RATE_LIMITS debe ser un diccionario"
@@ -93,13 +93,13 @@ class TestRateLimitConfiguration:
 
     def test_extensions_has_limiter(self) -> None:
         """Verifica que extensions.py inicializa el limiter."""
-        from extensions import limiter
+        from backend.extensions import limiter
 
         assert limiter is not None, "extensions.py debe tener limiter"
 
     def test_app_has_rate_limit_handler(self) -> None:
         """Verifica que app.py tiene el handler de 429."""
-        from app import rate_limit_exceeded
+        from backend.app import rate_limit_exceeded
 
         assert callable(rate_limit_exceeded), "app.py debe tener función rate_limit_exceeded"
 
@@ -111,7 +111,7 @@ class TestRateLimitErrorHandlerFormat:
 
     def test_rate_limit_handler_returns_json(self) -> None:
         """El handler rate_limit_exceeded debe retornar JSON con error y Retry-After."""
-        from app import rate_limit_exceeded
+        from backend.app import rate_limit_exceeded
         from werkzeug.exceptions import TooManyRequests
         from flask import Flask
 
@@ -128,7 +128,7 @@ class TestRateLimitErrorHandlerFormat:
 
     def test_rate_limit_handler_returns_429_status(self) -> None:
         """El handler debe retornar status code 429."""
-        from app import rate_limit_exceeded
+        from backend.app import rate_limit_exceeded
         from werkzeug.exceptions import TooManyRequests
         from flask import Flask
 
@@ -147,7 +147,7 @@ class TestRateLimitSeparateEndpoints:
 
     def test_different_categories_have_different_limits(self) -> None:
         """Cada categoría tiene su propio límite configurado."""
-        from config import RATE_LIMITS
+        from backend.config import RATE_LIMITS
 
         assert "30/minute" in RATE_LIMITS["gif"]
         assert "60/minute" in RATE_LIMITS["timeseries"]
@@ -175,13 +175,13 @@ class TestRateLimiterEnabled:
 
     def test_rate_limiter_is_enabled_by_default(self) -> None:
         """RATE_LIMIT_ENABLED debe ser True por defecto."""
-        from config import RATE_LIMIT_ENABLED
+        from backend.config import RATE_LIMIT_ENABLED
 
         assert RATE_LIMIT_ENABLED is True, "RATE_LIMIT_ENABLED debe ser True por defecto"
 
     def test_limiter_has_enabled_attribute(self) -> None:
         """El limiter debe tener atributo que indica si está habilitado."""
-        from extensions import limiter
+        from backend.extensions import limiter
 
         assert hasattr(limiter, '_enabled') or hasattr(limiter, 'enabled'), \
             "El limiter debe tener atributo de estado habilitado"

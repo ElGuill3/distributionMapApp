@@ -19,6 +19,8 @@ from flask import Blueprint, Response, jsonify, request
 
 logger = logging.getLogger(__name__)
 
+from backend.config import GIFS_DIR, RATE_LIMITS
+from backend.extensions import limiter
 from backend.gee.ndvi import build_ndvi_gif_bbox, build_ndvi_timeseries_bbox
 from backend.gee.precipitation import (
     build_chirps_precip_gif_bbox,
@@ -42,8 +44,6 @@ from backend.services.gif_service import (
     create_progress_queue,
     finish_progress_queue,
 )
-from config import GIFS_DIR, RATE_LIMITS
-from extensions import limiter
 
 gif_bp = Blueprint("gif", __name__)
 

@@ -9,7 +9,7 @@ import logging
 
 import pandas as pd
 
-from config import LOCAL_STATIONS
+from backend.config import LOCAL_STATIONS
 
 logger = logging.getLogger(__name__)
 

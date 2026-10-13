@@ -7,7 +7,7 @@
 set -e
 
 echo "Running Python test coverage..."
-echo "Packages: app, backend, config, extensions"
+echo "Packages: backend"
 echo "Scope: Unit tests only (excludes integration tests with external deps)"
 echo ""
 
@@ -53,10 +53,7 @@ set +e
 # 
 # First-pass scope: unit tests only (--ignore=backend/tests/integration)
 # This aligns with the first-pass guardrail spec which excludes complex environment setup
-python -m pytest --cov=app \
-       --cov=backend \
-       --cov=config \
-       --cov=extensions \
+python -m pytest --cov=backend \
        --cov-report=term-missing \
        --cov-report=html:htmlcov \
        --ignore=backend/tests/integration \

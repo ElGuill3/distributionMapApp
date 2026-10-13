@@ -31,7 +31,7 @@ MODEL_RUNTIME_SCHEMA = "bdctb-operational-runtime-paths/v1"
 MAX_MODEL_RUNTIME_DESCRIPTOR_BYTES = 4096
 WORKER_MODULE = "flood_research.modeling.exogenous.operational_worker"
 API_MODULE = "flood_research.forecast_api.server"
-APP_PREFLIGHT_MODULE = "app_preflight"
+APP_PREFLIGHT_MODULE = "backend.app_preflight"
 LOG_FILE_MAX_BYTES = 1024 * 1024
 LOG_FILES_PER_PROCESS = 3
 LOG_READ_CHUNK_BYTES = 64 * 1024
@@ -70,7 +70,7 @@ def _is_app_root(path: Path) -> bool:
         candidate.is_file()
         for candidate in (
             path / "pyproject.toml",
-            path / "app.py",
+            path / "backend/app.py",
             path / "package.json",
             path / "scripts/run_local_forecast_stack.py",
         )
@@ -263,7 +263,7 @@ def process_specs(settings: Settings) -> tuple[ProcessSpec, ...]:
         "-m",
         "flask",
         "--app",
-        "app",
+        "backend.app",
         "run",
         "--host",
         APP_HOST,

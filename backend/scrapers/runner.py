@@ -4,7 +4,7 @@ import logging
 from apscheduler.schedulers.blocking import BlockingScheduler
 from backend.scrapers.conagua import ConaguaScraper
 from backend.scrapers.smn import SmnWeatherScraper
-from config import CONAGUA_HIDROS_STATIONS, CONAGUA_CLIMAS_STATIONS
+from backend.config import CONAGUA_HIDROS_STATIONS, CONAGUA_CLIMAS_STATIONS
 
 # Configuración de logs básica a stdout para visibilidad
 logging.basicConfig(

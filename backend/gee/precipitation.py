@@ -8,8 +8,8 @@ Período   : diario
 
 import ee
 
+from backend.config import BASE_PIXELS_PER_FRAME, CHIRPS_DAILY
 from backend.gee.utils import build_base_collection, compute_gif_dims, validate_bbox
-from config import BASE_PIXELS_PER_FRAME, CHIRPS_DAILY
 
 _BAND = "precipitation"
 _FRAMES_PER_SECOND = 5

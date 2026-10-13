@@ -29,7 +29,7 @@ SMALL_BBOX_URL = "[-92.0,17.0,-91.0,18.0]"
 @pytest.fixture
 def client():
     """Cliente de test Flask usando la app real."""
-    from app import app
+    from backend.app import app
     app.config["TESTING"] = True
     return app.test_client()
 
@@ -215,7 +215,7 @@ class TestCacheHeadersExportEndpoint:
 
     def test_export_endpoint_has_no_store_config(self) -> None:
         """Verifica que /api/export está configurado con max_age=0 en CACHE_POLICIES."""
-        from config import CACHE_POLICIES
+        from backend.config import CACHE_POLICIES
         assert "/api/export" in CACHE_POLICIES
         max_age, use_etag = CACHE_POLICIES["/api/export"]
         assert max_age == 0
@@ -223,7 +223,7 @@ class TestCacheHeadersExportEndpoint:
 
     def test_export_endpoint_injects_no_store(self, client) -> None:
         """Export endpoint (/api/export) inyecta Cache-Control: no-store."""
-        from config import CACHE_POLICIES
+        from backend.config import CACHE_POLICIES
         # El hook inject_cache_headers trata max_age=0 como no-store
         # Verificamos indirectamente que la configuración produce no-store
         max_age, _ = CACHE_POLICIES["/api/export"]
@@ -238,7 +238,7 @@ class TestCacheHeadersSseEndpoint:
 
     def test_sse_endpoint_not_in_cache_policies(self) -> None:
         """El endpoint SSE no debe estar en CACHE_POLICIES (evita override)."""
-        from config import CACHE_POLICIES
+        from backend.config import CACHE_POLICIES
 
         # El endpoint SSE no debe estar configurado en CACHE_POLICIES
         # porque ya tiene su propio Cache-Control: no-cache
@@ -251,7 +251,7 @@ class TestCacheHeadersSseEndpoint:
         El hook inject_cache_headers NO debe sobreescribir Cache-Control: no-cache
         del endpoint SSE.
         """
-        from config import CACHE_POLICIES
+        from backend.config import CACHE_POLICIES
 
         # Verificar que /api/gif-progress NO coincide con ningún prefix en CACHE_POLICIES
         sse_in_policies = any(

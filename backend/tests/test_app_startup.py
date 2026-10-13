@@ -18,15 +18,15 @@ from unittest.mock import patch
 warnings.simplefilter("ignore", UserWarning)
 fixtures = runpy.run_path("backend/tests/conftest.py")
 next(fixtures["mock_modules"].__wrapped__())
-import config
+from backend import config
 mode = os.environ["STARTUP_PROBE"]
-with patch("config.prepare_runtime_directories") as directories, \
+with patch("backend.config.prepare_runtime_directories") as directories, \
      patch("ee.Initialize") as earth_engine, \
      patch("backend.services.gif_service.start_cleanup_daemon") as cleanup, \
      patch("logging.basicConfig") as logging_setup:
     if mode == "startup_failure":
         earth_engine.side_effect = RuntimeError("synthetic EE failure")
-    import app as module
+    import backend.app as module
     failure = None
     statuses = []
     if mode in ("explicit", "concurrent", "failure"):
@@ -56,8 +56,6 @@ with patch("config.prepare_runtime_directories") as directories, \
 
 @pytest.fixture
 def snapshot(tmp_path):
-    for filename in ("app.py", "config.py", "extensions.py"):
-        shutil.copy2(ROOT / filename, tmp_path / filename)
     for directory in ("backend",):
         for source in (ROOT / directory).rglob("*.py"):
             target = tmp_path / source.relative_to(ROOT)
