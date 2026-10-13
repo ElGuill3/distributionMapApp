@@ -20,9 +20,12 @@ def main(argv: list[str] | None = None) -> int:
     download = steps.add_parser("lidar-download", help="Download LiDAR tile ZIPs")
     download.add_argument("--workers", type=int, default=4)
     mosaic = steps.add_parser("terrain-mosaic", help="Merge LiDAR tiles into one DEM")
-    mosaic.add_argument("--resolution", type=float, default=10.0)
+    mosaic.add_argument("--resolution", type=float, default=15.0)
+    mosaic.add_argument("--margin-km", type=float, default=2.0)
+    cem_step = steps.add_parser("cem", help="INEGI CEM 3.0 (15 m) aligned to the DEM")
+    cem_step.add_argument("--resolution", type=float, default=15.0)
     derive = steps.add_parser("terrain-derivatives", help="HAND, slope, TWI, flow")
-    derive.add_argument("--resolution", type=float, default=10.0)
+    derive.add_argument("--resolution", type=float, default=15.0)
     derive.add_argument("--stream-area-km2", type=float, default=1.0)
     derive.add_argument("--conditioned", action="store_true")
     steps.add_parser("inventory", help="Download CENAPRED flood inventory layers")
@@ -72,13 +75,36 @@ def main(argv: list[str] | None = None) -> int:
         grids = [
             terrain.extract_grid(z, args.work_dir / "lidar" / "grids") for z in zips
         ]
+        boundaries = args.work_dir / "boundaries" / "municipalities.geojson"
+        if not boundaries.exists():
+            print("Run the `boundaries` step first: the grid covers the state.")
+            return 1
+        features = json.loads(boundaries.read_text())["features"]
+        bounds = terrain.grid_bounds(
+            [f["geometry"] for f in features],
+            terrain.LIDAR_CRS,
+            margin_m=args.margin_km * 1000,
+            resolution=args.resolution,
+        )
         out = terrain.mosaic(
             grids,
             _dem_path(args.work_dir, args.resolution),
             resolution=args.resolution,
             crs=terrain.LIDAR_CRS,
+            bounds=bounds,
         )
-        print(f"DEM mosaic: {len(grids)} tiles -> {out}")
+        print(f"DEM mosaic: {len(grids)} tiles, bounds {bounds} -> {out}")
+        return 0
+    if args.step == "cem":
+        from backend.floodmodel import cem
+
+        tif = cem.download("Tabasco", "27", args.work_dir / "cem")
+        out = terrain.align(
+            tif,
+            _dem_path(args.work_dir, args.resolution),
+            args.work_dir / "terrain" / f"cem_{args.resolution:g}m.tif",
+        )
+        print(f"CEM 3.0 aligned -> {out}")
         return 0
     if args.step == "terrain-derivatives":
         dem = _dem_path(args.work_dir, args.resolution)
@@ -121,14 +147,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.step == "terrain-condition":
         res = args.resolution
+        cem_path = args.work_dir / "terrain" / f"cem_{res:g}m.tif"
         out = terrain.condition(
             _dem_path(args.work_dir, res),
             args.work_dir / "terrain" / f"aux_{res:g}m.tif",
             args.work_dir / "terrain" / f"conditioned_{res:g}m",
+            fill=cem_path if cem_path.exists() else None,
         )
-        print(
-            f"Conditioned DEM (LiDAR-MERIT bias {out['bias_m']:.2f} m) -> {out['dem']}"
-        )
+        print(f"LiDAR-MERIT bias {out['bias_m']:.2f} m, LiDAR-CEM {out['fill_bias_m']}")
+        print(f"Conditioned DEM -> {out['dem']}")
         return 0
     if args.step == "boundaries":
         import ee
@@ -197,7 +224,9 @@ def main(argv: list[str] | None = None) -> int:
 
         ee.Initialize(project=config.GEE_PROJECT)
         years = list(range(args.first, args.last + 1))
-        grid = gee_layers.Grid.from_raster(_dem_path(args.work_dir, 15), res=30)
+        grid = gee_layers.Grid.from_raster(
+            _dem_path(args.work_dir, TERRAIN_RESOLUTION), res=30
+        )
         region = ee.Geometry.Rectangle([-94.2, 17.2, -90.9, 18.75])
         image = gee_layers.s1_season_image(years, region)
         out = gee_layers.download(
@@ -238,7 +267,7 @@ def main(argv: list[str] | None = None) -> int:
 
         ee.Initialize(project=config.GEE_PROJECT)
         grid = gee_layers.Grid.from_raster(
-            _dem_path(args.work_dir, 10.0), res=args.resolution
+            _dem_path(args.work_dir, TERRAIN_RESOLUTION), res=args.resolution
         )
         out = gee_layers.download(
             gee_layers.ee_compute(gee_layers.feature_image()),
@@ -249,6 +278,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"GEE features: {grid.width}x{grid.height} -> {out}")
         return 0
     return 2
+
+
+# Every Earth Engine layer is cut on the extent of this terrain mosaic, so
+# all model rasters share one grid.
+TERRAIN_RESOLUTION = 15.0
 
 
 def _dem_path(work_dir: Path, resolution: float) -> Path:
