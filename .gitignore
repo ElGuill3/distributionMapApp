@@ -40,8 +40,6 @@ build/
 # GIFs generados por GEE (limpieza automática cada 60 min)
 frontend/static/gifs/
 
-# Mapas de riesgo renderizados desde GeoTIFFs (servidor o GEE)
-
 # ---------------------------------------------------------------------------
 # Frontend build output (frontend/src/ts/ + frontend/src/styles/ → frontend/static/)
 # Se regeneran con: npm run build:ts

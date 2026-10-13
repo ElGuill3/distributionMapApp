@@ -214,7 +214,7 @@ with Sentinel-1 (radar, 2015–2024) or Landsat (optical, 2000–2024).
 
 - Flood susceptibility for all of Tabasco (17 municipalities) at 30 m, in 5 state-relative classes (area quintiles), with a colour-blind safe YlGnBu palette.
 - The index is the equal-weight rank average of a gradient boosting model trained on CENAPRED floods (2011, 2020), a model trained on Sentinel-1 seasonal flooding (2015–2025) and JRC 100-year flood depth. Terrain: hydrologically conditioned INEGI 5 m LiDAR (HAND, slope, TWI).
-- Validated on floods the model never saw: it beats JRC depth and the official IPCET-PNUD 2022 map (details in `backend/data/flood_risk/metadata.json`).
+- Validated on floods the model never saw: on the 2011 flood it beats JRC depth (ROC 0.778 vs 0.767), and on the 2023–2025 Sentinel-1 seasons it beats both JRC and the official IPCET-PNUD 2022 map (ROC ~0.72 vs ~0.61). On 2011 IPCET scores higher (0.892), probably because it was calibrated on that event. Details in `backend/data/flood_risk/metadata.json`.
 - Served as static XYZ tiles: the app does no processing at startup or on click.
 
 ### Local Hydrological Stations
@@ -283,9 +283,9 @@ To facilitate offline analysis, the system offers:
 - Load local station data per panel via checkboxes.
 
 **Flood Risk Mode**:
-- Activates the municipality control in the sidebar.
+- Shows statewide susceptibility with a legend and a readout of the class under the cursor.
 - Animation controls are locked to prevent overlay conflicts.
-- Risk layers can be combined across multiple municipalities simultaneously.
+- Several municipalities can be checked at once to show their outline and stats card; the **Por municipio** view shows the choropleth.
 
 **Flood Detection Mode**:
 - Detects surface water inside the drawn area (max 4°×4°) for any date range.

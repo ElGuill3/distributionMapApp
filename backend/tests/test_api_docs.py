@@ -74,7 +74,7 @@ class TestOpenApiSpec:
         assert "version" in spec["info"]
 
     def test_openapi_yaml_has_17_paths(self):
-        """The spec documents exactly 15 endpoints."""
+        """The spec documents exactly 17 endpoints."""
         with open(OPENAPI_YAML) as f:
             spec = yaml.safe_load(f)
         paths = spec.get("paths", {})

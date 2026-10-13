@@ -220,7 +220,7 @@ La detección de agua superficial no es una variable animada: se hace en el
 
 - Susceptibilidad a inundación de todo Tabasco (17 municipios) a 30 m, en 5 clases relativas al estado (quintiles de superficie), con paleta YlGnBu apta para daltonismo.
 - El índice combina, con pesos iguales sobre rangos, un modelo de gradient boosting entrenado con las inundaciones de CENAPRED (2011, 2020), otro entrenado con la inundación estacional detectada por Sentinel-1 (2015–2025) y la profundidad JRC para 100 años. Terreno: LiDAR 5 m de INEGI acondicionado hidrológicamente (HAND, pendiente, TWI).
-- Validado con eventos que el modelo no vio: supera a la profundidad JRC y al mapa oficial IPCET-PNUD 2022 (detalle en `backend/data/flood_risk/metadata.json`).
+- Validado con eventos que el modelo no vio: en la inundación de 2011 supera a la profundidad JRC (ROC 0,778 vs 0,767) y en las temporadas 2023–2025 de Sentinel-1 supera a JRC y al mapa oficial IPCET-PNUD 2022 (ROC ~0,72 vs ~0,61). En 2011 IPCET puntúa más alto (0,892), probablemente porque se calibró con ese evento. Detalle en `backend/data/flood_risk/metadata.json`.
 - Se sirve como tiles XYZ estáticos: la app no procesa nada al arrancar ni al hacer clic.
 
 ### Estaciones hidrológicas locales
@@ -289,9 +289,9 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 - Carga de datos de estaciones locales por panel mediante checkboxes.
 
 **Modo mapa de riesgo**:
-- Activa el control de municipios en el panel lateral.
+- Muestra la susceptibilidad de todo el estado, con leyenda y lectura de la clase bajo el cursor.
 - Los controles de animación quedan bloqueados para evitar superposiciones.
-- Las capas de riesgo se pueden combinar con múltiples municipios simultáneamente.
+- Se pueden marcar varios municipios a la vez para ver su contorno y su ficha; la vista **Por municipio** muestra la coropleta.
 
 **Modo detección de inundaciones**:
 - Detecta agua superficial en el área dibujada (máx. 4°×4°) para un rango de fechas libre.
