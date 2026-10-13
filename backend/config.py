@@ -15,6 +15,7 @@ Variables de entorno (todas con valores por defecto):
 import os
 from math import isfinite
 from pathlib import Path
+
 from dotenv import load_dotenv
 from limits import parse_many
 
@@ -47,9 +48,7 @@ def _env_positive_float(key: str, default: float) -> float:
     try:
         value = float(os.getenv(key, str(default)))
     except ValueError:
-        raise ValueError(
-            f"{key} must be a finite number greater than zero."
-        ) from None
+        raise ValueError(f"{key} must be a finite number greater than zero.") from None
     if not isfinite(value) or value <= 0:
         raise ValueError(f"{key} must be a finite number greater than zero.")
     return value
@@ -79,9 +78,7 @@ BDCTB_FORECAST_API_BASE_URL = os.getenv(
 # ---------------------------------------------------------------------------
 _base_override = os.getenv("BASE_DIR_OVERRIDE")
 BASE_DIR = (
-    Path(_base_override)
-    if _base_override
-    else Path(__file__).resolve().parent.parent
+    Path(_base_override) if _base_override else Path(__file__).resolve().parent.parent
 )
 STATIC_DIR = BASE_DIR / "frontend" / "static"
 TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
@@ -89,10 +86,12 @@ GIFS_DIR = STATIC_DIR / "gifs"
 FLOOD_MAPS_DIR = STATIC_DIR / "flood_maps"
 DATA_DIR = BASE_DIR / "backend" / "data" / "mapa_riesgo" / "municipios"
 
+
 def prepare_runtime_directories() -> None:
     """Create writable application directories during real startup only."""
     GIFS_DIR.mkdir(parents=True, exist_ok=True)
     FLOOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 # ---------------------------------------------------------------------------
 # Google Earth Engine
@@ -154,6 +153,7 @@ STATION_COORDS = {
     "BDCTB": [17.433333, -91.483333],
 }
 
+
 def _load_local_stations() -> dict[str, dict]:
     def clean_encoding(text: str) -> str:
         if not text:
@@ -188,15 +188,15 @@ def _load_local_stations() -> dict[str, dict]:
                 continue
 
             # Intentar leer con UTF-8
-            with open(csv_file, "r", encoding="utf-8") as f:
+            with open(csv_file, encoding="utf-8") as f:
                 lines = [f.readline().strip() for _ in range(6)]
-            
+
             metadata = {}
             for line in lines:
                 if ":" in line:
                     parts = line.split(":", 1)
                     metadata[parts[0].strip()] = parts[1].strip()
-            
+
             station_key = None
             station_name = None
             municipio = None
@@ -208,9 +208,13 @@ def _load_local_stations() -> dict[str, dict]:
                     station_name = clean_encoding(v)
                 elif "municip" in k_lower:
                     municipio = clean_encoding(v)
-            
+
             if station_key and station_name:
-                display_name = f"{station_name} ({municipio}) {metric_label}" if municipio else f"{station_name} {metric_label}"
+                display_name = (
+                    f"{station_name} ({municipio}) {metric_label}"
+                    if municipio
+                    else f"{station_name} {metric_label}"
+                )
                 combined_key = f"{station_key}_{type_suffix}"
                 stations[combined_key] = {
                     "name": display_name,
@@ -223,15 +227,15 @@ def _load_local_stations() -> dict[str, dict]:
         except Exception:
             # Fallback a Latin-1 por si falla la decodificación por caracteres con tilde
             try:
-                with open(csv_file, "r", encoding="latin-1") as f:
+                with open(csv_file, encoding="latin-1") as f:
                     lines = [f.readline().strip() for _ in range(6)]
-                
+
                 metadata = {}
                 for line in lines:
                     if ":" in line:
                         parts = line.split(":", 1)
                         metadata[parts[0].strip()] = parts[1].strip()
-                
+
                 station_key = None
                 station_name = None
                 municipio = None
@@ -243,9 +247,13 @@ def _load_local_stations() -> dict[str, dict]:
                         station_name = clean_encoding(v)
                     elif "municip" in k_lower:
                         municipio = clean_encoding(v)
-                
+
                 if station_key and station_name:
-                    display_name = f"{station_name} ({municipio}) {metric_label}" if municipio else f"{station_name} {metric_label}"
+                    display_name = (
+                        f"{station_name} ({municipio}) {metric_label}"
+                        if municipio
+                        else f"{station_name} {metric_label}"
+                    )
                     combined_key = f"{station_key}_{type_suffix}"
                     stations[combined_key] = {
                         "name": display_name,
@@ -297,6 +305,7 @@ CACHE_POLICIES = {
 # ---------------------------------------------------------------------------
 RATE_LIMIT_ENABLED = _env_bool("RATE_LIMIT_ENABLED", "true")
 
+
 def _env_rate_limit(key: str, default: str) -> str:
     """Validate configured quotas before registering any request guards."""
     value = os.getenv(key, default)
@@ -323,9 +332,17 @@ RATE_LIMITS = {
 # ---------------------------------------------------------------------------
 # Timeouts y parámetros de red
 # ---------------------------------------------------------------------------
-GIF_DOWNLOAD_TIMEOUT_S = _env_int("GIF_DOWNLOAD_TIMEOUT_S", 120)  # Timeout para descarga de GIF desde GEE
-SSE_TASK_QUEUE_TIMEOUT_S = _env_int("SSE_TASK_QUEUE_TIMEOUT_S", 60)  # Timeout de la cola SSE en progress endpoint
-SSE_WAIT_ATTEMPTS = _env_int("SSE_WAIT_ATTEMPTS", 100)  # Intentos de espera para que el endpoint GIF registre su cola
-SSE_PROGRESS_RETENTION_S = max(1, _env_int("SSE_PROGRESS_RETENTION_S", 3600))  # Completed progress lifetime (minimum 1s)
+GIF_DOWNLOAD_TIMEOUT_S = _env_int(
+    "GIF_DOWNLOAD_TIMEOUT_S", 120
+)  # Timeout para descarga de GIF desde GEE
+SSE_TASK_QUEUE_TIMEOUT_S = _env_int(
+    "SSE_TASK_QUEUE_TIMEOUT_S", 60
+)  # Timeout de la cola SSE en progress endpoint
+SSE_WAIT_ATTEMPTS = _env_int(
+    "SSE_WAIT_ATTEMPTS", 100
+)  # Intentos de espera para que el endpoint GIF registre su cola
+SSE_PROGRESS_RETENTION_S = max(
+    1, _env_int("SSE_PROGRESS_RETENTION_S", 3600)
+)  # Completed progress lifetime (minimum 1s)
 SSE_MAX_PROGRESS_TASKS = max(1, _env_int("SSE_MAX_PROGRESS_TASKS", 1024))
 SSE_MAX_PROGRESS_MESSAGES = max(2, _env_int("SSE_MAX_PROGRESS_MESSAGES", 128))

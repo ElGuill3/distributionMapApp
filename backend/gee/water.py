@@ -22,14 +22,32 @@ _VIS_PARAMS: dict = {
 }
 
 
-def _get_landsat_collection(bbox: list[float], start: str, end: str) -> ee.ImageCollection:
+def _get_landsat_collection(
+    bbox: list[float], start: str, end: str
+) -> ee.ImageCollection:
     """Obtiene y une las colecciones de Landsat 5, 7, 8 y 9 harmonizando nombres de bandas."""
     region = ee.Geometry.Rectangle(bbox)
 
-    l9 = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2").filterBounds(region).filterDate(start, end)
-    l8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2").filterBounds(region).filterDate(start, end)
-    l7 = ee.ImageCollection("LANDSAT/LE07/C02/T1_L2").filterBounds(region).filterDate(start, end)
-    l5 = ee.ImageCollection("LANDSAT/LT05/C02/T1_L2").filterBounds(region).filterDate(start, end)
+    l9 = (
+        ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
+        .filterBounds(region)
+        .filterDate(start, end)
+    )
+    l8 = (
+        ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+        .filterBounds(region)
+        .filterDate(start, end)
+    )
+    l7 = (
+        ee.ImageCollection("LANDSAT/LE07/C02/T1_L2")
+        .filterBounds(region)
+        .filterDate(start, end)
+    )
+    l5 = (
+        ee.ImageCollection("LANDSAT/LT05/C02/T1_L2")
+        .filterBounds(region)
+        .filterDate(start, end)
+    )
 
     def prep_l89(img: ee.Image) -> ee.Image:
         qa = img.select("QA_PIXEL")
@@ -67,7 +85,9 @@ def _get_landsat_collection(bbox: list[float], start: str, end: str) -> ee.Image
 
 def _scale_landsat(img: ee.Image) -> ee.Image:
     """Escala las bandas de reflectancia de Landsat Collection 2 Level 2 a rango 0-1."""
-    scaled = img.select(["Green", "NIR", "SWIR1", "SWIR2"]).multiply(0.0000275).subtract(0.2)
+    scaled = (
+        img.select(["Green", "NIR", "SWIR1", "SWIR2"]).multiply(0.0000275).subtract(0.2)
+    )
     return img.addBands(scaled, overwrite=True)
 
 
@@ -155,7 +175,9 @@ def build_water_gif_bbox(
             bestEffort=True,
         )
         # Asegurar piso de 0.0 para evitar clasificar tierra seca
-        mndwi_val = ee.Number(ee.Algorithms.If(stats.get("MNDWI"), stats.get("MNDWI"), 0.0))
+        mndwi_val = ee.Number(
+            ee.Algorithms.If(stats.get("MNDWI"), stats.get("MNDWI"), 0.0)
+        )
         thresh_num = mndwi_val.max(0.0)
 
         # Detección: MNDWI alto, NIR bajo y pendiente plana
@@ -235,10 +257,17 @@ def build_water_timeseries_bbox(
                 maxPixels=5e7,
                 bestEffort=True,
             )
-            vh_val = ee.Number(ee.Algorithms.If(stats.get("VH"), stats.get("VH"), -18.0))
+            vh_val = ee.Number(
+                ee.Algorithms.If(stats.get("VH"), stats.get("VH"), -18.0)
+            )
             thresh_num = vh_val
 
-            water = s1_img.select("VH").lt(thresh_num).updateMask(slope_mask).rename("water")
+            water = (
+                s1_img.select("VH")
+                .lt(thresh_num)
+                .updateMask(slope_mask)
+                .rename("water")
+            )
 
             area_img = ee.Image.pixelArea().multiply(water.unmask(0)).rename("area")
             stats_area = area_img.reduceRegion(
@@ -293,10 +322,17 @@ def build_water_timeseries_bbox(
                 maxPixels=5e7,
                 bestEffort=True,
             )
-            mndwi_val = ee.Number(ee.Algorithms.If(stats.get("MNDWI"), stats.get("MNDWI"), 0.0))
+            mndwi_val = ee.Number(
+                ee.Algorithms.If(stats.get("MNDWI"), stats.get("MNDWI"), 0.0)
+            )
             thresh_num = mndwi_val.max(0.0)
 
-            water = mndwi.gt(thresh_num).And(nir.lt(0.15)).updateMask(slope_mask).rename("water")
+            water = (
+                mndwi.gt(thresh_num)
+                .And(nir.lt(0.15))
+                .updateMask(slope_mask)
+                .rename("water")
+            )
 
             area_img = ee.Image.pixelArea().multiply(water.unmask(0)).rename("area")
             stats_area = area_img.reduceRegion(
@@ -417,7 +453,11 @@ def _get_flood_mask_and_visualizations(
         water_clean = water.updateMask(connected.gte(_MIN_CONNECTED_PX))
         flood_mask = water_clean.updateMask(perm_water_mask.Not()).rename("flood")
 
-        landsat_vis_params = {"bands": ["SWIR1", "NIR", "Green"], "min": 0.0, "max": 0.4}
+        landsat_vis_params = {
+            "bands": ["SWIR1", "NIR", "Green"],
+            "min": 0.0,
+            "max": 0.4,
+        }
         return flood_mask, final_thresh, landsat_vis_params, img
 
 
@@ -441,6 +481,7 @@ def detect_floods_bbox(
         return None
 
     import ee
+
     region = ee.Geometry.Rectangle(bbox)
     flood_vis = {"palette": ["00FFFF"]}  # Cian
 
@@ -448,8 +489,13 @@ def detect_floods_bbox(
     return {
         "satellite": satellite,
         "computed_threshold": round(final_thresh, 4),
-        "background_layer": bg_img.clip(region).getMapId(vis_params)["tile_fetcher"].url_format,
-        "water_layer": flood_mask.clip(region).updateMask(flood_mask).getMapId(flood_vis)["tile_fetcher"].url_format,
+        "background_layer": bg_img.clip(region)
+        .getMapId(vis_params)["tile_fetcher"]
+        .url_format,
+        "water_layer": flood_mask.clip(region)
+        .updateMask(flood_mask)
+        .getMapId(flood_vis)["tile_fetcher"]
+        .url_format,
     }
 
 
@@ -483,4 +529,3 @@ def calculate_flood_area(
     area_info = stats_area.getInfo()
     total_ha = (area_info.get("area", 0.0) or 0.0) / 10000.0
     return float(total_ha)
-

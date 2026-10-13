@@ -111,6 +111,7 @@ def flood_detection() -> Response:
 
     try:
         from backend.gee.water import detect_floods_bbox
+
         res = detect_floods_bbox(
             start=start_out,
             end=end_out,
@@ -120,7 +121,9 @@ def flood_detection() -> Response:
             threshold=threshold,
         )
         if res is None:
-            return jsonify({"error": "No se encontraron imágenes en esta zona/fecha."}), 404
+            return jsonify(
+                {"error": "No se encontraron imágenes en esta zona/fecha."}
+            ), 404
         return jsonify(res)
     except Exception as e:
         logger.exception("Error en flood_detection: %s", e)
@@ -176,6 +179,7 @@ def flood_stats() -> Response:
 
     try:
         from backend.gee.water import calculate_flood_area
+
         total_ha = calculate_flood_area(
             start=start_out,
             end=end_out,
@@ -188,4 +192,3 @@ def flood_stats() -> Response:
     except Exception as e:
         logger.exception("Error en flood_stats: %s", e)
         return jsonify({"error": f"Error interno al calcular estadísticas: {e}"}), 500
-

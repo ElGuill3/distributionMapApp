@@ -39,13 +39,13 @@ def read_station_level_timeseries(
     # Detectar el número de filas a omitir buscando la cabecera "Fecha"
     skiprows = 0
     try:
-        with open(csv_path, "r", encoding="utf-8") as f:
+        with open(csv_path, encoding="utf-8") as f:
             for i, line in enumerate(f):
                 if "Fecha" in line:
                     skiprows = i
                     break
     except Exception:
-        with open(csv_path, "r", encoding="latin-1") as f:
+        with open(csv_path, encoding="latin-1") as f:
             for i, line in enumerate(f):
                 if "Fecha" in line:
                     skiprows = i
@@ -77,7 +77,9 @@ def read_station_level_timeseries(
             break
 
     if not val_col:
-        raise ValueError(f"No se encontró una columna de medición válida (Nivel o Precipitación) en: {csv_path.name}")
+        raise ValueError(
+            f"No se encontró una columna de medición válida (Nivel o Precipitación) en: {csv_path.name}"
+        )
 
     df["Fecha"] = pd.to_datetime(df["Fecha"], dayfirst=False, errors="coerce")
     df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
@@ -103,6 +105,9 @@ def read_station_level_timeseries(
     values = df_clean["Val_clean"].astype(float).tolist()
 
     logger.info(
-        "Estación %s: %d fechas cargadas (tipo=%s)", station_id, len(dates), station["type"]
+        "Estación %s: %d fechas cargadas (tipo=%s)",
+        station_id,
+        len(dates),
+        station["type"],
     )
     return dates, values

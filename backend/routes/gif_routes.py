@@ -376,4 +376,3 @@ def imerg_precip_gif_bbox() -> Response:
         font_size=10,
         start_message="Iniciando generación de precipitación...",
     )
-

@@ -202,4 +202,3 @@ def imerg_precip_timeseries_bbox() -> Response:
         ts_key="precip_mm",
         empty_error="No hay datos de precipitación CHIRPS para ese rango / región.",
     )
-

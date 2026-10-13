@@ -143,9 +143,17 @@ class LocalStationQuerySchema(BaseModel):
     @classmethod
     def validate_station_id(cls, v: str) -> str:
         from backend.config import LOCAL_STATIONS
+
         if not LOCAL_STATIONS:
             # Fallback para tests unitarios cuando no hay archivos CSV en el entorno de prueba
-            known_fallback = {"SPTTB", "BDCTB", "SPTTB_hidro", "BDCTB_hidro", "SPTTB_clima", "BDCTB_clima"}
+            known_fallback = {
+                "SPTTB",
+                "BDCTB",
+                "SPTTB_hidro",
+                "BDCTB_hidro",
+                "SPTTB_clima",
+                "BDCTB_clima",
+            }
             if v in known_fallback:
                 if not v.endswith("_hidro") and not v.endswith("_clima"):
                     return f"{v}_hidro"

@@ -23,9 +23,9 @@ from backend.config import (
     GIF_DOWNLOAD_TIMEOUT_S,
     GIF_MAX_AGE_MINUTES,
     GIFS_DIR,
-    SSE_PROGRESS_RETENTION_S,
-    SSE_MAX_PROGRESS_TASKS,
     SSE_MAX_PROGRESS_MESSAGES,
+    SSE_MAX_PROGRESS_TASKS,
+    SSE_PROGRESS_RETENTION_S,
 )
 
 logger = logging.getLogger(__name__)
@@ -261,7 +261,7 @@ def add_dates_to_gif(
     original_gif = PILImage.open(gif_bytes)
 
     width, height = original_gif.size
-    
+
     # Calcular tamaño de fuente y paddings dinámicos según el tamaño del GIF
     # Usamos la dimensión menor para evitar overflow
     base_dim = min(width, height)
@@ -291,7 +291,7 @@ def add_dates_to_gif(
         _report(progress, f"Procesando frame {i + 1}/{total_frames}...")
 
         date_text = dates[i] if i < len(dates) else "Sin fecha"
-        
+
         # Medir dimensiones del texto
         bbox_text = font.getbbox(date_text)
         text_w = bbox_text[2] - bbox_text[0]
@@ -308,7 +308,7 @@ def add_dates_to_gif(
             (bg_pad - bbox_text[0], bg_pad - bbox_text[1]),
             date_text,
             fill=(255, 255, 255, 255),
-            font=font
+            font=font,
         )
 
         # Calcular coordenadas de pegado según posición
@@ -330,12 +330,14 @@ def add_dates_to_gif(
         frame_rgb.paste(overlay, (x, y), overlay)
 
         # Convertir a modo paleta adaptativa sin difuminado (dithering) para mantener colores sólidos
-        frame_p = frame_rgb.convert("P", palette=PILImage.Palette.ADAPTIVE, dither=PILImage.Dither.NONE)
+        frame_p = frame_rgb.convert(
+            "P", palette=PILImage.Palette.ADAPTIVE, dither=PILImage.Dither.NONE
+        )
         processed_frames.append(frame_p)
 
     _report(92, "Guardando GIF procesado...")
     logger.info("Guardando GIF procesado en: %s", output_path)
-    
+
     processed_frames[0].save(
         output_path,
         format="GIF",

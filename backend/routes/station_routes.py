@@ -54,7 +54,9 @@ def local_station_level_range() -> Response:
         ), 400
 
     try:
-        query = LocalStationQuerySchema(station_id=station_raw, start=start_raw, end=end_raw)
+        query = LocalStationQuerySchema(
+            station_id=station_raw, start=start_raw, end=end_raw
+        )
     except Exception as e:
         return jsonify({"error": f"parámetros inválidos: {e}"}), 400
 
