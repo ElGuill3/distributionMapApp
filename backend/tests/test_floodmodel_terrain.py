@@ -363,3 +363,12 @@ def test_grid_bounds_cover_the_state_plus_margin_snapped_to_the_resolution():
     assert not box(left, bottom, right, top).contains(utm.buffer(2100))
     for value in (left, bottom, right, top):
         assert value % 15 == 0
+
+
+def test_earth_engine_steps_share_the_default_terrain_mosaic_grid():
+    from pathlib import Path
+
+    from backend.floodmodel import __main__ as cli
+
+    assert cli.TERRAIN_RESOLUTION == 15.0
+    assert cli._dem_path(Path("w"), cli.TERRAIN_RESOLUTION).name == "dem_15m.tif"

@@ -12,21 +12,21 @@ El mapa final es un **ensamble por promedio de rangos, con pesos iguales fijados
 2. un modelo LightGBM entrenado con **inundación estacional** detectada con Sentinel-1 (2015–2025);
 3. la **profundidad de inundación JRC/GloFAS para periodo de retorno de 100 años**.
 
-Las variables de terreno salen del **MDE LiDAR de 5 m de INEGI**, acondicionado hidrológicamente y procesado a 15 m.
+Las variables de terreno salen del **MDE LiDAR de 5 m de INEGI**, acondicionado hidrológicamente y procesado a 15 m. Donde no hay LiDAR (14.4 % de la tierra del estado), el terreno sale del **Continuo de Elevaciones Mexicano 3.0 de INEGI, a 15 m**.
 
 **Resultado principal.** Se validó con eventos que ningún componente vio durante el entrenamiento:
 
 | Mapa | CENAPRED 2011 (evento extremo) ROC / PR | S1 2023 ROC / PR | S1 2024 ROC / PR | S1 2025 ROC / PR |
 |---|---|---|---|---|
-| **Ensamble (este trabajo)** | **0.778 / 0.108** | **0.722 / 0.270** | **0.714 / 0.178** | **0.723 / 0.275** |
-| Profundidad JRC 100 años | 0.767 / 0.091 | 0.570 / 0.167 | 0.576 / 0.107 | 0.579 / 0.173 |
-| Elevación (más baja = más susceptible) | 0.763 / 0.092 | 0.572 / 0.181 | 0.562 / 0.118 | 0.590 / 0.192 |
-| IPCET-PNUD 2022 (mapa oficial, 5 clases) | 0.892\* / 0.199\* | 0.608 / 0.187 | 0.608 / 0.115 | 0.625 / 0.208 |
+| **Ensamble (este trabajo)** | **0.778 / 0.109** | **0.723 / 0.271** | **0.715 / 0.179** | **0.723 / 0.275** |
+| Profundidad JRC 100 años | 0.766 / 0.091 | 0.569 / 0.168 | 0.576 / 0.108 | 0.577 / 0.173 |
+| Elevación (más baja = más susceptible) | 0.751 / 0.085 | 0.568 / 0.177 | 0.557 / 0.111 | 0.587 / 0.188 |
+| IPCET-PNUD 2022 (mapa oficial, 5 clases) | 0.892\* / 0.200\* | 0.609 / 0.188 | 0.608 / 0.115 | 0.624 / 0.207 |
 | Tasa base (proporción inundada) | 0.045 | 0.139 | 0.084 | 0.144 |
 
 \* El mapa IPCET-PNUD 2022 es posterior a 2011 y probablemente se calibró con esa inundación, así que para él 2011 no es un evento "no visto". Las temporadas 2023–2025 sí son posteriores a su publicación.
 
-**Cómo leer la tabla.** El ensamble es el único mapa que supera a todas las referencias en la inundación extrema no vista (2011), excepto a IPCET, que probablemente la usó. En las temporadas posteriores a 2022, que ningún mapa vio, el ensamble supera a JRC y a IPCET por unos 0.10–0.15 de ROC AUC y por un 32–66 % relativo en PR AUC (59–66 % frente a JRC, 32–55 % frente a IPCET). Los valores absolutos son moderados (ROC ≈ 0.72–0.78) porque las propias etiquetas tienen ruido (ver §4 y §8).
+**Cómo leer la tabla.** El ensamble es el único mapa que supera a todas las referencias en la inundación extrema no vista (2011), excepto a IPCET, que probablemente la usó. En las temporadas posteriores a 2022, que ningún mapa vio, el ensamble supera a JRC y a IPCET por unos 0.10–0.15 de ROC AUC y por un 33–67 % relativo en PR AUC (59–67 % frente a JRC, 33–56 % frente a IPCET). Los valores absolutos son moderados (ROC ≈ 0.72–0.78) porque las propias etiquetas tienen ruido (ver §4 y §8).
 
 > La validación cruzada espacial clásica daba ROC 0.885, pero sobreestima la capacidad del modelo para anticipar inundaciones nuevas (§5.2). Este reporte usa como métrica principal la evaluación sobre **eventos retenidos**, no la validación cruzada.
 
@@ -38,7 +38,8 @@ Las variables de terreno salen del **MDE LiDAR de 5 m de INEGI**, acondicionado 
 |---|---|
 | "Buscar un buen algoritmo y robusto"; "lo más preciso posible" | Modelos entrenados con inundaciones observadas, validados con eventos retenidos y comparados con referencias físicas y oficiales. |
 | "Que el mapa también lo generemos nosotros" | Pipeline `python -m backend.floodmodel` que reconstruye todo desde fuentes públicas. |
-| Mantener la optimización y el costo computacional | Nada se procesa al arrancar la app ni al hacer clic: se sirven tiles PNG estáticos (7.7 MB, contra 32 MB de los GeoTIFF anteriores). |
+| Mantener la optimización y el costo computacional | Nada se procesa al arrancar la app ni al hacer clic: se sirven tiles PNG estáticos (7.8 MB, contra 32 MB de los GeoTIFF anteriores). |
+| Cubrir todo el estado | La grilla abarca el límite estatal más 2 km, y los huecos del LiDAR se rellenan con el CEM 3.0 de INEGI (§3.5). |
 | Mejorar la visualización | Capa estatal en Web Mercator, 5 clases relativas al estado, paleta apta para daltonismo, lectura del valor bajo el cursor, ficha y coropleta por municipio (ahora con los 17 municipios; Teapa faltaba). |
 
 **Definición del producto.** Es un **índice relativo de susceptibilidad**: ordena las celdas del estado según su propensión a inundarse. **No es una profundidad ni una probabilidad anual** (ver §8).
@@ -49,17 +50,18 @@ Las variables de terreno salen del **MDE LiDAR de 5 m de INEGI**, acondicionado 
 
 | Fuente | Uso | Resolución / periodo |
 |---|---|---|
-| INEGI, MDE LiDAR (terreno) | Elevación, HAND, pendiente, TWI, acumulación de flujo | 5 m → 15 m; vuelo 2007, edición 2012; 603 hojas (1.6 GB) |
+| INEGI, MDE LiDAR (terreno) | Elevación, HAND, pendiente, TWI, acumulación de flujo | 5 m → 15 m; vuelo 2007, edición 2012; 603 hojas (1.6 GB); cubre el 85.6 % de la tierra del estado |
+| INEGI, Continuo de Elevaciones Mexicano 3.0 | Relleno de los huecos del LiDAR | 15 m; todo el estado; elevaciones en metros enteros |
 | CENAPRED, Atlas Nacional de Riesgos | Etiquetas de eventos extremos: inundación del 22-oct-2011; 2020 (Cristóbal, Sentinel-1 28-oct y 5-nov, TerraSAR-X 7-nov, Copernicus) | Polígonos vectoriales |
 | CENAPRED, mapas PNUD 2018 e IPCET-PNUD 2022 | **Solo comparación**, nunca entrenamiento | Polígonos, 5 clases |
 | Copernicus Sentinel-1 GRD (VV) | Etiquetas de inundación estacional 2015–2025 | 10 m → 30 m |
 | JRC/CEMS GloFAS Flood Hazard v2.1 | Profundidad por periodo de retorno (10 y 100 años): variable y componente del ensamble | ~90 m |
-| MERIT Hydro | Área de drenaje aguas arriba, HAND de referencia, relleno de huecos del LiDAR | ~90 m |
+| MERIT Hydro | Área de drenaje aguas arriba, HAND de referencia, último recurso de relleno | ~90 m |
 | JRC Global Surface Water v1.4 | Exclusión de agua permanente (ocurrencia ≥ 50 %) | 30 m |
 | ESA WorldCover 2021 | Uso de suelo | 10 m |
-| FAO GAUL 2025 nivel 2 | Límite estatal y 17 municipios (24 707 km²) | Vectorial |
+| FAO GAUL 2025 nivel 2 | Límite estatal y 17 municipios (24 707 km², área geodésica calculada en Earth Engine) | Vectorial |
 
-**Grilla de modelado:** UTM 15N (EPSG:32615), 30 m, 10 830 × 5 295 celdas. Celdas etiquetadas dentro del estado: 23 360 km².
+**Grilla de modelado:** UTM 15N (EPSG:32615), 30 m, 11 248 × 5 282 celdas (límite estatal + 2 km). Celdas etiquetadas dentro del estado: 23 742 km² (se excluye el agua permanente).
 
 ---
 
@@ -73,7 +75,7 @@ El plan era trabajar a 10 m. El relleno de depresiones por costo mínimo (*least
 
 El LiDAR de INEGI **no tiene datos sobre ríos y lagunas** y deja huecos de cobertura. Si no se corrige, el HAND (altura sobre el drenaje más cercano) queda referido a cauces equivocados.
 
-1. Los huecos se rellenan con la elevación de MERIT, corregida por el sesgo vertical medio LiDAR − MERIT (**−1.64 m**, coherente con la diferencia de datum).
+1. Los huecos se rellenan primero con el CEM 3.0 de INEGI (15 m) y, donde tampoco hay CEM, con MERIT (~90 m). Cada fuente se corrige por su sesgo vertical mediano respecto del LiDAR: **−0.40 m** para el CEM y **−1.64 m** para MERIT.
 2. El agua (ocurrencia JRC ≥ 50 % o área de drenaje MERIT ≥ 500 km²) se incorpora a la red de drenaje.
 
 ### 3.3 Un error de diseño detectado y corregido
@@ -93,6 +95,19 @@ El HAND no usó las inundaciones de CENAPRED, así que esos polígonos sirven pa
 
 Solo un 0.42 % de las celdas no encuentra drenaje, y ninguna supera su propia elevación.
 
+### 3.5 Cobertura del estado
+
+Al dibujar el mapa final para este reporte aparecieron dos huecos de cobertura, que se corrigieron antes de publicar:
+
+| Problema | Magnitud | Corrección |
+|---|---|---|
+| La grilla seguía la extensión de las hojas LiDAR, no el límite estatal | 391 km² fuera del modelo: 332 km² de Huimanguillo (9 %) y 59 km² de Cárdenas (3 %), en la planicie del Tonalá | Grilla = límite estatal + 2 km |
+| 3 103 km² de tierra (12.6 % del estado) sin LiDAR, rellenados con MERIT a ~90 m | Paraíso 91 %, Comalcalco 63 %, Emiliano Zapata 44 %, Tacotalpa 34 %, Jalpa de Méndez 31 % | Relleno con el CEM 3.0 de INEGI a 15 m, que cubre más del **97 %** de los huecos; MERIT solo en el resto |
+
+Otras series de INEGI a 5 m y 1.5 m cubren solo el 21 % del hueco y mezclan datum y vuelos, así que no se usaron. Tras la corrección no queda ninguna celda de tierra del estado sin clase. Al ampliar la grilla, la superficie sin LiDAR pasó a 3 416 km² (14.4 % de la tierra del estado), porque la franja agregada al oeste tampoco tiene vuelo LiDAR.
+
+Con la corrección, los porcentajes por clase de cada municipio cambiaron como máximo 2.6 puntos (Cárdenas), y la validación cambió en la tercera cifra decimal. El modelo se apoya sobre todo en JRC, la elevación y el uso de suelo, y la mediana del CEM difiere poco de la de MERIT (−1.3 m). Lo que mejora es el detalle local del terreno y la cobertura de la cuenca del Tonalá.
+
 ---
 
 ## 4. Etiquetas
@@ -103,7 +118,7 @@ Solo un 0.42 % de las celdas no encuentra drenaje, y ninguna supera su propia el
 - **Seca (0):** el resto del estado.
 - **Excluida (255):** el agua permanente y todo lo que queda fuera de Tabasco, porque CENAPRED solo mapeó dentro del estado.
 
-Resultado: 15.1 % de celdas inundadas.
+Resultado: 14.9 % de celdas inundadas.
 
 ### 4.2 Fuentes adicionales evaluadas
 
@@ -121,6 +136,8 @@ Los umbrales de Sentinel-1 se calibraron con un barrido de 34 combinaciones cont
 ---
 
 ## 5. Modelos y variantes
+
+> Las cifras de esta sección son de los experimentos de exploración, hechos antes de la corrección de cobertura (§3.5). La evaluación definitiva, ya con la cobertura corregida, está en §6 y en el Resumen; las diferencias aparecen en la tercera cifra decimal.
 
 Todas las variantes usan LightGBM con los mismos hiperparámetros: 400 árboles, tasa de aprendizaje 0.05, 63 hojas, `min_child_samples` 50 y submuestreo de 0.8 en filas y columnas. Se entrena con un muestreo balanceado de 150 000 celdas por clase. Las variables son las 6 del terreno LiDAR agregado a 30 m más las capas JRC, MERIT, WorldCover y GSW.
 
@@ -205,35 +222,35 @@ Los modelos publicados (paso `final`) se entrenan con **todos** los eventos. Val
 
 | Modelo publicado | ROC (5 pliegues) | Importancia (ganancia) principal |
 |---|---|---|
-| Eventos extremos | 0.885 ± 0.010 | JRC RP100 31.8 %, elevación 22.2 %, WorldCover 14.2 %, área de drenaje 12.9 % |
-| Estacional | 0.817 ± 0.005 | **WorldCover 54.0 %**, HAND MERIT 8.5 %, JRC RP10 6.5 % |
+| Eventos extremos | 0.884 ± 0.005 | JRC RP100 31.1 %, elevación 22.0 %, WorldCover 14.6 %, área de drenaje 12.5 % |
+| Estacional | 0.821 ± 0.006 | **WorldCover 54.2 %**, HAND MERIT 8.1 %, JRC RP10 6.5 % |
 
 ---
 
 ## 7. Producto publicado
 
-- **Clases.** Quintiles de superficie del índice del ensamble (cortes 0.345, 0.474, 0.597 y 0.752): Muy baja, Baja, Media, Alta y Muy alta. Por construcción, cada clase cubre ~20 % del estado.
-- **Tiles.** 916 PNG con paleta (ColorBrewer YlGnBu), zoom 7–12, 7.7 MB en total. El navegador traduce el color del píxel a la clase sin consultar al servidor.
+- **Clases.** Quintiles de superficie del índice del ensamble (cortes 0.344, 0.474, 0.597 y 0.749): Muy baja, Baja, Media, Alta y Muy alta. Por construcción, cada clase cubre ~20 % del estado.
+- **Tiles.** 962 PNG con paleta (ColorBrewer YlGnBu), zoom 7–12, 7.8 MB en disco. El navegador traduce el color del píxel a la clase sin consultar al servidor.
 - **Por municipio.** Porcentaje de superficie por clase, % en Alta o Muy alta, puntaje medio y lugar en el estado:
 
 | # | Municipio | km² | % Alta + Muy alta |
 |---|---|---|---|
 | 1 | Nacajuca | 522 | 84 % |
 | 2 | Jonuta | 1 520 | 71 % |
-| 3 | Centro | 1 654 | 72 % |
-| 4 | Macuspana | 2 349 | 71 % |
+| 3 | Centro | 1 654 | 73 % |
+| 4 | Macuspana | 2 348 | 71 % |
 | 5 | Centla | 2 531 | 68 % |
 | 6 | Jalapa | 593 | 57 % |
-| 7 | Jalpa de Méndez | 366 | 54 % |
-| 8 | Emiliano Zapata | 560 | 37 % |
-| 9 | Paraíso | 322 | 33 % |
+| 7 | Jalpa de Méndez | 366 | 55 % |
+| 8 | Emiliano Zapata | 560 | 36 % |
+| 9 | Paraíso | 321 | 33 % |
 | 10 | Cunduacán | 592 | 30 % |
-| 11 | Teapa | 420 | 27 % |
-| 12 | Comalcalco | 743 | 22 % |
-| 13 | Cárdenas | 1 763 | 21 % |
-| 14 | Huimanguillo | 3 329 | 22 % |
-| 15 | Balancán | 3 520 | 15 % |
-| 16 | Tacotalpa | 732 | 14 % |
+| 11 | Comalcalco | 743 | 21 % |
+| 12 | Teapa | 420 | 27 % |
+| 13 | Cárdenas | 1 820 | 20 % |
+| 14 | Huimanguillo | 3 654 | 23 % |
+| 15 | Balancán | 3 520 | 17 % |
+| 16 | Tacotalpa | 732 | 15 % |
 | 17 | Tenosique | 1 844 | 10 % |
 
 El orden del ranking sigue el puntaje medio, no el %. Las áreas excluyen el agua permanente.
@@ -247,10 +264,10 @@ El orden del ranking sigue el puntaje medio, no el %. Las áreas excluyen el agu
 3. **Dominio del uso de suelo en el modelo estacional (54 % de la ganancia).** Puede reflejar un patrón real (humedales y pastizales inundables) o un artefacto del detector (por ejemplo, cultivos cosechados que se oscurecen en el radar). No se resolvió.
 4. **Selección del ensamble.** Los pesos se fijaron a priori, pero la *idea* de ensamblar surgió después de ver los resultados en 2011 y en 2023–2025. Hay cierto riesgo de sesgo de selección; la confirmación definitiva exige un evento futuro.
 5. **Antigüedad del LiDAR (vuelo 2007).** Las obras de protección posteriores (bordos y el Plan Integral Hídrico de Tabasco tras 2007) no están en el MDE. Zonas protegidas de Villahermosa pueden aparecer más susceptibles de lo que son.
-6. **Resolución.** El terreno se procesó a 15 m, no a 10 m, por límites de memoria y tiempo (§3.1). Algunas variables (JRC y MERIT, ~90 m) son más gruesas que la grilla.
+6. **Resolución y fuentes de terreno.** El terreno se procesó a 15 m, no a 10 m, por límites de memoria y tiempo (§3.1). En el 14.4 % de la tierra del estado sin LiDAR (3 416 km², incluida la franja agregada al oeste) el terreno sale del CEM 3.0, que tiene elevaciones en metros enteros y otra fecha de captura. Algunas variables (JRC y MERIT, ~90 m) son más gruesas que la grilla.
 7. **Clases relativas.** Los quintiles hacen que ~40 % del estado sea "Alta" o "Muy alta" por definición. El mapa ordena; no dice cuánto se inunda ni con qué frecuencia.
 8. **Artefactos visibles.** Hay un rayado diagonal tenue en Centla, probablemente por las franjas de órbita de Sentinel-1.
-9. **Límites.** La simplificación de GAUL dejó líneas sueltas en 3 municipios. Afectaron 5 de 26.9 M celdas, y no se reentrenó.
+9. **Límites.** La simplificación de GAUL dejó líneas sueltas en 3 municipios; se corrigió, y el efecto fue de 5 de 26.9 M celdas.
 
 ---
 
@@ -265,6 +282,7 @@ El orden del ranking sigue el puntaje medio, no el %. Las áreas excluyen el agu
 | Calibración de probabilidad (isotónica) con eventos retenidos | Pasar de un índice relativo a una probabilidad interpretable | Medio |
 | Mover `rasterio` y `matplotlib` al grupo `floodmodel` (la app ya no los usa) | Instalación de la app más liviana | Bajo |
 | Alinear `openapi.yaml` con las rutas reales (deriva previa a este trabajo) | Documentación de la API correcta | Bajo |
+| Segmentar inundaciones de Sentinel-1 con una red profunda (p. ej. U-Net, en la GPU disponible) | Etiquetas estacionales menos ruidosas, incluida la vegetación inundada | Alto |
 
 ---
 
@@ -273,18 +291,19 @@ El orden del ranking sigue el puntaje medio, no el %. Las áreas excluyen el agu
 ```bash
 uv sync --group floodmodel
 python -m backend.floodmodel lidar-index && python -m backend.floodmodel lidar-download
-python -m backend.floodmodel terrain-mosaic --resolution 15
+python -m backend.floodmodel boundaries
+python -m backend.floodmodel terrain-mosaic --resolution 15 && python -m backend.floodmodel cem
 python -m backend.floodmodel terrain-aux && python -m backend.floodmodel terrain-condition
 python -m backend.floodmodel terrain-derivatives --resolution 15 --conditioned
 python -m backend.floodmodel inventory && python -m backend.floodmodel gee-features
-python -m backend.floodmodel boundaries && python -m backend.floodmodel stack
+python -m backend.floodmodel stack
 python -m backend.floodmodel labels && python -m backend.floodmodel s1-seasons
 python -m backend.floodmodel validate && python -m backend.floodmodel final
 python -m backend.floodmodel publish
 ```
 
-- **Cómputo.** WSL2 con 12 GB de RAM y 8 núcleos. El paso más pesado es la hidrología a 15 m (pico de 7.6 GB). Todos los pasos en numpy procesan el ráster por franjas: una primera versión que cargaba el estado completo agotó la memoria (8.6 GB) y tumbó la máquina virtual.
-- **Pruebas.** 691 tests de backend (incluidos los del pipeline con datos sintéticos), 268 de frontend (vitest) y 15 end-to-end (Playwright, con los tiles reales).
+- **Cómputo.** WSL2 con 12 GB de RAM y 8 núcleos. El paso más pesado es la hidrología a 15 m (pico de 8.3 GB, 7 min). La cadena completa tarda ~1.3 h, dominada por las descargas de Earth Engine. Todos los pasos en numpy procesan el ráster por franjas: una primera versión que cargaba el estado completo agotó la memoria (8.6 GB) y tumbó la máquina virtual.
+- **Pruebas.** 699 tests de backend (incluidos los del pipeline con datos sintéticos), 268 de frontend (vitest) y 15 end-to-end (Playwright, con los tiles reales).
 - **Commits** (rama `feat/flood-risk-model`):
 
 | Commit | Contenido |
@@ -296,8 +315,10 @@ python -m backend.floodmodel publish
 | `71f3ec1` | Publicación (clases, tiles, estadísticas) |
 | `0e2236c`, `f02d18c` | Capa estatal, lector de valor y coropleta |
 | `5d97c9d`, `e2d7e8b` | Retiro del FHI anterior y documentación |
+| `cef6f9f` | Este reporte |
+| `e98eb79`, `75774c7` | Cobertura estatal completa y relleno con el CEM 3.0 |
 
-- **Pendiente.** Se está verificando que el paso `s1-seasons` del CLI reproduce byte a byte las temporadas de Sentinel-1 que bajó el prototipo; el resultado se agrega al cerrar.
+- **Reproducibilidad verificada.** El paso `s1-seasons` del CLI regeneró las 11 temporadas de Sentinel-1 (2015–2025) **idénticas byte a byte** a las del prototipo con el que se eligieron los umbrales (49 min de descarga desde Earth Engine).
 
 ---
 
@@ -311,4 +332,4 @@ python -m backend.floodmodel publish
 - Ke, G. et al. (2017). LightGBM: A highly efficient gradient boosting decision tree. *NeurIPS 30*.
 - Roberts, D. R. et al. (2017). Cross-validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure. *Ecography*, 40(8), 913–929.
 - European Commission, Joint Research Centre. CEMS GloFAS Flood Hazard maps v2.1 (dataset `JRC/CEMS_GLOFAS/FloodHazard/v2_1` en Google Earth Engine).
-- INEGI. Modelo Digital de Elevación de alta resolución LiDAR, 5 m. CENAPRED. Atlas Nacional de Riesgos. FAO. GAUL 2025.
+- INEGI. Modelo Digital de Elevación de alta resolución LiDAR, 5 m; Continuo de Elevaciones Mexicano 3.0, 15 m. CENAPRED. Atlas Nacional de Riesgos. FAO. GAUL 2025.
