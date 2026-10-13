@@ -36,7 +36,7 @@
           </div>
         </div>
         <div class="sidebar-header-bottom-row">
-          <h1 style="font-weight: 600;">Visor meteorológico</h1>
+          <h1 class="sidebar-title">Visor meteorológico</h1>
           <div class="sidebar-header-actions">
             <button
               id="themeToggle"
@@ -44,8 +44,8 @@
               class="theme-toggle-btn"
               aria-label="Alternar modo claro u oscuro"
               title="Alternar modo claro u oscuro"
-              style="width: 36px; height: 36px;"
             >
+              <!-- Inline display:none avoids showing both icons before styles.css loads. -->
               <span class="icon-sun" data-lucide="sun" aria-hidden="true" style="display: none;"></span>
               <span class="icon-moon" data-lucide="moon" aria-hidden="true"></span>
             </button>
@@ -66,13 +66,12 @@
             <span class="tflow-step-label">Área</span>
           </div>
           <div class="tflow-step-content">
-            <div id="tflow-draw-container" style="display: flex; flex-direction: column; width: 100%;">
+            <div id="tflow-draw-container">
               <p id="tflow-hint" class="tflow-hint">Dibuja un rectángulo en el mapa para delimitar el área de análisis.</p>
               <button
                 id="tflow-draw-btn"
                 type="button"
                 class="primary-action"
-                style="width: 100%; display: flex; align-items: center; justify-content: center; margin-top: var(--space-2); gap: var(--space-2);"
               >
                 <span data-lucide="square-pen" aria-hidden="true"></span>
                 Dibujar área en el mapa
@@ -163,7 +162,7 @@
               </div>
 
               <!-- Estación Climatológica -->
-              <div class="tflow-station-group" style="margin-top: 1rem; border-top: 1px solid var(--sidebar-border); padding-top: 1rem;">
+              <div class="tflow-station-group tflow-station-group--separated">
                 <span class="tflow-station-group-title">Estación Climatológica (Lluvia)</span>
                 <div class="tflow-station-content">
                   <label for="tflow-climaStation">Estación</label>
@@ -259,43 +258,43 @@
         </p>
 
         <!-- Panel de Inundaciones -->
-        <div id="inundaciones-panel" class="inundaciones-panel" style="margin-top: var(--space-3);">
-          <div style="margin-bottom: var(--space-3);">
+        <div id="inundaciones-panel" class="inundaciones-panel">
+          <div class="inund-field">
             <label for="inund-satellite" class="tflow-label">Satélite</label>
-            <select id="inund-satellite" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+            <select id="inund-satellite" class="inund-control">
               <option value="sentinel1" selected>Sentinel-1 (Radar, 10m, 2015-2024)</option>
               <option value="landsat">Landsat (Óptico, 30m, 2000-2024)</option>
             </select>
-            <p id="inund-satellite-hint" class="hint" style="margin-top: var(--space-1); font-size: 0.78rem; color: var(--gray-400);">
+            <p id="inund-satellite-hint" class="hint">
               Sentinel-1 (Radar): Cobertura 2015–2024. Inmune a nubes.
             </p>
           </div>
 
-          <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-3);">
-            <div style="flex: 1;">
-              <label for="inund-start" class="tflow-label" style="font-size: 0.82rem;">Fecha Inicio</label>
-              <input type="date" id="inund-start" value="2020-01-01" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 0.82rem;">
+          <div class="inund-date-row">
+            <div class="inund-date-field">
+              <label for="inund-start" class="tflow-label inund-label--compact">Fecha Inicio</label>
+              <input type="date" id="inund-start" value="2020-01-01" class="inund-control inund-control--compact">
             </div>
-            <div style="flex: 1;">
-              <label for="inund-end" class="tflow-label" style="font-size: 0.82rem;">Fecha Fin</label>
-              <input type="date" id="inund-end" value="2020-01-15" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 0.82rem;">
+            <div class="inund-date-field">
+              <label for="inund-end" class="tflow-label inund-label--compact">Fecha Fin</label>
+              <input type="date" id="inund-end" value="2020-01-15" class="inund-control inund-control--compact">
             </div>
           </div>
 
-          <div style="margin-bottom: var(--space-3);">
+          <div class="inund-field">
             <label for="inund-threshold-mode" class="tflow-label">Modo de Umbral</label>
-            <select id="inund-threshold-mode" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+            <select id="inund-threshold-mode" class="inund-control">
               <option value="auto" selected>Automático (Percentil dinámico)</option>
               <option value="manual">Manual</option>
             </select>
           </div>
 
-          <div id="inund-threshold-manual-group" class="hidden" style="margin-bottom: var(--space-3);">
+          <div id="inund-threshold-manual-group" class="inund-field hidden">
             <label for="inund-threshold-value" class="tflow-label">Valor de Umbral</label>
-            <input type="number" id="inund-threshold-value" step="0.1" value="-18.0" style="width: 100%; padding: var(--space-2); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+            <input type="number" id="inund-threshold-value" step="0.1" value="-18.0" class="inund-control">
           </div>
 
-          <button id="inund-btn-process" type="button" class="primary-action" style="width: 100%;">
+          <button id="inund-btn-process" type="button" class="primary-action">
             Visualizar Inundación
           </button>
         </div>

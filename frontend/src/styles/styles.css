@@ -3040,3 +3040,80 @@ body.inundaciones-mode-active .inundaciones-panel {
   gap: var(--space-2);
   cursor: pointer;
 }
+
+/* ------------------------------------------------------------------ */
+/* Template layout rules (formerly inline style attributes in index.html) */
+/* ------------------------------------------------------------------ */
+
+.sidebar-header-bottom-row .sidebar-title {
+  font-weight: 600;
+}
+
+#themeToggle {
+  width: 36px;
+  height: 36px;
+}
+
+#tflow-draw-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+#tflow-draw-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-2);
+  gap: var(--space-2);
+}
+
+.tflow-station-group.tflow-station-group--separated {
+  margin-top: 1rem;
+  border-top: 1px solid var(--sidebar-border);
+  padding-top: 1rem;
+}
+
+/* Flood detection panel */
+#inundaciones-panel {
+  margin-top: var(--space-3);
+}
+
+#inundaciones-panel .inund-field {
+  margin-bottom: var(--space-3);
+}
+
+#inundaciones-panel .inund-control {
+  width: 100%;
+  padding: var(--space-2);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+}
+
+#inundaciones-panel .inund-control.inund-control--compact,
+#inundaciones-panel .tflow-label.inund-label--compact {
+  font-size: 0.82rem;
+}
+
+#inund-satellite-hint {
+  margin-top: var(--space-1);
+  font-size: 0.78rem;
+  color: var(--gray-400);
+}
+
+#inundaciones-panel .inund-date-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+#inundaciones-panel .inund-date-field {
+  flex: 1;
+}
+
+#inund-btn-process {
+  width: 100%;
+}
