@@ -6,11 +6,8 @@ import logging
 
 from flask import Blueprint, Response, jsonify, request
 
-from backend.extensions import limiter
-
-logger = logging.getLogger(__name__)
-
 from backend.config import MUNICIPAL_TIFS, RATE_LIMITS
+from backend.extensions import limiter
 from backend.gee.flood_risk import render_flood_risk_png
 from backend.gee.schemas import (
     BBoxSchema,
@@ -18,6 +15,8 @@ from backend.gee.schemas import (
     MuniQuerySchema,
     _parse_bbox_str,
 )
+
+logger = logging.getLogger(__name__)
 
 flood_bp = Blueprint("flood", __name__)
 

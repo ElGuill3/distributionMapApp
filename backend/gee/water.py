@@ -1,8 +1,10 @@
 """
 Módulo GEE para Cuerpos de Agua e Inundaciones.
 Soporta dos satélites:
-  1. Landsat (óptico, 30m, 2000-2024): compuesto mediano estacional y MNDWI dinámico.
-  2. Sentinel-1 (radar, 10m, 2015-2024): compuesto de retrodispersión y umbral VH dinámico.
+  1. Landsat (óptico, 30m, 2000-2024): compuesto mediano estacional y MNDWI
+     dinámico.
+  2. Sentinel-1 (radar, 10m, 2015-2024): compuesto de retrodispersión y umbral VH
+     dinámico.
 """
 
 import ee
@@ -25,7 +27,7 @@ _VIS_PARAMS: dict = {
 def _get_landsat_collection(
     bbox: list[float], start: str, end: str
 ) -> ee.ImageCollection:
-    """Obtiene y une las colecciones de Landsat 5, 7, 8 y 9 harmonizando nombres de bandas."""
+    """Une las colecciones de Landsat 5, 7, 8 y 9 armonizando nombres de bandas."""
     region = ee.Geometry.Rectangle(bbox)
 
     l9 = (
@@ -120,8 +122,9 @@ def build_water_gif_bbox(
     satellite: str = "landsat",
 ) -> str | None:
     """
-    Genera la URL de una sola imagen estática (como un GIF de 1 fotograma) de detección de agua.
-    Usa el satélite indicado ('landsat' o 'sentinel1') con umbralización dinámica en la región.
+    Genera la URL de una sola imagen estática (como un GIF de 1 fotograma) de
+    detección de agua. Usa el satélite indicado ('landsat' o 'sentinel1') con
+    umbralización dinámica en la región.
     """
     validate_bbox(bbox, max_span=MAX_SPAN_DEG_S2)
 
@@ -370,7 +373,8 @@ def _get_flood_mask_and_visualizations(
     threshold: float = -18.0,
 ) -> tuple[ee.Image | None, float, dict | None, ee.Image | None]:
     """
-    Helper interno para clasificar la inundación y preparar los parámetros de visualización.
+    Helper interno para clasificar la inundación y preparar los parámetros de
+    visualización.
     Retorna (flood_mask, final_thresh, vis_params, background_img).
     """
     validate_bbox(bbox, max_span=MAX_SPAN_DEG_S2)

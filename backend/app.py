@@ -39,23 +39,15 @@ from backend.config import (
     prepare_runtime_directories,
 )
 from backend.extensions import limiter
-
-DEPENDENCY_PREFLIGHT = os.getenv("_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT") == "1"
-
-# ---------------------------------------------------------------------------
-# Blueprints
-# ---------------------------------------------------------------------------
 from backend.routes.export_routes import export_bp
 from backend.routes.flood_routes import flood_bp
 from backend.routes.gif_routes import gif_bp
 from backend.routes.progress_routes import progress_bp
 from backend.routes.station_routes import station_bp
 from backend.routes.timeseries_routes import ts_bp
-
-# ---------------------------------------------------------------------------
-# Limpieza automática de GIFs en segundo plano
-# ---------------------------------------------------------------------------
 from backend.services.gif_service import start_cleanup_daemon
+
+DEPENDENCY_PREFLIGHT = os.getenv("_DISTRIBUTIONMAPAPP_DEPENDENCY_PREFLIGHT") == "1"
 
 # ---------------------------------------------------------------------------
 # Aplicación Flask

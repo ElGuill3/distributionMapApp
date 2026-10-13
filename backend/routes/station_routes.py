@@ -16,7 +16,8 @@ station_bp = Blueprint("station", __name__)
 @limiter.limit(RATE_LIMITS["station"])
 def local_stations() -> Response:
     """
-    Devuelve los metadatos (nombre, tipo, coordenadas) de todas las estaciones locales disponibles.
+    Devuelve los metadatos (nombre, tipo, coordenadas) de todas las estaciones
+    locales disponibles.
     """
     stations_data = {}
     for key, info in LOCAL_STATIONS.items():
@@ -34,7 +35,8 @@ def local_stations() -> Response:
 @limiter.limit(RATE_LIMITS["station"])
 def local_station_level_range() -> Response:
     """
-    Devuelve la serie temporal de una estación local (nivel o precipitación) dentro del rango de fechas.
+    Devuelve la serie temporal de una estación local (nivel o precipitación)
+    dentro del rango de fechas.
 
     Query params:
         station : ID de la estación (p. ej. 'BDCTB_hidro' o 'BDCTB_clima').

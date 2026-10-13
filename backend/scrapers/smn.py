@@ -11,7 +11,9 @@ class SmnWeatherScraper(BaseScraper):
 
     def scrape(self) -> None:
         logger.info(
-            "Ejecutando stub del SMN Weather Scraper. Ingesta a futuro para modelos de predicción."
+            "Ejecutando stub del SMN Weather Scraper. Ingesta a futuro para "
+            "modelos de predicción."
         )
-        # TODO: Implementar consulta a la API de SMN (JSON gzip) e ingesta a DB/archivos.
+        # TODO: Implementar consulta a la API de SMN (JSON gzip) e ingesta a
+        # DB/archivos.
         pass

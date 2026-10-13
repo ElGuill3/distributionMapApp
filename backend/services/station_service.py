@@ -78,7 +78,8 @@ def read_station_level_timeseries(
 
     if not val_col:
         raise ValueError(
-            f"No se encontró una columna de medición válida (Nivel o Precipitación) en: {csv_path.name}"
+            "No se encontró una columna de medición válida (Nivel o Precipitación) "
+            f"en: {csv_path.name}"
         )
 
     df["Fecha"] = pd.to_datetime(df["Fecha"], dayfirst=False, errors="coerce")

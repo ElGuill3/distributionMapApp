@@ -234,7 +234,8 @@ def add_dates_to_gif(
         gif_url          : URL del GIF generado por GEE.
         dates            : Lista de fechas 'YYYY-MM-DD', una por frame.
         output_path      : Ruta de salida del GIF procesado.
-        font_size        : Tamaño de fuente base (se adaptará dinámicamente si no se cambia).
+        font_size        : Tamaño de fuente base (se adaptará dinámicamente si
+                           no se cambia).
         position         : Posición del texto: 'top-left' | 'top-right' |
                            'bottom-left' | 'bottom-right'.
         progress_callback: Función opcional que recibe (porcentaje, mensaje).
@@ -329,7 +330,8 @@ def add_dates_to_gif(
         # Mezclar el overlay con el frame usando pegado local con máscara alpha
         frame_rgb.paste(overlay, (x, y), overlay)
 
-        # Convertir a modo paleta adaptativa sin difuminado (dithering) para mantener colores sólidos
+        # Convertir a modo paleta adaptativa sin difuminado (dithering) para
+        # mantener colores sólidos
         frame_p = frame_rgb.convert(
             "P", palette=PILImage.Palette.ADAPTIVE, dither=PILImage.Dither.NONE
         )

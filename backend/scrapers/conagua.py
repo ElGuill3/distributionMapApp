@@ -28,8 +28,14 @@ class ConaguaScraper(BaseScraper):
         category = self.username.capitalize()  # "Hidros" o "Climas"
         url = f"https://{self.host}/basedatos/{category}/{station}.csv"
         headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                "image/avif,image/webp,image/apng,*/*;q=0.8"
+            ),
             "Accept-Language": "en-US,en;q=0.9",
         }
         try:
@@ -42,7 +48,8 @@ class ConaguaScraper(BaseScraper):
                     or "challenge validation" in content.lower()
                 ):
                     logger.warning(
-                        f"Descarga HTTPS de {station} bloqueada por desafío de seguridad (Incapsula)."
+                        f"Descarga HTTPS de {station} bloqueada por desafío de "
+                        "seguridad (Incapsula)."
                     )
                     return False
 
@@ -96,13 +103,14 @@ class ConaguaScraper(BaseScraper):
             if not success:
                 pending_stations.append(station)
 
-        # 2. Si alguna estación falló por HTTPS (ej. por WAF / Incapsula), intentar por FTP como fallback
+        # 2. Si alguna estación falló por HTTPS (ej. por WAF / Incapsula),
+        #    intentar por FTP como fallback
         if pending_stations:
             logger.info(
-                f"Las siguientes estaciones fallaron o fueron bloqueadas por HTTPS: {pending_stations}. Intentando fallback vía FTP..."
+                "Las siguientes estaciones fallaron o fueron bloqueadas por HTTPS: "
+                f"{pending_stations}. Intentando fallback vía FTP..."
             )
 
-            ftp_success = False
             max_retries = 3
             for attempt in range(1, max_retries + 1):
                 try:
@@ -120,7 +128,8 @@ class ConaguaScraper(BaseScraper):
                             expected_filename = f"{station}.CSV"
                             if expected_filename not in file_map:
                                 logger.warning(
-                                    f"La estación {station} no se encontró en el servidor FTP ({expected_filename})."
+                                    f"La estación {station} no se encontró en el "
+                                    f"servidor FTP ({expected_filename})."
                                 )
                                 continue
 
@@ -144,22 +153,24 @@ class ConaguaScraper(BaseScraper):
                                 # Reemplazo atómico
                                 os.replace(temp_path, local_final_path)
                                 logger.info(
-                                    f"Descarga de {station} vía FTP finalizada exitosamente."
+                                    f"Descarga de {station} vía FTP finalizada "
+                                    "exitosamente."
                                 )
                             except Exception as e:
                                 logger.error(
-                                    f"Error durante la descarga o escritura de {station} vía FTP: {e}"
+                                    "Error durante la descarga o escritura de "
+                                    f"{station} vía FTP: {e}"
                                 )
                                 if temp_path.exists():
                                     try:
                                         os.unlink(temp_path)
                                     except OSError:
                                         pass
-                        ftp_success = True
                         break
                 except Exception as e:
                     logger.error(
-                        f"Fallo en la conexión FTP de fallback (intento {attempt}/{max_retries}): {e}"
+                        "Fallo en la conexión FTP de fallback "
+                        f"(intento {attempt}/{max_retries}): {e}"
                     )
                     if attempt < max_retries:
                         sleep_time = 2**attempt
@@ -169,5 +180,6 @@ class ConaguaScraper(BaseScraper):
                         time.sleep(sleep_time)
                     else:
                         logger.error(
-                            f"Se agotaron todos los reintentos FTP de fallback para {self.username}."
+                            "Se agotaron todos los reintentos FTP de fallback "
+                            f"para {self.username}."
                         )

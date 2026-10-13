@@ -145,7 +145,8 @@ class LocalStationQuerySchema(BaseModel):
         from backend.config import LOCAL_STATIONS
 
         if not LOCAL_STATIONS:
-            # Fallback para tests unitarios cuando no hay archivos CSV en el entorno de prueba
+            # Fallback para tests unitarios cuando no hay archivos CSV en el
+            # entorno de prueba
             known_fallback = {
                 "SPTTB",
                 "BDCTB",
@@ -161,7 +162,8 @@ class LocalStationQuerySchema(BaseModel):
             raise ValueError(f"Estación local no soportada: '{v}'.")
 
         if v not in LOCAL_STATIONS:
-            # Compatibilidad hacia atrás: mapear clave simple (ej. BDCTB) a su versión hidro
+            # Compatibilidad hacia atrás: mapear clave simple (ej. BDCTB) a su
+            # versión hidro
             if f"{v}_hidro" in LOCAL_STATIONS:
                 return f"{v}_hidro"
             raise ValueError(f"Estación local no soportada: '{v}'.")
