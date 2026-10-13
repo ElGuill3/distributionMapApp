@@ -112,3 +112,65 @@ test('a tile that fails to load is reported, not shown as no data', async ({
     'No se pudo leer el mapa en este punto · Centro'
   );
 });
+
+test('flood risk mode hides station markers and restores them on exit', async ({
+  page,
+}) => {
+  await page.route('**/api/local-stations', route =>
+    route.fulfill({
+      json: {
+        BDCTB_hidro: {
+          name: 'Boca del Cerro',
+          type: 'hidrometrica',
+          coords: [17.43, -91.48],
+          station_name: 'Boca del Cerro',
+          municipio: 'Tenosique',
+        },
+      },
+    })
+  );
+  await page.goto('/templates/index.html');
+  const markers = page.locator('.leaflet-marker-pane > *');
+  await expect(markers).toHaveCount(1);
+
+  await page.locator('#toggleFloodRiskMode').click();
+  await expect(page.locator('.flood-risk-colorbar')).toBeVisible();
+  await expect(markers).toHaveCount(0);
+
+  await page.locator('#toggleFloodRiskMode').click();
+  await expect(markers).toHaveCount(1);
+});
+
+test('the stations toggle still hides markers and flood mode keeps that choice', async ({
+  page,
+}) => {
+  await page.route('**/api/local-stations', route =>
+    route.fulfill({
+      json: {
+        BDCTB_hidro: {
+          name: 'Boca del Cerro',
+          type: 'hidrometrica',
+          coords: [17.43, -91.48],
+          station_name: 'Boca del Cerro',
+          municipio: 'Tenosique',
+        },
+      },
+    })
+  );
+  await page.goto('/templates/index.html');
+  const markers = page.locator('.leaflet-marker-pane > *');
+  const toggle = page.locator('#topbar-layer-stations');
+  await expect(markers).toHaveCount(1);
+
+  await toggle.evaluate(el => (el as HTMLElement).click());
+  await expect(markers).toHaveCount(0);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+  await page.locator('#toggleFloodRiskMode').click();
+  await page.locator('#toggleFloodRiskMode').click();
+  await expect(markers).toHaveCount(0);
+
+  await toggle.evaluate(el => (el as HTMLElement).click());
+  await expect(markers).toHaveCount(1);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+});
