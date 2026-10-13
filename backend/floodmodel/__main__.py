@@ -224,7 +224,9 @@ def main(argv: list[str] | None = None) -> int:
 
         ee.Initialize(project=config.GEE_PROJECT)
         years = list(range(args.first, args.last + 1))
-        grid = gee_layers.Grid.from_raster(_dem_path(args.work_dir, 15), res=30)
+        grid = gee_layers.Grid.from_raster(
+            _dem_path(args.work_dir, TERRAIN_RESOLUTION), res=30
+        )
         region = ee.Geometry.Rectangle([-94.2, 17.2, -90.9, 18.75])
         image = gee_layers.s1_season_image(years, region)
         out = gee_layers.download(
@@ -265,7 +267,7 @@ def main(argv: list[str] | None = None) -> int:
 
         ee.Initialize(project=config.GEE_PROJECT)
         grid = gee_layers.Grid.from_raster(
-            _dem_path(args.work_dir, 10.0), res=args.resolution
+            _dem_path(args.work_dir, TERRAIN_RESOLUTION), res=args.resolution
         )
         out = gee_layers.download(
             gee_layers.ee_compute(gee_layers.feature_image()),
@@ -276,6 +278,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"GEE features: {grid.width}x{grid.height} -> {out}")
         return 0
     return 2
+
+
+# Every Earth Engine layer is cut on the extent of this terrain mosaic, so
+# all model rasters share one grid.
+TERRAIN_RESOLUTION = 15.0
 
 
 def _dem_path(work_dir: Path, resolution: float) -> Path:

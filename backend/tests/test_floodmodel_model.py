@@ -292,3 +292,12 @@ def test_score_events_reports_roc_and_pr_per_event_and_source():
     assert table["good"]["2011"]["roc_auc"] > 0.9
     assert 0.4 < table["random"]["2011"]["roc_auc"] < 0.6
     assert table["good"]["2011"]["base_rate"] == pytest.approx(event.mean())
+
+
+def test_label_from_masks_rejects_rasters_on_different_grids(tmp_path):
+    _write(tmp_path / "s1.tif", [np.zeros((3, 4))], 0, 30, 10, names=["s1_2015"])
+    _write(tmp_path / "base.tif", [np.zeros((3, 3))], 0, 30, 10, nodata=255, dtype="uint8")
+
+    with pytest.raises(ValueError, match="grid"):
+        model.label_from_masks(tmp_path / "s1.tif", ["s1_2015"], tmp_path / "base.tif", tmp_path / "l.tif")
+    assert not (tmp_path / "l.tif").exists()

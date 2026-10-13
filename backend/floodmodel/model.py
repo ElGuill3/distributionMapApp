@@ -352,6 +352,13 @@ def label_from_masks(masks: Path, bands: list[str], base: Path, output: Path) ->
         base_labels = src.read(1)
         profile = src.profile.copy()
     with rasterio.open(masks) as src:
+        if (src.height, src.width) != base_labels.shape or src.transform != profile[
+            "transform"
+        ]:
+            raise ValueError(
+                f"{masks.name} is not on the grid of {base.name}; rebuild it from "
+                "the same terrain mosaic"
+            )
         names = list(src.descriptions)
         flooded = np.zeros(base_labels.shape, dtype=bool)
         for band in bands:
