@@ -17,9 +17,11 @@ def client():
     return app.test_client()
 
 
-def _existing_tile() -> str:
-    tile = next(TILES.glob("10/*/*.png"))
-    return f"/api/flood-risk/tiles/10/{tile.parent.name}/{tile.name}"
+def _existing_tile(zoom: int) -> str:
+    tile = next(TILES.glob(f"{zoom}/*/*.png"), None)
+    if tile is None:
+        pytest.fail(f"no published tile at zoom {zoom}: run `python -m backend.floodmodel publish`")
+    return f"/api/flood-risk/tiles/{zoom}/{tile.parent.name}/{tile.name}"
 
 
 def test_metadata_lists_five_classes_and_tile_template(client):
@@ -47,8 +49,9 @@ def test_municipalities_cover_all_seventeen_with_stats(client):
         assert 1 <= props["rank"] <= 17
 
 
-def test_tile_is_served_as_cached_png(client):
-    response = client.get(_existing_tile())
+@pytest.mark.parametrize("zoom", range(7, 13))
+def test_tile_is_served_as_cached_png(client, zoom):
+    response = client.get(_existing_tile(zoom))
 
     assert response.status_code == 200
     assert response.mimetype == "image/png"
@@ -85,15 +88,25 @@ def test_config_no_longer_exposes_fhi_settings():
         assert not hasattr(config, name)
 
 
-def test_openapi_documents_the_statewide_flood_routes_only():
+def test_openapi_no_longer_documents_the_fhi_route():
+    # test_api_docs pins documented paths == served routes; this only guards
+    # the retired contract and its schema.
     import yaml
 
     spec = yaml.safe_load(Path("backend/openapi.yaml").read_text(encoding="utf-8"))
-    paths = set(spec["paths"])
-    assert "/api/flood-risk-municipio" not in paths
-    assert {
-        "/api/flood-risk/metadata",
-        "/api/flood-risk/municipalities",
-        "/api/flood-risk/tiles/{z}/{x}/{y}.png",
-    } <= paths
+    assert "/api/flood-risk-municipio" not in spec["paths"]
     assert "MuniQuerySchema" not in spec["components"]["schemas"]
+
+
+@pytest.mark.parametrize("content", [None, "{not json"])
+def test_metadata_reports_an_unavailable_map_instead_of_crashing(client, tmp_path, monkeypatch, content):
+    from backend.routes import flood_routes
+
+    if content is not None:
+        (tmp_path / "metadata.json").write_text(content)
+    monkeypatch.setattr(flood_routes, "FLOOD_RISK_DIR", tmp_path)
+
+    response = client.get("/api/flood-risk/metadata")
+
+    assert response.status_code == 503
+    assert "mapa de susceptibilidad" in response.get_json()["error"]

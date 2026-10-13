@@ -73,13 +73,13 @@ class TestOpenApiSpec:
         assert "title" in spec["info"]
         assert "version" in spec["info"]
 
-    def test_openapi_yaml_has_17_paths(self):
-        """The spec documents exactly 17 endpoints."""
+    def test_openapi_yaml_has_18_paths(self):
+        """The spec documents exactly 18 endpoints."""
         with open(OPENAPI_YAML) as f:
             spec = yaml.safe_load(f)
         paths = spec.get("paths", {})
-        assert len(paths) == 17, (
-            f"Expected 17 paths, got {len(paths)}: {list(paths.keys())}"
+        assert len(paths) == 18, (
+            f"Expected 18 paths, got {len(paths)}: {list(paths.keys())}"
         )
 
     def test_bdctb_forecast_proxy_contract_is_closed(self):
@@ -96,9 +96,7 @@ class TestOpenApiSpec:
         ):
             assert schemas[name]["additionalProperties"] is False
         assert set(
-            schemas["BdctbForecastProxyErrorResponse"]["properties"]["error"][
-                "enum"
-            ]
+            schemas["BdctbForecastProxyErrorResponse"]["properties"]["error"]["enum"]
         ) == {
             "Forecast service returned an error.",
             "Forecast response is too large.",
@@ -173,6 +171,29 @@ class TestSchemaDrift:
         for key in expected_keys:
             assert key in committed, f"{key} missing from committed schemas"
             assert key in generated, f"{key} missing from generated schemas"
-            assert (
-                committed[key] == generated[key]
-            ), f"{key} schema drifted — run backend/scripts/generate_schemas.py --merge and commit"
+            assert committed[key] == generated[key], (
+                f"{key} schema drifted — run backend/scripts/generate_schemas.py --merge and commit"
+            )
+
+
+def _openapi_path(rule: str) -> str:
+    """Flask rule -> OpenAPI path template (``<int:z>`` -> ``{z}``)."""
+    import re
+
+    return re.sub(r"<(?:[a-z]+:)?([a-z_]+)>", r"{\1}", rule)
+
+
+def test_openapi_paths_match_the_served_api_routes():
+    """Every served /api route is documented and every documented path is served."""
+    from backend.app import app as flask_app
+
+    served = {
+        _openapi_path(rule.rule)
+        for rule in flask_app.url_map.iter_rules()
+        if rule.rule.startswith("/api/") and not rule.rule.startswith("/api/docs")
+    }
+    with open(OPENAPI_YAML) as f:
+        documented = set(yaml.safe_load(f)["paths"])
+
+    assert sorted(documented - served) == []
+    assert sorted(served - documented) == []

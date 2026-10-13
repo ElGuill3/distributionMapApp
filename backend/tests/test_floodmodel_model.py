@@ -301,3 +301,34 @@ def test_label_from_masks_rejects_rasters_on_different_grids(tmp_path):
     with pytest.raises(ValueError, match="grid"):
         model.label_from_masks(tmp_path / "s1.tif", ["s1_2015"], tmp_path / "base.tif", tmp_path / "l.tif")
     assert not (tmp_path / "l.tif").exists()
+
+
+def test_score_events_ignores_nodata_scores_and_unlabelled_truth():
+    score = np.array([0.9, 0.8, 0.1, 0.2, NODATA, 0.5])
+    truth = np.array([1, 1, 0, 0, 1, np.nan])
+
+    table = model.score_events({"s": score}, {"e": truth})
+
+    assert table["s"]["e"]["n"] == 4
+    assert table["s"]["e"]["roc_auc"] == pytest.approx(1.0)
+    assert table["s"]["e"]["base_rate"] == pytest.approx(0.5)
+
+
+def test_train_report_records_hyperparameters_and_seed(tmp_path, monkeypatch):
+    from backend.floodmodel import pipeline
+
+    work = tmp_path / "work"
+    feat = work / "features"
+    feat.mkdir(parents=True)
+    rng = np.random.default_rng(0)
+    hand = rng.uniform(0, 20, (40, 40)).astype("float32")
+    _write(feat / "stack_30m.tif", [hand, hand * 0], 0, 1200, 30, names=["hand", "noise"])
+    labels = (hand < 6).astype("uint8")
+    _write(feat / "labels_30m.tif", [labels], 0, 1200, 30, nodata=255, dtype="uint8")
+
+    pipeline.train(work, "m", feat / "labels_30m.tif", per_class=200, cv=False, drop=())
+
+    report = json.loads((work / "model" / "m" / "report.json").read_text())
+    assert report["seed"] == 0
+    assert report["params"]["n_estimators"] == model.DEFAULT_PARAMS["n_estimators"]
+    assert report["features"] == ["hand", "noise"]

@@ -31,19 +31,9 @@ def mock_modules():
     mock_ee_module.Algorithm = MagicMock()
     sys.modules["ee"] = mock_ee_module
 
-    # Mock de rasterio
+    # Mock de rasterio (solo lo usa el pipeline offline backend.floodmodel)
     mock_rasterio = MagicMock()
     sys.modules["rasterio"] = mock_rasterio
-
-    # Mock de matplotlib
-    mock_matplotlib = MagicMock()
-    mock_matplotlib.cm = MagicMock()
-    mock_matplotlib.colors = MagicMock()
-    mock_matplotlib.colors.LinearSegmentedColormap = MagicMock
-    mock_matplotlib.colors.Normalize = MagicMock
-    sys.modules["matplotlib"] = mock_matplotlib
-    sys.modules["matplotlib.cm"] = mock_matplotlib.cm
-    sys.modules["matplotlib.colors"] = mock_matplotlib.colors
 
     # Mock de pandas
     mock_pandas = MagicMock()

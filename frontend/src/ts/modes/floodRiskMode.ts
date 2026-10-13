@@ -20,9 +20,12 @@ import { showErrorModal } from '../ui/progress.js';
 import { switchColorbar, municipalFloodOverlays } from '../map/overlays.js';
 import {
   classFromRgba,
+  applyClassColors,
   findMunicipality,
   highShareClass,
-  muniKey,
+  municipalityIndex,
+  readoutHtml,
+  TilePixelCache,
   municipalityCardHtml,
   tilePixel,
   TILE_SIZE,
@@ -68,7 +71,9 @@ let _view: FloodView = 'detail';
 let _tiles: L.TileLayer | null = null;
 let _choropleth: L.GeoJSON | null = null;
 const _outlines: Record<string, L.GeoJSON> = {};
-const _tilePixels = new Map<string, Promise<ImageData | null>>();
+let _byKey = new Map<string, MunicipalityFeature>();
+let _readoutRequest = 0;
+const _tilePixels = new TilePixelCache(TILE_CACHE_LIMIT, _decodeTile);
 
 // ---------------------------------------------------------------------------
 // Interfaz pública del módulo
@@ -165,6 +170,8 @@ async function _ensureLoaded(): Promise<void> {
     .then(([metadata, municipalities]) => {
       _metadata = metadata;
       _municipalities = municipalities;
+      _byKey = municipalityIndex(municipalities);
+      applyClassColors(metadata.classes, document.documentElement);
     })
     .finally(() => {
       _loading = null;
@@ -280,6 +287,7 @@ function _addReadout(map: L.Map): void {
 }
 
 function _onMouseOut(): void {
+  _readoutRequest += 1; // a tile still loading must not overwrite this
   if (_readoutEl) _readoutEl.textContent = 'Pasa el cursor sobre el mapa';
 }
 
@@ -294,39 +302,32 @@ function _onMouseMove(event: L.LeafletMouseEvent): void {
   });
 }
 
-function _loadTilePixels(z: number, x: number, y: number): Promise<ImageData | null> {
-  const key = `${z}/${x}/${y}`;
-  const cached = _tilePixels.get(key);
-  if (cached) return cached;
+function _decodeTile(key: string): Promise<ImageData> {
+  const [z, x, y] = key.split('/');
   const url = _metadata!.tiles.url
-    .replace('{z}', String(z))
-    .replace('{x}', String(x))
-    .replace('{y}', String(y));
-  const pixels = new Promise<ImageData | null>(resolve => {
+    .replace('{z}', z ?? '')
+    .replace('{x}', x ?? '')
+    .replace('{y}', y ?? '');
+  return new Promise<ImageData>((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = TILE_SIZE;
       canvas.height = TILE_SIZE;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return resolve(null);
+      if (!ctx) return reject(new Error('2D canvas unavailable'));
       ctx.drawImage(img, 0, 0);
       resolve(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE));
     };
-    img.onerror = () => resolve(null);
+    img.onerror = () => reject(new Error(`tile ${key} failed to load`));
     img.src = url;
   });
-  _tilePixels.set(key, pixels);
-  if (_tilePixels.size > TILE_CACHE_LIMIT) {
-    const oldest = _tilePixels.keys().next().value;
-    if (oldest !== undefined) _tilePixels.delete(oldest);
-  }
-  return pixels;
 }
 
 async function _updateReadout(latlng: L.LatLng): Promise<void> {
   if (!_metadata || !_mapRef || !_readoutEl) return;
   if (_view === 'municipal') {
+    _readoutRequest += 1;
     const muni = findMunicipality(latlng.lng, latlng.lat, _municipalities);
     _readoutEl.innerHTML = muni
       ? `${escapeHtml(muni.properties.name)} · <strong>${Math.round(
@@ -338,34 +339,27 @@ async function _updateReadout(latlng: L.LatLng): Promise<void> {
   const { minzoom, maxzoom } = _metadata.tiles;
   const z = Math.max(minzoom, Math.min(maxzoom, Math.round(_mapRef.getZoom())));
   const { x, y, px, py } = tilePixel(latlng.lat, latlng.lng, z);
-  const pixels = await _loadTilePixels(z, x, y);
-  const offset = (py * TILE_SIZE + px) * 4;
-  const cls = pixels
-    ? classFromRgba(pixels.data.subarray(offset, offset + 4), _metadata.classes)
-    : null;
-  const muni = findMunicipality(latlng.lng, latlng.lat, _municipalities);
-  if (!_readoutEl) return;
-  if (!cls) {
-    _readoutEl.innerHTML = muni
-      ? `${escapeHtml(muni.properties.name)} · sin dato (agua permanente o fuera del modelo)`
-      : 'Fuera del área del modelo';
-    return;
+  // Tile decoding is async: only the latest hover may write the readout.
+  const request = ++_readoutRequest;
+  let status: 'ok' | 'error' = 'ok';
+  let cls = null;
+  try {
+    const pixels = await _tilePixels.get(`${z}/${x}/${y}`);
+    const offset = (py * TILE_SIZE + px) * 4;
+    cls = classFromRgba(pixels.data.subarray(offset, offset + 4), _metadata.classes);
+  } catch (err) {
+    console.warn(err);
+    status = 'error';
   }
-  _readoutEl.innerHTML = `Susceptibilidad <strong>${escapeHtml(cls.label)}</strong>${
-    muni ? ` · ${escapeHtml(muni.properties.name)}` : ''
-  }`;
+  if (request !== _readoutRequest || !_readoutEl) return;
+  const muni = findMunicipality(latlng.lng, latlng.lat, _municipalities);
+  _readoutEl.innerHTML = readoutHtml({
+    status,
+    cls,
+    muni: muni?.properties.name ?? null,
+  });
 }
 
-// ---------------------------------------------------------------------------
-// API pública — municipios marcados en el panel
-// ---------------------------------------------------------------------------
-
-/**
- * Marca o desmarca un municipio: contorno, ficha con estadísticas y zoom.
- *
- * @param muni    Clave del municipio (data-muni)
- * @param checked true = mostrar contorno y ficha, false = quitarlos
- */
 export async function toggleMunicipalFloodRisk(
   muni: string,
   checked: boolean
@@ -382,8 +376,17 @@ export async function toggleMunicipalFloodRisk(
     showErrorModal('Error de red', 'No se pudieron cargar los municipios.');
     return;
   }
-  const feature = _municipalities.find(f => muniKey(f.properties.name) === muni);
-  if (!feature || !_mapRef || !_metadata) return;
+  // The mode may have been left, or the box unticked, while loading.
+  const box = document.querySelector<HTMLInputElement>(
+    `input.chk-flood-muni[data-muni="${muni}"]`
+  );
+  if (!mapState.getFloodRiskModeActive() || (box && !box.checked)) return;
+  const feature = _byKey.get(muni);
+  if (!feature || !_mapRef || !_metadata) {
+    console.warn(`No published flood statistics for municipality "${muni}"`);
+    return;
+  }
+  _outlines[muni]?.remove();
   const outline = L.geoJSON(feature as unknown as GeoJSON.Feature, {
     style: { className: 'flood-muni-outline', fill: false, weight: 3 },
   });
@@ -396,7 +399,6 @@ export async function toggleMunicipalFloodRisk(
       )
     )
     .addTo(_mapRef);
-  _outlines[muni]?.remove();
   _outlines[muni] = outline;
   _mapRef.fitBounds(outline.getBounds(), { padding: [24, 24] });
   outline.openPopup(outline.getBounds().getCenter());

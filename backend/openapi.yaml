@@ -464,115 +464,6 @@ paths:
       x-cache-policy:
         max_age: 3600
         etag: true
-  /api/water-gif-bbox:
-    get:
-      operationId: getWaterGifBbox
-      summary: Water body area animated GIF
-      description: 'Generate an animated water body area (Sentinel-2) GIF for the
-        given bounding box.
-
-        **Dual date mode:** Accepts direct dates (`start` + `end`) or seasonal shorthand
-        (`year` + `season`). If `start`/`end` are missing, `year`+`season` is converted
-        server-side.
-
-        '
-      tags:
-      - GIF
-      parameters:
-      - name: start
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-        description: Start date (YYYY-MM-DD). Required unless using year+season.
-      - name: end
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-        description: End date (YYYY-MM-DD). Required unless using year+season.
-      - name: bbox
-        in: query
-        required: true
-        schema:
-          type: string
-        description: JSON array [minLon, minLat, maxLon, maxLat].
-      - name: ratio
-        in: query
-        required: false
-        schema:
-          type: number
-        description: Optional resolution ratio for the GIF.
-      - name: task_id
-        in: query
-        required: false
-        schema:
-          type: string
-        description: Optional SSE task ID to track generation progress.
-      - name: year
-        in: query
-        required: false
-        schema:
-          type: integer
-        description: Year for seasonal shorthand.
-      - name: season
-        in: query
-        required: false
-        schema:
-          type: string
-        description: Season name for seasonal shorthand.
-      responses:
-        '200':
-          description: Animated water body area GIF with dates and values.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  gifUrl:
-                    type: string
-                  bbox:
-                    type: array
-                    items:
-                      type: number
-                  dates:
-                    type: array
-                    items:
-                      type: string
-                  water_ha:
-                    type: array
-                    items:
-                      type: number
-                    description: Water surface area values in hectares.
-        '400':
-          description: Invalid parameters.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
-          description: Rate limit exceeded.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds until the client should retry.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-      x-rate-limit: 30/minute
-      x-cache-policy:
-        max_age: 3600
-        etag: true
   /api/ndvi-timeseries-bbox:
     get:
       operationId: getNdviTimeseriesBbox
@@ -845,74 +736,6 @@ paths:
       x-cache-policy:
         max_age: 300
         etag: true
-  /api/water-timeseries-bbox:
-    get:
-      operationId: getWaterTimeseriesBbox
-      summary: Water body area timeseries
-      description: 'Get water surface area (Sentinel-2) time-series values for the
-        given bounding box. The `year` and `season` parameters are resolved internally;
-        only `start` and `end` are exposed as query parameters.
-
-        '
-      tags:
-      - Timeseries
-      parameters:
-      - name: start
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-        description: Start date (YYYY-MM-DD).
-      - name: end
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-        description: End date (YYYY-MM-DD).
-      - name: bbox
-        in: query
-        required: true
-        schema:
-          type: string
-        description: JSON array [minLon, minLat, maxLon, maxLat].
-      responses:
-        '200':
-          description: Water body area timeseries data.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  dates:
-                    type: array
-                    items:
-                      type: string
-                  water_ha:
-                    type: array
-                    items:
-                      type: number
-                  bbox:
-                    type: array
-                    items:
-                      type: number
-        '400':
-          description: Invalid parameters.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-      x-rate-limit: 60/minute
-      x-cache-policy:
-        max_age: 300
-        etag: true
   /api/flood-risk/metadata:
     get:
       operationId: getFloodRiskMetadata
@@ -961,6 +784,12 @@ paths:
                     type: array
                     items:
                       type: string
+        '503':
+          description: The published map is missing or unreadable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       x-cache-policy:
         max_age: 86400
         etag: false
@@ -1025,6 +854,220 @@ paths:
       x-cache-policy:
         max_age: 86400
         etag: false
+  /api/flood-detection:
+    get:
+      operationId: getFloodDetection
+      summary: Flood detection layers for a bounding box
+      description: 'Classify water with Sentinel-1 (VH backscatter) or Landsat (MNDWI)
+        over the period and return Earth Engine tile URL templates for Leaflet plus
+        the threshold used. Permanent water and steep slopes are masked.
+
+        '
+      tags:
+      - Flood Detection
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD).
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD), after start.
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Bounding box "min_lon,min_lat,max_lon,max_lat" (WGS 84).
+      - name: satellite
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - sentinel1
+          - landsat
+          default: sentinel1
+        description: Sensor used to classify water.
+      - name: auto
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: Compute the classification threshold automatically.
+      - name: threshold
+        in: query
+        required: false
+        schema:
+          type: number
+          default: -18.0
+        description: Manual threshold (VH backscatter in dB for Sentinel-1) used when auto is false.
+      responses:
+        '200':
+          description: Tile layers and threshold.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  satellite:
+                    type: string
+                  computed_threshold:
+                    type: number
+                  background_layer:
+                    type: string
+                    description: Earth Engine XYZ tile URL template for the background image.
+                  water_layer:
+                    type: string
+                    description: Earth Engine XYZ tile URL template for detected water.
+        '400':
+          description: Missing or invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No images for this area and period.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+  /api/flood-stats:
+    get:
+      operationId: getFloodStats
+      summary: Flooded area for a bounding box
+      description: 'Same classification as /api/flood-detection, reduced to the total
+        flooded area in hectares.
+
+        '
+      tags:
+      - Flood Detection
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Start date (YYYY-MM-DD).
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: End date (YYYY-MM-DD), after start.
+      - name: bbox
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Bounding box "min_lon,min_lat,max_lon,max_lat" (WGS 84).
+      - name: satellite
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - sentinel1
+          - landsat
+          default: sentinel1
+        description: Sensor used to classify water.
+      - name: auto
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: Compute the classification threshold automatically.
+      - name: threshold
+        in: query
+        required: false
+        schema:
+          type: number
+          default: -18.0
+        description: Manual threshold (VH backscatter in dB for Sentinel-1) used when auto is false.
+      responses:
+        '200':
+          description: Flooded area.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_ha:
+                    type: number
+                    description: Flooded area in hectares (2 decimals).
+        '400':
+          description: Missing or invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 30/minute
+  /api/local-stations:
+    get:
+      operationId: getLocalStations
+      summary: Local station metadata
+      description: 'Metadata of every configured local station, keyed by station id
+        (for example "BDCTB_hidro").
+
+        '
+      tags:
+      - Station
+      responses:
+        '200':
+          description: Stations keyed by id.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                    coords:
+                      type:
+                      - array
+                      - 'null'
+                      items:
+                        type: number
+                    station_name:
+                      type:
+                      - string
+                      - 'null'
+                    municipio:
+                      type:
+                      - string
+                      - 'null'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 600
+        etag: true
   /api/local-station-level-range:
     get:
       operationId: getLocalStationLevelRange

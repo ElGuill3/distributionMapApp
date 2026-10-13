@@ -10,6 +10,13 @@ from pathlib import Path
 from backend.floodmodel import lidar, terrain
 
 WORK_DIR = Path(".cache/floodmodel")
+# Every Earth Engine layer is cut on the extent of this terrain mosaic, so all
+# model rasters share one grid. The model itself runs on a coarser grid.
+TERRAIN_RESOLUTION = 15.0
+MODEL_RESOLUTION = 30.0
+# State whose INEGI Continuo de Elevaciones Mexicano is downloaded (INEGI
+# entity code 27 = Tabasco).
+STATE_NAME, STATE_CODE = "Tabasco", "27"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -20,25 +27,25 @@ def main(argv: list[str] | None = None) -> int:
     download = steps.add_parser("lidar-download", help="Download LiDAR tile ZIPs")
     download.add_argument("--workers", type=int, default=4)
     mosaic = steps.add_parser("terrain-mosaic", help="Merge LiDAR tiles into one DEM")
-    mosaic.add_argument("--resolution", type=float, default=15.0)
+    mosaic.add_argument("--resolution", type=float, default=TERRAIN_RESOLUTION)
     mosaic.add_argument("--margin-km", type=float, default=2.0)
     cem_step = steps.add_parser("cem", help="INEGI CEM 3.0 (15 m) aligned to the DEM")
-    cem_step.add_argument("--resolution", type=float, default=15.0)
+    cem_step.add_argument("--resolution", type=float, default=TERRAIN_RESOLUTION)
     derive = steps.add_parser("terrain-derivatives", help="HAND, slope, TWI, flow")
-    derive.add_argument("--resolution", type=float, default=15.0)
+    derive.add_argument("--resolution", type=float, default=TERRAIN_RESOLUTION)
     derive.add_argument("--stream-area-km2", type=float, default=1.0)
     derive.add_argument("--conditioned", action="store_true")
     steps.add_parser("inventory", help="Download CENAPRED flood inventory layers")
     aux = steps.add_parser("terrain-aux", help="Earth Engine layers for conditioning")
-    aux.add_argument("--resolution", type=float, default=15.0)
+    aux.add_argument("--resolution", type=float, default=TERRAIN_RESOLUTION)
     cond = steps.add_parser("terrain-condition", help="Fill gaps and mark water")
-    cond.add_argument("--resolution", type=float, default=15.0)
+    cond.add_argument("--resolution", type=float, default=TERRAIN_RESOLUTION)
     steps.add_parser("boundaries", help="Municipality boundaries (FAO GAUL 2025)")
     stack = steps.add_parser(
         "stack", help="Terrain + Earth Engine features on one grid"
     )
-    stack.add_argument("--terrain-resolution", type=float, default=15.0)
-    stack.add_argument("--resolution", type=float, default=30.0)
+    stack.add_argument("--terrain-resolution", type=float, default=TERRAIN_RESOLUTION)
+    stack.add_argument("--resolution", type=float, default=MODEL_RESOLUTION)
     steps.add_parser("labels", help="Flooded / dry / excluded cells from CENAPRED")
     seasons = steps.add_parser("s1-seasons", help="Sentinel-1 flood season per year")
     seasons.add_argument("--first", type=int, default=2015)
@@ -48,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     pub = steps.add_parser("publish", help="Classes, XYZ tiles and stats for the app")
     pub.add_argument("--out", type=Path, default=Path("backend/data/flood_risk"))
     features = steps.add_parser("gee-features", help="Earth Engine layers on the grid")
-    features.add_argument("--resolution", type=float, default=30.0)
+    features.add_argument("--resolution", type=float, default=MODEL_RESOLUTION)
     args = parser.parse_args(argv)
 
     index_path = args.work_dir / "lidar" / "index.json"
@@ -98,10 +105,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.step == "cem":
         from backend.floodmodel import cem
 
-        tif = cem.download("Tabasco", "27", args.work_dir / "cem")
+        dem = _require_dem(args.work_dir, args.resolution)
+        if dem is None:
+            return 1
+        tif = cem.download(STATE_NAME, STATE_CODE, args.work_dir / "cem")
         out = terrain.align(
             tif,
-            _dem_path(args.work_dir, args.resolution),
+            dem,
             args.work_dir / "terrain" / f"cem_{args.resolution:g}m.tif",
         )
         print(f"CEM 3.0 aligned -> {out}")
@@ -134,8 +144,10 @@ def main(argv: list[str] | None = None) -> int:
         from backend import config
         from backend.floodmodel import gee_layers
 
+        dem = _require_dem(args.work_dir, args.resolution)
+        if dem is None:
+            return 1
         ee.Initialize(project=config.GEE_PROJECT)
-        dem = _dem_path(args.work_dir, args.resolution)
         grid = gee_layers.Grid.from_raster(dem, res=args.resolution)
         out = gee_layers.download(
             gee_layers.ee_compute(gee_layers.aux_image()),
@@ -148,6 +160,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.step == "terrain-condition":
         res = args.resolution
         cem_path = args.work_dir / "terrain" / f"cem_{res:g}m.tif"
+        if not cem_path.exists():
+            print(
+                f"{cem_path} is missing: conditioning without the CEM fill, so LiDAR "
+                "gaps fall back to ~90 m MERIT. Run the `cem` step to fix this.",
+                file=sys.stderr,
+            )
         out = terrain.condition(
             _dem_path(args.work_dir, res),
             args.work_dir / "terrain" / f"aux_{res:g}m.tif",
@@ -172,6 +190,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.step == "stack":
         from backend.floodmodel import model
+
+        if args.resolution != MODEL_RESOLUTION:
+            print(
+                f"Only {MODEL_RESOLUTION:g} m is supported: labels, training and "
+                "publish read the 30 m stack.",
+                file=sys.stderr,
+            )
+            return 2
 
         tdir = args.work_dir / "terrain" / f"{args.terrain_resolution:g}m"
         dem = (
@@ -198,22 +224,16 @@ def main(argv: list[str] | None = None) -> int:
         from shapely.geometry import mapping, shape
         from shapely.ops import unary_union
 
-        from backend.floodmodel import cenapred, model
+        from backend.floodmodel import cenapred, model, pipeline
 
-        bounds = json.loads(
-            (args.work_dir / "boundaries" / "municipalities.geojson").read_text()
-        )
+        p = pipeline.paths(args.work_dir)
+        bounds = json.loads(p["boundaries"].read_text())
         state = mapping(unary_union([shape(f["geometry"]) for f in bounds["features"]]))
         events = [
             args.work_dir / "inventory" / f"{name}.geojson"
             for name in cenapred.FLOOD_EVENTS
         ]
-        out = model.label_raster(
-            events,
-            args.work_dir / "features" / "stack_30m.tif",
-            args.work_dir / "features" / "labels_30m.tif",
-            state=state,
-        )
+        out = model.label_raster(events, p["stack"], p["labels"], state=state)
         print(f"Labels -> {out}")
         return 0
     if args.step == "s1-seasons":
@@ -222,11 +242,12 @@ def main(argv: list[str] | None = None) -> int:
         from backend import config
         from backend.floodmodel import gee_layers
 
+        dem = _require_dem(args.work_dir, TERRAIN_RESOLUTION)
+        if dem is None:
+            return 1
         ee.Initialize(project=config.GEE_PROJECT)
         years = list(range(args.first, args.last + 1))
-        grid = gee_layers.Grid.from_raster(
-            _dem_path(args.work_dir, TERRAIN_RESOLUTION), res=30
-        )
+        grid = gee_layers.Grid.from_raster(dem, res=MODEL_RESOLUTION)
         region = ee.Geometry.Rectangle([-94.2, 17.2, -90.9, 18.75])
         image = gee_layers.s1_season_image(years, region)
         out = gee_layers.download(
@@ -265,10 +286,11 @@ def main(argv: list[str] | None = None) -> int:
         from backend import config
         from backend.floodmodel import gee_layers
 
+        dem = _require_dem(args.work_dir, TERRAIN_RESOLUTION)
+        if dem is None:
+            return 1
         ee.Initialize(project=config.GEE_PROJECT)
-        grid = gee_layers.Grid.from_raster(
-            _dem_path(args.work_dir, TERRAIN_RESOLUTION), res=args.resolution
-        )
+        grid = gee_layers.Grid.from_raster(dem, res=args.resolution)
         out = gee_layers.download(
             gee_layers.ee_compute(gee_layers.feature_image()),
             gee_layers.FEATURE_BANDS,
@@ -280,13 +302,21 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-# Every Earth Engine layer is cut on the extent of this terrain mosaic, so
-# all model rasters share one grid.
-TERRAIN_RESOLUTION = 15.0
-
-
 def _dem_path(work_dir: Path, resolution: float) -> Path:
     return work_dir / "terrain" / f"dem_{resolution:g}m.tif"
+
+
+def _require_dem(work_dir: Path, resolution: float) -> Path | None:
+    """The terrain mosaic that fixes the grid, or None after explaining why."""
+    dem = _dem_path(work_dir, resolution)
+    if dem.exists():
+        return dem
+    print(
+        f"{dem} is missing: run `terrain-mosaic --resolution {resolution:g}` first "
+        "(after `boundaries`).",
+        file=sys.stderr,
+    )
+    return None
 
 
 if __name__ == "__main__":

@@ -86,7 +86,14 @@ def train(
     keep = [i for i, n in enumerate(sample["feature_names"]) if n not in drop]
     names = [sample["feature_names"][i] for i in keep]
     features = sample["features"][:, keep]
-    report = {"labels": str(labels), "per_class": per_class, "dropped": list(drop)}
+    report = {
+        "labels": str(labels),
+        "per_class": per_class,
+        "dropped": list(drop),
+        "features": names,
+        "seed": 0,
+        "params": model.training_params(seed=0),
+    }
     if cv:
         cv_report = model.cross_validate(
             features,
@@ -161,6 +168,11 @@ def validate(work_dir: Path, *, sample_size: int = 1_000_000, seed: int = 0) -> 
     * seasonal model trained on Sentinel-1 2015-2022, tested on 2023-2025;
     * the ensemble of both held-out models plus JRC, against JRC, elevation and
       the official IPCET-PNUD 2022 map (which likely used 2011 and 2020).
+
+    Scope of the numbers: they come from a random sample of ``sample_size``
+    cells restricted to cells where every compared map has a value (which
+    limits them to the IPCET-PNUD 2022 footprint), and the held-out models are
+    refits, not the published models trained on every event.
     """
     p = paths(work_dir)
     out = p["model"] / "validation"

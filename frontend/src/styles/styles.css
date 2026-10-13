@@ -1915,7 +1915,8 @@ html.theme-transitioning #chart-b {
   opacity: 0.8;
 }
 
-/* ColorBrewer YlGnBu, same palette as the published tiles (publish.PALETTE). */
+/* Class colours come from metadata.json at runtime (--flood-class-N, see
+   applyClassColors); the fallbacks are publish.PALETTE (ColorBrewer YlGnBu). */
 .flood-swatch {
   display: inline-block;
   flex: none;
@@ -1926,23 +1927,23 @@ html.theme-transitioning #chart-b {
 }
 
 .flood-swatch-1 {
-  background: #ffffcc;
+  background: var(--flood-class-1, #ffffcc);
 }
 
 .flood-swatch-2 {
-  background: #a1dab4;
+  background: var(--flood-class-2, #a1dab4);
 }
 
 .flood-swatch-3 {
-  background: #41b6c4;
+  background: var(--flood-class-3, #41b6c4);
 }
 
 .flood-swatch-4 {
-  background: #2c7fb8;
+  background: var(--flood-class-4, #2c7fb8);
 }
 
 .flood-swatch-5 {
-  background: #253494;
+  background: var(--flood-class-5, #253494);
 }
 
 .flood-view-toggle {
@@ -1973,23 +1974,23 @@ html.theme-transitioning #chart-b {
 }
 
 .flood-choropleth-1 {
-  fill: #ffffcc;
+  fill: var(--flood-class-1, #ffffcc);
 }
 
 .flood-choropleth-2 {
-  fill: #a1dab4;
+  fill: var(--flood-class-2, #a1dab4);
 }
 
 .flood-choropleth-3 {
-  fill: #41b6c4;
+  fill: var(--flood-class-3, #41b6c4);
 }
 
 .flood-choropleth-4 {
-  fill: #2c7fb8;
+  fill: var(--flood-class-4, #2c7fb8);
 }
 
 .flood-choropleth-5 {
-  fill: #253494;
+  fill: var(--flood-class-5, #253494);
 }
 
 .flood-readout {

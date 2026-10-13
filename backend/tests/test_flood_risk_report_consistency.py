@@ -48,3 +48,16 @@ def test_published_stats_cover_seventeen_municipalities():
 def test_metadata_credits_every_terrain_source():
     sources = " ".join(_metadata()["sources"])
     assert "LiDAR" in sources and "Continuo de Elevaciones Mexicano" in sources
+
+
+def test_readme_validation_claims_match_published_scores():
+    scores = _metadata()["validation"]
+    claims = {
+        "ensemble": scores["ensemble"]["cenapred_2011"]["roc_auc"],
+        "jrc": scores["jrc_rp100"]["cenapred_2011"]["roc_auc"],
+        "ipcet": scores["ipcet_pnud_2022"]["cenapred_2011"]["roc_auc"],
+    }
+    for readme, decimal in (("README.en.md", "."), ("README.md", ",")):
+        text = (ROOT / readme).read_text(encoding="utf-8")
+        for name, value in claims.items():
+            assert f"{value:.3f}".replace(".", decimal) in text, (readme, name)
