@@ -39,6 +39,7 @@ PALETTE = {
 CLASS_LABELS = {1: "Muy baja", 2: "Baja", 3: "Media", 4: "Alta", 5: "Muy alta"}
 SOURCES = [
     "INEGI, Modelo Digital de Elevación LiDAR 5 m (2007-2012)",
+    "INEGI, Continuo de Elevaciones Mexicano 3.0, 15 m (relleno de huecos LiDAR)",
     "CENAPRED, Atlas Nacional de Riesgos: inundaciones 2011 y 2020",
     "Copernicus Sentinel-1 (ESA), procesado en Google Earth Engine",
     "JRC/CEMS GloFAS Flood Hazard v2.1 (periodo de retorno 100 años)",

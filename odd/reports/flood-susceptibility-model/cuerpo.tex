@@ -15,7 +15,7 @@ El mapa final es un \textbf{ensamble por promedio de rangos, con pesos iguales f
   la \textbf{profundidad de inundación JRC/GloFAS para periodo de retorno de 100 años}.
 \end{enumerate}
 
-Las variables de terreno salen del \textbf{MDE LiDAR de 5 m de INEGI}, acondicionado hidrológicamente y procesado a 15 m. Donde no hay LiDAR (12.6 \% del estado), el terreno sale del \textbf{Continuo de Elevaciones Mexicano 3.0 de INEGI, a 15 m}.
+Las variables de terreno salen del \textbf{MDE LiDAR de 5 m de INEGI}, acondicionado hidrológicamente y procesado a 15 m. Donde no hay LiDAR (14.4 \% de la tierra del estado), el terreno sale del \textbf{Continuo de Elevaciones Mexicano 3.0 de INEGI, a 15 m}.
 
 \textbf{Resultado principal.} Se validó con eventos que ningún componente vio durante el entrenamiento:
 
@@ -81,7 +81,7 @@ Cómo se atendió
 \endlastfoot
 ``Buscar un buen algoritmo y robusto''; ``lo más preciso posible'' & Modelos entrenados con inundaciones observadas, validados con eventos retenidos y comparados con referencias físicas y oficiales. \\
 ``Que el mapa también lo generemos nosotros'' & Pipeline \texttt{python\ -m\ backend.floodmodel} que reconstruye todo desde fuentes públicas. \\
-Mantener la optimización y el costo computacional & Nada se procesa al arrancar la app ni al hacer clic: se sirven tiles PNG estáticos (8.0 MB, contra 32 MB de los GeoTIFF anteriores). \\
+Mantener la optimización y el costo computacional & Nada se procesa al arrancar la app ni al hacer clic: se sirven tiles PNG estáticos (7.8 MB, contra 32 MB de los GeoTIFF anteriores). \\
 Cubrir todo el estado & La grilla abarca el límite estatal más 2 km, y los huecos del LiDAR se rellenan con el CEM 3.0 de INEGI (§3.5). \\
 Mejorar la visualización & Capa estatal en Web Mercator, 5 clases relativas al estado, paleta apta para daltonismo, lectura del valor bajo el cursor, ficha y coropleta por municipio (ahora con los 17 municipios; Teapa faltaba). \\
 \end{longtable}
@@ -108,7 +108,7 @@ Resolución / periodo
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-INEGI, MDE LiDAR (terreno) & Elevación, HAND, pendiente, TWI, acumulación de flujo & 5 m → 15 m; vuelo 2007, edición 2012; 603 hojas (1.6 GB); cubre el 87.4 \% del estado \\
+INEGI, MDE LiDAR (terreno) & Elevación, HAND, pendiente, TWI, acumulación de flujo & 5 m → 15 m; vuelo 2007, edición 2012; 603 hojas (1.6 GB); cubre el 85.6 \% de la tierra del estado \\
 INEGI, Continuo de Elevaciones Mexicano 3.0 & Relleno de los huecos del LiDAR & 15 m; todo el estado; elevaciones en metros enteros \\
 CENAPRED, Atlas Nacional de Riesgos & Etiquetas de eventos extremos: inundación del 22-oct-2011; 2020 (Cristóbal, Sentinel-1 28-oct y 5-nov, TerraSAR-X 7-nov, Copernicus) & Polígonos vectoriales \\
 CENAPRED, mapas PNUD 2018 e IPCET-PNUD 2022 & \textbf{Solo comparación}, nunca entrenamiento & Polígonos, 5 clases \\
@@ -117,7 +117,7 @@ JRC/CEMS GloFAS Flood Hazard v2.1 & Profundidad por periodo de retorno (10 y 100
 MERIT Hydro & Área de drenaje aguas arriba, HAND de referencia, último recurso de relleno & \textasciitilde90 m \\
 JRC Global Surface Water v1.4 & Exclusión de agua permanente (ocurrencia ≥ 50 \%) & 30 m \\
 ESA WorldCover 2021 & Uso de suelo & 10 m \\
-FAO GAUL 2025 nivel 2 & Límite estatal y 17 municipios (24 707 km²) & Vectorial \\
+FAO GAUL 2025 nivel 2 & Límite estatal y 17 municipios (24 707 km², área geodésica calculada en Earth Engine) & Vectorial \\
 \end{longtable}
 }
 
@@ -189,13 +189,13 @@ Corrección
 \bottomrule\noalign{}
 \endlastfoot
 La grilla seguía la extensión de las hojas LiDAR, no el límite estatal & 391 km² fuera del modelo: 332 km² de Huimanguillo (9 \%) y 59 km² de Cárdenas (3 \%), en la planicie del Tonalá & Grilla = límite estatal + 2 km \\
-3 103 km² de tierra (12.6 \% del estado) sin LiDAR, rellenados con MERIT a \textasciitilde90 m & Paraíso 91 \%, Comalcalco 63 \%, Emiliano Zapata 44 \%, Tacotalpa 34 \%, Jalpa de Méndez 31 \% & Relleno con el CEM 3.0 de INEGI a 15 m, que cubre el \textbf{97.4 \%} de los huecos; MERIT solo en el resto \\
+3 103 km² de tierra (12.6 \% del estado) sin LiDAR, rellenados con MERIT a \textasciitilde90 m & Paraíso 91 \%, Comalcalco 63 \%, Emiliano Zapata 44 \%, Tacotalpa 34 \%, Jalpa de Méndez 31 \% & Relleno con el CEM 3.0 de INEGI a 15 m, que cubre más del \textbf{97 \%} de los huecos; MERIT solo en el resto \\
 \end{longtable}
 }
 
-Otras series de INEGI a 5 m y 1.5 m cubren solo el 21 \% del hueco y mezclan datum y vuelos, así que no se usaron. Tras la corrección no queda ninguna celda de tierra del estado sin clase.
+Otras series de INEGI a 5 m y 1.5 m cubren solo el 21 \% del hueco y mezclan datum y vuelos, así que no se usaron. Tras la corrección no queda ninguna celda de tierra del estado sin clase. Al ampliar la grilla, la superficie sin LiDAR pasó a 3 416 km² (14.4 \% de la tierra del estado), porque la franja agregada al oeste tampoco tiene vuelo LiDAR.
 
-Con la corrección, los porcentajes por clase de cada municipio cambiaron como máximo 2 puntos, y la validación cambió en la tercera cifra decimal. El modelo se apoya sobre todo en JRC, la elevación y el uso de suelo, y la mediana del CEM difiere poco de la de MERIT (−1.3 m). Lo que mejora es el detalle local del terreno y la cobertura de la cuenca del Tonalá.
+Con la corrección, los porcentajes por clase de cada municipio cambiaron como máximo 2.6 puntos (Cárdenas), y la validación cambió en la tercera cifra decimal. El modelo se apoya sobre todo en JRC, la elevación y el uso de suelo, y la mediana del CEM difiere poco de la de MERIT (−1.3 m). Lo que mejora es el detalle local del terreno y la cobertura de la cuenca del Tonalá.
 
 \section{Etiquetas}
 
@@ -420,7 +420,7 @@ Estacional & 0.821 ± 0.006 & \textbf{WorldCover 54.2 \%}, HAND MERIT 8.1 \%, JR
 \item
   \textbf{Clases.} Quintiles de superficie del índice del ensamble (cortes 0.344, 0.474, 0.597 y 0.749): Muy baja, Baja, Media, Alta y Muy alta. Por construcción, cada clase cubre \textasciitilde20 \% del estado.
 \item
-  \textbf{Tiles.} 962 PNG con paleta (ColorBrewer YlGnBu), zoom 7--12, 8.0 MB en total. El navegador traduce el color del píxel a la clase sin consultar al servidor.
+  \textbf{Tiles.} 962 PNG con paleta (ColorBrewer YlGnBu), zoom 7--12, 7.8 MB en disco. El navegador traduce el color del píxel a la clase sin consultar al servidor.
 \item
   \textbf{Por municipio.} Porcentaje de superficie por clase, \% en Alta o Muy alta, puntaje medio y lugar en el estado:
 \end{itemize}
@@ -481,7 +481,7 @@ El orden del ranking sigue el puntaje medio, no el \%. Las áreas excluyen el ag
 \item
   \textbf{Antigüedad del LiDAR (vuelo 2007).} Las obras de protección posteriores (bordos y el Plan Integral Hídrico de Tabasco tras 2007) no están en el MDE. Zonas protegidas de Villahermosa pueden aparecer más susceptibles de lo que son.
 \item
-  \textbf{Resolución y fuentes de terreno.} El terreno se procesó a 15 m, no a 10 m, por límites de memoria y tiempo (§3.1). En el 12.6 \% del estado sin LiDAR el terreno sale del CEM 3.0, que tiene elevaciones en metros enteros y otra fecha de captura. Algunas variables (JRC y MERIT, \textasciitilde90 m) son más gruesas que la grilla.
+  \textbf{Resolución y fuentes de terreno.} El terreno se procesó a 15 m, no a 10 m, por límites de memoria y tiempo (§3.1). En el 14.4 \% de la tierra del estado sin LiDAR (3 416 km², incluida la franja agregada al oeste) el terreno sale del CEM 3.0, que tiene elevaciones en metros enteros y otra fecha de captura. Algunas variables (JRC y MERIT, \textasciitilde90 m) son más gruesas que la grilla.
 \item
   \textbf{Clases relativas.} Los quintiles hacen que \textasciitilde40 \% del estado sea ``Alta'' o ``Muy alta'' por definición. El mapa ordena; no dice cuánto se inunda ni con qué frecuencia.
 \item
