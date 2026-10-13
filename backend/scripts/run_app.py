@@ -7,7 +7,7 @@ Flask in the foreground on http://127.0.0.1:5000. If downloads fail, usable loca
 station data is retained with a warning; startup stops if none is available.
 It never requires the sibling model repository and
 never starts the Forecast API or the automatic worker; those remain available
-through the deferred ``scripts/run_local_forecast_stack.py`` supervisor.
+through the deferred ``backend/scripts/run_local_forecast_stack.py`` supervisor.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from scripts.run_local_forecast_stack import (
+from backend.scripts.run_local_forecast_stack import (
     APP_HOST,
     APP_PORT,
     APP_PREFLIGHT_MODULE,
@@ -42,7 +42,7 @@ NODE_EXECUTABLE = "node"
 BUILD_SCRIPT = Path("frontend/scripts/build-typescript.mjs")
 PREFLIGHT_TIMEOUT_SECONDS = 30
 BUILD_TIMEOUT_SECONDS = 300
-STATION_BOOTSTRAP_MODULE = "scripts.bootstrap_stations"
+STATION_BOOTSTRAP_MODULE = "backend.scripts.bootstrap_stations"
 
 # Startup children currently running under preflight/build. The foreground
 # signal-cleanup requirement covers startup too: a SIGTERM to the launcher

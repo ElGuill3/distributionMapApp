@@ -63,12 +63,12 @@ predicción operativa.
 ## Ruta diferida: pila local con pronóstico automático (compatibilidad)
 
 La pila completa con modelo, API de pronóstico y worker se conserva en
-`scripts/run_local_forecast_stack.py` para uso diferido; ya no es el destino
+`backend/scripts/run_local_forecast_stack.py` para uso diferido; ya no es el destino
 del comando público:
 
 ```bash
-.venv/bin/python scripts/run_local_forecast_stack.py
-.venv/bin/python scripts/run_local_forecast_stack.py --model-repo /ruta/al/repositorio
+.venv/bin/python backend/scripts/run_local_forecast_stack.py
+.venv/bin/python backend/scripts/run_local_forecast_stack.py --model-repo /ruta/al/repositorio
 ```
 
 El modelo es una dependencia local explícita y permanece en un repositorio
@@ -721,9 +721,9 @@ Además del stack de testing, el proyecto ahora incluye comandos de calidad para
 
 ```bash
 # Ejecutar los scripts a través de uv run:
-uv run scripts/python/quality/coverage.sh  # Ejecuta pytest con coverage
-uv run scripts/python/quality/lint.sh      # Ejecuta ruff check
-uv run scripts/python/quality/format.sh    # Ejecuta ruff format --check
+uv run backend/scripts/quality/coverage.sh  # Ejecuta pytest con coverage
+uv run backend/scripts/quality/lint.sh      # Ejecuta ruff check
+uv run backend/scripts/quality/format.sh    # Ejecuta ruff format --check
 ```
 
 Notas:

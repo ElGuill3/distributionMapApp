@@ -15,7 +15,7 @@ echo ""
 if [ -z "$VIRTUAL_ENV" ] && [ -z "$CONDA_DEFAULT_ENV" ]; then
     echo "WARNING: No active virtual environment detected."
     echo "Run this script using uv:"
-    echo "  uv run scripts/python/quality/coverage.sh"
+    echo "  uv run backend/scripts/quality/coverage.sh"
     echo ""
 fi
 

@@ -17,7 +17,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 OPENAPI_YAML = ROOT / "backend" / "openapi.yaml"
-GENERATE_SCRIPT = ROOT / "scripts" / "generate_schemas.py"
+GENERATE_SCRIPT = ROOT / "backend" / "scripts" / "generate_schemas.py"
 
 
 class TestApiDocsServe:
@@ -177,4 +177,4 @@ class TestSchemaDrift:
             assert key in generated, f"{key} missing from generated schemas"
             assert (
                 committed[key] == generated[key]
-            ), f"{key} schema drifted — run scripts/generate_schemas.py --merge and commit"
+            ), f"{key} schema drifted — run backend/scripts/generate_schemas.py --merge and commit"

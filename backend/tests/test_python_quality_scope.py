@@ -35,7 +35,7 @@ def test_quality_scope_and_exit_contract(tmp_path, name, exit_code):
     marker.write_bytes(b"GIF89a-owned")
     before = hashlib.sha256(marker.read_bytes()).digest()
     result = subprocess.run(
-        ["bash", str(ROOT / "scripts/python/quality" / f"{name}.sh")],
+        ["bash", str(ROOT / "backend/scripts/quality" / f"{name}.sh")],
         cwd=ROOT,
         env={
             **os.environ,

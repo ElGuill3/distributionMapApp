@@ -62,12 +62,12 @@ prediction.
 ## Deferred path: local stack with automatic forecasting (compatibility)
 
 The full stack with model, Forecast API, and worker remains preserved in
-`scripts/run_local_forecast_stack.py` for deferred use; it is no longer the
+`backend/scripts/run_local_forecast_stack.py` for deferred use; it is no longer the
 target of the public command:
 
 ```bash
-.venv/bin/python scripts/run_local_forecast_stack.py
-.venv/bin/python scripts/run_local_forecast_stack.py --model-repo /path/to/repository
+.venv/bin/python backend/scripts/run_local_forecast_stack.py
+.venv/bin/python backend/scripts/run_local_forecast_stack.py --model-repo /path/to/repository
 ```
 
 The model is an explicit local dependency that remains in a separate
@@ -694,9 +694,9 @@ The action checks exercise the public generation event, actual modal close/Escap
 **Python** — Coverage, linting, and formatting checks using `pytest-cov` and `ruff`.
 
 ```bash
-uv run scripts/python/quality/coverage.sh
-uv run scripts/python/quality/lint.sh
-uv run scripts/python/quality/format.sh
+uv run backend/scripts/quality/coverage.sh
+uv run backend/scripts/quality/lint.sh
+uv run backend/scripts/quality/format.sh
 ```
 
 **TypeScript** — Linting and formatting checks using ESLint and Prettier.

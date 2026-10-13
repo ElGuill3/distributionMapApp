@@ -4,7 +4,7 @@
 # Exclude paths as per spec
 exclude = [
     "frontend/static/**",
-    "scripts/**",
+    "backend/scripts/**",
     "backend/tests/**",
     "__pycache__/**",
     ".git/**",

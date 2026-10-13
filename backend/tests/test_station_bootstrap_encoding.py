@@ -2,7 +2,7 @@
 
 import pytest
 
-from scripts import bootstrap_stations
+from backend.scripts import bootstrap_stations
 
 CSV = (
     "Comisión Nacional del Agua\nSubdirección General Técnica\n"

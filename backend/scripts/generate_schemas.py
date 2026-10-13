@@ -3,8 +3,8 @@
 Generate OpenAPI 3.1 component schemas from Pydantic v2 models.
 
 Usage:
-    python scripts/generate_schemas.py           # print to stdout
-    python scripts/generate_schemas.py --merge    # merge into backend/openapi.yaml
+    python backend/scripts/generate_schemas.py           # print to stdout
+    python backend/scripts/generate_schemas.py --merge    # merge into backend/openapi.yaml
 
 This script imports the 5 Pydantic validation schemas used by the API,
 calls model_json_schema() on each, and outputs a YAML fragment suitable
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.gee.schemas import (
     BBoxSchema,
@@ -126,7 +126,7 @@ def merge_into_openapi(openapi_path: Path) -> None:
 
 def main():
     if "--merge" in sys.argv:
-        openapi_path = Path(__file__).resolve().parent.parent / "backend" / "openapi.yaml"
+        openapi_path = Path(__file__).resolve().parents[1] / "openapi.yaml"
         if not openapi_path.exists():
             print(f"Error: {openapi_path} not found. Create it first.", file=sys.stderr)
             sys.exit(1)

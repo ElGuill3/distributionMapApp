@@ -1,6 +1,6 @@
 #!/bin/bash
 # Python lint script - runs Ruff check on authored source only
-# Excludes: frontend/static/, scripts/, tests/ (as configured in ruff.toml)
+# Excludes: frontend/static/, backend/scripts/, backend/tests/ (as configured in ruff.toml)
 
 set -e
 

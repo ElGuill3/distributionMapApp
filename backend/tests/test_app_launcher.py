@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-import scripts.run_app as run_app
-from scripts.run_local_forecast_stack import (
+import backend.scripts.run_app as run_app
+from backend.scripts.run_local_forecast_stack import (
     APP_HOST,
     APP_PORT,
     APP_PREFLIGHT_MODULE,
@@ -41,7 +41,7 @@ def test_pyproject_entry_point_targets_the_app_only_launcher():
     document = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
     assert document["project"]["scripts"]["distribution-map"] == (
-        "scripts.run_app:main"
+        "backend.scripts.run_app:main"
     )
 
 
@@ -208,7 +208,7 @@ def test_station_bootstrap_failure_blocks_build_and_backend(
         calls.append(command)
         return subprocess.CompletedProcess(
             command,
-            2 if "scripts.bootstrap_stations" in command else 0,
+            2 if "backend.scripts.bootstrap_stations" in command else 0,
             stdout="",
             stderr="",
         )
@@ -236,7 +236,7 @@ def test_station_bootstrap_failure_blocks_build_and_backend(
     )
     assert calls == [
         [str(settings.app_python), "-m", APP_PREFLIGHT_MODULE],
-        [str(settings.app_python), "-m", "scripts.bootstrap_stations"],
+        [str(settings.app_python), "-m", "backend.scripts.bootstrap_stations"],
     ]
 
 
@@ -305,7 +305,7 @@ from pathlib import Path
 repo_root, app_root, marker_path = sys.argv[1:4]
 sys.path.insert(0, repo_root)
 
-import scripts.run_app as run_app
+import backend.scripts.run_app as run_app
 
 app_root = Path(app_root)
 settings = run_app.AppSettings(

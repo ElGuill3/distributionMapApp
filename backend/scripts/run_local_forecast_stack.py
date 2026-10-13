@@ -24,7 +24,7 @@ API_HOST = "127.0.0.1"
 API_PORT = 8765
 APP_ORIGIN = f"http://{APP_HOST}:{APP_PORT}"
 API_ORIGIN = f"http://{API_HOST}:{API_PORT}"
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL_REPOSITORY_NAME = "distributionMapApp-model-research"
 MODEL_RUNTIME_DESCRIPTOR = Path("configs/model/bdctb_runtime_paths_v1.json")
 MODEL_RUNTIME_SCHEMA = "bdctb-operational-runtime-paths/v1"
@@ -72,7 +72,7 @@ def _is_app_root(path: Path) -> bool:
             path / "pyproject.toml",
             path / "backend/app.py",
             path / "package.json",
-            path / "scripts/run_local_forecast_stack.py",
+            path / "backend/scripts/run_local_forecast_stack.py",
         )
     )
 

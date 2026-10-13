@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.run_local_forecast_stack import (
+from backend.scripts.run_local_forecast_stack import (
     API_HOST,
     API_MODULE,
     API_ORIGIN,
@@ -112,7 +112,7 @@ def test_explicit_relative_model_repo_resolves_from_invocation_directory():
 
 
 def test_app_root_never_falls_back_to_an_installed_module_path(tmp_path, monkeypatch):
-    from scripts import run_local_forecast_stack as stack
+    from backend.scripts import run_local_forecast_stack as stack
 
     installed_module_root = tmp_path / "site-packages"
     installed_module_root.mkdir()

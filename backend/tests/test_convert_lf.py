@@ -13,7 +13,7 @@ def test_convert_lf_rewrites_frontend_template_line_endings(tmp_path):
     template.write_bytes(b"<html>\r\n<body></body>\r\n</html>\r\n")
 
     result = subprocess.run(
-        [sys.executable, "-I", str(ROOT / "scripts/convert_lf.py")],
+        [sys.executable, "-I", str(ROOT / "backend/scripts/convert_lf.py")],
         cwd=tmp_path,
         capture_output=True,
         text=True,

@@ -18,7 +18,7 @@ import backend
 from backend.scrapers.base import BaseScraper
 from backend.scrapers.conagua import ConaguaScraper
 from backend.scrapers.smn import SmnWeatherScraper
-from scripts.bootstrap_stations import ConaguaScraper as bootstrap_scraper
+from backend.scripts.bootstrap_stations import ConaguaScraper as bootstrap_scraper
 from backend import config
 assert bootstrap_scraper is ConaguaScraper
 assert issubclass(ConaguaScraper, BaseScraper)

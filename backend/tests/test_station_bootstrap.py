@@ -2,7 +2,7 @@
 
 import pytest
 
-from scripts import bootstrap_stations
+from backend.scripts import bootstrap_stations
 
 VALID_CSV = (
     "Clave: BDCTB\nEstacion: Boca del Cerro\nMunicipio: Tenosique\n"
