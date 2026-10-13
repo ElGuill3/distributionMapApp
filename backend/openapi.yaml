@@ -784,6 +784,12 @@ paths:
                     type: array
                     items:
                       type: string
+        '503':
+          description: The published map is missing or unreadable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       x-cache-policy:
         max_age: 86400
         etag: false

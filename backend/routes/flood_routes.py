@@ -23,8 +23,12 @@ flood_bp = Blueprint("flood", __name__)
 @flood_bp.get("/api/flood-risk/metadata")
 def flood_risk_metadata() -> Response:
     """Classes, palette, tile template, sources and validation of the map."""
-    metadata = json.loads((FLOOD_RISK_DIR / "metadata.json").read_text("utf-8"))
-    metadata["tiles"]["url"] = "/api/flood-risk/" + metadata["tiles"]["url"]
+    try:
+        metadata = json.loads((FLOOD_RISK_DIR / "metadata.json").read_text("utf-8"))
+        metadata["tiles"]["url"] = "/api/flood-risk/" + metadata["tiles"]["url"]
+    except (OSError, ValueError, KeyError, TypeError):
+        logger.exception("Published flood susceptibility metadata is unavailable")
+        return jsonify({"error": "El mapa de susceptibilidad no está disponible."}), 503
     return jsonify(metadata)
 
 
