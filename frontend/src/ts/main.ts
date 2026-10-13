@@ -688,6 +688,7 @@ floodRiskMode.registerFloodRiskModeListeners(
 
 document.addEventListener('floodRiskModeActivated', () => {
   floodRiskMode.enterFloodRiskMode(() => {});
+  renderStationMarkersA();
   normalMode.clearNormalMode();
   ndviChartContainer?.classList.add('hidden');
   body.classList.remove('sidebar-collapsed');
@@ -697,6 +698,7 @@ document.addEventListener('floodRiskModeActivated', () => {
 
 document.addEventListener('floodRiskModeDeactivated', () => {
   floodRiskMode.exitFloodRiskMode();
+  renderStationMarkersA();
   ndviChartContainer?.classList.remove('hidden');
   showChartPlaceholderA();
   toggleModeBanner('flood-risk', false);
@@ -1050,15 +1052,8 @@ function toggleGifLayer(show: boolean): void {
  * Shows or hides the station markers based on layer toggle state.
  */
 function toggleStationsLayer(show: boolean): void {
-  if (show) {
-    for (const m of stationMarkersMap) {
-      if (!map.hasLayer(m)) m.addTo(map);
-    }
-  } else {
-    for (const m of stationMarkersMap) {
-      if (map.hasLayer(m)) map.removeLayer(m);
-    }
-  }
+  layerVisibility.stations = show;
+  renderStationMarkersA();
 
   // Also apply to Map B if in compare mode
   const mapB = mapState.getMapB();
@@ -1074,8 +1069,19 @@ function toggleStationsLayer(show: boolean): void {
     }
   }
 
-  layerVisibility.stations = show;
   if (topbarLayerStations) syncLayerButtonState(topbarLayerStations, show);
+}
+
+/**
+ * Station markers on map A follow the topbar toggle, but stay hidden while
+ * flood risk mode shows the susceptibility map (the toggle is not changed).
+ */
+function renderStationMarkersA(): void {
+  const show = layerVisibility.stations && !mapState.getFloodRiskModeActive();
+  for (const m of stationMarkersMap) {
+    if (show && !map.hasLayer(m)) m.addTo(map);
+    else if (!show && map.hasLayer(m)) map.removeLayer(m);
+  }
 }
 
 topbarLayerGif?.addEventListener('click', () => {
