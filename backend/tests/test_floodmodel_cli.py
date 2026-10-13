@@ -38,3 +38,31 @@ def test_terrain_condition_warns_when_running_without_the_cem_fill(tmp_path, cap
     assert code == 0
     assert calls["fill"] is None
     assert "without the CEM" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("argv", "key", "value"),
+    [
+        (["terrain-mosaic"], "resolution", 15.0),
+        (["cem"], "resolution", 15.0),
+        (["terrain-derivatives"], "resolution", 15.0),
+        (["stack"], "resolution", 30.0),
+        (["stack"], "terrain_resolution", 15.0),
+        (["gee-features"], "resolution", 30.0),
+    ],
+)
+def test_documented_steps_keep_their_grid_defaults(monkeypatch, argv, key, value):
+    import argparse
+
+    seen = {}
+    real = argparse.ArgumentParser.parse_args
+
+    def capture(self, args=None, namespace=None):
+        seen.update(vars(real(self, args, namespace)))
+        raise SystemExit(0)
+
+    monkeypatch.setattr(argparse.ArgumentParser, "parse_args", capture)
+
+    with pytest.raises(SystemExit):
+        cli.main(argv)
+    assert seen[key] == value

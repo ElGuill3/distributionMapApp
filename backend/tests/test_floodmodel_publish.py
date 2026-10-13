@@ -1,6 +1,7 @@
 """Published flood susceptibility artifact: classes, XYZ tiles, municipality stats."""
 
 import json
+from pathlib import Path
 import math
 
 import numpy as np
@@ -220,3 +221,34 @@ def test_publish_reports_a_missing_ensemble_score(tmp_path):
 
     with pytest.raises(FileNotFoundError, match="susceptibility_30m.tif.*final"):
         publish.publish(work, tmp_path / "flood_risk", zooms=[10])
+
+
+def test_publish_keeps_the_served_dir_world_readable(tmp_path):
+    import os
+    import stat
+
+    work = _work_dir(tmp_path)
+    publish.publish(work, tmp_path / "flood_risk", zooms=[10])
+
+    assert stat.S_IMODE(os.stat(tmp_path / "flood_risk").st_mode) & 0o055 == 0o055
+
+
+def test_publish_restores_the_old_output_when_the_swap_fails(tmp_path, monkeypatch):
+    work = _work_dir(tmp_path)
+    out = tmp_path / "flood_risk"
+    out.mkdir()
+    (out / "metadata.json").write_text("old")
+    real = Path.rename
+
+    def rename(self, target):
+        if self.name.startswith(".flood_risk-") and not self.name.endswith("previous"):
+            raise OSError("swap failed")
+        return real(self, target)
+
+    monkeypatch.setattr(Path, "rename", rename)
+
+    with pytest.raises(OSError, match="swap failed"):
+        publish.publish(work, out, zooms=[10])
+
+    assert (out / "metadata.json").read_text() == "old"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["flood_risk", "work"]

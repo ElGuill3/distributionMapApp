@@ -230,13 +230,21 @@ def publish(work_dir: Path, out_dir: Path, *, zooms=range(7, 13)) -> dict:
         )
     out_dir.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f".{out_dir.name}-", dir=out_dir.parent))
+    # mkdtemp creates 0700; the served directory must stay readable by others.
+    staging.chmod(0o755)
+    previous = out_dir.with_name(f".{out_dir.name}-previous")
     try:
         result = _build(work_dir, staging, score, boundaries_path, list(zooms))
-        previous = out_dir.with_name(f".{out_dir.name}-previous")
         shutil.rmtree(previous, ignore_errors=True)
-        if out_dir.exists():
+        moved = out_dir.exists()
+        if moved:
             out_dir.rename(previous)
-        staging.rename(out_dir)
+        try:
+            staging.rename(out_dir)
+        except OSError:
+            if moved:
+                previous.rename(out_dir)  # put the old output back
+            raise
         shutil.rmtree(previous, ignore_errors=True)
     finally:
         shutil.rmtree(staging, ignore_errors=True)

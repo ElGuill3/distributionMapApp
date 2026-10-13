@@ -287,6 +287,7 @@ function _addReadout(map: L.Map): void {
 }
 
 function _onMouseOut(): void {
+  _readoutRequest += 1; // a tile still loading must not overwrite this
   if (_readoutEl) _readoutEl.textContent = 'Pasa el cursor sobre el mapa';
 }
 
@@ -326,6 +327,7 @@ function _decodeTile(key: string): Promise<ImageData> {
 async function _updateReadout(latlng: L.LatLng): Promise<void> {
   if (!_metadata || !_mapRef || !_readoutEl) return;
   if (_view === 'municipal') {
+    _readoutRequest += 1;
     const muni = findMunicipality(latlng.lng, latlng.lat, _municipalities);
     _readoutEl.innerHTML = muni
       ? `${escapeHtml(muni.properties.name)} · <strong>${Math.round(
