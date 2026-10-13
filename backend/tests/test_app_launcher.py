@@ -28,7 +28,7 @@ def _app_settings(tmp_path: Path):
     for path in (
         tmp_path / ".venv/bin/python",
         tmp_path / "node_modules/.bin/tsc",
-        tmp_path / "scripts/build-typescript.mjs",
+        tmp_path / "frontend/scripts/build-typescript.mjs",
     ):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("fixture", encoding="utf-8")
@@ -71,7 +71,7 @@ def test_app_settings_resolve_without_any_model_configuration(tmp_path):
 
     assert settings.app_root == tmp_path
     assert settings.app_python == tmp_path / ".venv/bin/python"
-    assert settings.build_script == tmp_path / "scripts/build-typescript.mjs"
+    assert settings.build_script == tmp_path / "frontend/scripts/build-typescript.mjs"
     assert settings.typescript == tmp_path / "node_modules/.bin/tsc"
     assert settings.runtime_root == tmp_path / ".cache/bdctb-local-app"
     assert settings.environment == {"PASSTHROUGH": "1"}

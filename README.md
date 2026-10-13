@@ -16,7 +16,7 @@ uv run distribution-map
 
 `uv sync` instala las dependencias y registra el comando del proyecto. El
 comando público es solo-aplicación: compila el frontend TypeScript con el
-driver limpio determinista (`scripts/build-typescript.mjs`, expuesto también
+driver limpio determinista (`frontend/scripts/build-typescript.mjs`, expuesto también
 como `npm run build:ts`), que compila TypeScript y copia el CSS fuente
 `frontend/src/styles/styles.css` a la misma URL pública `/static/styles.css`, valida el límite de dependencias de la aplicación y
 sirve Flask en primer plano en `http://127.0.0.1:5000`. Nunca requiere el

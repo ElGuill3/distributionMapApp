@@ -39,7 +39,7 @@ from scripts.run_local_forecast_stack import (
 APP_ORIGIN = f"http://{APP_HOST}:{APP_PORT}"
 APP_RUNTIME_ROOT = Path(".cache/bdctb-local-app")
 NODE_EXECUTABLE = "node"
-BUILD_SCRIPT = Path("scripts/build-typescript.mjs")
+BUILD_SCRIPT = Path("frontend/scripts/build-typescript.mjs")
 PREFLIGHT_TIMEOUT_SECONDS = 30
 BUILD_TIMEOUT_SECONDS = 300
 STATION_BOOTSTRAP_MODULE = "scripts.bootstrap_stations"

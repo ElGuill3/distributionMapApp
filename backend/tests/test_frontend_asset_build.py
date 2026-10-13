@@ -25,15 +25,15 @@ def test_public_stylesheet_url_retains_exact_bytes_and_mime_type(tmp_path, monke
 
 def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
     for folder in (
-        "scripts",
+        "frontend/scripts",
         "frontend/src/ts",
         "frontend/src/styles",
         "frontend/static/vendor",
         "frontend/static/gifs",
     ):
         (tmp_path / folder).mkdir(parents=True, exist_ok=True)
-    (tmp_path / "scripts/build-typescript.mjs").write_bytes(
-        (ROOT / "scripts/build-typescript.mjs").read_bytes()
+    (tmp_path / "frontend/scripts/build-typescript.mjs").write_bytes(
+        (ROOT / "frontend/scripts/build-typescript.mjs").read_bytes()
     )
     (tmp_path / "node_modules").symlink_to(
         ROOT / "node_modules", target_is_directory=True
@@ -65,7 +65,7 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
         (tmp_path / name).write_bytes(content)
     (tmp_path / "frontend/static/obsolete.js").write_bytes(b"stale generated code")
     result = subprocess.run(
-        ["node", "scripts/build-typescript.mjs"],
+        ["node", "frontend/scripts/build-typescript.mjs"],
         cwd=tmp_path,
         capture_output=True,
         text=True,
@@ -80,7 +80,7 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
     for name, content in preserved.items():
         assert (tmp_path / name).read_bytes() == content
     again = subprocess.run(
-        ["node", "scripts/build-typescript.mjs"],
+        ["node", "frontend/scripts/build-typescript.mjs"],
         cwd=tmp_path,
         capture_output=True,
         text=True,

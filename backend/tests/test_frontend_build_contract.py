@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_typescript_build_uses_the_clean_build_driver() -> None:
-    build_script = (ROOT / "scripts" / "build-typescript.mjs").read_text()
+    build_script = (ROOT / "frontend" / "scripts" / "build-typescript.mjs").read_text()
 
     assert "cleanGeneratedOutput(outputRoot)" in build_script
     assert "compileTypeScript()" in build_script
@@ -19,4 +19,4 @@ def test_typescript_build_uses_the_clean_build_driver() -> None:
 def test_npm_build_script_invokes_the_clean_driver() -> None:
     package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
 
-    assert package["scripts"]["build:ts"] == "node scripts/build-typescript.mjs"
+    assert package["scripts"]["build:ts"] == "node frontend/scripts/build-typescript.mjs"

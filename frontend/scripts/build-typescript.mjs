@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const outputRoot = path.join(root, 'frontend', 'static');
 const generatedSuffixes = ['.d.ts.map', '.js.map', '.d.ts', '.js'];
 
