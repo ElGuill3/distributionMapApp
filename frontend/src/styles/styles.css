@@ -482,7 +482,7 @@ details > *:not(summary) {
   margin-left: var(--space-4);
 }
 
-/* En modo comparativa, ocultar botón generar del task flow (los pasos 1-2 están deshabilitados) */
+/* Modo comparativa: oculta el botón Generar del task flow (pasos 1-2 deshabilitados) */
 body.compare-mode-active #tflow-config .tflow-generate-btn,
 body.flood-risk-mode-active #tflow-config .tflow-generate-btn {
   display: none;
@@ -1574,7 +1574,7 @@ body.compare-mode-active #map-panel-b {
   }
 }
 
-/* Sobrescribir contenedor nativo de Leaflet Popup para soportar modo oscuro y tema premium */
+/* Popup de Leaflet: reemplaza el contenedor nativo para soportar el modo oscuro */
 .leaflet-popup-content-wrapper {
   background-color: var(--sidebar-bg) !important;
   color: var(--surface-fg) !important;

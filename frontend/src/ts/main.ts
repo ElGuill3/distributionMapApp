@@ -289,8 +289,6 @@ map.on(L.Draw.Event.DRAWSTOP, () => {
   }
 });
 
-// Phase B: bbox now managed via mapState.getBbox() / mapState.setBbox()
-
 map.on(L.Draw.Event.CREATED, e => {
   const layer = (e as unknown as { layer: L.Rectangle }).layer;
   const bounds = layer.getBounds();
@@ -355,8 +353,6 @@ const ndviChartDiv = document.getElementById('ndvi-chart') as HTMLDivElement | n
 const chartPlaceholderA = document.getElementById(
   'chartPlaceholderA'
 ) as HTMLDivElement | null;
-
-// Phase B: allSeriesData now managed via mapState (seriesDataA)
 
 function showChartContainer(): void {
   // En modo comparativa la visibilidad se controla via CSS; no ocultar
@@ -428,8 +424,6 @@ if (chartBContainer) {
   chartResizeObserver.observe(chartBContainer);
 }
 
-// Phase B: allSeriesDataB now managed via mapState (seriesDataB)
-
 function showChartBContainer(): void {
   chartBContainer?.classList.remove('hidden');
 }
@@ -442,17 +436,9 @@ function hideChartBContainer(): void {
 // Estado de variable activa
 // ---------------------------------------------------------------------------
 
-// Phase B: currentVariable now managed via mapState
-
 // ---------------------------------------------------------------------------
 // Modo comparativa
 // ---------------------------------------------------------------------------
-
-// Phase B: compareModeActive, mapB, mapBSyncLock now managed via mapState
-
-// Phase B: activeBOverlay now managed via mapState.getOverlayB() / mapState.setOverlayB()
-
-// Phase B: gifPlayerA, gifPlayerB, syncPlayer, soloPlayer now managed via mapState
 
 const compareControlsA = document.getElementById(
   'compare-controls-a'
@@ -476,8 +462,6 @@ const toggleInundacionesModeButton = document.getElementById(
 const inundacionesModeHint = document.getElementById(
   'modeBannerInundaciones'
 ) as HTMLElement | null;
-
-// Phase B: floodRiskModeActive now managed via mapState
 
 // DOM: selectores de comparativa — panel A
 const compareVarASelect = document.getElementById(
@@ -546,7 +530,7 @@ const playerSpeedSelect = document.getElementById(
   'playerSpeed'
 ) as HTMLSelectElement | null;
 
-// PR1: Topbar DOM references
+// Topbar DOM references
 const topbarPlayPauseBtn = document.getElementById(
   'topbar-play-pause'
 ) as HTMLButtonElement | null;
@@ -567,7 +551,7 @@ const topbarSpeedSelect = document.getElementById(
   'topbar-speed'
 ) as HTMLSelectElement | null;
 
-// PR1: Topbar layer toggle buttons
+// Topbar layer toggle buttons
 const topbarLayerGif = document.getElementById(
   'topbar-layer-gif'
 ) as HTMLButtonElement | null;
@@ -575,7 +559,7 @@ const topbarLayerStations = document.getElementById(
   'topbar-layer-stations'
 ) as HTMLButtonElement | null;
 
-// PR2: Topbar opacity slider
+// Topbar opacity slider
 const topbarOpacitySlider = document.getElementById(
   'topbar-opacity-slider'
 ) as HTMLInputElement | null;
@@ -741,7 +725,7 @@ document.addEventListener('inundacionesModeDeactivated', () => {
   toggleModeBanner('inundaciones', false);
 });
 
-// PR2: Initialize new sidebar task flow modules directly (no bridge)
+// Lazily load and initialize the sidebar task-flow modules
 if (typeof window !== 'undefined') {
   Promise.all([
     import('./sidebar/taskFlow.js'),
@@ -774,8 +758,6 @@ function syncPlayPauseIcon(): void {
 }
 
 // Phase D: trySyncBothPanels ahora vive en compareMode.ts
-
-// Phase B: _currentOverlayA now managed via mapState.getOverlayA() / mapState.setOverlayA()
 
 // ---------------------------------------------------------------------------
 // Población de selectores de comparativa
@@ -924,7 +906,7 @@ playerSpeedSelect?.addEventListener('change', () => {
 });
 
 // ---------------------------------------------------------------------------
-// PR1: Topbar playback controls — parallel wiring to existing player controls
+// Topbar playback controls, wired in parallel with the player controls
 // ---------------------------------------------------------------------------
 
 function syncTopbarPlayPauseIcon(): void {
@@ -969,7 +951,7 @@ topbarSpeedSelect?.addEventListener('change', () => {
 });
 
 // ---------------------------------------------------------------------------
-// PR2: Opacity slider
+// Opacity slider
 // ---------------------------------------------------------------------------
 
 /**
@@ -1029,12 +1011,13 @@ topbarOpacitySlider?.addEventListener('input', () => {
 });
 
 // ---------------------------------------------------------------------------
-// PR1: Topbar layer toggles
+// Topbar layer toggles
 // ---------------------------------------------------------------------------
 
 /**
  * Tracks visibility state of each layer controlled by topbar toggles.
- * Initial states: GIF (visible=true since animation loaded), stations (true by default), flood (false).
+ * Initial states: GIF visible (an animation is loaded), stations visible,
+ * flood layer hidden.
  */
 const layerVisibility: Record<'gif' | 'stations' | 'flood', boolean> = {
   gif: true,
@@ -1136,13 +1119,13 @@ async function requestGifAndSeries(
   await requestNormalGeneration(variable, start, end, bbox);
 }
 
-// PR1: New task flow generation handler
+// Task-flow generation handler
 document.addEventListener('tflowGenerateAnimation', (e: Event) => {
   const customEvent = e as CustomEvent;
   const { variable, year, season } = customEvent.detail || {};
 
   if (!variable || !year || !season) {
-    console.warn('[PR1] Missing generation parameters');
+    console.warn('[taskFlow] Missing generation parameters');
     return;
   }
 

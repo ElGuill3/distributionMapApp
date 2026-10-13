@@ -1,9 +1,7 @@
 /**
  * Config Panel — distributionMapApp
  *
- * Manages the configuration (year/season selects) in Paso 3
- *
- * PR2: TypeScript migration from configPanel.js
+ * Manages the configuration (year/season selects) in Paso 3.
  */
 
 import { VARIABLE_YEARS, SEASONS, type SeasonOption } from '../config.js';

@@ -1,9 +1,9 @@
 /**
  * Estado global centralizado para distributionMapApp.
  *
- * Phase B: Este módulo encapsula todo el estado que antes vivía como
- * variables `let` dispersas en main.ts. Se accede y muta a través
- * de las funciones exportadas.
+ * Encapsula el estado de la sesión del mapa (bbox, modo, variable, series,
+ * players y overlays). Se lee y se modifica solo a través de las funciones
+ * exportadas.
  *
  * Patrón: objeto de estado central + funciones de lectura/mutación.
  * Mantiene tipado completo con TypeScript.
@@ -37,7 +37,7 @@ export interface StepState {
   isValid: boolean;
 }
 
-/** Estado del flujo de tareas (PR1) */
+/** Estado del flujo de pasos del panel lateral. */
 export interface TaskFlowState {
   currentStep: 'area' | 'variable' | 'config' | 'explore';
   currentVariable: VariableKey;
@@ -59,7 +59,7 @@ export interface AppState {
   // variable activa
   currentVariable: VariableKey;
 
-  // PR1: Task flow state
+  // Task flow state
   taskFlow: TaskFlowState;
 
   // series data — panel A y B
@@ -85,7 +85,7 @@ export interface AppState {
   gifPathsA: Partial<Record<VariableKey, string | undefined>>;
   gifPathsB: Partial<Record<VariableKey, string | undefined>>;
 
-  // PR2: Animation frame date labels for date label overlay
+  // Animation frame date labels for date label overlay
   frameDateLabels: AnimationFrameInfo[];
 
   // Local stations response/list
@@ -116,11 +116,11 @@ export const initialState: AppState = {
   activeGifPathB: null,
   gifPathsA: {},
   gifPathsB: {},
-  // PR2: Animation frame date labels for date label overlay
+  // Animation frame date labels for date label overlay
   frameDateLabels: [],
   // Local stations list
   localStations: null,
-  // PR1: Task flow initial state
+  // Task flow initial state
   taskFlow: {
     currentStep: 'area',
     currentVariable: 'ndvi',
@@ -176,7 +176,7 @@ export function getCurrentVariable(): VariableKey {
   return state.currentVariable;
 }
 
-// PR1: Task flow getters
+// Task flow getters
 export function getTaskFlowState(): TaskFlowState {
   return state.taskFlow;
 }
@@ -303,7 +303,7 @@ export function clearGifPathsB(): void {
   state = { ...state, gifPathsB: {} };
 }
 
-// PR2: Frame date labels for date label overlay
+// Frame date labels for date label overlay
 export function getFrameDateLabels(): AnimationFrameInfo[] {
   return state.frameDateLabels;
 }
@@ -373,7 +373,7 @@ export function setCurrentVariable(variable: VariableKey): void {
   };
 }
 
-// PR1: Task flow setters
+// Task flow setters
 export function setTaskFlowStep(step: TaskFlowState['currentStep']): void {
   state = {
     ...state,

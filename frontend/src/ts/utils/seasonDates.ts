@@ -1,8 +1,7 @@
 /**
  * Date utilities for season/year conversion.
  *
- * Extracted from variableListeners.ts (PR2) to provide a pure,
- * framework-agnostic home for season→date logic.
+ * Pure, framework-agnostic home for season→date logic.
  */
 
 import type { Season } from '../types.js';

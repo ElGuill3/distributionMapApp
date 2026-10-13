@@ -2,9 +2,8 @@
  * Cliente de API para el frontend — distributionMapApp.
  *
  * Centraliza todas las llamadas HTTP al backend en funciones tipadas.
- * Mantiene la misma firma y comportamiento que el código original en main.ts.
  *
- * TODO (Phase B-C): Eliminar duplicaciones entre requestGifAndSeries y
+ * TODO: Eliminar duplicaciones entre requestGifAndSeries y
  *   requestGifAndSeriesForPanel; unificar _loadCompareStation con
  *   requestLocalStationLevel.
  */
@@ -245,7 +244,7 @@ export function extractTimeseriesValues(
 }
 
 // ---------------------------------------------------------------------------
-// Utils para construir URLs de descarga (futuro — Phase B-C)
+// Utilidades para construir URLs de descarga (hoy sin uso en la interfaz)
 // ---------------------------------------------------------------------------
 
 /** Construye la URL de descarga directa para un archivo en el backend. */
@@ -360,7 +359,8 @@ export function downloadBlob(blob: Blob, filename: string): void {
  * Combina el ZIP del servidor con el PNG del chart y dispara la descarga.
  *
  * @param pngBlob   - PNG del chart generado por plotChartAsPng()
- * @param zipBlob   - ZIP devuelto por exportBundle() (contiene timeseries.csv, GIFs, metadata.json)
+ * @param zipBlob   - ZIP devuelto por exportBundle()
+ *                    (contiene timeseries.csv, GIFs y metadata.json)
  */
 export async function buildExportBundleZip(
   pngBlob: Blob,

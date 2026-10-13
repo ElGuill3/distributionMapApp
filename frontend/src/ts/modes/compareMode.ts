@@ -46,6 +46,7 @@ import { setLucideIcon } from '../ui/icons.js';
 import * as normalMode from './normalMode.js';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
 import { buildStationPopup } from '../ui/stationPopup.js';
+import { seasonToDates } from '../utils/seasonDates.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
 declare const L: typeof import('leaflet');
@@ -105,7 +106,7 @@ let _selStationClimaA: HTMLSelectElement | null = null;
 let _selStationHidroB: HTMLSelectElement | null = null;
 let _selStationClimaB: HTMLSelectElement | null = null;
 
-/** PR2: Callback para actualizar la etiqueta de fecha en el overlay del mapa. */
+/** Callback para actualizar la etiqueta de fecha en el overlay del mapa. */
 let _onDateLabelUpdate: ((frameIdx: number) => void) | undefined = undefined;
 
 // ---------------------------------------------------------------------------
@@ -198,7 +199,7 @@ function onPlayerFrameChange(current: number, total: number): void {
   if (_playerFrameLabel) {
     _playerFrameLabel.textContent = `${current + 1} / ${total}`;
   }
-  // PR2: Update date label with current frame's season/year
+  // Update date label with current frame's season/year
   _onDateLabelUpdate?.(current);
 }
 
@@ -702,9 +703,6 @@ export function trySyncBothPanels(): void {
 // ---------------------------------------------------------------------------
 // Station checkboxes en modo comparativa
 // ---------------------------------------------------------------------------
-
-// Importación lazy para evitar dependencia circular con listeners/variableListeners
-import { seasonToDates } from '../utils/seasonDates.js';
 
 async function _loadCompareStation(
   stationId: string,

@@ -1,9 +1,8 @@
 /**
  * Modo Section — distributionMapApp
  *
- * Manages the MODO section (Compare and Flood Risk toggles)
- *
- * PR2: TypeScript migration from modoSection.js
+ * Manages the MODO section: Compare, Flood Risk and Flood Detection toggles.
+ * Only one special mode can be active at a time.
  */
 
 /**
@@ -108,8 +107,8 @@ class ModoSection {
   }
 
   /**
-   * Activate a specific modo
-   * @param modo - 'compare' or 'flood'
+   * Activate a specific modo, turning off any other active one.
+   * @param modo - 'compare', 'flood' or 'inundaciones'
    */
   activateModo(modo: ModoType): void {
     if (modo !== 'compare' && modo !== 'flood' && modo !== 'inundaciones') {

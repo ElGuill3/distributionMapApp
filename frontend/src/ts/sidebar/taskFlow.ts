@@ -4,7 +4,7 @@
  * Manages the 4-step sidebar flow:
  * 1. Área → 2. Variable → 3. Configurar → 4. Explorar
  *
- * PR1: Single source of truth via mapState.
+ * Single source of truth: mapState.
  * All state is delegated to mapState; this controller only handles
  * UI updates and event orchestration.
  */
@@ -29,7 +29,7 @@ const STEPS: StepName[] = ['area', 'variable', 'config', 'explore'];
 /**
  * TaskFlowController singleton
  *
- * PR1: No internal state — all reads/writes go through mapState.
+ * No internal state — all reads/writes go through mapState.
  */
 class TaskFlowController {
   isDisabled: boolean;
@@ -60,7 +60,8 @@ class TaskFlowController {
       if (hasBbox) {
         this.transitionTo('variable');
 
-        // Automatically validate variable and config steps if they already have valid selections in the UI
+        // Validate the variable and config steps right away when the UI
+        // already holds valid selections for them
         const currentVar = mapState.getCurrentVariable();
         if (currentVar) {
           this.updateStepValidity('variable', true);

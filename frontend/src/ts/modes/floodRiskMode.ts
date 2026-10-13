@@ -167,7 +167,8 @@ export async function toggleMunicipalFloodRisk(
  * Registra el listener para toggle de modo riesgo.
  * Debe llamarse desde main.ts durante la inicialización, después de initFloodRiskMode.
  *
- * @param onEnter        Callback para entrar al modo riesgo (delega a main.ts la coordinación con compareMode)
+ * @param onEnter        Callback para entrar al modo riesgo (main.ts coordina
+ *                       la salida de compareMode)
  * @param onExit         Callback para salir del modo riesgo
  * @param clearNormalMode Función para limpiar el modo normal (delegada a normalMode)
  */

@@ -1,9 +1,7 @@
 /**
  * Variable Selector — distributionMapApp
  *
- * Manages the variable chip/tabs selection in Paso 2
- *
- * PR1: TypeScript migration
+ * Manages the variable chip/tabs selection in Paso 2.
  */
 
 import { VARIABLE_YEARS } from '../config.js';
@@ -46,7 +44,7 @@ class VariableSelector {
 
     this.setupChipListeners();
     this.updateChipVisuals();
-    // PR2 fix: populate year select on init so it's ready before first chip click
+    // Populate the year select on init so it is ready before the first chip click
     this.populateYearSelect();
   }
 
@@ -77,7 +75,7 @@ class VariableSelector {
     this.activeVariable = variable;
     this.updateChipVisuals();
 
-    // PR2: Single source of truth — update mapState and taskFlow directly
+    // Single source of truth — update mapState and taskFlow directly
     setCurrentVariable(variable as VariableKey);
     transitionTo('config');
 
