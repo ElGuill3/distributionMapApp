@@ -6,9 +6,8 @@
  * - Generación de GIF + serie temporal
  * - Limpieza del panel A
  *
- * Phase C: extraído de main.ts. No contiene lógica de compare mode ni flood risk mode.
- * Cualquier lógica compartida con otros modos se documenta con un comentario
- * indicando que se resolverá en Phase D.
+ * No contiene lógica de compare mode ni flood risk mode; las funciones que
+ * comparte con compareMode se exportan desde aquí.
  */
 
 import type { BBox, VariableKey } from '../types.js';
@@ -169,7 +168,7 @@ function syncPlayPauseIcon(): void {
 }
 
 /** Detiene el SoloPlayer sin liberar los GifPlayers. */
-// NOTE: stopSoloPlayer es compartido con compareMode — se unificará en Phase D
+// Compartido con compareMode.
 export function stopSoloPlayer(): void {
   const soloPlayer = mapState.getSoloPlayer();
   if (soloPlayer) {
@@ -179,7 +178,7 @@ export function stopSoloPlayer(): void {
 }
 
 /** Detiene el SyncPlayer sin liberar los GifPlayers. */
-// NOTE: stopSyncPlayer es compartido con compareMode — se unificará en Phase D
+// Compartido con compareMode.
 export function stopSyncPlayer(): void {
   const syncPlayer = mapState.getSyncPlayer();
   if (syncPlayer) {
@@ -555,8 +554,7 @@ export function updatePlaySpeed(): void {
  * Actualiza la visibilidad de los marcadores de estaciones.
  * Muestra en mapa A cuando no hay overlay activo ni capas flood.
  *
- * NOTE: Esta función es usada tanto por normalMode como por compareMode.
- * Se evaluará en Phase D si vive en un módulo compartido (ej. mapUtils.ts).
+ * La usan tanto normalMode como compareMode.
  *
  * @param stationMarkersMap  Marcadores del mapa principal
  * @param mapB              Mapa B (puede ser null en modo normal)

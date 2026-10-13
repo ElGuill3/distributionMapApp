@@ -7,8 +7,8 @@
  * - Sincronización de players
  * - Limpieza de paneles
  *
- * Phase D: extraído de main.ts. No contiene lógica de flood risk mode.
- * Cualquier lógica compartida con normal mode se resuelve vía import de normalMode.
+ * No contiene lógica de flood risk mode. La lógica compartida con el modo
+ * normal se importa de normalMode.
  */
 
 import type { BBox, VariableKey, Season } from '../types.js';

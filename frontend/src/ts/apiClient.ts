@@ -144,7 +144,7 @@ export async function fetchGifAndSeries(
 export async function fetchGifAndSeriesForPanel(
   options: FetchGifAndSeriesOptions
 ): Promise<FetchGifAndSeriesResult> {
-  // Phase A: usa la misma implementación que fetchGifAndSeries
+  // Usa la misma implementación que fetchGifAndSeries
   // (las diferencias entre modo normal y comparativa están en main.ts,
   // no en el fetching en sí)
   return fetchGifAndSeries(options);

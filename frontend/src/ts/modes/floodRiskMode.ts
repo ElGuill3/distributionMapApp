@@ -6,7 +6,7 @@
  * - Carga/limpieza de mapas de riesgo por municipio (overlays)
  * - Coordinación de colorbar 'flood'
  *
- * Phase E: extraído de main.ts. No contiene lógica de normal mode ni compare mode.
+ * No contiene lógica de normal mode ni compare mode.
  *
  * La visibilidad de marcadores de estaciones se delega a quien llame,
  * pasando los marcadores como argumento (evita dependencia circular).
@@ -167,10 +167,13 @@ export async function toggleMunicipalFloodRisk(
  * Registra el listener para toggle de modo riesgo.
  * Debe llamarse desde main.ts durante la inicialización, después de initFloodRiskMode.
  *
- * @param onEnter        Callback para entrar al modo riesgo (main.ts coordina
- *                       la salida de compareMode)
- * @param onExit         Callback para salir del modo riesgo
- * @param clearNormalMode Función para limpiar el modo normal (delegada a normalMode)
+ * Los tres callbacks se ignoran: la entrada y salida del modo ocurren con los
+ * eventos floodRiskModeActivated/Deactivated que emite sidebar/modoSection.ts y
+ * maneja main.ts. Se conservan para no romper la firma pública.
+ *
+ * @param onEnter         Sin uso (compatibilidad de firma)
+ * @param onExit          Sin uso (compatibilidad de firma)
+ * @param _clearNormalMode Sin uso (compatibilidad de firma)
  */
 export function registerFloodRiskModeListeners(
   onEnter: () => void,

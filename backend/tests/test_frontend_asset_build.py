@@ -14,7 +14,7 @@ def test_public_stylesheet_url_retains_exact_bytes_and_mime_type(tmp_path, monke
     (tmp_path / "styles.css").write_bytes(css)
     monkeypatch.setattr(app, "static_folder", str(tmp_path))
     with app.test_client() as client:
-        response = client.get("/static/styles.css?v=1.0.1")
+        response = client.get("/static/styles.css?v=1.0.2")
         assert response.status_code == 200
         assert response.data == css
         assert response.mimetype == "text/css"

@@ -624,7 +624,7 @@ function stepActivePlayer(delta: number): void {
   syncTopbarPlayPauseIcon();
 }
 
-// Phase C: inicializar normalMode con referencias al DOM y mapa
+// inicializar normalMode con referencias al DOM y mapa
 normalMode.initNormalMode({
   map,
   chartDiv: ndviChartDiv,
@@ -640,7 +640,7 @@ normalMode.initNormalMode({
   onDateLabelUpdate: updateDateLabel,
 });
 
-// Phase D: inicializar compareMode con referencias al DOM y mapa
+// inicializar compareMode con referencias al DOM y mapa
 compareMode.initCompareMode({
   map,
   stationMarkersMap,
@@ -669,17 +669,17 @@ compareMode.initCompareMode({
   selStationClimaB,
 });
 
-// Phase D: registrar todos los listeners de comparativa en compareMode
+// registrar todos los listeners de comparativa en compareMode
 compareMode.registerCompareModeListeners();
 
-// Phase E: inicializar floodRiskMode con referencias al DOM y mapa
+// inicializar floodRiskMode con referencias al DOM y mapa
 floodRiskMode.initFloodRiskMode({
   map,
   toggleFloodRiskModeButton,
   floodRiskModeHint,
 });
 
-// Phase E: registrar listeners de modo riesgo
+// registrar listeners de modo riesgo
 floodRiskMode.registerFloodRiskModeListeners(
   () => {},
   () => {},
@@ -744,26 +744,11 @@ if (typeof window !== 'undefined') {
     });
 }
 
-// Phase C: delegated to normalMode
-/** Para el SoloPlayer. */
-// Phase C: delegated to normalMode
-
-/** Limpia la animación y gráfica en modo normal (panel A). */
-// Phase C: delegated to normalMode.clearNormalMode()
-
 function syncPlayPauseIcon(): void {
   const active = mapState.getSyncPlayer() ?? mapState.getSoloPlayer();
   const icon = document.getElementById('playerPlayIcon');
   setLucideIcon(icon, active?.isPlaying ? 'pause' : 'play');
 }
-
-// Phase D: trySyncBothPanels ahora vive en compareMode.ts
-
-// ---------------------------------------------------------------------------
-// Población de selectores de comparativa
-// ---------------------------------------------------------------------------
-// Phase D: toda la lógica de selectores y listeners de comparativa ahora
-// vive en compareMode.ts y se registra vía compareMode.registerCompareModeListeners()
 
 // ---------------------------------------------------------------------------
 // Listeners para el modo comparativa coordinados por modoSection
@@ -1104,7 +1089,6 @@ topbarLayerStations?.addEventListener('click', () => {
 // ---------------------------------------------------------------------------
 // SSE + petición GIF + serie temporal — modo NORMAL (panel A)
 // ---------------------------------------------------------------------------
-// Phase C: delegated to normalMode.requestGifAndSeries
 
 /**
  * Wrapper que delega requestGifAndSeries a normalMode.
@@ -1147,7 +1131,7 @@ document.addEventListener('tflowGenerateAnimation', (e: Event) => {
 // Estaciones locales
 // ---------------------------------------------------------------------------
 
-// Phase A: usa fetchLocalStationLevel de apiClient.ts.
+// Usa fetchLocalStationLevel de apiClient.ts.
 
 async function requestLocalStationLevel(
   stationId: string,
@@ -1288,11 +1272,6 @@ wireTflowStationGroup(
   tflowClimaSeason,
   tflowBtnLocalClima
 );
-
-// ---------------------------------------------------------------------------
-// Listeners de municipios (riesgo de inundación)
-// ---------------------------------------------------------------------------
-// Phase E: delegated to floodRiskMode.registerFloodRiskModeListeners()
 
 // ---------------------------------------------------------------------------
 // Bbox Status Bar Update

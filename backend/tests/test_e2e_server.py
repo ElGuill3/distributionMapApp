@@ -31,7 +31,7 @@ with app.test_client() as client:
         assert response.status_code == 503
         assert response.get_json() == {
             'error': 'Synthetic E2E server: mock API requests in the browser.'}
-    css = client.get('/static/styles.css?v=1.0.1')
+    css = client.get('/static/styles.css?v=1.0.2')
     assert css.status_code == 200 and css.mimetype == 'text/css'
     css_source = server_path.parents[3] / 'frontend/src/styles/styles.css'
     assert css.data == css_source.read_bytes()
