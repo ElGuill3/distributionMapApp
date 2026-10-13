@@ -18,6 +18,7 @@ import rasterio
 import rasterio.windows
 from rasterio.enums import Resampling
 from rasterio.merge import merge
+from rasterio.vrt import WarpedVRT
 
 NODATA = -9999.0
 # INEGI LiDAR: UTM zone 15, ITRF92 (within 1 m of WGS 84), NAVD88 heights.
@@ -111,6 +112,31 @@ def _map_strips(inputs: dict, outputs: dict, func) -> None:
             src.close()
 
 
+def align(source: Path, like: Path, output: Path) -> Path:
+    """Resample ``source`` (any CRS) onto the grid of ``like`` (bilinear)."""
+    with rasterio.open(like) as ref, rasterio.open(source) as src:
+        profile = _out_profile(ref.profile, dtype="float32", nodata=NODATA)
+        with WarpedVRT(
+            src,
+            crs=ref.crs,
+            transform=ref.transform,
+            width=ref.width,
+            height=ref.height,
+            resampling=Resampling.bilinear,
+            src_nodata=src.nodata,
+            nodata=NODATA,
+        ) as vrt:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            with rasterio.open(output, "w", **profile) as dst:
+                for strip in _strips(ref.height):
+                    window = rasterio.windows.Window(
+                        0, strip.row_off, ref.width, strip.height
+                    )
+                    block = vrt.read(1, window=window).astype("float32")
+                    dst.write(block, 1, window=window)
+    return output
+
+
 def condition(
     dem: Path,
     aux: Path,
@@ -118,14 +144,17 @@ def condition(
     *,
     occurrence_threshold: float = 50.0,
     river_upa_km2: float = 500.0,
+    fill: Path | None = None,
 ) -> dict:
     """Hydrologically condition the LiDAR DEM before deriving drainage.
 
-    The INEGI terrain model has no returns over rivers and lagoons and a few
-    coverage gaps. Gaps are filled with MERIT elevation shifted by the median
-    LiDAR-MERIT offset (vertical datum difference). Water is JRC surface water
-    (occurrence >= threshold) plus MERIT rivers (upstream area >= river_upa_km2);
-    it is returned as a mask so ``derivatives`` can force drainage through it.
+    The INEGI terrain model has no returns over rivers and lagoons and leaves
+    coverage gaps. Gaps are filled with ``fill`` (a DEM already aligned to the
+    grid, e.g. INEGI CEM 3.0) and, where that is missing too, with MERIT; each
+    source is shifted by its median offset from the LiDAR (vertical datum).
+    Water is JRC surface water (occurrence >= threshold) plus MERIT rivers
+    (upstream area >= river_upa_km2); it is returned as a mask so
+    ``derivatives`` can force drainage through it.
     Both passes stream over row strips so memory stays bounded.
     """
     with rasterio.open(aux) as src:
@@ -136,6 +165,8 @@ def condition(
         "occurrence": (aux, band["gsw_occurrence"]),
         "upa": (aux, band["merit_upa_km2"]),
     }
+    if fill is not None:
+        inputs["fill"] = (fill, 1)
 
     def masks(d):
         lidar_ok = np.isfinite(d["lidar"]) & (d["lidar"] != d["lidar_nodata"])
@@ -147,25 +178,35 @@ def condition(
         water = (occurrence >= occurrence_threshold) | (upa >= river_upa_km2)
         return lidar_ok, merit_ok, water
 
-    samples = []
+    def fill_ok(d):
+        if "fill" not in d:
+            return np.zeros(d["lidar"].shape, dtype=bool)
+        return np.isfinite(d["fill"]) & (d["fill"] != d["fill_nodata"])
+
+    samples: dict[str, list] = {"merit": [], "fill": []}
 
     def collect(d):
         lidar_ok, merit_ok, water = masks(d)
-        overlap = lidar_ok & merit_ok & ~water
-        samples.append((d["lidar"] - d["merit"])[overlap][::7])
+        base = lidar_ok & ~water
+        samples["merit"].append((d["lidar"] - d["merit"])[base & merit_ok][::7])
+        if "fill" in d:
+            samples["fill"].append((d["lidar"] - d["fill"])[base & fill_ok(d)][::7])
         return {}
 
     _map_strips(inputs, {}, collect)
-    offsets = np.concatenate(samples) if samples else np.empty(0, "float32")
-    bias = float(np.median(offsets)) if offsets.size else 0.0
-    samples.clear()
-    del offsets
+    biases = {}
+    for name, parts in samples.items():
+        offsets = np.concatenate(parts) if parts else np.empty(0, "float32")
+        biases[name] = float(np.median(offsets)) if offsets.size else 0.0
+        parts.clear()
+    bias, fill_bias = biases["merit"], biases["fill"]
 
-    def fill(d):
+    def apply(d):
         lidar_ok, merit_ok, water = masks(d)
-        filled = np.where(
-            lidar_ok, d["lidar"], np.where(merit_ok, d["merit"] + bias, NODATA)
-        )
+        backup = np.where(merit_ok, d["merit"] + bias, NODATA)
+        if "fill" in d:
+            backup = np.where(fill_ok(d), d["fill"] + fill_bias, backup)
+        filled = np.where(lidar_ok, d["lidar"], backup)
         return {"dem": filled, "water": np.where(filled != NODATA, water, 255)}
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -177,17 +218,56 @@ def condition(
             "dem": (dem_out, {"dtype": "float32", "nodata": NODATA}),
             "water": (water_out, {"dtype": "uint8", "nodata": 255}),
         },
-        fill,
+        apply,
     )
-    return {"dem": dem_out, "water": water_out, "bias_m": bias}
+    return {
+        "dem": dem_out,
+        "water": water_out,
+        "bias_m": bias,
+        "fill_bias_m": fill_bias if fill is not None else None,
+    }
 
 
-def mosaic(sources: list[Path], output: Path, *, resolution: float, crs: str) -> Path:
-    """Merge tiles into one GeoTIFF, averaging cells down to ``resolution``."""
+def grid_bounds(
+    geometries: list[dict], crs: str, *, margin_m: float, resolution: float
+) -> tuple[float, float, float, float]:
+    """Bounds in ``crs`` covering WGS84 ``geometries`` plus a margin, snapped."""
+    import math
+
+    from pyproj import Transformer
+    from shapely.geometry import shape
+    from shapely.ops import transform, unary_union
+
+    project = Transformer.from_crs("EPSG:4326", crs, always_xy=True).transform
+    left, bottom, right, top = unary_union(
+        [transform(project, shape(g)) for g in geometries]
+    ).bounds
+    return (
+        math.floor((left - margin_m) / resolution) * resolution,
+        math.floor((bottom - margin_m) / resolution) * resolution,
+        math.ceil((right + margin_m) / resolution) * resolution,
+        math.ceil((top + margin_m) / resolution) * resolution,
+    )
+
+
+def mosaic(
+    sources: list[Path],
+    output: Path,
+    *,
+    resolution: float,
+    crs: str,
+    bounds: tuple[float, float, float, float] | None = None,
+) -> Path:
+    """Merge tiles into one GeoTIFF, averaging cells down to ``resolution``.
+
+    ``bounds`` (left, bottom, right, top in ``crs``) fixes the output extent,
+    e.g. the state plus a margin; cells without a tile stay NoData.
+    """
     datasets = [rasterio.open(path) for path in sources]
     try:
         array, transform = merge(
             datasets,
+            bounds=bounds,
             res=resolution,
             resampling=Resampling.average,
             nodata=NODATA,

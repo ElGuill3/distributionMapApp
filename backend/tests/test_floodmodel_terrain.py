@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 import rasterio
 from rasterio.transform import from_origin
+from rasterio.warp import transform_bounds
 
 from backend.floodmodel import terrain
 
@@ -251,3 +252,114 @@ def test_hand_never_exceeds_height_above_the_lowest_drainage_with_coastal_lagoon
     assert not hand.mask[~dem.mask].any()
     assert (hand <= dem - float(dem.min()) + 1e-3).all()
     assert float(np.abs(hand[lagoon]).max()) < 1e-3
+
+
+def test_mosaic_extends_to_requested_bounds_with_nodata_outside_tiles(tmp_path):
+    _write(tmp_path / "a.tif", np.ones((4, 4), dtype="float32"), 100, 200, 5)
+
+    out = terrain.mosaic(
+        [tmp_path / "a.tif"],
+        tmp_path / "m.tif",
+        resolution=10,
+        crs=UTM15,
+        bounds=(80, 160, 140, 220),
+    )
+
+    with rasterio.open(out) as src:
+        assert tuple(src.bounds) == (80, 160, 140, 220)
+        dem = src.read(1, masked=True)
+    assert dem.shape == (6, 6)
+    assert dem.count() == 4  # the 20 m x 20 m tile -> 2 x 2 cells at 10 m
+    assert dem.mask[0].all() and dem.mask[:, 0].all()
+
+
+def test_align_resamples_a_geographic_raster_onto_the_dem_grid(tmp_path):
+    _write(
+        tmp_path / "dem.tif", np.zeros((10, 10), dtype="float32"), 500000, 2000100, 10
+    )
+    west, south, east, north = transform_bounds(
+        UTM15, "EPSG:4326", 499900, 1999900, 500200, 2000200
+    )
+    fill = np.full((30, 30), 7.0, dtype="float32")
+    _write(
+        tmp_path / "fill.tif",
+        fill,
+        west,
+        north,
+        (east - west) / 30,
+        crs="EPSG:4326",
+        nodata=32767,
+    )
+
+    out = terrain.align(
+        tmp_path / "fill.tif", tmp_path / "dem.tif", tmp_path / "aligned.tif"
+    )
+
+    with rasterio.open(out) as src, rasterio.open(tmp_path / "dem.tif") as ref:
+        assert (src.crs, src.transform, src.shape) == (
+            ref.crs,
+            ref.transform,
+            ref.shape,
+        )
+        assert src.nodata == -9999.0
+        np.testing.assert_allclose(src.read(1), 7.0)
+
+
+def test_condition_prefers_bias_corrected_fill_dem_over_merit(tmp_path, small_strips):
+    truth = _valley()
+    lidar = truth.copy()
+    lidar[:, 40:45] = -9999.0  # gap covered by the fill DEM
+    lidar[:, 50:53] = -9999.0  # gap the fill DEM also misses -> MERIT
+    fill = truth + 3.0  # 3 m datum offset, otherwise exact
+    fill[:, 50:53] = -9999.0
+    merit = truth - 2.0
+    zeros = np.zeros_like(truth)
+    _write(tmp_path / "dem.tif", lidar, 0, 600, 10)
+    _write(tmp_path / "fill.tif", fill, 0, 600, 10)
+    _write_stack(
+        tmp_path / "aux.tif",
+        [merit, zeros, zeros],
+        0,
+        600,
+        10,
+        ["merit_elv", "gsw_occurrence", "merit_upa_km2"],
+    )
+
+    out = terrain.condition(
+        tmp_path / "dem.tif",
+        tmp_path / "aux.tif",
+        tmp_path / "cond",
+        fill=tmp_path / "fill.tif",
+    )
+
+    with rasterio.open(out["dem"]) as src:
+        dem = src.read(1)
+    np.testing.assert_allclose(dem[:, 40:45], truth[:, 40:45], atol=1e-4)
+    np.testing.assert_allclose(dem[:, 50:53], truth[:, 50:53], atol=1e-4)
+    assert out["fill_bias_m"] == pytest.approx(-3.0)
+    assert out["bias_m"] == pytest.approx(2.0)
+
+
+def test_grid_bounds_cover_the_state_plus_margin_snapped_to_the_resolution():
+    # A square around (-93, 18) in WGS84.
+    state = {
+        "type": "Polygon",
+        "coordinates": [
+            [[-93.1, 17.9], [-92.9, 17.9], [-92.9, 18.1], [-93.1, 18.1], [-93.1, 17.9]]
+        ],
+    }
+    from shapely.geometry import box, shape
+    from shapely.ops import transform
+    from pyproj import Transformer
+
+    project = Transformer.from_crs("EPSG:4326", UTM15, always_xy=True).transform
+    utm = transform(project, shape(state))
+
+    left, bottom, right, top = terrain.grid_bounds(
+        [state], UTM15, margin_m=2000, resolution=15
+    )
+
+    assert box(left, bottom, right, top).contains(utm.buffer(1999))
+    assert not box(left, bottom, right, top).contains(utm.buffer(2100))
+    for value in (left, bottom, right, top):
+        assert value % 15 == 0
