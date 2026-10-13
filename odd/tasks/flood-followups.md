@@ -10,7 +10,7 @@ Branch `feat/flood-followups`. Sentinel-1 deep-learning labels are explicitly de
 
 ## Tasks
 - F1 [S3] inline; done — rasterio moved to floodmodel group, matplotlib (+fonttools, kiwisolver) removed, conftest matplotlib mock removed; 3 tests (pyproject + cold-process app import with both blocked); 707 backend pass
-- F2 [S2] inline; pending — openapi paths for flood-detection/flood-stats/local-stations, drop water-* paths, test that spec == live routes
+- F2 [S2] inline; done — removed /api/water-gif-bbox and /api/water-timeseries-bbox (never served), documented /api/flood-detection, /api/flood-stats, /api/local-stations; new test pins spec paths == served /api routes (excluding /api/docs*); 18 paths; 708 backend pass
 - F3 [S1] inline; pending — triage (explore task mv75t6qy-4-2cjn) then fix FIX items with tests
 
 ## Log
