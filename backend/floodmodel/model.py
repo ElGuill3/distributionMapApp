@@ -334,3 +334,102 @@ def predict(classifier, stack: Path, labels: Path, output: Path) -> Path:
                     out[valid] = classifier.predict_proba(_frame(cells, names))[:, 1]
                 dst.write(out, 1, window=window)
     return output
+
+
+def _write_single(output: Path, profile: dict, array: np.ndarray, **overrides) -> Path:
+    out = {**profile, "driver": "GTiff", "count": 1, "compress": "deflate", **overrides}
+    for key in ("tiled", "blockxsize", "blockysize", "predictor"):
+        out.pop(key, None)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with rasterio.open(output, "w", **out) as dst:
+        dst.write(array.astype(out["dtype"]), 1)
+    return output
+
+
+def label_from_masks(masks: Path, bands: list[str], base: Path, output: Path) -> Path:
+    """1 where any selected 0/1 band is set, 0 elsewhere, ``base`` exclusions kept."""
+    with rasterio.open(base) as src:
+        base_labels = src.read(1)
+        profile = src.profile.copy()
+    with rasterio.open(masks) as src:
+        names = list(src.descriptions)
+        flooded = np.zeros(base_labels.shape, dtype=bool)
+        for band in bands:
+            flooded |= src.read(names.index(band) + 1) == 1
+    labels = np.where(base_labels == LABEL_NODATA, LABEL_NODATA, flooded).astype(
+        "uint8"
+    )
+    return _write_single(output, profile, labels, dtype="uint8", nodata=LABEL_NODATA)
+
+
+def _valid_values(path: Path, labels: np.ndarray, rows_cols=None) -> np.ndarray:
+    with rasterio.open(path) as src:
+        values = _as_nan(src.read(1), src.nodata)
+    if rows_cols is not None:
+        values = values[rows_cols]
+        return values[np.isfinite(values)]
+    return values[(labels != LABEL_NODATA) & np.isfinite(values)]
+
+
+def ensemble(
+    components: dict,
+    labels: Path,
+    output: Path,
+    *,
+    sample_size: int = 2_000_000,
+    seed: int = 0,
+) -> Path:
+    """Equal-weight average of each component's state-relative rank (0-1).
+
+    Ranks are the empirical CDF of each component over a random sample of
+    valid cells, so components on different scales (probabilities, metres)
+    contribute equally. A component missing at a cell is skipped there.
+    """
+    with rasterio.open(labels) as src:
+        label = src.read(1)
+        profile = src.profile.copy()
+    valid_index = np.flatnonzero(label != LABEL_NODATA)
+    rng = np.random.default_rng(seed)
+    if valid_index.size > sample_size:
+        valid_index = rng.choice(valid_index, sample_size, replace=False)
+    sample_cells = np.unravel_index(valid_index, label.shape)
+    sorted_samples = {
+        name: np.sort(_valid_values(path, label, sample_cells))
+        for name, path in components.items()
+    }
+    total = np.zeros(label.shape, dtype="float32")
+    count = np.zeros(label.shape, dtype="uint8")
+    for name, path in components.items():
+        ref = sorted_samples[name]
+        with rasterio.open(path) as src:
+            nodata = src.nodata
+            for row, rows in _strips(src.height):
+                window = rasterio.windows.Window(0, row, src.width, rows)
+                block = _as_nan(src.read(1, window=window), nodata)
+                ok = np.isfinite(block) & (label[row : row + rows] != LABEL_NODATA)
+                rank = np.searchsorted(ref, block[ok], side="right") / ref.size
+                total[row : row + rows][ok] += rank.astype("float32")
+                count[row : row + rows][ok] += 1
+    result = np.full(label.shape, NODATA, dtype="float32")
+    has = count > 0
+    result[has] = total[has] / count[has]
+    return _write_single(output, profile, result, dtype="float32", nodata=NODATA)
+
+
+def score_events(scores: dict, events: dict) -> dict:
+    """ROC AUC, PR AUC and base rate of every score map on every event."""
+    from sklearn.metrics import average_precision_score, roc_auc_score
+
+    table = {}
+    for source, score in scores.items():
+        score = np.asarray(score, dtype="float64")
+        for event, truth in events.items():
+            truth = np.asarray(truth).astype(int)
+            ok = np.isfinite(score)
+            table.setdefault(source, {})[event] = {
+                "roc_auc": float(roc_auc_score(truth[ok], score[ok])),
+                "pr_auc": float(average_precision_score(truth[ok], score[ok])),
+                "base_rate": float(truth[ok].mean()),
+                "n": int(ok.sum()),
+            }
+    return table

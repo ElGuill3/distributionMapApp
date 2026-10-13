@@ -37,12 +37,11 @@ def main(argv: list[str] | None = None) -> int:
     stack.add_argument("--terrain-resolution", type=float, default=15.0)
     stack.add_argument("--resolution", type=float, default=30.0)
     steps.add_parser("labels", help="Flooded / dry / excluded cells from CENAPRED")
-    train = steps.add_parser("train", help="Spatial CV, final model and prediction")
-    train.add_argument("--per-class", type=int, default=150_000)
-    train.add_argument("--block-km", type=float, default=5.0)
-    train.add_argument("--folds", type=int, default=5)
-    train.add_argument("--drop", nargs="*", default=[], help="Features to leave out")
-    train.add_argument("--name", default="lightgbm", help="Output name prefix")
+    seasons = steps.add_parser("s1-seasons", help="Sentinel-1 flood season per year")
+    seasons.add_argument("--first", type=int, default=2015)
+    seasons.add_argument("--last", type=int, default=2025)
+    steps.add_parser("final", help="Train both models and build the ensemble map")
+    steps.add_parser("validate", help="Score held-out models on unseen floods")
     features = steps.add_parser("gee-features", help="Earth Engine layers on the grid")
     features.add_argument("--resolution", type=float, default=30.0)
     args = parser.parse_args(argv)
@@ -188,49 +187,39 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"Labels -> {out}")
         return 0
-    if args.step == "train":
-        import joblib
+    if args.step == "s1-seasons":
+        import ee
 
-        from backend.floodmodel import model
+        from backend import config
+        from backend.floodmodel import gee_layers
 
-        feat = args.work_dir / "features"
-        stack_path, labels_path = feat / "stack_30m.tif", feat / "labels_30m.tif"
-        block_cells = max(1, round(args.block_km * 1000 / 30))
-        sample = model.sample_training(
-            stack_path, labels_path, per_class=args.per_class, block_cells=block_cells
+        ee.Initialize(project=config.GEE_PROJECT)
+        years = list(range(args.first, args.last + 1))
+        grid = gee_layers.Grid.from_raster(_dem_path(args.work_dir, 15), res=30)
+        region = ee.Geometry.Rectangle([-94.2, 17.2, -90.9, 18.75])
+        image = gee_layers.s1_season_image(years, region)
+        out = gee_layers.download(
+            gee_layers.ee_compute(image),
+            [f"s1_{y}" for y in years],
+            grid,
+            args.work_dir / "features" / "s1_seasons_30m.tif",
         )
-        keep = [i for i, n in enumerate(sample["feature_names"]) if n not in args.drop]
-        names = [sample["feature_names"][i] for i in keep]
-        sample["features"] = sample["features"][:, keep]
-        report = model.cross_validate(
-            sample["features"],
-            sample["labels"],
-            sample["groups"],
-            feature_names=names,
-            n_splits=args.folds,
-        )
-        fitted = model.fit(sample["features"], sample["labels"], feature_names=names)
-        out_dir = args.work_dir / "model" / args.name
-        out_dir.mkdir(parents=True, exist_ok=True)
-        joblib.dump(fitted, out_dir / "model.joblib")
-        for fold in report["folds"]:
-            fold["train_groups"] = len(fold["train_groups"])
-            fold["test_groups"] = len(fold["test_groups"])
-        report.update(
-            per_class=args.per_class,
-            block_km=args.block_km,
-            n=int(sample["labels"].size),
-            dropped=args.drop,
-        )
-        (out_dir / "cv_report.json").write_text(json.dumps(report, indent=2))
-        prob = model.predict(
-            fitted, stack_path, labels_path, out_dir / "susceptibility_30m.tif"
-        )
-        mean = report["mean"]
-        print(
-            f"CV ROC AUC {mean['roc_auc']:.3f}  PR AUC {mean['pr_auc']:.3f}  "
-            f"Brier {mean['brier']:.3f} -> {prob}"
-        )
+        print(f"Sentinel-1 seasons {years[0]}-{years[-1]} -> {out}")
+        return 0
+    if args.step == "final":
+        from backend.floodmodel import pipeline
+
+        print(f"Susceptibility -> {pipeline.final(args.work_dir)}")
+        return 0
+    if args.step == "validate":
+        from backend.floodmodel import pipeline
+
+        scores = pipeline.validate(args.work_dir)["scores"]
+        for source, events in scores.items():
+            cells = "  ".join(
+                f"{e} {m['roc_auc']:.3f}/{m['pr_auc']:.3f}" for e, m in events.items()
+            )
+            print(f"{source:16s} {cells}")
         return 0
     if args.step == "gee-features":
         import ee

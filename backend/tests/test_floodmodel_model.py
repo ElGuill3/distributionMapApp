@@ -230,3 +230,65 @@ def test_sample_training_balances_classes_and_skips_excluded_cells(tmp_path, sma
     np.testing.assert_array_equal(
         sample["groups"], (sample["rows"] // 4) * 2 + sample["cols"] // 4
     )
+
+
+def test_label_from_masks_floods_any_selected_band_and_keeps_exclusions(tmp_path):
+    y2015 = np.array([[1, 0, 0], [0, 0, 0]], dtype="float32")
+    y2016 = np.array([[0, 1, 0], [0, 0, 1]], dtype="float32")
+    y2024 = np.array([[0, 0, 1], [0, 0, 0]], dtype="float32")
+    _write(tmp_path / "s1.tif", [y2015, y2016, y2024], 0, 20, 10, names=["s1_2015", "s1_2016", "s1_2024"])
+    base = np.array([[0, 0, 0], [0, 255, 255]], dtype="uint8")
+    _write(tmp_path / "base.tif", [base], 0, 20, 10, nodata=255, dtype="uint8")
+
+    out = model.label_from_masks(
+        tmp_path / "s1.tif", ["s1_2015", "s1_2016"], tmp_path / "base.tif", tmp_path / "l.tif"
+    )
+
+    with rasterio.open(out) as src:
+        labels = src.read(1)
+    np.testing.assert_array_equal(labels, [[1, 1, 0], [0, 255, 255]])
+
+
+def test_ensemble_averages_state_relative_ranks_of_each_component(tmp_path, small_strips):
+    a = np.array([[1, 2, 3, 4]] * 4, dtype="float32")
+    b = np.array([[40, 30, 20, 10]] * 4, dtype="float32")
+    c = a.copy()
+    c[0, 0] = NODATA  # a missing component is skipped, not treated as low
+    _write(tmp_path / "a.tif", [a], 0, 40, 10)
+    _write(tmp_path / "b.tif", [b * 1000], 0, 40, 10)  # scale must not matter
+    _write(tmp_path / "c.tif", [c], 0, 40, 10)
+    labels = np.zeros((4, 4), dtype="uint8")
+    labels[3, :] = 255
+    _write(tmp_path / "labels.tif", [labels], 0, 40, 10, nodata=255, dtype="uint8")
+
+    out = model.ensemble(
+        {"a": tmp_path / "a.tif", "b": tmp_path / "b.tif", "c": tmp_path / "c.tif"},
+        tmp_path / "labels.tif",
+        tmp_path / "ens.tif",
+        sample_size=1000,
+    )
+
+    with rasterio.open(out) as src:
+        ens = src.read(1, masked=True)
+    assert ens.mask[3].all()
+    assert float(ens.min()) >= 0.0 and float(ens.max()) <= 1.0
+    # Empirical CDF over the 12 valid cells (11 for c): a -> .25,.5,.75,1;
+    # b reversed; c -> 2/11, 5/11, 8/11, 1.
+    assert ens[1, 0] == pytest.approx((0.25 + 1.0 + 2 / 11) / 3)
+    assert ens[1, 3] == pytest.approx((1.0 + 0.25 + 1.0) / 3)
+    # A missing component is skipped, not treated as a low score.
+    assert ens[0, 0] == pytest.approx((0.25 + 1.0) / 2)
+
+
+def test_score_events_reports_roc_and_pr_per_event_and_source():
+    rng = np.random.default_rng(0)
+    truth = rng.uniform(size=5000)
+    event = (truth > 0.8).astype(int)
+    scores = {"good": truth + rng.normal(scale=0.1, size=5000), "random": rng.uniform(size=5000)}
+
+    table = model.score_events(scores, {"2011": event})
+
+    assert set(table) == {"good", "random"}
+    assert table["good"]["2011"]["roc_auc"] > 0.9
+    assert 0.4 < table["random"]["2011"]["roc_auc"] < 0.6
+    assert table["good"]["2011"]["base_rate"] == pytest.approx(event.mean())
