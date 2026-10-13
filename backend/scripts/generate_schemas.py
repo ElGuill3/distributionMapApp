@@ -28,7 +28,6 @@ from backend.gee.schemas import (
     BBoxSchema,
     DateRangeSchema,
     ExportRequestSchema,
-    MuniQuerySchema,
     StationQuerySchema,
 )
 
@@ -36,7 +35,6 @@ SCHEMA_MODELS = [
     ("BBoxSchema", BBoxSchema),
     ("DateRangeSchema", DateRangeSchema),
     ("StationQuerySchema", StationQuerySchema),
-    ("MuniQuerySchema", MuniQuerySchema),
     ("ExportRequestSchema", ExportRequestSchema),
 ]
 

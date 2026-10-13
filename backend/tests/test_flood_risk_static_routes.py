@@ -74,3 +74,26 @@ def test_tile_route_only_accepts_integer_coordinates(client, path):
     response = client.get(path)
 
     assert response.status_code == 404
+
+
+def test_removed_municipal_fhi_route_is_gone(client):
+    assert client.get("/api/flood-risk-municipio?muni=centla").status_code == 404
+
+
+def test_config_no_longer_exposes_fhi_settings():
+    for name in ("MUNICIPAL_TIFS", "DATA_DIR", "FLOOD_MAPS_DIR"):
+        assert not hasattr(config, name)
+
+
+def test_openapi_documents_the_statewide_flood_routes_only():
+    import yaml
+
+    spec = yaml.safe_load(Path("backend/openapi.yaml").read_text(encoding="utf-8"))
+    paths = set(spec["paths"])
+    assert "/api/flood-risk-municipio" not in paths
+    assert {
+        "/api/flood-risk/metadata",
+        "/api/flood-risk/municipalities",
+        "/api/flood-risk/tiles/{z}/{x}/{y}.png",
+    } <= paths
+    assert "MuniQuerySchema" not in spec["components"]["schemas"]
