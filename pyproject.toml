@@ -39,6 +39,14 @@ dev = [
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
 ]
+floodmodel = [
+    "lightgbm>=4.3",
+    "pyogrio>=0.7",
+    "pyproj>=3.6",
+    "scikit-learn>=1.4",
+    "shapely>=2.0",
+    "whitebox>=2.3",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
