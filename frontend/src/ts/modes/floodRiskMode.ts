@@ -6,6 +6,7 @@
  * - Capa estatal de susceptibilidad (tiles XYZ estáticos) y su leyenda
  * - Lectura de la clase bajo el cursor (color del tile, sin servidor)
  * - Ficha y contorno de los municipios marcados en el panel
+ * - Vista por municipio: coropleta del % de superficie en clase alta o muy alta
  *
  * No contiene lógica de normal mode ni compare mode.
  *
@@ -20,6 +21,7 @@ import { switchColorbar, municipalFloodOverlays } from '../map/overlays.js';
 import {
   classFromRgba,
   findMunicipality,
+  highShareClass,
   muniKey,
   municipalityCardHtml,
   tilePixel,
@@ -32,8 +34,11 @@ import { escapeHtml } from '../utils/html.js';
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
 declare const L: typeof import('leaflet');
 
-/** Key of the statewide layer inside `municipalFloodOverlays`. */
+/** Keys of the flood layers inside `municipalFloodOverlays`. */
 const STATE_LAYER_KEY = 'estado';
+const MUNICIPAL_LAYER_KEY = 'municipios';
+
+export type FloodView = 'detail' | 'municipal';
 const TILE_CACHE_LIMIT = 64;
 
 // ---------------------------------------------------------------------------
@@ -59,6 +64,9 @@ let _loading: Promise<void> | null = null;
 let _readout: L.Control | null = null;
 let _readoutEl: HTMLElement | null = null;
 let _pendingMove: L.LeafletMouseEvent | null = null;
+let _view: FloodView = 'detail';
+let _tiles: L.TileLayer | null = null;
+let _choropleth: L.GeoJSON | null = null;
 const _outlines: Record<string, L.GeoJSON> = {};
 const _tilePixels = new Map<string, Promise<ImageData | null>>();
 
@@ -133,6 +141,11 @@ export function exitFloodRiskMode(): void {
   document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => {
     chk.checked = false;
   });
+  _view = 'detail';
+  const detailRadio = document.querySelector<HTMLInputElement>(
+    'input[name="flood-view"][value="detail"]'
+  );
+  if (detailRadio) detailRadio.checked = true;
 
   if (_mapRef) {
     _mapRef.off('mousemove', _onMouseMove);
@@ -171,20 +184,84 @@ async function showStateLayer(): Promise<void> {
     return;
   }
   if (!_mapRef || !_metadata || !mapState.getFloodRiskModeActive()) return;
-  if (!municipalFloodOverlays[STATE_LAYER_KEY]) {
-    const [west, south, east, north] = _metadata.bounds;
-    municipalFloodOverlays[STATE_LAYER_KEY] = L.tileLayer(_metadata.tiles.url, {
+  _applyView();
+  _addReadout(_mapRef);
+}
+
+/**
+ * Cambia entre el detalle a 30 m (tiles) y la coropleta por municipio.
+ *
+ * @param view 'detail' | 'municipal'
+ */
+export function setFloodView(view: FloodView): void {
+  _view = view;
+  if (mapState.getFloodRiskModeActive() && _metadata) _applyView();
+}
+
+function _tileLayer(metadata: FloodRiskMetadata): L.TileLayer {
+  if (!_tiles) {
+    const [west, south, east, north] = metadata.bounds;
+    _tiles = L.tileLayer(metadata.tiles.url, {
       minZoom: 0,
-      maxNativeZoom: _metadata.tiles.maxzoom,
-      minNativeZoom: _metadata.tiles.minzoom,
+      maxNativeZoom: metadata.tiles.maxzoom,
+      minNativeZoom: metadata.tiles.minzoom,
       bounds: L.latLngBounds([south, west], [north, east]),
       opacity: 0.8,
       attribution: 'Susceptibilidad: INEGI, CENAPRED, Copernicus, JRC, MERIT Hydro',
     });
   }
-  municipalFloodOverlays[STATE_LAYER_KEY]?.addTo(_mapRef);
-  switchColorbar(_mapRef, 'flood');
-  _addReadout(_mapRef);
+  return _tiles;
+}
+
+function _choroplethLayer(metadata: FloodRiskMetadata): L.GeoJSON {
+  if (!_choropleth) {
+    const total = _municipalities.length;
+    _choropleth = L.geoJSON(
+      {
+        type: 'FeatureCollection',
+        features: _municipalities,
+      } as unknown as GeoJSON.FeatureCollection,
+      {
+        style: feature => {
+          const share =
+            (feature?.properties as { high_share?: number } | undefined)?.high_share ??
+            0;
+          return {
+            className: `flood-choropleth flood-choropleth-${highShareClass(share)}`,
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const props = (feature as unknown as MunicipalityFeature).properties;
+          layer.bindPopup(municipalityCardHtml(props, metadata.classes, total));
+        },
+      }
+    );
+  }
+  return _choropleth;
+}
+
+function _setLayer(key: string, layer: L.Layer | null): void {
+  const current = municipalFloodOverlays[key];
+  if (current && current !== layer && _mapRef) _mapRef.removeLayer(current);
+  if (layer && _mapRef) {
+    layer.addTo(_mapRef);
+    municipalFloodOverlays[key] = layer;
+  } else {
+    delete municipalFloodOverlays[key];
+  }
+}
+
+function _applyView(): void {
+  if (!_mapRef || !_metadata) return;
+  if (_view === 'municipal') {
+    _setLayer(STATE_LAYER_KEY, null);
+    _setLayer(MUNICIPAL_LAYER_KEY, _choroplethLayer(_metadata));
+    switchColorbar(_mapRef, 'floodMunicipal');
+  } else {
+    _setLayer(MUNICIPAL_LAYER_KEY, null);
+    _setLayer(STATE_LAYER_KEY, _tileLayer(_metadata));
+    switchColorbar(_mapRef, 'flood');
+  }
 }
 
 function _addReadout(map: L.Map): void {
@@ -249,6 +326,15 @@ function _loadTilePixels(z: number, x: number, y: number): Promise<ImageData | n
 
 async function _updateReadout(latlng: L.LatLng): Promise<void> {
   if (!_metadata || !_mapRef || !_readoutEl) return;
+  if (_view === 'municipal') {
+    const muni = findMunicipality(latlng.lng, latlng.lat, _municipalities);
+    _readoutEl.innerHTML = muni
+      ? `${escapeHtml(muni.properties.name)} · <strong>${Math.round(
+          muni.properties.high_share * 100
+        )}%</strong> en susceptibilidad alta o muy alta`
+      : 'Fuera del estado';
+    return;
+  }
   const { minzoom, maxzoom } = _metadata.tiles;
   const z = Math.max(minzoom, Math.min(maxzoom, Math.round(_mapRef.getZoom())));
   const { x, y, px, py } = tilePixel(latlng.lat, latlng.lng, z);
@@ -341,6 +427,15 @@ export function registerFloodRiskModeListeners(
   void _clearNormalMode;
   void onEnter;
   void onExit;
+
+  document
+    .querySelectorAll<HTMLInputElement>('input[name="flood-view"]')
+    .forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (radio.checked)
+          setFloodView(radio.value === 'municipal' ? 'municipal' : 'detail');
+      });
+    });
 
   // Listeners de checkboxes de municipios
   document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => {

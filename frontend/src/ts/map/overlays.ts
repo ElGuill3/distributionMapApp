@@ -46,7 +46,9 @@ export function setOverlayOpacity(opacity: number): void {
 // Colorbars
 // ---------------------------------------------------------------------------
 
-export let allColorbars: Partial<Record<VariableKey | 'flood', L.Control>> = {};
+export type ColorbarKey = VariableKey | 'flood' | 'floodMunicipal';
+
+export let allColorbars: Partial<Record<ColorbarKey, L.Control>> = {};
 
 /**
  * Crea e inicializa todos los controles de colorbar.
@@ -59,6 +61,7 @@ export function buildColorbars(): void {
     soil: _makeColorbar('soil-colorbar', _soilHtml()),
     precip: _makeColorbar('precip-colorbar', _precipHtml()),
     flood: _makeColorbar('flood-risk-colorbar', _floodHtml()),
+    floodMunicipal: _makeColorbar('flood-risk-colorbar', _floodMunicipalHtml()),
   };
 }
 
@@ -68,12 +71,12 @@ export function buildColorbars(): void {
  * (útil al mover la colorbar entre paneles en modo comparativa).
  *
  * @param targetMap    - Mapa donde se mostrará la colorbar activa.
- * @param variable     - Variable activa o 'flood'. null desactiva todas.
+ * @param variable     - Variable activa, 'flood' o 'floodMunicipal'. null desactiva todas.
  * @param removeFromMap - Mapa adicional del que eliminar todos los controles.
  */
 export function switchColorbar(
   targetMap: L.Map,
-  variable: VariableKey | 'flood' | null,
+  variable: ColorbarKey | null,
   removeFromMap?: L.Map
 ): void {
   for (const [key, ctrl] of Object.entries(allColorbars)) {
@@ -188,6 +191,19 @@ function _precipHtml(): string {
       <span class="colorbar-label-item">1–10 mm/día</span>
       <span class="colorbar-label-item">0–1 mm/día</span>
     </div>`;
+}
+
+function _floodMunicipalHtml(): string {
+  const rows = [5, 4, 3, 2, 1]
+    .map(
+      value =>
+        `<div class="flood-legend-row"><span class="flood-swatch flood-swatch-${value}"></span>${(value - 1) * 20} – ${value * 20}%</div>`
+    )
+    .join('');
+  return `
+    <div class="flood-legend-title">% de superficie en susceptibilidad alta o muy alta</div>
+    ${rows}
+    <div class="flood-legend-note">Haz clic en un municipio para ver su resumen.</div>`;
 }
 
 function _floodHtml(): string {

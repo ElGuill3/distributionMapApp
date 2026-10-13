@@ -51,3 +51,41 @@ test('flood risk mode shows the statewide layer, legend, readout and municipalit
   await expect(legend).toHaveCount(0);
   await expect(page.locator('.flood-readout')).toHaveCount(0);
 });
+
+test('municipality view colours each municipality by its high-susceptibility share', async ({
+  page,
+}) => {
+  await page.goto('/templates/index.html');
+  await page.locator('#toggleFloodRiskMode').click();
+  await expect(page.locator('.flood-risk-colorbar .flood-legend-row')).toHaveCount(5);
+
+  await page
+    .locator('input[name="flood-view"][value="municipal"]')
+    .check({ force: true });
+
+  await expect(page.locator('path.flood-choropleth')).toHaveCount(17);
+  // Nacajuca has 84% of its area in high or very high susceptibility -> top bin.
+  await expect(page.locator('path.flood-choropleth-5')).not.toHaveCount(0);
+  await expect(page.locator('.flood-risk-colorbar .flood-legend-title')).toHaveText(
+    '% de superficie en susceptibilidad alta o muy alta'
+  );
+  await expect(page.locator('.flood-risk-colorbar .flood-legend-row')).toHaveText([
+    '80 – 100%',
+    '60 – 80%',
+    '40 – 60%',
+    '20 – 40%',
+    '0 – 20%',
+  ]);
+  await expect(
+    page.locator('.leaflet-tile-pane img[src*="/api/flood-risk/tiles/"]')
+  ).toHaveCount(0);
+
+  await page.locator('path.flood-choropleth-5').first().click({ force: true });
+  await expect(page.locator('.flood-muni-card')).toContainText(/Lugar \d+ de 17/);
+
+  await page.locator('input[name="flood-view"][value="detail"]').check({ force: true });
+  await expect(page.locator('path.flood-choropleth')).toHaveCount(0);
+  await expect(page.locator('.flood-risk-colorbar .flood-legend-title')).toHaveText(
+    'Susceptibilidad a inundación'
+  );
+});

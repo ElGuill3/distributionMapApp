@@ -493,8 +493,13 @@ body.flood-risk-mode-active #tflow-config .tflow-generate-btn {
 /* ------------------------------------------------------------------ */
 
 /* Municipality grid: visible only in flood risk mode, hidden otherwise */
-.municipios-grid {
+.municipios-grid,
+.flood-view-toggle {
   display: none;
+}
+
+body.flood-risk-mode-active .flood-view-toggle {
+  display: flex;
 }
 
 body.flood-risk-mode-active .municipios-grid {
@@ -1938,6 +1943,53 @@ html.theme-transitioning #chart-b {
 
 .flood-swatch-5 {
   background: #253494;
+}
+
+.flood-view-toggle {
+  gap: 0.75rem;
+  align-items: center;
+  border: 0;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  color: var(--sidebar-fg);
+  font-size: 0.9rem;
+}
+
+.flood-view-toggle legend {
+  float: left;
+  margin-right: 0.25rem;
+}
+
+.flood-view-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.flood-choropleth {
+  stroke: #555;
+  stroke-width: 1px;
+  fill-opacity: 0.8;
+}
+
+.flood-choropleth-1 {
+  fill: #ffffcc;
+}
+
+.flood-choropleth-2 {
+  fill: #a1dab4;
+}
+
+.flood-choropleth-3 {
+  fill: #41b6c4;
+}
+
+.flood-choropleth-4 {
+  fill: #2c7fb8;
+}
+
+.flood-choropleth-5 {
+  fill: #253494;
 }
 
 .flood-readout {
