@@ -6,6 +6,10 @@ import {
   muniKey,
   highShareClass,
   municipalityCardHtml,
+  TilePixelCache,
+  readoutHtml,
+  municipalityIndex,
+  applyClassColors,
   type FloodClass,
   type MunicipalityFeature,
 } from '../../src/ts/map/floodRiskLayer.js';
@@ -130,5 +134,79 @@ describe('municipalityCardHtml', () => {
       name: '<img onerror=1>',
     };
     expect(municipalityCardHtml(props, CLASSES, 17)).not.toContain('<img');
+  });
+});
+
+describe('TilePixelCache', () => {
+  const pixels = (v: number) =>
+    ({ data: new Uint8ClampedArray([v]) }) as unknown as ImageData;
+
+  it('loads each tile once and evicts the oldest beyond its limit', async () => {
+    const calls: string[] = [];
+    const cache = new TilePixelCache(2, async key => {
+      calls.push(key);
+      return pixels(calls.length);
+    });
+    await cache.get('a');
+    await cache.get('a');
+    await cache.get('b');
+    await cache.get('c');
+    await cache.get('a');
+    expect(calls).toEqual(['a', 'b', 'c', 'a']);
+  });
+
+  it('does not keep failed loads, so the next hover retries', async () => {
+    let attempt = 0;
+    const cache = new TilePixelCache(4, async () => {
+      attempt += 1;
+      if (attempt === 1) throw new Error('network');
+      return pixels(7);
+    });
+    await expect(cache.get('t')).rejects.toThrow('network');
+    expect((await cache.get('t')).data[0]).toBe(7);
+    expect(attempt).toBe(2);
+  });
+});
+
+describe('readoutHtml', () => {
+  it('names the class and municipality', () => {
+    expect(readoutHtml({ status: 'ok', cls: CLASSES[4]!, muni: 'Centro' })).toBe(
+      'Susceptibilidad <strong>Muy alta</strong> · Centro'
+    );
+  });
+
+  it('tells no-data apart from a tile that could not be read', () => {
+    expect(readoutHtml({ status: 'ok', cls: null, muni: 'Centla' })).toContain(
+      'sin dato'
+    );
+    expect(readoutHtml({ status: 'error', cls: null, muni: 'Centla' })).toContain(
+      'No se pudo leer el mapa'
+    );
+    expect(readoutHtml({ status: 'ok', cls: null, muni: null })).toBe(
+      'Fuera del área del modelo'
+    );
+  });
+
+  it('escapes the municipality name', () => {
+    expect(readoutHtml({ status: 'ok', cls: null, muni: '<b>x' })).not.toContain('<b>');
+  });
+});
+
+describe('municipalityIndex', () => {
+  it('maps sidebar keys to features', () => {
+    const f = feature('Jalpa De Méndez', {
+      type: 'Polygon',
+      coordinates: [square(0, 0, 1)],
+    });
+    expect(municipalityIndex([f]).get('jalpa_de_mendez')).toBe(f);
+  });
+});
+
+describe('applyClassColors', () => {
+  it('exposes each class colour as a CSS custom property', () => {
+    const root = document.createElement('div');
+    applyClassColors(CLASSES, root);
+    expect(root.style.getPropertyValue('--flood-class-1')).toBe('#ffffcc');
+    expect(root.style.getPropertyValue('--flood-class-5')).toBe('#253494');
   });
 });

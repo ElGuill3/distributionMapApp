@@ -162,3 +162,66 @@ export function municipalityCardHtml(
     ${bars}
   </div>`;
 }
+
+/**
+ * Bounded cache of decoded tile pixels. Only successful loads are kept, so a
+ * tile that failed to load (network error) is retried on the next hover
+ * instead of being reported as "no data" until it is evicted.
+ */
+export class TilePixelCache {
+  private readonly entries = new Map<string, Promise<ImageData>>();
+
+  constructor(
+    private readonly limit: number,
+    private readonly load: (key: string) => Promise<ImageData>
+  ) {}
+
+  get(key: string): Promise<ImageData> {
+    const cached = this.entries.get(key);
+    if (cached) return cached;
+    const pending = this.load(key);
+    this.entries.set(key, pending);
+    pending.catch(() => {
+      if (this.entries.get(key) === pending) this.entries.delete(key);
+    });
+    if (this.entries.size > this.limit) {
+      const oldest = this.entries.keys().next().value;
+      if (oldest !== undefined) this.entries.delete(oldest);
+    }
+    return pending;
+  }
+}
+
+export interface ReadoutState {
+  /** 'error' when the tile under the cursor could not be read. */
+  status: 'ok' | 'error';
+  cls: FloodClass | null;
+  muni: string | null;
+}
+
+/** Text of the hover readout (escaped HTML). */
+export function readoutHtml({ status, cls, muni }: ReadoutState): string {
+  const where = muni ? ` · ${escapeHtml(muni)}` : '';
+  if (status === 'error') return `No se pudo leer el mapa en este punto${where}`;
+  if (cls) return `Susceptibilidad <strong>${escapeHtml(cls.label)}</strong>${where}`;
+  return muni
+    ? `${escapeHtml(muni)} · sin dato (agua permanente o fuera del modelo)`
+    : 'Fuera del área del modelo';
+}
+
+/** Municipality features keyed by their sidebar key (data-muni). */
+export function municipalityIndex(
+  features: MunicipalityFeature[]
+): Map<string, MunicipalityFeature> {
+  return new Map(features.map(f => [muniKey(f.properties.name), f]));
+}
+
+/**
+ * Expose the published class colours as `--flood-class-N` so legend swatches
+ * and the choropleth follow metadata.json instead of a hard-coded copy.
+ */
+export function applyClassColors(classes: FloodClass[], root: HTMLElement): void {
+  for (const cls of classes) {
+    root.style.setProperty(`--flood-class-${cls.value}`, cls.color);
+  }
+}

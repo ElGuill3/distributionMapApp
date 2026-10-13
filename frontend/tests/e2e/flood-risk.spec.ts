@@ -41,9 +41,13 @@ test('flood risk mode shows the statewide layer, legend, readout and municipalit
   const box = await page.locator('#map').boundingBox();
   if (!box) throw new Error('map not rendered');
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.move(box.x + box.width / 2 + 3, box.y + box.height / 2 + 3);
   await expect(page.locator('.flood-readout')).toContainText(
-    /Susceptibilidad (Muy baja|Baja|Media|Alta|Muy alta) · Centro|Centro · sin dato/
+    /Susceptibilidad (Muy baja|Baja|Media|Alta|Muy alta) · Centro/
+  );
+  // Legend swatches take their colour from metadata.json.
+  await expect(page.locator('.flood-risk-colorbar .flood-swatch-5')).toHaveCSS(
+    'background-color',
+    'rgb(37, 52, 148)'
   );
 
   // Leaving the mode removes the layer and legend.
@@ -87,5 +91,24 @@ test('municipality view colours each municipality by its high-susceptibility sha
   await expect(page.locator('path.flood-choropleth')).toHaveCount(0);
   await expect(page.locator('.flood-risk-colorbar .flood-legend-title')).toHaveText(
     'Susceptibilidad a inundación'
+  );
+});
+
+test('a tile that fails to load is reported, not shown as no data', async ({
+  page,
+}) => {
+  await page.route('**/api/flood-risk/tiles/**', route =>
+    route.fulfill({ status: 500 })
+  );
+  await page.goto('/templates/index.html');
+  await page.locator('#toggleFloodRiskMode').click();
+  await page.locator('input.chk-flood-muni[data-muni="centro"]').check({ force: true });
+  await page.locator('.leaflet-popup-close-button').click();
+  const box = await page.locator('#map').boundingBox();
+  if (!box) throw new Error('map not rendered');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+
+  await expect(page.locator('.flood-readout')).toContainText(
+    'No se pudo leer el mapa en este punto · Centro'
   );
 });
