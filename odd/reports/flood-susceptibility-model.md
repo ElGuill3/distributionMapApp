@@ -294,7 +294,7 @@ Los cortes de los quintiles del índice son 0.344, 0.474, 0.597 y 0.749. La susc
 
 ### 4.7 Aplicación del resultado
 
-El mapa se integró como capa interactiva de consulta: muestra la clase y el municipio bajo el cursor, una ficha por municipio y una vista por municipio.
+El mapa se integró como capa interactiva de consulta. Al pasar el cursor se resalta el municipio y se lee la clase de susceptibilidad del punto. Un clic en el mapa, o en la lista de municipios del panel lateral, selecciona un municipio a la vez y abre su ficha: reparto de la superficie por clase, porcentaje en susceptibilidad alta o muy alta y puesto entre los 17 municipios. La vista por municipio muestra la coropleta de ese porcentaje (tabla 12).
 
 ---
 

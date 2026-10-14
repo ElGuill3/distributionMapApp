@@ -74,15 +74,16 @@ insert_after(
     ),
 )
 insert_after(
-    "una ficha por municipio y una vista por municipio.\n",
+    "La vista por municipio muestra la coropleta de ese porcentaje (tabla 12).\n",
     figure(
         "figures/app_detalle.jpg",
-        "Consulta interactiva del mapa: capa estatal a 30 m, ficha de Nacajuca y "
-        "lectura de la clase bajo el cursor.",
+        "Consulta interactiva del mapa: capa estatal a 30 m, Nacajuca seleccionado "
+        "(contorno y ficha), Cunduacán resaltado bajo el cursor y lectura de la clase.",
     )
     + figure(
         "figures/app_municipios.jpg",
-        "Vista por municipio: porcentaje de superficie en susceptibilidad alta o muy alta.",
+        "Vista por municipio: porcentaje de superficie en susceptibilidad alta o muy "
+        "alta, con Huimanguillo resaltado bajo el cursor.",
     ),
 )
 Path("cuerpo.md").write_text(text, encoding="utf-8")
