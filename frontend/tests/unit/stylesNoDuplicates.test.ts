@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import postcss from 'postcss';
 
@@ -9,6 +10,72 @@ import postcss from 'postcss';
 const CSS_PATH =
   process.env.STYLES_CSS_PATH ??
   fileURLToPath(new URL('../../src/styles/styles.css', import.meta.url));
+
+const TS_ROOT = fileURLToPath(new URL('../../src/ts', import.meta.url));
+const TEMPLATE_PATH = fileURLToPath(
+  new URL('../../templates/index.html', import.meta.url)
+);
+
+// Class names built from a prefix at runtime, e.g. `flood-swatch-${value}`.
+const DYNAMIC_CLASS_PREFIXES = [
+  'flood-swatch-',
+  'flood-choropleth-',
+  'forecast-',
+  'tflow-step--',
+];
+
+function tsSources(dir = TS_ROOT): string[] {
+  return readdirSync(dir).flatMap(name => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return tsSources(path);
+    return path.endsWith('.ts') ? [readFileSync(path, 'utf8')] : [];
+  });
+}
+
+/** Class names used in rule selectors (comments and declarations ignored). */
+function selectorClasses(css: string): Set<string> {
+  const classes = new Set<string>();
+  postcss.parse(css).walkRules(rule => {
+    for (const m of rule.selector.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)) classes.add(m[1]);
+  });
+  return classes;
+}
+
+/** Context (enclosing at-rules and rules) of a rule, outermost first. */
+function ruleContext(rule: postcss.Rule): string {
+  const context: string[] = [];
+  for (let p = rule.parent; p && p.type !== 'root'; p = p.parent as postcss.Container) {
+    context.unshift(
+      p.type === 'atrule'
+        ? `@${(p as postcss.AtRule).name} ${(p as postcss.AtRule).params}`
+        : (p as postcss.Rule).selector
+    );
+  }
+  return context.join('>');
+}
+
+function inKeyframes(rule: postcss.Rule): boolean {
+  return (
+    rule.parent?.type === 'atrule' &&
+    /keyframes$/.test((rule.parent as postcss.AtRule).name)
+  );
+}
+
+/** Selector lists declared by more than one rule in the same context. */
+function repeatedSelectors(css: string): string[] {
+  const seen = new Map<string, number>();
+  const repeated: string[] = [];
+  postcss.parse(css).walkRules(rule => {
+    if (inKeyframes(rule)) return;
+    const key = `${ruleContext(rule)}|${rule.selectors.join(',')}`;
+    if (seen.has(key))
+      repeated.push(
+        `${rule.selector} (lines ${seen.get(key)} and ${rule.source?.start?.line})`
+      );
+    else seen.set(key, rule.source?.start?.line ?? 0);
+  });
+  return repeated;
+}
 
 /** Flat rules repeated verbatim (selector + declarations) in the same context. */
 function exactDuplicateRules(css: string): string[] {
@@ -78,6 +145,21 @@ describe('styles.css', () => {
 
   it.each(Object.entries(CRITICAL_RULES))('still declares %s', (selector, expected) => {
     expect(declarationsFor(css, selector)).toMatchObject(expected);
+  });
+
+  it('declares each selector once per context', () => {
+    expect(repeatedSelectors(css)).toEqual([]);
+  });
+
+  it('only styles classes the app can render', () => {
+    const markup = [...tsSources(), readFileSync(TEMPLATE_PATH, 'utf8')].join('\n');
+    const unused = [...selectorClasses(css)].filter(
+      name =>
+        !name.startsWith('leaflet-') &&
+        !DYNAMIC_CLASS_PREFIXES.some(prefix => name.startsWith(prefix)) &&
+        !new RegExp(`[\\s'"\`.]${name}(?![\\w-])`).test(markup)
+    );
+    expect(unused.sort()).toEqual([]);
   });
 
   it('tells rules under different at-rules with the same params apart', () => {
