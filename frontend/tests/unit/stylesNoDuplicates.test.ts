@@ -151,6 +151,20 @@ describe('styles.css', () => {
     expect(repeatedSelectors(css)).toEqual([]);
   });
 
+  it('styles every class that TypeScript toggles', () => {
+    const styled = selectorClasses(css);
+    const toggled = new Set<string>();
+    for (const src of tsSources()) {
+      for (const call of src.matchAll(/classList\.(?:add|remove|toggle)\(([^)]*)\)/g)) {
+        for (const name of call[1].matchAll(
+          /^\s*['"]([\w-]+)['"]|,\s*['"]([\w-]+)['"]/g
+        ))
+          toggled.add(name[1] ?? name[2]);
+      }
+    }
+    expect([...toggled].filter(name => !styled.has(name)).sort()).toEqual([]);
+  });
+
   it('only styles classes the app can render', () => {
     const markup = [...tsSources(), readFileSync(TEMPLATE_PATH, 'utf8')].join('\n');
     const unused = [...selectorClasses(css)].filter(

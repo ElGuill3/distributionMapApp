@@ -239,7 +239,6 @@ class ConfigPanel {
 
     this.generateBtn.disabled = isLoading;
     this.generateBtn.textContent = isLoading ? 'Generando…' : 'Generar animación';
-    this.generateBtn.classList.toggle('loading', isLoading);
   }
 
   /**
