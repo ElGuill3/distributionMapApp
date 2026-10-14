@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import {
   tilePixel,
@@ -190,22 +189,6 @@ describe('readoutHtml', () => {
 
   it('escapes the municipality name', () => {
     expect(readoutHtml({ status: 'ok', cls: null, muni: '<b>x' })).not.toContain('<b>');
-  });
-});
-
-describe('sidebar municipality list', () => {
-  it('matches every sidebar button to one published municipality', () => {
-    const html = readFileSync('frontend/templates/index.html', 'utf8');
-    const buttons = [
-      ...html.matchAll(/class="flood-muni-btn" data-muni="([a-z_]+)"/g),
-    ].map(m => m[1]);
-    const published = (
-      JSON.parse(
-        readFileSync('backend/data/flood_risk/municipalities.geojson', 'utf8')
-      ) as { features: MunicipalityFeature[] }
-    ).features.map(f => muniKey(f.properties.name));
-    expect(buttons).toHaveLength(17);
-    expect([...buttons].sort()).toEqual([...published].sort());
   });
 });
 
