@@ -36,21 +36,19 @@ El resto del documento se organiza así. La sección 2 resume los trabajos relac
 
 Los mapas de susceptibilidad a inundación con aprendizaje automático combinan variables del terreno, del suelo y de la hidrografía con un inventario de inundaciones pasadas. Tehrany et al. [2] ensamblaron pesos de evidencia y máquinas de soporte vectorial para la cuenca de Terengganu, en Malasia. Khosravi et al. [3] compararon cuatro algoritmos de árboles de decisión para inundaciones súbitas en la cuenca del Haraz, en Irán. En ambos casos, la evaluación principal es el área bajo la curva ROC sobre una partición aleatoria del inventario.
 
-En Tabasco, los trabajos recientes usan imágenes satelitales para **cartografiar** el agua de un evento concreto. Pech-May et al. [4] clasificaron cultivos y coberturas del oriente del estado con Sentinel-2 y SVM, RF y CART en Google Earth Engine. Con radar Sentinel-1 y la red U-Net, se segmentaron las inundaciones de 2020 en la subregión de los Ríos [1, 5], se entrenó un modelo con el conjunto Sen1Floods11 aplicado al sureste de México [6] y se combinaron Sentinel-1 y Sentinel-2 entre 2019 y 2023 [7].
+Con radar, la inundación de un evento concreto se **cartografía** comparando la retrodispersión con una imagen de referencia: el agua lisa refleja poca señal hacia el sensor. Twele et al. [4] automatizaron esa detección por cambio con Sentinel-1, y Pech-May et al. [1] segmentaron con la red U-Net las inundaciones de 2020 en la subregión de los Ríos, en Tabasco. Estos mapas de eventos son la materia prima de un modelo de susceptibilidad: este trabajo usa la detección por cambio para obtener sus etiquetas de inundación estacional (sección 3.4.2).
 
 | Trabajo | Datos | Modelo | Área de estudio | Producto |
 |---|---|---|---|---|
 | Tehrany et al. [2], 2014 | Factores condicionantes en SIG e inventario | Pesos de evidencia + SVM | Terengganu, Malasia | Susceptibilidad |
 | Khosravi et al. [3], 2018 | Factores condicionantes en SIG e inventario | LMT, REPT, NBT, ADT | Haraz, Irán | Susceptibilidad |
-| Pech-May et al. [4], 2022 | Sentinel-2 | SVM, RF, CART | Oriente de Tabasco | Cobertura del suelo |
+| Twele et al. [4], 2016 | Sentinel-1 | Detección por cambio | — | Mapa de un evento |
 | Pech-May et al. [1], 2023 | Sentinel-1 (2020) | U-Net | Los Ríos, Tabasco | Mapa de un evento |
-| Pech-May et al. [6], 2024 | Sentinel-1 (Sen1Floods11) | U-Net | Sureste de México | Mapa de un evento |
-| Pech-May et al. [7], 2025 | Sentinel-1 y Sentinel-2 (2019–2023) | U-Net | Los Ríos, Tabasco | Mapa de un evento |
 | Este trabajo | LiDAR, Sentinel-1, CENAPRED, JRC | LightGBM + ensamble | Todo Tabasco | Susceptibilidad |
 
 : Trabajos relacionados: datos, modelo, área de estudio y producto.
 
-Este trabajo se diferencia en dos aspectos. Estima la susceptibilidad de todo el estado, no el agua de una imagen, y la valida con **eventos completos retenidos** en lugar de con una partición aleatoria de celdas, que mide sobre todo interpolación dentro de eventos conocidos [8].
+Este trabajo se diferencia en dos aspectos. Estima la susceptibilidad de todo el estado, no el agua de una imagen, y la valida con **eventos completos retenidos** en lugar de con una partición aleatoria de celdas, que mide sobre todo interpolación dentro de eventos conocidos [5].
 
 ---
 
@@ -69,9 +67,9 @@ Tabasco ocupa 24 707 km² (área geodésica de los límites FAO GAUL 2025) y se 
 | CENAPRED, Atlas Nacional de Riesgos | Etiquetas de eventos extremos: inundación del 22-oct-2011; 2020 (Cristóbal, Sentinel-1 28-oct y 5-nov, TerraSAR-X 7-nov, Copernicus) | Polígonos vectoriales |
 | CENAPRED, mapas PNUD 2018 e IPCET-PNUD 2022 | **Solo comparación**, nunca entrenamiento | Polígonos, 5 clases |
 | Copernicus Sentinel-1 GRD (VV) | Etiquetas de inundación estacional 2015–2025 | 10 m → 30 m |
-| JRC/CEMS GloFAS Flood Hazard v2.1 [9] | Profundidad por periodo de retorno (10 y 100 años): variable y componente del ensamble | ≈ 90 m |
-| MERIT Hydro [10] | Área de drenaje aguas arriba, HAND de referencia, último recurso de relleno | ≈ 90 m |
-| JRC Global Surface Water v1.4 [11] | Exclusión de agua permanente (ocurrencia ≥ 50 %) | 30 m |
+| JRC/CEMS GloFAS Flood Hazard v2.1 [6] | Profundidad por periodo de retorno (10 y 100 años): variable y componente del ensamble | ≈ 90 m |
+| MERIT Hydro [7] | Área de drenaje aguas arriba, HAND de referencia, último recurso de relleno | ≈ 90 m |
+| JRC Global Surface Water v1.4 [8] | Exclusión de agua permanente (ocurrencia ≥ 50 %) | 30 m |
 | ESA WorldCover 2021 | Uso de suelo | 10 m |
 | FAO GAUL 2025 nivel 2 | Límite estatal y 17 municipios | Vectorial |
 
@@ -83,11 +81,11 @@ Tabasco ocupa 24 707 km² (área geodésica de los límites FAO GAUL 2025) y se 
 
 #### 3.3.1 Resolución: 10 m → 15 m
 
-La resolución prevista era 10 m. A esa escala, el relleno de depresiones por costo mínimo (*least-cost breaching*) no es viable en un equipo de escritorio para todo el estado. Se trabajó a **15 m**, con el algoritmo híbrido de Lindsay [12], que da redes de drenaje equivalentes a un costo mucho menor. Las variables se agregan después a la grilla de modelado de 30 m.
+La resolución prevista era 10 m. A esa escala, el relleno de depresiones por costo mínimo (*least-cost breaching*) no es viable en un equipo de escritorio para todo el estado. Se trabajó a **15 m**, con el algoritmo híbrido de Lindsay [9], que da redes de drenaje equivalentes a un costo mucho menor. Las variables se agregan después a la grilla de modelado de 30 m.
 
 #### 3.3.2 Acondicionamiento hidrológico
 
-El LiDAR de INEGI **no tiene datos sobre ríos y lagunas** (el láser no vuelve del agua), deja huecos donde no hubo vuelo y guarda el mar como una superficie plana a 0.0 m. Si no se corrige, el HAND [13] (altura sobre el drenaje más cercano) queda referido a cauces equivocados.
+El LiDAR de INEGI **no tiene datos sobre ríos y lagunas** (el láser no vuelve del agua), deja huecos donde no hubo vuelo y guarda el mar como una superficie plana a 0.0 m. Si no se corrige, el HAND [10] (altura sobre el drenaje más cercano) queda referido a cauces equivocados.
 
 1. Los huecos se rellenan primero con el CEM 3.0 de INEGI (15 m) y, donde tampoco hay CEM, con MERIT (≈ 90 m). Cada fuente se corrige por su sesgo vertical mediano respecto del LiDAR: **−0.40 m** para el CEM y **−1.64 m** para MERIT.
 2. El agua (ocurrencia JRC ≥ 50 % o área de drenaje MERIT ≥ 500 km²) se incorpora a la red de drenaje.
@@ -130,7 +128,7 @@ Con solo dos años de eventos extremos, los modelos generalizaban mal (sección 
 | Fuente | Método | Concordancia con CENAPRED | Decisión |
 |---|---|---|---|
 | Landsat 5/7 (2011; 2007) | MNDWI > 0 en píxeles despejados (QA), sin agua permanente | 2011: IoU 7.7 % (P 12.9 %, R 16.1 %); 2007: solo 6 % del estado inundado | **Descartada:** las nubes ocultan el pico, y las imágenes despejadas son posteriores a la crecida |
-| Global Flood Database (MODIS) [14] | Eventos 2005, 2007, 2010, 2011 | 2011: IoU 14.1 % (P 17.7 %, R 40.4 %); vistas despejadas medianas: 1 % | **Descartada** |
+| Global Flood Database (MODIS) [11] | Eventos 2005, 2007, 2010, 2011 | 2011: IoU 14.1 % (P 17.7 %, R 40.4 %); vistas despejadas medianas: 1 % | **Descartada** |
 | Sentinel-1, detección por cambio | VV percentil 10 (jun–dic) < −13 dB **y** caída > 1.5 dB respecto de la mediana feb–may del mismo año, HAND MERIT < 20 m, sin agua permanente | 2020: **IoU 34.9 %** (P 55.5 %, R 48.5 %) | **Adoptada** como etiqueta de inundación estacional |
 | Sentinel-1, "vegetación inundada" (doble rebote) | Aumento de VV > 2 dB | Unión con la anterior: P 16.4 %, R 71.7 % | **Descartada:** demasiado ruido |
 
@@ -140,7 +138,7 @@ Los umbrales de Sentinel-1 se calibraron con un barrido de 34 combinaciones cont
 
 ### 3.5 Modelos
 
-Todos los modelos usan LightGBM [15] con los mismos hiperparámetros: 400 árboles, tasa de aprendizaje 0.05, 63 hojas, mínimo de 50 muestras por hoja y submuestreo de 0.8 en filas y columnas. Se entrena con un muestreo balanceado de 150 000 celdas por clase. Las variables son las 6 del terreno LiDAR agregado a 30 m más las capas JRC, MERIT y WorldCover.
+Todos los modelos usan LightGBM [12] con los mismos hiperparámetros: 400 árboles, tasa de aprendizaje 0.05, 63 hojas, mínimo de 50 muestras por hoja y submuestreo de 0.8 en filas y columnas. Se entrena con un muestreo balanceado de 150 000 celdas por clase. Las variables son las 6 del terreno LiDAR agregado a 30 m más las capas JRC, MERIT y WorldCover.
 
 **Fuga de etiquetas.** Las capas JRC Global Surface Water (ocurrencia y extensión máxima) pueden haber registrado las mismas inundaciones que se usan como etiqueta. Con ellas, la validación cruzada espacial da ROC 0.890; sin ellas, 0.885 ± 0.010. La diferencia es despreciable, así que se excluyeron para evitar la fuga.
 
@@ -203,7 +201,7 @@ Pero al **entrenar solo con 2020 y evaluar en 2011**:
 
 : Modelo entrenado con 2020 y evaluado en 2011, frente a variables solas.
 
-**Diagnóstico.** Las manchas de inundación miden decenas de kilómetros, así que bloques de 5 km no logran descorrelacionarlas [8]. La validación cruzada espacial mide sobre todo interpolación dentro de eventos conocidos. Además, solo el 28 % de la superficie inundada en 2011 se volvió a inundar en 2020: los eventos son muy distintos entre sí.
+**Diagnóstico.** Las manchas de inundación miden decenas de kilómetros, así que bloques de 5 km no logran descorrelacionarlas [5]. La validación cruzada espacial mide sobre todo interpolación dentro de eventos conocidos. Además, solo el 28 % de la superficie inundada en 2011 se volvió a inundar en 2020: los eventos son muy distintos entre sí.
 
 **Comparación justa con el mapa oficial.** Sobre los eventos de CENAPRED, IPCET-PNUD 2022 obtiene ROC 0.892 en 2011 y 0.848 en 2020, y PNUD 2018 obtiene 0.768 y 0.783. Como IPCET es de 2022, esa comparación no es justa. Por eso se definió como prueba justa **las temporadas de Sentinel-1 de 2023 a 2025**, posteriores a IPCET y a los datos de entrenamiento del modelo. Con esa prueba, el modelo de eventos extremos ya supera a IPCET en PR AUC todos los años; por ejemplo, a 90 m: 0.114 contra 0.087 en 2023, 0.076 contra 0.058 en 2024 y 0.112 contra 0.088 en 2025.
 
@@ -306,7 +304,7 @@ El resultado principal es que un mapa aprendido de inundaciones observadas antic
 
 La lección metodológica es que **la forma de validar decide la conclusión**. Con validación cruzada espacial, el modelo de eventos extremos parecía muy superior a JRC (0.885 contra 0.740). Al retener un evento completo, la ventaja desaparece (0.741 contra 0.759). Los estudios de susceptibilidad que validan con particiones aleatorias del inventario [2, 3] miden, por tanto, una capacidad distinta de la que importa para la prevención.
 
-Los trabajos de cartografía de inundaciones con U-Net en Tabasco [1, 5–7] resuelven un problema complementario. Su F1 (por ejemplo, 0.93 para la clase inundación en [1]) mide la concordancia con la máscara de referencia de la misma imagen; las métricas de este trabajo miden qué tan bien un mapa previo ordena un evento futuro. Los dos números no son comparables. La relación natural entre ambos enfoques es otra: las máscaras de una U-Net son una fuente de **etiquetas** más limpias que el detector por umbrales usado aquí, cuya concordancia con CENAPRED es de 34.9 % de IoU.
+La cartografía de inundaciones con radar [1, 4] resuelve un problema complementario. Su F1 (por ejemplo, 0.93 para la clase inundación con U-Net en Tabasco [1]) mide la concordancia con la máscara de referencia de la misma imagen; las métricas de este trabajo miden qué tan bien un mapa previo ordena un evento futuro. Los dos números no son comparables. La relación natural entre ambos enfoques es otra: las máscaras de una U-Net son una fuente de **etiquetas** más limpias que el detector por umbrales usado aquí, cuya concordancia con CENAPRED es de 34.9 % de IoU.
 
 ### 5.1 Limitaciones y amenazas a la validez
 
@@ -328,7 +326,7 @@ Solo con datos públicos es posible construir un mapa de susceptibilidad a inund
 
 El hallazgo más importante es metodológico. La validación cruzada espacial sobreestima la capacidad de anticipar inundaciones nuevas, y las etiquetas de un mismo detector premian a los modelos entrenados con él. Por eso este trabajo evalúa con eventos completos retenidos y exige que el mapa supere a JRC también en un evento extremo independiente. Con ese criterio, las ventajas son reales pero moderadas, y los valores absolutos están acotados por el ruido de las etiquetas.
 
-Como trabajo futuro, la mejora con mayor impacto esperado es reemplazar el detector por umbrales de Sentinel-1 por una segmentación con U-Net, en la línea de [1, 5–7], para obtener etiquetas estacionales menos ruidosas, incluida la vegetación inundada. También se proponen: incorporar más eventos extremos independientes (activaciones de Copernicus EMS y UNOSAT); incorporar el inventario de bordos y obras de protección de CONAGUA para corregir la sobreestimación en zonas protegidas; usar umbrales del detector por cobertura de suelo; validar por cuenca o con bloques de al menos 50 km; y calibrar el índice con regresión isotónica sobre eventos retenidos, para pasar de un orden relativo a una probabilidad interpretable.
+Como trabajo futuro, la mejora con mayor impacto esperado es reemplazar el detector por umbrales de Sentinel-1 por una segmentación con U-Net [1], para obtener etiquetas estacionales menos ruidosas, incluida la vegetación inundada. También se proponen: incorporar más eventos extremos independientes (activaciones de Copernicus EMS y UNOSAT); incorporar el inventario de bordos y obras de protección de CONAGUA para corregir la sobreestimación en zonas protegidas; usar umbrales del detector por cobertura de suelo; validar por cuenca o con bloques de al menos 50 km; y calibrar el índice con regresión isotónica sobre eventos retenidos, para pasar de un orden relativo a una probabilidad interpretable.
 
 ---
 
@@ -351,17 +349,14 @@ Los autores declaran no tener conflictos de interés.
 1. Pech-May, F.; Aquino-Santos, R.; Delgadillo-Partida, J. Sentinel-1 SAR images and deep learning for water body mapping. *Remote Sensing* **2023**, 15, 3009. <https://doi.org/10.3390/rs15123009>
 2. Tehrany, M. S.; Pradhan, B.; Jebur, M. N. Flood susceptibility mapping using a novel ensemble weights-of-evidence and support vector machine models in GIS. *Journal of Hydrology* **2014**, 512, 332–343. <https://doi.org/10.1016/j.jhydrol.2014.03.008>
 3. Khosravi, K.; Pham, B. T.; Chapi, K.; Shirzadi, A.; Shahabi, H.; Revhaug, I.; Prakash, I.; Bui, D. T. A comparative assessment of decision trees algorithms for flash flood susceptibility modeling at Haraz watershed, northern Iran. *Science of the Total Environment* **2018**, 627, 744–755. <https://doi.org/10.1016/j.scitotenv.2018.01.266>
-4. Pech-May, F.; Aquino-Santos, R.; Rios-Toledo, G.; Posadas-Durán, J. P. F. Mapping of land cover with optical images, supervised algorithms, and Google Earth Engine. *Sensors* **2022**, 22, 4729. <https://doi.org/10.3390/s22134729>
-5. Pech-May, F.; Sánchez-Hernández, J. V.; López-Gómez, L. A.; Magaña-Govea, J.; Mil-Chontal, E. M. Flooded areas detection through SAR images and U-NET deep learning model. *Computación y Sistemas* **2023**, 27, 449–458. <https://doi.org/10.13053/cys-27-2-4624>
-6. Pech-May, F.; Aquino-Santos, R.; Álvarez-Cárdenas, O.; Lozoya Arandia, J.; Ríos-Toledo, G. Segmentation and visualization of flooded areas through Sentinel-1 images and U-Net. *IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing* **2024**, 17, 8996–9008. <https://doi.org/10.1109/JSTARS.2024.3387452>
-7. Pech-May, F.; Álvarez-Cárdenas, O.; Ríos-Toledo, G. Flood mapping through Sentinel-1, Sentinel-2 imagery and U-NET deep learning model. *Computación y Sistemas* **2025**, 29, 393–407. <https://doi.org/10.13053/cys-29-1-5539>
-8. Roberts, D. R. et al. Cross-validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure. *Ecography* **2017**, 40, 913–929.
-9. European Commission, Joint Research Centre. CEMS GloFAS Flood Hazard maps v2.1. Conjunto de datos `JRC/CEMS_GLOFAS/FloodHazard/v2_1` en Google Earth Engine.
-10. Yamazaki, D. et al. MERIT Hydro: a high-resolution global hydrography map. *Water Resources Research* **2019**, 55, 5053–5073.
-11. Pekel, J.-F. et al. High-resolution mapping of global surface water and its long-term changes. *Nature* **2016**, 540, 418–422.
-12. Lindsay, J. B. Efficient hybrid breaching-filling sink removal methods for flow path enforcement in digital elevation models. *Hydrological Processes* **2016**, 30, 846–857.
-13. Nobre, A. D. et al. Height Above the Nearest Drainage – a hydrologically relevant new terrain model. *Journal of Hydrology* **2011**, 404, 13–29.
-14. Tellman, B. et al. Satellite imaging reveals increased proportion of population exposed to floods. *Nature* **2021**, 596, 80–86.
-15. Ke, G. et al. LightGBM: A highly efficient gradient boosting decision tree. *Advances in Neural Information Processing Systems* **2017**, 30.
+4. Twele, A.; Cao, W.; Plank, S.; Martinis, S. Sentinel-1-based flood mapping: a fully automated processing chain. *International Journal of Remote Sensing* **2016**, 37, 2990–3004. <https://doi.org/10.1080/01431161.2016.1192304>
+5. Roberts, D. R. et al. Cross-validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure. *Ecography* **2017**, 40, 913–929.
+6. European Commission, Joint Research Centre. CEMS GloFAS Flood Hazard maps v2.1. Conjunto de datos `JRC/CEMS_GLOFAS/FloodHazard/v2_1` en Google Earth Engine.
+7. Yamazaki, D. et al. MERIT Hydro: a high-resolution global hydrography map. *Water Resources Research* **2019**, 55, 5053–5073.
+8. Pekel, J.-F. et al. High-resolution mapping of global surface water and its long-term changes. *Nature* **2016**, 540, 418–422.
+9. Lindsay, J. B. Efficient hybrid breaching-filling sink removal methods for flow path enforcement in digital elevation models. *Hydrological Processes* **2016**, 30, 846–857.
+10. Nobre, A. D. et al. Height Above the Nearest Drainage – a hydrologically relevant new terrain model. *Journal of Hydrology* **2011**, 404, 13–29.
+11. Tellman, B. et al. Satellite imaging reveals increased proportion of population exposed to floods. *Nature* **2021**, 596, 80–86.
+12. Ke, G. et al. LightGBM: A highly efficient gradient boosting decision tree. *Advances in Neural Information Processing Systems* **2017**, 30.
 
 Fuentes de datos: INEGI, Modelo Digital de Elevación de alta resolución LiDAR (5 m) y Continuo de Elevaciones Mexicano 3.0 (15 m); CENAPRED, Atlas Nacional de Riesgos; Copernicus Sentinel-1; ESA WorldCover 2021; FAO GAUL 2025.
