@@ -455,6 +455,9 @@ def score_events(scores: dict, events: dict) -> dict:
                 "base_rate": float(y.mean()),
                 "n": int(ok.sum()),
                 "top40_area_share": float(top.mean()),
+                # roc_auc_score above already raises when an event has no flooded
+                # cell, so the max() only guards the division and never yields a
+                # reported 0.0 for an empty event.
                 "top40_capture": float(y[top].sum() / max(int(y.sum()), 1)),
             }
     return table

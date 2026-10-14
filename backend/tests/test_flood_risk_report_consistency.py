@@ -34,7 +34,9 @@ def test_municipality_table_matches_published_stats():
     for p in _municipalities():
         area = f"{round(p['area_km2']):,}".replace(",", " ")
         row = f"| {p['rank']} | "
-        line = next(line for line in text.splitlines() if line.startswith(row) and area in line)
+        line = next(
+            line for line in text.splitlines() if line.startswith(row) and area in line
+        )
         assert f"{round(p['high_share'] * 100)} %" in line, p["name"]
 
 
@@ -66,19 +68,27 @@ def test_readme_validation_claims_match_published_scores():
 def test_capture_table_matches_published_validation():
     lines = REPORT.read_text(encoding="utf-8").splitlines()
     scores = _metadata()["validation"]
-    rows = {
-        "ensemble": "| **Ensamble** | 40 % |",
-        "jrc_rp100": "| JRC 100 años | 40 % |",
-        "low_elevation": "| Elevación | 40 % |",
-        "ipcet_pnud_2022": "| IPCET-PNUD 2022 | 57 % |",
+    # Map name as written in the first column of the capture table.
+    names = {
+        "ensemble": "**Ensamble**",
+        "jrc_rp100": "JRC 100 años",
+        "low_elevation": "Elevación",
+        "ipcet_pnud_2022": "IPCET-PNUD 2022",
     }
-    for source, prefix in rows.items():
-        line = next(line for line in lines if line.startswith(prefix))
-        cells = [c.strip(" *\\") for c in line.split("|")[3:-1]]
-        expected = [
-            f"{round(scores[source][event]['top40_capture'] * 100)} %"
-            for event in ("cenapred_2011", "s1_2023", "s1_2024", "s1_2025")
+    events = ("cenapred_2011", "s1_2023", "s1_2024", "s1_2025")
+    for source, name in names.items():
+        rows = [
+            line
+            for line in lines
+            if line.startswith(f"| {name} | ") and line.count("|") == 7
         ]
-        assert cells == expected, source
-        area = round(scores[source]["s1_2023"]["top40_area_share"] * 100)
-        assert prefix.endswith(f"| {area} % |"), source
+        assert len(rows) == 1, f"no single capture-table row for {name!r}"
+        # Columns: map | area share of the top classes | one capture per event.
+        cells = [c.strip(" *\\") for c in rows[0].split("|")[1:-1]]
+        area, captures = cells[1], cells[2:]
+        expected_area = round(scores[source]["s1_2023"]["top40_area_share"] * 100)
+        assert area == f"{expected_area} %", source
+        expected = [
+            f"{round(scores[source][e]['top40_capture'] * 100)} %" for e in events
+        ]
+        assert captures == expected, source
