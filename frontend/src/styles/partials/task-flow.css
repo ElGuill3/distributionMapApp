@@ -291,6 +291,12 @@ html.theme-transitioning .colorbar-label-item {
   transition-duration: 220ms !important;
 }
 
+/* Modo comparativa: oculta el botón Generar del task flow (pasos 1-2 deshabilitados) */
+body.compare-mode-active #tflow-config .tflow-generate-btn,
+body.flood-risk-mode-active #tflow-config .tflow-generate-btn {
+  display: none;
+}
+
 /* Deactivation of all task flow steps in compare and flood risk modes */
 body.compare-mode-active #tflow-container,
 body.flood-risk-mode-active #tflow-container {
@@ -342,64 +348,24 @@ body.compare-mode-active #chart-b-container {
   }
 }
 
-/* Utility class */
-.hidden {
-  display: none !important;
+/* Draw button and separated station group (formerly inline styles in index.html) */
+#tflow-draw-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
-/* Theme Toggle Button */
-.theme-toggle-btn {
-  background: transparent;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--radius-sm);
-  color: var(--surface-fg);
+#tflow-draw-btn {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition:
-    background 0.2s,
-    border-color 0.2s;
-  padding: 0;
-  flex-shrink: 0;
-  margin-right: 8px;
-}
-.theme-toggle-btn:hover {
-  background: var(--gray-50);
-  border-color: var(--gray-300);
-}
-.theme-toggle-btn svg {
-  width: 16px;
-  height: 16px;
+  margin-top: var(--space-2);
+  gap: var(--space-2);
 }
 
-/* Visibility toggles based on theme state */
-:root:not([data-theme='dark']) .theme-toggle-btn .icon-sun {
-  display: none !important;
-}
-:root:not([data-theme='dark']) .theme-toggle-btn .icon-moon {
-  display: block !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .theme-toggle-btn .icon-sun {
-    display: block !important;
-  }
-  :root:not([data-theme='light']) .theme-toggle-btn .icon-moon {
-    display: none !important;
-  }
-}
-
-:root[data-theme='dark'] .theme-toggle-btn .icon-sun {
-  display: block !important;
-}
-:root[data-theme='dark'] .theme-toggle-btn .icon-moon {
-  display: none !important;
-}
-
-:root[data-theme='light'] .theme-toggle-btn .icon-sun {
-  display: none !important;
-}
-:root[data-theme='light'] .theme-toggle-btn .icon-moon {
-  display: block !important;
+.tflow-station-group.tflow-station-group--separated {
+  margin-top: 1rem;
+  border-top: 1px solid var(--sidebar-border);
+  padding-top: 1rem;
 }

@@ -193,9 +193,3 @@ details[open] > summary {
 details > *:not(summary) {
   margin-left: var(--space-4);
 }
-
-/* Modo comparativa: oculta el botón Generar del task flow (pasos 1-2 deshabilitados) */
-body.compare-mode-active #tflow-config .tflow-generate-btn,
-body.flood-risk-mode-active #tflow-config .tflow-generate-btn {
-  display: none;
-}

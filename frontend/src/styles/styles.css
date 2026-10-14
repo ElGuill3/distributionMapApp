@@ -23,13 +23,13 @@
 /* Topbar over the map (playback, layers, opacity) and Leaflet control overrides */
 @import './partials/map-topbar.css';
 
-/* Station icons, legacy player controls and the map/chart rows of a panel */
+/* Station icons, legacy player controls, the map/chart rows of a panel and Plotly sizing */
 @import './partials/map-and-chart.css';
 
 /* Compare mode controls in the chart area */
 @import './partials/compare.css';
 
-/* Station marker popups, the Leaflet popup shell and Plotly chart sizing */
+/* Station marker popups and the Leaflet popup shell */
 @import './partials/popups.css';
 
 /* Mode toggles and hints in the sidebar, Leaflet left-control alignment */
@@ -50,14 +50,11 @@
 /* Chart placeholder, mode banners and the sidebar logo */
 @import './partials/banners-and-placeholders.css';
 
-/* Task flow sidebar steps, mode section, mode overrides, .hidden and the theme toggle */
+/* Task flow sidebar steps, draw button, mode section and per-mode overrides */
 @import './partials/task-flow.css';
 
-/* Flood events (inundaciones) mode and its legend card */
+/* The .hidden utility, the theme toggle and the sidebar title */
+@import './partials/theme-toggle.css';
+
+/* Flood events (inundaciones) mode: legend card, panel and the map loading spinner */
 @import './partials/inundaciones.css';
-
-/* Layout rules moved out of inline style attributes in index.html */
-@import './partials/template-layout.css';
-
-/* Flood events panel and the map loading spinner */
-@import './partials/inundaciones-panel.css';

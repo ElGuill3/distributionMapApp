@@ -141,3 +141,20 @@ body.animation-loaded #player-controls {
 body.compare-mode-active #ndvi-chart-container {
   display: flex !important;
 }
+
+/* Plotly usa todo el ancho del div */
+#ndvi-chart,
+#chart-b {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+html.theme-transitioning #ndvi-chart,
+html.theme-transitioning #chart-b {
+  opacity: 0.97;
+  transform: translateY(0);
+}
