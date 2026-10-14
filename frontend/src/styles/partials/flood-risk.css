@@ -1,0 +1,175 @@
+/* ------------------------------------------------------------------ */
+/* Modo riesgo de inundación                                           */
+/* ------------------------------------------------------------------ */
+
+/* Municipality grid: visible only in flood risk mode, hidden otherwise */
+.municipios-grid,
+.flood-view-toggle {
+  display: none;
+}
+
+body.flood-risk-mode-active .flood-view-toggle {
+  display: flex;
+}
+
+/* ==========================================================================
+   Colorbars (with theming)
+   ========================================================================== */
+
+.flood-risk-colorbar {
+  flex-direction: column;
+  gap: 3px;
+  max-width: 190px;
+  color: var(--sidebar-fg);
+}
+
+.flood-legend-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.flood-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flood-legend-note {
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  opacity: 0.8;
+}
+
+/* Class colours come from metadata.json at runtime (--flood-class-N, see
+   applyClassColors); the fallbacks are publish.PALETTE (ColorBrewer YlGnBu). */
+.flood-swatch {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 2px;
+}
+
+.flood-swatch-1 {
+  background: var(--flood-class-1, #ffffcc);
+}
+
+.flood-swatch-2 {
+  background: var(--flood-class-2, #a1dab4);
+}
+
+.flood-swatch-3 {
+  background: var(--flood-class-3, #41b6c4);
+}
+
+.flood-swatch-4 {
+  background: var(--flood-class-4, #2c7fb8);
+}
+
+.flood-swatch-5 {
+  background: var(--flood-class-5, #253494);
+}
+
+.flood-view-toggle {
+  gap: 0.75rem;
+  align-items: center;
+  border: 0;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  color: var(--sidebar-fg);
+  font-size: 0.9rem;
+}
+
+.flood-view-toggle legend {
+  float: left;
+  margin-right: 0.25rem;
+}
+
+.flood-view-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.flood-choropleth {
+  stroke: #555;
+  stroke-width: 1px;
+  fill-opacity: 0.8;
+}
+
+.flood-choropleth-1 {
+  fill: var(--flood-class-1, #ffffcc);
+}
+
+.flood-choropleth-2 {
+  fill: var(--flood-class-2, #a1dab4);
+}
+
+.flood-choropleth-3 {
+  fill: var(--flood-class-3, #41b6c4);
+}
+
+.flood-choropleth-4 {
+  fill: var(--flood-class-4, #2c7fb8);
+}
+
+.flood-choropleth-5 {
+  fill: var(--flood-class-5, #253494);
+}
+
+.flood-readout {
+  background: var(--colorbar-bg);
+  color: var(--sidebar-fg);
+  padding: 4px 8px;
+  border-radius: 4px;
+  box-shadow: var(--shadow-sm);
+  font-size: 12px;
+  min-width: 180px;
+}
+
+.flood-muni-outline {
+  stroke: #e6550d;
+}
+
+.flood-muni-card {
+  min-width: 210px;
+  font-size: 12px;
+}
+
+.flood-muni-meta {
+  margin: 2px 0 6px;
+  opacity: 0.85;
+}
+
+.flood-muni-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flood-muni-label {
+  flex: 1;
+}
+
+.flood-muni-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.municipios-grid {
+  display: none;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.3rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+body.flood-risk-mode-active .municipios-grid {
+  display: grid;
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--gray-400);
+  margin: 0;
+}

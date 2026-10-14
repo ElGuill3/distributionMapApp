@@ -1,0 +1,86 @@
+/* ------------------------------------------------------------------ */
+/* Controles de comparativa en el área de gráficas                     */
+/* ------------------------------------------------------------------ */
+
+.compare-panel-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface-bg);
+  border-bottom: 1px solid var(--sky-400);
+  flex-shrink: 0;
+}
+
+.compare-selects-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.compare-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 110px;
+}
+
+.compare-select-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--btn-primary-bg);
+}
+
+.compare-select-group select {
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sky-400);
+  font-size: 0.85rem;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  min-width: 110px;
+}
+
+.compare-select-group select:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border-style: dashed;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.compare-generate-btn {
+  align-self: flex-end;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Etiqueta panel A en modo comparativa — sky */
+body.compare-mode-active #map-panel-a .panel-label {
+  background: var(--btn-primary-bg);
+  color: var(--gray-0);
+  border-bottom-color: var(--btn-primary-hover);
+}
+
+/* Etiqueta panel B en modo comparativa — slate (contraste) */
+body.compare-mode-active #map-panel-b .panel-label {
+  background: var(--gray-500);
+  color: var(--gray-0);
+  border-bottom-color: var(--gray-600);
+}
+
+/* Controles panel B — fondo slate muy suave */
+#compare-controls-b {
+  background: var(--surface-bg);
+  border-bottom-color: var(--gray-200);
+}
+
+#compare-controls-b .compare-select-group label {
+  color: var(--gray-500);
+}
+
+#compare-controls-b .compare-select-group select {
+  border-color: var(--gray-300);
+}

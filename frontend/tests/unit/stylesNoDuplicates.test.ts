@@ -4,12 +4,19 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import postcss from 'postcss';
+import { readStyleBundle } from '../../scripts/bundle-styles.mjs';
 
-// Resolved from this file so the test does not depend on the working directory;
-// STYLES_CSS_PATH lets a check run against another copy of the stylesheet.
-const CSS_PATH =
-  process.env.STYLES_CSS_PATH ??
-  fileURLToPath(new URL('../../src/styles/styles.css', import.meta.url));
+// The served stylesheet: the partials listed in src/styles/styles.css, joined.
+// STYLES_CSS_PATH lets a check run against a single bundled copy instead.
+type Locate = (line: number) => string;
+const byLine: Locate = line => `line ${line}`;
+
+const BUNDLE = process.env.STYLES_CSS_PATH
+  ? {
+      css: readFileSync(process.env.STYLES_CSS_PATH, 'utf8'),
+      locate: byLine,
+    }
+  : readStyleBundle();
 
 const TS_ROOT = fileURLToPath(new URL('../../src/ts', import.meta.url));
 const TEMPLATE_PATH = fileURLToPath(
@@ -60,7 +67,7 @@ function inKeyframes(rule: postcss.Rule): boolean {
 }
 
 /** Selector lists declared by more than one rule in the same context. */
-function repeatedSelectors(css: string): string[] {
+function repeatedSelectors(css: string, where: Locate = byLine): string[] {
   const seen = new Map<string, number>();
   const repeated: string[] = [];
   postcss.parse(css).walkRules(rule => {
@@ -68,7 +75,7 @@ function repeatedSelectors(css: string): string[] {
     const key = `${ruleContext(rule)}|${rule.selectors.join(',')}`;
     if (seen.has(key))
       repeated.push(
-        `${rule.selector} (lines ${seen.get(key)} and ${rule.source?.start?.line})`
+        `${rule.selector} (${where(seen.get(key) ?? 0)} and ${where(rule.source?.start?.line ?? 0)})`
       );
     else seen.set(key, rule.source?.start?.line ?? 0);
   });
@@ -76,7 +83,7 @@ function repeatedSelectors(css: string): string[] {
 }
 
 /** Flat rules repeated verbatim (selector + declarations) in the same context. */
-function exactDuplicateRules(css: string): string[] {
+function exactDuplicateRules(css: string, where: Locate = byLine): string[] {
   const root = postcss.parse(css);
   const seen = new Map<string, number>();
   const duplicates: string[] = [];
@@ -105,7 +112,7 @@ function exactDuplicateRules(css: string): string[] {
     const key = `${context.join('>')}|${rule.selectors.join(',')}|${decls.join(';')}`;
     if (seen.has(key))
       duplicates.push(
-        `${rule.selector} (lines ${seen.get(key)} and ${rule.source?.start?.line})`
+        `${rule.selector} (${where(seen.get(key) ?? 0)} and ${where(rule.source?.start?.line ?? 0)})`
       );
     else seen.set(key, rule.source?.start?.line ?? 0);
   });
@@ -135,10 +142,10 @@ const CRITICAL_RULES: Record<string, Record<string, string>> = {
 };
 
 describe('styles.css', () => {
-  const css = readFileSync(CSS_PATH, 'utf8');
+  const css = BUNDLE.css;
 
   it('has no rule repeated verbatim in the same context', () => {
-    expect(exactDuplicateRules(css)).toEqual([]);
+    expect(exactDuplicateRules(css, BUNDLE.locate)).toEqual([]);
   });
 
   it.each(Object.entries(CRITICAL_RULES))('still declares %s', (selector, expected) => {
@@ -146,7 +153,7 @@ describe('styles.css', () => {
   });
 
   it('declares each selector once per context', () => {
-    expect(repeatedSelectors(css)).toEqual([]);
+    expect(repeatedSelectors(css, BUNDLE.locate)).toEqual([]);
   });
 
   // Reads string-literal arguments of classList.add/remove/toggle only; names

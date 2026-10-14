@@ -17,8 +17,8 @@ uv run distribution-map
 `uv sync` installs the dependencies and registers the project command. The
 public command is app-only: it compiles the TypeScript frontend through the
 clean deterministic driver (`frontend/scripts/build-typescript.mjs`, also exposed as
-`npm run build:ts`), which compiles TypeScript and copies the authored
-`frontend/src/styles/styles.css` to its unchanged public `/static/styles.css` URL, validates the application dependency boundary, and serves
+`npm run build:ts`), which compiles TypeScript and joins the CSS partials listed in
+`frontend/src/styles/styles.css`, in order, into one file served at `/static/styles.css`, validates the application dependency boundary, and serves
 Flask in the foreground at `http://127.0.0.1:5000`. It never requires the
 sibling model repository and never starts the Forecast API or the automatic
 worker.
@@ -827,11 +827,13 @@ distributionMapApp/
     ├── static/                      # Files served under /static/
     │   ├── vendor/ and assets/      # Third-party libraries and versioned images
     │   ├── main.js                  # Compiled JavaScript from TypeScript (generated)
-    │   ├── styles.css               # Published copy of src/styles/styles.css (generated)
+    │   ├── styles.css               # src/styles/ partials joined in order (generated)
     │   └── gifs/                    # Generated GIFs (temp cache, automatically cleaned)
     ├── scripts/build-typescript.mjs # Clean TypeScript build (`npm run build:ts`)
+    ├── scripts/bundle-styles.mjs    # Joins the CSS partials in styles.css order
     ├── src/
-    │   ├── styles/styles.css        # Authored styles published to static/ by build:ts
+    │   ├── styles/styles.css        # Index: lists the partials in cascade order
+    │   ├── styles/partials/         # Styles by UI area (tokens, base, topbar, modals…)
     │   └── ts/                      # TypeScript compiled to static/
     │       ├── main.ts              # Composition root and initialization
     │       ├── apiClient.ts         # Typed HTTP client

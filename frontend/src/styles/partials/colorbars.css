@@ -1,0 +1,242 @@
+/* ==========================================================================
+   Colorbars (with theming)
+   ========================================================================== */
+
+.ndvi-colorbar,
+.temp-colorbar,
+.soil-colorbar,
+.precip-colorbar,
+.flood-risk-colorbar {
+  display: flex;
+  align-items: stretch;
+  background: var(--colorbar-bg);
+  padding: 6px;
+  border-radius: 4px;
+  box-shadow: var(--shadow-sm);
+  font-size: 12px;
+  margin-right: 8px;
+  transition:
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease;
+}
+
+.ndvi-colorbar-scale {
+  width: 14px;
+  height: 140px;
+  border: 1px solid var(--gray-300);
+  background: linear-gradient(
+    to top,
+    #a50026 0%,
+    #d73027 25%,
+    #ffffbf 50%,
+    #a6d96a 75%,
+    #006837 100%
+  );
+  margin-right: 6px;
+}
+
+.ndvi-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sidebar-fg);
+}
+
+.temp-colorbar-scale {
+  width: 14px;
+  height: 160px;
+  border: 1px solid var(--gray-300);
+  background: linear-gradient(
+    to top,
+    #000080 0%,
+    #0000d9 10%,
+    #4000ff 20%,
+    #0080ff 30%,
+    #00ffff 40%,
+    #00ff80 50%,
+    #80ff00 60%,
+    #daff00 70%,
+    #ffff00 80%,
+    #ffb000 90%,
+    #ff0000 100%
+  );
+  margin-right: 6px;
+}
+
+.temp-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sidebar-fg);
+}
+
+.soil-colorbar-scale {
+  width: 14px;
+  height: 140px;
+  border: 1px solid var(--gray-300);
+  background: linear-gradient(
+    to top,
+    #552200 0%,
+    #8c510a 12.5%,
+    #bf812d 25%,
+    #dfc27d 37.5%,
+    #f6e8c3 50%,
+    #c7eae5 62.5%,
+    #80cdc1 75%,
+    #35978f 87.5%,
+    #01665e 100%
+  );
+  margin-right: 6px;
+}
+
+.soil-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sidebar-fg);
+}
+
+.precip-colorbar-scale {
+  width: 14px;
+  height: 160px;
+  border: 1px solid var(--gray-300);
+  background: linear-gradient(
+    to top,
+    #ffffff 0%,
+    #b3d9ff 20%,
+    #4da6ff 40%,
+    #0066ff 55%,
+    #0044aa 70%,
+    #880000 85%,
+    #ff0000 100%
+  );
+  margin-right: 6px;
+}
+
+.precip-colorbar-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sidebar-fg);
+}
+
+.municipios-grid label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--sidebar-fg);
+}
+
+/* Styling for colorbar labels and tooltip */
+.colorbar-label-item {
+  position: relative;
+  cursor: help;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm, 3px);
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
+  white-space: nowrap;
+}
+
+.colorbar-label-item:hover {
+  background-color: var(--gray-100);
+  color: var(--btn-primary-bg);
+}
+
+/* Tooltip container */
+.colorbar-label-item[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) scale(0.92);
+  background-color: rgba(15, 23, 42, 0.95);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: var(--radius-md, 6px);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.3),
+    0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* Tooltip arrow */
+.colorbar-label-item[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 0 6px 6px;
+  border-style: solid;
+  border-color: transparent transparent transparent rgba(15, 23, 42, 0.95);
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.colorbar-label-item[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.colorbar-label-item[data-tooltip]:hover::before {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Toggle de la barra de colores                                        */
+/* ------------------------------------------------------------------ */
+
+.colorbar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.colorbar-toggle-btn {
+  width: var(--colorbar-toggle-size);
+  height: var(--colorbar-toggle-size);
+  border-radius: var(--colorbar-toggle-radius);
+  border: 1px solid var(--colorbar-toggle-border);
+  background: var(--colorbar-toggle-bg);
+  color: var(--colorbar-toggle-fg);
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.colorbar-toggle-btn:hover {
+  background: var(--surface-bg);
+  color: var(--btn-primary-bg);
+}
+
+/* Oculta el contenido de la colorbar pero mantiene visible el botón */
+.colorbar-content-hidden {
+  display: none !important;
+}

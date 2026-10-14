@@ -1,8 +1,10 @@
+// @vitest-environment node
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { readStyleBundle } from '../../scripts/bundle-styles.mjs';
 
 const html = readFileSync('frontend/templates/index.html', 'utf8');
-const css = readFileSync('frontend/src/styles/styles.css', 'utf8');
+const css = readStyleBundle().css;
 
 describe('index.html inline styles', () => {
   it('keeps only the icon-sun inline style that prevents a flash before CSS loads', () => {
