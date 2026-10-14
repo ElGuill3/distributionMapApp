@@ -8,7 +8,6 @@ import {
   municipalityCardHtml,
   TilePixelCache,
   readoutHtml,
-  municipalityIndex,
   applyClassColors,
   type FloodClass,
   type MunicipalityFeature,
@@ -123,7 +122,8 @@ describe('municipalityCardHtml', () => {
       17
     );
     expect(html).toContain('Centro');
-    expect(html).toContain('3 de 17');
+    expect(html).toContain('Puesto 3 de 17 municipios por susceptibilidad');
+    expect(html).not.toContain('Lugar');
     expect(html).toContain('60%');
     for (const cls of CLASSES) expect(html).toContain(cls.label);
   });
@@ -189,16 +189,6 @@ describe('readoutHtml', () => {
 
   it('escapes the municipality name', () => {
     expect(readoutHtml({ status: 'ok', cls: null, muni: '<b>x' })).not.toContain('<b>');
-  });
-});
-
-describe('municipalityIndex', () => {
-  it('maps sidebar keys to features', () => {
-    const f = feature('Jalpa De Méndez', {
-      type: 'Polygon',
-      coordinates: [square(0, 0, 1)],
-    });
-    expect(municipalityIndex([f]).get('jalpa_de_mendez')).toBe(f);
   });
 });
 

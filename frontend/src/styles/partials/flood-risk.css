@@ -129,8 +129,24 @@ body.flood-risk-mode-active .flood-view-toggle {
   min-width: 180px;
 }
 
-.flood-muni-outline {
+/* Municipality polygons drawn over either view: invisible until hovered or
+   selected. Fixed colours: the basemap is light in both themes. */
+.flood-muni-hit {
+  stroke: transparent;
+  fill: transparent;
+  cursor: pointer;
+}
+
+.flood-muni-hit.is-hover {
+  stroke: #1f2937;
+  stroke-width: 2;
+  fill: #ffffff;
+  fill-opacity: 0.18;
+}
+
+.flood-muni-hit.is-selected {
   stroke: #e6550d;
+  stroke-width: 3;
 }
 
 .flood-muni-card {
@@ -166,6 +182,39 @@ body.flood-risk-mode-active .flood-view-toggle {
 
 body.flood-risk-mode-active .municipios-grid {
   display: grid;
+}
+
+/* One button per municipality; the selected one is pressed (single choice). */
+.flood-muni-btn {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  background: var(--gray-0);
+  color: var(--gray-600);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease;
+}
+
+.flood-muni-btn:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+.flood-muni-btn[aria-pressed='true'] {
+  background: var(--teal-600);
+  border-color: var(--teal-600);
+  /* White in both themes: --gray-0 turns near-black in dark mode (3.2:1). */
+  color: #ffffff;
+}
+
+.flood-muni-btn:focus-visible {
+  outline: 2px solid var(--teal-400);
+  outline-offset: 2px;
 }
 
 .hint {
