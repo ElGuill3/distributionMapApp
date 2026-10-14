@@ -61,3 +61,24 @@ def test_readme_validation_claims_match_published_scores():
         text = (ROOT / readme).read_text(encoding="utf-8")
         for name, value in claims.items():
             assert f"{value:.3f}".replace(".", decimal) in text, (readme, name)
+
+
+def test_capture_table_matches_published_validation():
+    lines = REPORT.read_text(encoding="utf-8").splitlines()
+    scores = _metadata()["validation"]
+    rows = {
+        "ensemble": "| **Ensamble** | 40 % |",
+        "jrc_rp100": "| JRC 100 años | 40 % |",
+        "low_elevation": "| Elevación | 40 % |",
+        "ipcet_pnud_2022": "| IPCET-PNUD 2022 | 57 % |",
+    }
+    for source, prefix in rows.items():
+        line = next(line for line in lines if line.startswith(prefix))
+        cells = [c.strip(" *\\") for c in line.split("|")[3:-1]]
+        expected = [
+            f"{round(scores[source][event]['top40_capture'] * 100)} %"
+            for event in ("cenapred_2011", "s1_2023", "s1_2024", "s1_2025")
+        ]
+        assert cells == expected, source
+        area = round(scores[source]["s1_2023"]["top40_area_share"] * 100)
+        assert prefix.endswith(f"| {area} % |"), source
