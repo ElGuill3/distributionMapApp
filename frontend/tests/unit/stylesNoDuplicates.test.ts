@@ -16,13 +16,11 @@ const TEMPLATE_PATH = fileURLToPath(
   new URL('../../templates/index.html', import.meta.url)
 );
 
-// Class names built from a prefix at runtime, e.g. `flood-swatch-${value}`.
-const DYNAMIC_CLASS_PREFIXES = [
-  'flood-swatch-',
-  'flood-choropleth-',
-  'forecast-',
-  'tflow-step--',
-];
+// Class names built at runtime, so no source spells them out: numbered flood
+// classes (`flood-swatch-${value}`) and the forecast freshness states
+// (`forecast-${freshness}`). Keep these exact so other classes stay checked.
+const DYNAMIC_CLASS_PREFIXES = ['flood-swatch-', 'flood-choropleth-'];
+const DYNAMIC_CLASSES = ['forecast-fresh', 'forecast-stale'];
 
 function tsSources(dir = TS_ROOT): string[] {
   return readdirSync(dir).flatMap(name => {
@@ -151,6 +149,8 @@ describe('styles.css', () => {
     expect(repeatedSelectors(css)).toEqual([]);
   });
 
+  // Reads string-literal arguments of classList.add/remove/toggle only; names
+  // built from template literals or set through className are not checked.
   it('styles every class that TypeScript toggles', () => {
     const styled = selectorClasses(css);
     const toggled = new Set<string>();
@@ -171,6 +171,7 @@ describe('styles.css', () => {
       name =>
         !name.startsWith('leaflet-') &&
         !DYNAMIC_CLASS_PREFIXES.some(prefix => name.startsWith(prefix)) &&
+        !DYNAMIC_CLASSES.includes(name) &&
         !new RegExp(`[\\s'"\`.]${name}(?![\\w-])`).test(markup)
     );
     expect(unused.sort()).toEqual([]);
