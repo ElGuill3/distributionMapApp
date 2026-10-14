@@ -1,3 +1,4 @@
+import glob
 import os
 
 files = [
@@ -8,7 +9,8 @@ files = [
     'frontend/src/ts/ui/chart.ts',
     'frontend/src/ts/modes/compareMode.ts',
     'frontend/src/ts/main.ts',
-    'frontend/src/styles/styles.css'
+    'frontend/src/styles/styles.css',
+    *sorted(glob.glob('frontend/src/styles/partials/*.css')),
 ]
 
 for f in files:

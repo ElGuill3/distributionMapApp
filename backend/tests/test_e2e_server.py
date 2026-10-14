@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PROBE = """
-import importlib.util, json, re, sys
+import importlib.util, json, re, subprocess, sys
 from pathlib import Path
 server_path = Path(sys.argv[1])
 spec = importlib.util.spec_from_file_location('e2e_server', server_path)
@@ -33,8 +33,13 @@ with app.test_client() as client:
             'error': 'Synthetic E2E server: mock API requests in the browser.'}
     css = client.get('/static/styles.css?v=1.0.2')
     assert css.status_code == 200 and css.mimetype == 'text/css'
-    css_source = server_path.parents[3] / 'frontend/src/styles/styles.css'
-    assert css.data == css_source.read_bytes()
+    # The served file is the build output: the listed partials joined in order.
+    bundle = subprocess.run(
+        ['node', '--input-type=module', '-e',
+         "import { readStyleBundle } from './frontend/scripts/bundle-styles.mjs';"
+         " process.stdout.write(readStyleBundle().css);"],
+        cwd=server_path.parents[3], capture_output=True, check=True).stdout
+    assert css.data == bundle
 assert 'ee' not in sys.modules
 assert 'app' not in sys.modules
 assert 'backend.app' not in sys.modules

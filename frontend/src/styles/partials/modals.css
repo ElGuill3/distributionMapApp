@@ -1,0 +1,214 @@
+/* ==========================================================================
+   Modal CSS Classes (extracted from progress.ts)
+   ========================================================================== */
+
+/* Loading Indicator Full Screen Backdrop */
+#loading-indicator {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  backdrop-filter: blur(2px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal Overlay Base */
+.modal-overlay {
+  background: var(--surface-bg);
+  color: var(--surface-fg);
+  padding: 30px;
+  border-radius: 12px;
+  min-width: 400px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--sidebar-border);
+}
+
+.modal-overlay.modal-large {
+  max-width: 650px;
+  width: 90%;
+}
+
+/* Progress Modal */
+.modal-progress {
+  text-align: center;
+}
+
+.modal-progress-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+  font-weight: bold;
+  color: var(--surface-fg);
+}
+
+.modal-progress-message {
+  font-size: 14px;
+  margin-bottom: 15px;
+  color: var(--gray-400);
+}
+
+.modal-progress-bar-bg {
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 24px;
+  margin-bottom: 10px;
+}
+
+.modal-progress-bar-fill {
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.modal-progress-bar-fill.error {
+  background: linear-gradient(90deg, #f44336, #e53935);
+}
+
+.modal-progress-percent {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.modal-progress-percent.error {
+  color: #f44336;
+}
+
+/* Warning Modal */
+.modal-warning {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  padding: 16px 20px;
+  border-radius: 8px;
+  z-index: 10002;
+  min-width: 300px;
+  max-width: 420px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--warning-border);
+}
+
+.modal-warning-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.modal-warning-text {
+  flex: 1;
+}
+
+.modal-warning-title {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.modal-warning-message {
+  font-size: 13px;
+  color: var(--warning-fg);
+}
+
+.modal-warning-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--warning-fg);
+  padding: 0;
+  line-height: 1;
+}
+
+/* Error Modal */
+.modal-error-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+}
+
+.modal-error {
+  background: var(--modal-surface);
+  color: var(--modal-fg);
+  padding: 30px;
+  border-radius: 12px;
+  min-width: 420px;
+  max-width: 560px;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-error-content {
+  text-align: center;
+}
+
+.modal-error-title {
+  font-size: 22px;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #f44336;
+}
+
+.modal-error-message {
+  font-size: 14px;
+  margin-bottom: 20px;
+  color: var(--gray-300);
+  line-height: 1.5;
+}
+
+.modal-error-bar-bg {
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 8px;
+  margin-bottom: 20px;
+}
+
+.modal-error-bar-fill {
+  background: linear-gradient(90deg, #f44336, #e53935);
+  height: 100%;
+  width: 100%;
+}
+
+.modal-error-btn-primary {
+  margin-top: 16px;
+  padding: 8px 20px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-error-btn-secondary {
+  margin-top: 12px;
+  padding: 8px 20px;
+  background: transparent;
+  color: var(--gray-300);
+  border: 1px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-error-btn-primary:hover {
+  background: #d32f2f;
+}
+
+.modal-error-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

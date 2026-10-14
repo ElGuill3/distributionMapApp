@@ -1,0 +1,60 @@
+/* Contenedor principal del visor (mapas + controles + gráficas) */
+.main-viewer-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}
+
+/* Contenedor de mapas + gráficas */
+#map-and-chart {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Panel individual (A o B) */
+.map-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+/* Etiqueta de panel (visible solo en compare mode) */
+.panel-label {
+  display: none;
+  background: var(--btn-primary-bg);
+  color: var(--gray-0);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--btn-primary-hover);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* Panel B oculto por defecto */
+#map-panel-b {
+  display: none;
+  border-left: 2px solid var(--btn-primary-hover);
+}
+
+/* Modo comparativa: mostrar panel B (con borde separador) y etiquetas */
+body.compare-mode-active #map-panel-b {
+  display: flex;
+  border-left-color: var(--gray-500);
+}
+
+body.compare-mode-active .panel-label {
+  display: block;
+}

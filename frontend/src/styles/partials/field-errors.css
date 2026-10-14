@@ -1,0 +1,18 @@
+/* ---------------------------------------------------------------------------
+   Field-level inline errors (Phase 1 — frontend-ux-error-handling)
+   --------------------------------------------------------------------------- */
+
+.field-error {
+  display: block;
+  color: var(--red-500);
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Keyboard reachability: outline on the error span when it receives focus
+   (e.g., user tabs to it via its tabindex="-1") */
+.field-error:focus {
+  outline: 2px solid var(--red-500);
+  outline-offset: 2px;
+}

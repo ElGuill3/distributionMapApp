@@ -1,0 +1,52 @@
+/* ------------------------------------------------------------------ */
+/* Toggles de modo y avisos (en la sidebar)                          */
+/* ------------------------------------------------------------------ */
+
+/* Flood risk toggle activo — acento teal */
+.flood-risk-toggle-btn[aria-pressed='true'] {
+  background: var(--teal-600);
+  border-color: var(--teal-600);
+  color: var(--gray-0);
+}
+
+.flood-risk-toggle-btn[aria-pressed='true'] svg {
+  color: var(--teal-400);
+}
+
+.compare-mode-hint,
+.flood-risk-mode-hint {
+  font-size: var(--text-sm);
+  color: var(--btn-primary-bg);
+  margin: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ajuste del control Leaflet para alineación con el botón de sidebar */
+.leaflet-left {
+  margin-left: 0;
+}
+
+.leaflet-left .leaflet-control {
+  margin-left: 12px;
+}
+
+.leaflet-left .leaflet-control-zoom {
+  margin-top: 52px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: min(280px, 70vw);
+  }
+}

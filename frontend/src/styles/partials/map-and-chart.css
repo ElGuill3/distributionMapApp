@@ -1,0 +1,160 @@
+/* Custom Leaflet station icon styles */
+.custom-station-icon {
+  background: none !important;
+  border: none !important;
+}
+
+.station-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  border: 2px solid white;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  color: white;
+}
+
+.station-icon:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+.station-icon-hidro {
+  background-color: #7c3aed; /* Púrpura/violeta */
+}
+
+.station-icon-clima {
+  background-color: #0284c7; /* Celeste/azul claro */
+}
+
+.station-icon svg {
+  display: block;
+}
+
+/* PR3: Hide old #player-controls when new topbar is active */
+body.animation-loaded #player-controls {
+  display: none !important;
+}
+
+/* Player controls: barra fija al fondo del área de mapas */
+#player-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  background: var(--colorbar-bg);
+  backdrop-filter: blur(4px);
+  border-top: 1px solid var(--sidebar-border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  color: var(--sidebar-fg);
+}
+
+.player-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--btn-primary-bg);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.player-btn:hover {
+  background: var(--gray-100);
+}
+
+.player-step-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.player-slider {
+  flex: 1;
+  accent-color: var(--btn-primary-bg);
+  height: 4px;
+  cursor: pointer;
+}
+
+.player-frame-label {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--gray-400);
+  min-width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-speed-select {
+  flex-shrink: 0;
+  padding: 0.15rem 0.3rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-bg);
+  color: var(--sidebar-fg);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mapa arriba dentro del panel */
+#map,
+#map-b {
+  flex: 7;
+  width: 100%;
+  position: relative;
+}
+
+/* Contenedor de la gráfica: segunda fila del panel */
+#ndvi-chart-container,
+#chart-b-container {
+  flex: 3;
+  width: 100%;
+  min-width: 0;
+  min-height: 220px;
+  border-top: 1px solid var(--sidebar-border);
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease;
+}
+
+/* En modo comparativa siempre mostramos el chart-container A (para los controles) */
+body.compare-mode-active #ndvi-chart-container {
+  display: flex !important;
+}
+
+/* Plotly usa todo el ancho del div */
+#ndvi-chart,
+#chart-b {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+html.theme-transitioning #ndvi-chart,
+html.theme-transitioning #chart-b {
+  opacity: 0.97;
+  transform: translateY(0);
+}

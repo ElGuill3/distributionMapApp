@@ -1,0 +1,158 @@
+/* ------------------------------------------------------------------ */
+/* Modo Inundaciones                                                  */
+/* ------------------------------------------------------------------ */
+
+body.inundaciones-mode-active #map-overlay-topbar-a {
+  display: none !important;
+}
+
+body.inundaciones-mode-active #tflow-config .tflow-generate-btn {
+  display: none;
+}
+
+.inundaciones-panel {
+  display: none;
+}
+
+body.inundaciones-mode-active .inundaciones-panel {
+  display: block;
+}
+
+.mode-banner--inundaciones {
+  background: var(--mode-banner-inundaciones-bg);
+  color: var(--mode-banner-inundaciones-fg);
+}
+
+/* Floating Legend Card for Inundaciones mode */
+.inund-legend-card {
+  background: var(--colorbar-bg);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  font-family: inherit;
+  color: var(--text-primary);
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inund-legend-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--space-1);
+}
+
+.inund-legend-item {
+  font-size: var(--text-sm);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.inund-legend-item span:first-child {
+  color: var(--gray-400);
+}
+
+.inund-legend-item span:last-child {
+  font-weight: 500;
+}
+
+.inund-legend-toggles {
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inund-legend-toggles label {
+  font-size: var(--text-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+/* Flood detection panel */
+#inundaciones-panel {
+  margin-top: var(--space-3);
+}
+
+#inundaciones-panel .inund-field {
+  margin-bottom: var(--space-3);
+}
+
+#inundaciones-panel .inund-control {
+  width: 100%;
+  padding: var(--space-2);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+}
+
+#inundaciones-panel .inund-control.inund-control--compact,
+#inundaciones-panel .tflow-label.inund-label--compact {
+  font-size: 0.82rem;
+}
+
+#inund-satellite-hint {
+  margin-top: var(--space-1);
+  font-size: 0.78rem;
+  color: var(--gray-400);
+}
+
+#inundaciones-panel .inund-date-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+#inundaciones-panel .inund-date-field {
+  flex: 1;
+}
+
+#inund-btn-process {
+  width: 100%;
+}
+
+/* Busy indicator on the map while inundacionesMode computes the flood layer */
+#map.map-loading {
+  cursor: progress;
+}
+
+#map.map-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 750; /* above Leaflet panes and popups, below map controls */
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 4px solid var(--gray-200);
+  border-top-color: var(--sky-500);
+  border-radius: 50%;
+  /* A filled disc keeps the ring readable over any basemap. */
+  background: var(--surface-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  animation: map-loading-spin 0.8s linear infinite;
+}
+
+@keyframes map-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #map.map-loading::after {
+    animation-duration: 2.4s;
+  }
+}

@@ -1,0 +1,71 @@
+/* Utility class */
+.hidden {
+  display: none !important;
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  color: var(--surface-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+.theme-toggle-btn:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-300);
+}
+.theme-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Visibility toggles based on theme state */
+:root:not([data-theme='dark']) .theme-toggle-btn .icon-sun {
+  display: none !important;
+}
+:root:not([data-theme='dark']) .theme-toggle-btn .icon-moon {
+  display: block !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .theme-toggle-btn .icon-sun {
+    display: block !important;
+  }
+  :root:not([data-theme='light']) .theme-toggle-btn .icon-moon {
+    display: none !important;
+  }
+}
+
+:root[data-theme='dark'] .theme-toggle-btn .icon-sun {
+  display: block !important;
+}
+:root[data-theme='dark'] .theme-toggle-btn .icon-moon {
+  display: none !important;
+}
+
+:root[data-theme='light'] .theme-toggle-btn .icon-sun {
+  display: none !important;
+}
+:root[data-theme='light'] .theme-toggle-btn .icon-moon {
+  display: block !important;
+}
+
+/* Sidebar title and theme toggle size (formerly inline styles in index.html) */
+.sidebar-header-bottom-row .sidebar-title {
+  font-weight: 600;
+}
+
+#themeToggle {
+  width: 36px;
+  height: 36px;
+}

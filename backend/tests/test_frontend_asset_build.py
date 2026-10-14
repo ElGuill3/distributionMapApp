@@ -27,14 +27,15 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
     for folder in (
         "frontend/scripts",
         "frontend/src/ts",
-        "frontend/src/styles",
+        "frontend/src/styles/partials",
         "frontend/static/vendor",
         "frontend/static/gifs",
     ):
         (tmp_path / folder).mkdir(parents=True, exist_ok=True)
-    (tmp_path / "frontend/scripts/build-typescript.mjs").write_bytes(
-        (ROOT / "frontend/scripts/build-typescript.mjs").read_bytes()
-    )
+    for script in ("build-typescript.mjs", "bundle-styles.mjs"):
+        (tmp_path / "frontend/scripts" / script).write_bytes(
+            (ROOT / "frontend/scripts" / script).read_bytes()
+        )
     (tmp_path / "node_modules").symlink_to(
         ROOT / "node_modules", target_is_directory=True
     )
@@ -54,8 +55,19 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
         )
     )
     (tmp_path / "frontend/src/ts/main.ts").write_text("export const proof = 42;\n")
-    css = b"/* synthetic authored stylesheet */\nbody { color: teal; }\n"
-    (tmp_path / "frontend/src/styles/styles.css").write_bytes(css)
+    # The entry lists partials out of alphabetical order: the build must keep it.
+    (tmp_path / "frontend/src/styles/styles.css").write_text(
+        "/* synthetic entry */\n"
+        "@import './partials/second.css';\n"
+        "@import './partials/first.css';\n"
+    )
+    (tmp_path / "frontend/src/styles/partials/second.css").write_text(
+        "body { color: teal; }\n"
+    )
+    (tmp_path / "frontend/src/styles/partials/first.css").write_text(
+        "p { margin: 0; }\n"
+    )
+    css = b"body { color: teal; }\n\np { margin: 0; }\n"
     (tmp_path / "frontend/static/styles.css").write_bytes(b"stale stylesheet")
     preserved = {
         "frontend/static/vendor/icons.mjs": b"export const icon = 1;\n",
@@ -75,7 +87,9 @@ def test_build_publishes_authored_styles_and_preserves_runtime_assets(tmp_path):
     assert result.stdout == ""
     assert result.stderr == ""
     assert (tmp_path / "frontend/static/styles.css").read_bytes() == css
-    assert "export const proof = 42;" in (tmp_path / "frontend/static/main.js").read_text()
+    assert (
+        "export const proof = 42;" in (tmp_path / "frontend/static/main.js").read_text()
+    )
     assert not (tmp_path / "frontend/static/obsolete.js").exists()
     for name, content in preserved.items():
         assert (tmp_path / name).read_bytes() == content

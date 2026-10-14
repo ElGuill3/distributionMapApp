@@ -1,0 +1,50 @@
+/* ------------------------------------------------------------------ */
+/* Export toolbar                                                       */
+/* ------------------------------------------------------------------ */
+
+/* Hidden by default; .can-export reveals it once there is data to export. */
+#export-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.8rem;
+  background: var(--export-toolbar-bg);
+  backdrop-filter: var(--export-toolbar-blur);
+  box-shadow: var(--export-toolbar-shadow);
+  flex-shrink: 0;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    max-height 0.25s ease,
+    padding 0.25s ease,
+    margin 0.25s ease;
+}
+
+.export-btn {
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--btn-primary-bg);
+  background: var(--btn-primary-bg);
+  color: var(--gray-0);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: var(--btn-primary-hover);
+}
+
+.export-btn:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  border: 1px dashed var(--btn-disabled-border);
+  cursor: not-allowed;
+  opacity: 0.8;
+}

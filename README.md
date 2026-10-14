@@ -17,8 +17,8 @@ uv run distribution-map
 `uv sync` instala las dependencias y registra el comando del proyecto. El
 comando público es solo-aplicación: compila el frontend TypeScript con el
 driver limpio determinista (`frontend/scripts/build-typescript.mjs`, expuesto también
-como `npm run build:ts`), que compila TypeScript y copia el CSS fuente
-`frontend/src/styles/styles.css` a la misma URL pública `/static/styles.css`, valida el límite de dependencias de la aplicación y
+como `npm run build:ts`), que compila TypeScript y une en orden los parciales CSS listados en
+`frontend/src/styles/styles.css` en un único archivo servido en `/static/styles.css`, valida el límite de dependencias de la aplicación y
 sirve Flask en primer plano en `http://127.0.0.1:5000`. Nunca requiere el
 repositorio hermano del modelo y nunca inicia la API de pronóstico ni el
 worker automático.
@@ -833,11 +833,13 @@ distributionMapApp/
     ├── static/                      # Archivos servidos en /static/
     │   ├── vendor/ y assets/        # Librerías de terceros e imágenes versionadas
     │   ├── main.js                  # JavaScript compilado desde TypeScript (generado)
-    │   ├── styles.css               # Copia publicada de src/styles/styles.css (generado)
+    │   ├── styles.css               # Parciales de src/styles/ unidos en orden (generado)
     │   └── gifs/                    # GIFs generados (caché temporal, se limpian automáticamente)
     ├── scripts/build-typescript.mjs # Build limpio de TypeScript (`npm run build:ts`)
+    ├── scripts/bundle-styles.mjs    # Une los parciales CSS en el orden de styles.css
     ├── src/
-    │   ├── styles/styles.css        # Estilos fuente publicados en static/ por build:ts
+    │   ├── styles/styles.css        # Índice: lista los parciales en orden de cascada
+    │   ├── styles/partials/         # Estilos por zona (tokens, base, topbar, modales…)
     │   └── ts/                      # TypeScript compilado en static/
     │       ├── main.ts              # Composition root e inicialización
     │       ├── apiClient.ts         # Cliente HTTP tipado
