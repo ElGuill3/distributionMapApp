@@ -60,18 +60,6 @@ describe('topbar layer toggles — PR1', () => {
       const ariaPressed = String(isActive);
       expect(ariaPressed).toBe('false');
     });
-
-    it('should apply topbar-layer-btn--active class only when active', () => {
-      const isActive = true;
-      const classList = new Set<string>();
-      if (isActive) classList.add('topbar-layer-btn--active');
-      expect(classList.has('topbar-layer-btn--active')).toBe(true);
-
-      const isInactive = false;
-      const classList2 = new Set<string>();
-      if (isInactive) classList2.add('topbar-layer-btn--active');
-      expect(classList2.has('topbar-layer-btn--active')).toBe(false);
-    });
   });
 
   describe('animation-loaded body class', () => {

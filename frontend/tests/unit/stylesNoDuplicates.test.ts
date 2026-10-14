@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import postcss from 'postcss';
 
@@ -9,6 +10,70 @@ import postcss from 'postcss';
 const CSS_PATH =
   process.env.STYLES_CSS_PATH ??
   fileURLToPath(new URL('../../src/styles/styles.css', import.meta.url));
+
+const TS_ROOT = fileURLToPath(new URL('../../src/ts', import.meta.url));
+const TEMPLATE_PATH = fileURLToPath(
+  new URL('../../templates/index.html', import.meta.url)
+);
+
+// Class names built at runtime, so no source spells them out: numbered flood
+// classes (`flood-swatch-${value}`) and the forecast freshness states
+// (`forecast-${freshness}`). Keep these exact so other classes stay checked.
+const DYNAMIC_CLASS_PREFIXES = ['flood-swatch-', 'flood-choropleth-'];
+const DYNAMIC_CLASSES = ['forecast-fresh', 'forecast-stale'];
+
+function tsSources(dir = TS_ROOT): string[] {
+  return readdirSync(dir).flatMap(name => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return tsSources(path);
+    return path.endsWith('.ts') ? [readFileSync(path, 'utf8')] : [];
+  });
+}
+
+/** Class names used in rule selectors (comments and declarations ignored). */
+function selectorClasses(css: string): Set<string> {
+  const classes = new Set<string>();
+  postcss.parse(css).walkRules(rule => {
+    for (const m of rule.selector.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)) classes.add(m[1]);
+  });
+  return classes;
+}
+
+/** Context (enclosing at-rules and rules) of a rule, outermost first. */
+function ruleContext(rule: postcss.Rule): string {
+  const context: string[] = [];
+  for (let p = rule.parent; p && p.type !== 'root'; p = p.parent as postcss.Container) {
+    context.unshift(
+      p.type === 'atrule'
+        ? `@${(p as postcss.AtRule).name} ${(p as postcss.AtRule).params}`
+        : (p as postcss.Rule).selector
+    );
+  }
+  return context.join('>');
+}
+
+function inKeyframes(rule: postcss.Rule): boolean {
+  return (
+    rule.parent?.type === 'atrule' &&
+    /keyframes$/.test((rule.parent as postcss.AtRule).name)
+  );
+}
+
+/** Selector lists declared by more than one rule in the same context. */
+function repeatedSelectors(css: string): string[] {
+  const seen = new Map<string, number>();
+  const repeated: string[] = [];
+  postcss.parse(css).walkRules(rule => {
+    if (inKeyframes(rule)) return;
+    const key = `${ruleContext(rule)}|${rule.selectors.join(',')}`;
+    if (seen.has(key))
+      repeated.push(
+        `${rule.selector} (lines ${seen.get(key)} and ${rule.source?.start?.line})`
+      );
+    else seen.set(key, rule.source?.start?.line ?? 0);
+  });
+  return repeated;
+}
 
 /** Flat rules repeated verbatim (selector + declarations) in the same context. */
 function exactDuplicateRules(css: string): string[] {
@@ -78,6 +143,38 @@ describe('styles.css', () => {
 
   it.each(Object.entries(CRITICAL_RULES))('still declares %s', (selector, expected) => {
     expect(declarationsFor(css, selector)).toMatchObject(expected);
+  });
+
+  it('declares each selector once per context', () => {
+    expect(repeatedSelectors(css)).toEqual([]);
+  });
+
+  // Reads string-literal arguments of classList.add/remove/toggle only; names
+  // built from template literals or set through className are not checked.
+  it('styles every class that TypeScript toggles', () => {
+    const styled = selectorClasses(css);
+    const toggled = new Set<string>();
+    for (const src of tsSources()) {
+      for (const call of src.matchAll(/classList\.(?:add|remove|toggle)\(([^)]*)\)/g)) {
+        for (const name of call[1].matchAll(
+          /^\s*['"]([\w-]+)['"]|,\s*['"]([\w-]+)['"]/g
+        ))
+          toggled.add(name[1] ?? name[2]);
+      }
+    }
+    expect([...toggled].filter(name => !styled.has(name)).sort()).toEqual([]);
+  });
+
+  it('only styles classes the app can render', () => {
+    const markup = [...tsSources(), readFileSync(TEMPLATE_PATH, 'utf8')].join('\n');
+    const unused = [...selectorClasses(css)].filter(
+      name =>
+        !name.startsWith('leaflet-') &&
+        !DYNAMIC_CLASS_PREFIXES.some(prefix => name.startsWith(prefix)) &&
+        !DYNAMIC_CLASSES.includes(name) &&
+        !new RegExp(`[\\s'"\`.]${name}(?![\\w-])`).test(markup)
+    );
+    expect(unused.sort()).toEqual([]);
   });
 
   it('tells rules under different at-rules with the same params apart', () => {

@@ -105,7 +105,6 @@ describe('ModoSection', () => {
       // Assert: compare mode should be active
       expect(modoSection.activeModo).toBe('compare');
       expect(compareToggle.setAttribute).toHaveBeenCalledWith('aria-pressed', 'true');
-      expect(compareToggle.classList.classes.has('modo-toggle--active')).toBe(true);
     });
 
     it('click active compare toggle deactivates all', () => {
@@ -146,7 +145,6 @@ describe('ModoSection', () => {
       // Assert: flood mode should be active
       expect(modoSection.activeModo).toBe('flood');
       expect(floodToggle.setAttribute).toHaveBeenCalledWith('aria-pressed', 'true');
-      expect(floodToggle.classList.classes.has('modo-toggle--active')).toBe(true);
     });
 
     it('clicking compare while flood active switches to compare', () => {
@@ -188,9 +186,6 @@ describe('ModoSection', () => {
       expect(inundacionesToggle.setAttribute).toHaveBeenCalledWith(
         'aria-pressed',
         'true'
-      );
-      expect(inundacionesToggle.classList.classes.has('modo-toggle--active')).toBe(
-        true
       );
     });
 

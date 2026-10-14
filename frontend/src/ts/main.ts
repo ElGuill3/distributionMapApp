@@ -1013,11 +1013,11 @@ const layerVisibility: Record<'gif' | 'stations' | 'flood', boolean> = {
 };
 
 /**
- * Updates the aria-pressed state and CSS class of a layer toggle button.
+ * Updates the aria-pressed state of a layer toggle button; the stylesheet
+ * styles the active state through [aria-pressed='true'].
  */
 function syncLayerButtonState(btn: HTMLButtonElement, isActive: boolean): void {
   btn.setAttribute('aria-pressed', String(isActive));
-  btn.classList.toggle('topbar-layer-btn--active', isActive);
 }
 
 /**

@@ -124,7 +124,6 @@ class ModoSection {
     if (modo === 'compare') {
       if (this.compareToggle) {
         this.compareToggle.setAttribute('aria-pressed', 'true');
-        this.compareToggle.classList.add('modo-toggle--active');
       }
 
       // Disable all task flow steps on the left
@@ -140,7 +139,6 @@ class ModoSection {
     } else if (modo === 'flood') {
       if (this.floodToggle) {
         this.floodToggle.setAttribute('aria-pressed', 'true');
-        this.floodToggle.classList.add('modo-toggle--active');
       }
 
       // Disable all task flow steps on the left
@@ -156,7 +154,6 @@ class ModoSection {
     } else if (modo === 'inundaciones') {
       if (this.inundacionesToggle) {
         this.inundacionesToggle.setAttribute('aria-pressed', 'true');
-        this.inundacionesToggle.classList.add('modo-toggle--active');
       }
 
       // Disable variable, config, and explore steps (keep area active for drawing bbox)
@@ -179,17 +176,14 @@ class ModoSection {
 
     if (this.compareToggle) {
       this.compareToggle.setAttribute('aria-pressed', 'false');
-      this.compareToggle.classList.remove('modo-toggle--active');
     }
 
     if (this.floodToggle) {
       this.floodToggle.setAttribute('aria-pressed', 'false');
-      this.floodToggle.classList.remove('modo-toggle--active');
     }
 
     if (this.inundacionesToggle) {
       this.inundacionesToggle.setAttribute('aria-pressed', 'false');
-      this.inundacionesToggle.classList.remove('modo-toggle--active');
     }
 
     // Re-enable task flow steps
