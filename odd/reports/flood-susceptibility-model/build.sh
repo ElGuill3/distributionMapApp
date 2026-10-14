@@ -13,15 +13,21 @@ md = Path("../flood-susceptibility-model.md").read_text(encoding="utf-8")
 lines = md.splitlines()
 # Title and project line live on the LaTeX title page.
 lines = lines[lines.index("## Resumen"):]
+# Front and back matter sections carry no number, as in a journal article.
+UNNUMBERED = {
+    "Resumen",
+    "Contribuciones de los autores",
+    "Disponibilidad de datos y código",
+    "Conflictos de interés",
+    "Referencias",
+}
 out = []
 for line in lines:
     if line.strip() == "---":
         continue
-    if line == "## Resumen":
-        out.append("```{=latex}\n\\section*{Resumen}\\addcontentsline{toc}{section}{Resumen}\n```")
-        continue
-    if line == "## Referencias":
-        out.append("```{=latex}\n\\section*{Referencias}\\addcontentsline{toc}{section}{Referencias}\n```")
+    if line[3:] in UNNUMBERED and line.startswith("## "):
+        title = line[3:]
+        out.append(f"```{{=latex}}\n\\section*{{{title}}}\\addcontentsline{{toc}}{{section}}{{{title}}}\n```")
         continue
     # LaTeX numbers sections itself, in the same order as the Markdown.
     line = re.sub(r"^(#{2,4}) \d+(?:\.\d+)*\.? ", r"\1 ", line)
@@ -44,6 +50,14 @@ def insert_after(anchor, block):
 
 
 insert_after(
+    "con máximos en junio y de septiembre a noviembre [1].\n",
+    figure(
+        "figures/area_estudio.png",
+        "Área de estudio. (a) Tabasco en México; (b) municipios (FAO GAUL 2025) y "
+        "ríos principales (HydroSHEDS).",
+    ),
+)
+insert_after(
     "Las temporadas 2023–2025 sí son posteriores a su publicación.\n",
     figure(
         "figures/validacion.png",
@@ -52,7 +66,7 @@ insert_after(
     ),
 )
 insert_after(
-    "## Resultados\n",
+    "### Mapa de susceptibilidad\n",
     figure(
         "figures/mapa_clases.png",
         "Mapa de susceptibilidad: clases (quintiles de superficie del estado) "

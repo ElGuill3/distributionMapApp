@@ -2,7 +2,7 @@
 % Compilar con `./build.sh` (pandoc + tectonic). El contenido se genera desde
 % ../flood-susceptibility-model.md en cuerpo.tex: no edites cuerpo.tex a mano.
 % build.sh también inserta las figuras, que deben existir en figures/:
-% mapa_clases.png, validacion.png, app_detalle.jpg y app_municipios.jpg.
+% area_estudio.png, mapa_clases.png, validacion.png, app_detalle.jpg y app_municipios.jpg.
 \documentclass[11pt,a4paper]{article}
 
 \usepackage{fontspec}
@@ -37,7 +37,9 @@
 \let\oldtexttt\texttt
 \renewcommand{\texttt}[1]{\oldtexttt{\seqsplit{#1}}}
 \usepackage{framed}
+\usepackage{xurl}
 \usepackage[hidelinks]{hyperref}
+\urlstyle{same}
 \hypersetup{colorlinks=true,linkcolor=accent,urlcolor=accent,citecolor=accent}
 
 \definecolor{accent}{HTML}{253494}
@@ -81,7 +83,12 @@
   {\sffamily\huge\bfseries Mapa de susceptibilidad a inundación\\[4pt] de Tabasco\par}
   \vspace{0.4cm}
   {\Large Modelado y validación con eventos no vistos\par}
-  \vspace{1.2cm}
+  \vspace{0.9cm}
+  {\large Guillermo Antonio Jiménez de la Cruz \quad Fernando Pech-May\par}
+  \vspace{0.2cm}
+  {\small Tecnológico Nacional de México, Instituto Tecnológico Superior de los Ríos\\
+  Balancán, Tabasco, México\par}
+  \vspace{0.9cm}
   \includegraphics[width=0.95\textwidth]{figures/mapa_clases.png}\par
   \vspace{1.2cm}
   {\normalsize Octubre de 2026\par}
@@ -90,6 +97,7 @@
   JRC/CEMS GloFAS, MERIT Hydro, JRC Global Surface Water, ESA WorldCover, FAO GAUL 2025.\par}
 \end{titlepage}
 
+\setcounter{tocdepth}{2}
 \tableofcontents
 \newpage
 

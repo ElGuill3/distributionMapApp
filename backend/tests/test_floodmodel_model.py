@@ -332,3 +332,26 @@ def test_train_report_records_hyperparameters_and_seed(tmp_path, monkeypatch):
     assert report["seed"] == 0
     assert report["params"]["n_estimators"] == model.DEFAULT_PARAMS["n_estimators"]
     assert report["features"] == ["hand", "noise"]
+
+
+def test_score_events_reports_how_much_flooding_falls_in_the_top_40_percent():
+    # 10 cells; the top 40 % by score are cells 6-9.
+    score = np.arange(10, dtype="float64")
+    truth = np.array([0, 0, 0, 0, 0, 1, 1, 1, 0, 1])  # 3 of 4 flooded in top 40 %
+
+    row = model.score_events({"s": score}, {"e": truth})["s"]["e"]
+
+    assert row["top40_area_share"] == pytest.approx(0.4)
+    assert row["top40_capture"] == pytest.approx(0.75)
+
+
+def test_capture_counts_ties_at_the_cut_and_reports_the_real_area():
+    # A few-class map: the 60th percentile is 4, shared by four cells, so the
+    # top set holds every 4 and the 5, half of the area rather than 40 %.
+    score = np.array([1, 1, 2, 2, 3, 4, 4, 4, 4, 5], dtype="float64")
+    truth = np.array([0, 0, 0, 0, 1, 0, 0, 0, 0, 1])  # 1 of 2 flooded in the top set
+
+    row = model.score_events({"s": score}, {"e": truth})["s"]["e"]
+
+    assert row["top40_area_share"] == pytest.approx(0.5)
+    assert row["top40_capture"] == pytest.approx(0.5)
