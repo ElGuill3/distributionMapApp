@@ -429,7 +429,14 @@ def ensemble(
 
 
 def score_events(scores: dict, events: dict) -> dict:
-    """ROC AUC, PR AUC and base rate of every score map on every event."""
+    """ROC AUC, PR AUC, base rate and top-40 % capture of every map on every event.
+
+    ``top40_capture`` is the share of flooded cells whose score is at least the
+    map's 60th percentile, i.e. how much of the flooding falls in the two
+    highest quintile classes. Ties at the cut (maps with few classes) can make
+    that set larger than 40 % of the area; ``top40_area_share`` reports its real
+    size so maps are compared on equal footing.
+    """
     from sklearn.metrics import average_precision_score, roc_auc_score
 
     table = {}
@@ -440,10 +447,14 @@ def score_events(scores: dict, events: dict) -> dict:
             # Raw rasters carry NODATA (finite) and unlabelled truth as NaN.
             ok = np.isfinite(score) & (score != NODATA) & np.isfinite(truth)
             y = truth[ok].astype(int)
+            values = score[ok]
+            top = values >= np.quantile(values, 0.6)
             table.setdefault(source, {})[event] = {
-                "roc_auc": float(roc_auc_score(y, score[ok])),
-                "pr_auc": float(average_precision_score(y, score[ok])),
+                "roc_auc": float(roc_auc_score(y, values)),
+                "pr_auc": float(average_precision_score(y, values)),
                 "base_rate": float(y.mean()),
                 "n": int(ok.sum()),
+                "top40_area_share": float(top.mean()),
+                "top40_capture": float(y[top].sum() / max(int(y.sum()), 1)),
             }
     return table
