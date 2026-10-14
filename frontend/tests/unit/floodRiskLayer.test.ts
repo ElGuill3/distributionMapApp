@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import {
   tilePixel,
@@ -8,7 +9,6 @@ import {
   municipalityCardHtml,
   TilePixelCache,
   readoutHtml,
-  municipalityIndex,
   applyClassColors,
   type FloodClass,
   type MunicipalityFeature,
@@ -123,7 +123,8 @@ describe('municipalityCardHtml', () => {
       17
     );
     expect(html).toContain('Centro');
-    expect(html).toContain('3 de 17');
+    expect(html).toContain('Puesto 3 de 17 municipios por susceptibilidad');
+    expect(html).not.toContain('Lugar');
     expect(html).toContain('60%');
     for (const cls of CLASSES) expect(html).toContain(cls.label);
   });
@@ -192,13 +193,19 @@ describe('readoutHtml', () => {
   });
 });
 
-describe('municipalityIndex', () => {
-  it('maps sidebar keys to features', () => {
-    const f = feature('Jalpa De Méndez', {
-      type: 'Polygon',
-      coordinates: [square(0, 0, 1)],
-    });
-    expect(municipalityIndex([f]).get('jalpa_de_mendez')).toBe(f);
+describe('sidebar municipality list', () => {
+  it('matches every sidebar button to one published municipality', () => {
+    const html = readFileSync('frontend/templates/index.html', 'utf8');
+    const buttons = [
+      ...html.matchAll(/class="flood-muni-btn" data-muni="([a-z_]+)"/g),
+    ].map(m => m[1]);
+    const published = (
+      JSON.parse(
+        readFileSync('backend/data/flood_risk/municipalities.geojson', 'utf8')
+      ) as { features: MunicipalityFeature[] }
+    ).features.map(f => muniKey(f.properties.name));
+    expect(buttons).toHaveLength(17);
+    expect([...buttons].sort()).toEqual([...published].sort());
   });
 });
 

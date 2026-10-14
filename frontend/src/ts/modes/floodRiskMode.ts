@@ -5,7 +5,7 @@
  * - Entrada/salida del modo riesgo
  * - Capa estatal de susceptibilidad (tiles XYZ estáticos) y su leyenda
  * - Lectura de la clase bajo el cursor (color del tile, sin servidor)
- * - Ficha y contorno de los municipios marcados en el panel
+ * - Selección de un municipio (en el mapa o en la lista): resaltado y ficha
  * - Vista por municipio: coropleta del % de superficie en clase alta o muy alta
  *
  * No contiene lógica de normal mode ni compare mode.
@@ -23,10 +23,10 @@ import {
   applyClassColors,
   findMunicipality,
   highShareClass,
-  municipalityIndex,
   readoutHtml,
   TilePixelCache,
   municipalityCardHtml,
+  muniKey,
   tilePixel,
   TILE_SIZE,
   type FloodRiskMetadata,
@@ -70,8 +70,16 @@ let _pendingMove: L.LeafletMouseEvent | null = null;
 let _view: FloodView = 'detail';
 let _tiles: L.TileLayer | null = null;
 let _choropleth: L.GeoJSON | null = null;
-const _outlines: Record<string, L.GeoJSON> = {};
-let _byKey = new Map<string, MunicipalityFeature>();
+/** Transparent municipality polygons on top of either view: hover and click. */
+let _hits: L.GeoJSON | null = null;
+const _hitByKey = new Map<string, L.Polygon>();
+/** Key (data-muni) of the selected municipality, at most one. */
+let _selected: string | null = null;
+/**
+ * Municipality highlighted under the cursor. The readout names this one, so
+ * text, highlight and click agree where simplified borders overlap.
+ */
+let _hovered: MunicipalityFeature | null = null;
 let _readoutRequest = 0;
 const _tilePixels = new TilePixelCache(TILE_CACHE_LIMIT, _decodeTile);
 
@@ -139,13 +147,10 @@ export function exitFloodRiskMode(): void {
     if (layer && _mapRef) _mapRef.removeLayer(layer);
     delete municipalFloodOverlays[key];
   }
-  for (const key of Object.keys(_outlines)) {
-    _outlines[key]?.remove();
-    delete _outlines[key];
-  }
-  document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => {
-    chk.checked = false;
-  });
+  _mapRef?.closePopup();
+  _markSelected(null);
+  _hovered = null;
+  _hits?.remove();
   _view = 'detail';
   const detailRadio = document.querySelector<HTMLInputElement>(
     'input[name="flood-view"][value="detail"]'
@@ -170,7 +175,6 @@ async function _ensureLoaded(): Promise<void> {
     .then(([metadata, municipalities]) => {
       _metadata = metadata;
       _municipalities = municipalities;
-      _byKey = municipalityIndex(municipalities);
       applyClassColors(metadata.classes, document.documentElement);
     })
     .finally(() => {
@@ -220,9 +224,8 @@ function _tileLayer(metadata: FloodRiskMetadata): L.TileLayer {
   return _tiles;
 }
 
-function _choroplethLayer(metadata: FloodRiskMetadata): L.GeoJSON {
+function _choroplethLayer(): L.GeoJSON {
   if (!_choropleth) {
-    const total = _municipalities.length;
     _choropleth = L.geoJSON(
       {
         type: 'FeatureCollection',
@@ -237,14 +240,65 @@ function _choroplethLayer(metadata: FloodRiskMetadata): L.GeoJSON {
             className: `flood-choropleth flood-choropleth-${highShareClass(share)}`,
           };
         },
-        onEachFeature: (feature, layer) => {
-          const props = (feature as unknown as MunicipalityFeature).properties;
-          layer.bindPopup(municipalityCardHtml(props, metadata.classes, total));
-        },
+        // Hover and clicks go to the municipality layer drawn on top.
+        interactive: false,
       }
     );
   }
   return _choropleth;
+}
+
+function _hitLayer(metadata: FloodRiskMetadata): L.GeoJSON {
+  if (!_hits) {
+    const total = _municipalities.length;
+    _hits = L.geoJSON(
+      {
+        type: 'FeatureCollection',
+        features: _municipalities,
+      } as unknown as GeoJSON.FeatureCollection,
+      {
+        style: { className: 'flood-muni-hit', weight: 3 },
+        onEachFeature: (feature, layer) => {
+          const props = (feature as unknown as MunicipalityFeature).properties;
+          const key = muniKey(props.name);
+          const polygon = layer as L.Polygon;
+          _hitByKey.set(key, polygon);
+          polygon.bindPopup(municipalityCardHtml(props, metadata.classes, total));
+          const muni = feature as unknown as MunicipalityFeature;
+          polygon.on('mouseover', () => {
+            _hovered = muni;
+            polygon.getElement()?.classList.add('is-hover');
+          });
+          polygon.on('mouseout', () => {
+            if (_hovered === muni) _hovered = null;
+            polygon.getElement()?.classList.remove('is-hover');
+          });
+          // The popup opens on the same click (bindPopup); just record it.
+          polygon.on('click', () => _markSelected(key));
+          // Opening another card closes this one: only clear if still current.
+          polygon.on('popupclose', () => {
+            if (_selected === key) _markSelected(null);
+          });
+        },
+      }
+    );
+  }
+  return _hits;
+}
+
+/** Highlight `key` on the map and in the list (or clear the selection). */
+function _markSelected(key: string | null): void {
+  if (_selected)
+    _hitByKey.get(_selected)?.getElement()?.classList.remove('is-selected');
+  _selected = key;
+  if (key) {
+    const polygon = _hitByKey.get(key);
+    polygon?.getElement()?.classList.add('is-selected');
+    polygon?.bringToFront();
+  }
+  document.querySelectorAll<HTMLButtonElement>('button.flood-muni-btn').forEach(btn => {
+    btn.setAttribute('aria-pressed', String(btn.dataset['muni'] === key));
+  });
 }
 
 function _setLayer(key: string, layer: L.Layer | null): void {
@@ -262,13 +316,17 @@ function _applyView(): void {
   if (!_mapRef || !_metadata) return;
   if (_view === 'municipal') {
     _setLayer(STATE_LAYER_KEY, null);
-    _setLayer(MUNICIPAL_LAYER_KEY, _choroplethLayer(_metadata));
+    _setLayer(MUNICIPAL_LAYER_KEY, _choroplethLayer());
     switchColorbar(_mapRef, 'floodMunicipal');
   } else {
     _setLayer(MUNICIPAL_LAYER_KEY, null);
     _setLayer(STATE_LAYER_KEY, _tileLayer(_metadata));
     switchColorbar(_mapRef, 'flood');
   }
+  const hits = _hitLayer(_metadata);
+  if (_mapRef.hasLayer(hits)) hits.bringToFront();
+  else hits.addTo(_mapRef);
+  if (_selected) _hitByKey.get(_selected)?.bringToFront();
 }
 
 function _addReadout(map: L.Map): void {
@@ -324,11 +382,16 @@ function _decodeTile(key: string): Promise<ImageData> {
   });
 }
 
+/** The highlighted municipality, or the one containing the point. */
+function _muniAt(latlng: L.LatLng): MunicipalityFeature | null {
+  return _hovered ?? findMunicipality(latlng.lng, latlng.lat, _municipalities);
+}
+
 async function _updateReadout(latlng: L.LatLng): Promise<void> {
   if (!_metadata || !_mapRef || !_readoutEl) return;
   if (_view === 'municipal') {
     _readoutRequest += 1;
-    const muni = findMunicipality(latlng.lng, latlng.lat, _municipalities);
+    const muni = _muniAt(latlng);
     _readoutEl.innerHTML = muni
       ? `${escapeHtml(muni.properties.name)} · <strong>${Math.round(
           muni.properties.high_share * 100
@@ -352,7 +415,7 @@ async function _updateReadout(latlng: L.LatLng): Promise<void> {
     status = 'error';
   }
   if (request !== _readoutRequest || !_readoutEl) return;
-  const muni = findMunicipality(latlng.lng, latlng.lat, _municipalities);
+  const muni = _muniAt(latlng);
   _readoutEl.innerHTML = readoutHtml({
     status,
     cls,
@@ -360,15 +423,14 @@ async function _updateReadout(latlng: L.LatLng): Promise<void> {
   });
 }
 
-export async function toggleMunicipalFloodRisk(
-  muni: string,
-  checked: boolean
-): Promise<void> {
-  if (!checked) {
-    _outlines[muni]?.remove();
-    delete _outlines[muni];
-    return;
-  }
+/**
+ * Selecciona un municipio desde la lista: lo resalta, hace zoom y abre su
+ * ficha. Si ya estaba seleccionado, lo deselecciona. Los clics en el mapa
+ * seleccionan sin zoom (el municipio ya está a la vista).
+ *
+ * @param muni Clave del municipio (data-muni)
+ */
+export async function selectFloodMunicipality(muni: string): Promise<void> {
   try {
     await _ensureLoaded();
   } catch (err) {
@@ -376,32 +438,21 @@ export async function toggleMunicipalFloodRisk(
     showErrorModal('Error de red', 'No se pudieron cargar los municipios.');
     return;
   }
-  // The mode may have been left, or the box unticked, while loading.
-  const box = document.querySelector<HTMLInputElement>(
-    `input.chk-flood-muni[data-muni="${muni}"]`
-  );
-  if (!mapState.getFloodRiskModeActive() || (box && !box.checked)) return;
-  const feature = _byKey.get(muni);
-  if (!feature || !_mapRef || !_metadata) {
+  // The mode may have been left while loading.
+  if (!mapState.getFloodRiskModeActive() || !_mapRef || !_metadata) return;
+  if (_selected === muni) {
+    _mapRef.closePopup();
+    return;
+  }
+  if (!_hits || !_mapRef.hasLayer(_hits)) _applyView();
+  const polygon = _hitByKey.get(muni);
+  if (!polygon) {
     console.warn(`No published flood statistics for municipality "${muni}"`);
     return;
   }
-  _outlines[muni]?.remove();
-  const outline = L.geoJSON(feature as unknown as GeoJSON.Feature, {
-    style: { className: 'flood-muni-outline', fill: false, weight: 3 },
-  });
-  outline
-    .bindPopup(
-      municipalityCardHtml(
-        feature.properties,
-        _metadata.classes,
-        _municipalities.length
-      )
-    )
-    .addTo(_mapRef);
-  _outlines[muni] = outline;
-  _mapRef.fitBounds(outline.getBounds(), { padding: [24, 24] });
-  outline.openPopup(outline.getBounds().getCenter());
+  _markSelected(muni);
+  _mapRef.fitBounds(polygon.getBounds(), { padding: [24, 24] });
+  polygon.openPopup(polygon.getBounds().getCenter());
 }
 
 // ---------------------------------------------------------------------------
@@ -439,12 +490,11 @@ export function registerFloodRiskModeListeners(
       });
     });
 
-  // Listeners de checkboxes de municipios
-  document.querySelectorAll<HTMLInputElement>('input.chk-flood-muni').forEach(chk => {
-    chk.addEventListener('change', () => {
-      const muni = chk.dataset['muni'];
-      if (!muni) return;
-      void toggleMunicipalFloodRisk(muni, chk.checked);
+  // Lista de municipios: selección única, igual que hacer clic en el mapa.
+  document.querySelectorAll<HTMLButtonElement>('button.flood-muni-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const muni = btn.dataset['muni'];
+      if (muni) void selectFloodMunicipality(muni);
     });
   });
 }

@@ -285,7 +285,7 @@ To facilitate offline analysis, the system offers:
 **Flood Risk Mode**:
 - Shows statewide susceptibility with a legend and a readout of the class under the cursor.
 - Animation controls are locked to prevent overlay conflicts.
-- Several municipalities can be checked at once to show their outline and stats card; the **Por municipio** view shows the choropleth.
+- One municipality at a time: it is highlighted on hover and selected with a click on the map or in the sidebar list, which opens its stats card; the **Por municipio** view shows the choropleth.
 
 **Flood Detection Mode**:
 - Detects surface water inside the drawn area (max 4°×4°) for any date range.
@@ -733,7 +733,7 @@ Open your browser and navigate to: **http://127.0.0.1:5000**
 
 1. Click **"Mapa de riesgo"** (Risk Map) in the sidebar. Animation controls lock and the statewide susceptibility layer appears with its legend.
 2. Hover the map: the bottom-left readout shows the class and municipality at that point.
-3. Check a municipality to zoom to it and open its card (class shares, share of high or very high susceptibility and statewide rank).
+3. Click a municipality, on the map or in the sidebar list, to open its card (class shares, share of high or very high susceptibility and rank among the 17 municipalities). From the list the map also zooms to it. Closing the card, or clicking the same municipality in the list again, clears the selection.
 4. Under **Vista** (View) choose **Por municipio** (By municipality) for a choropleth of the share of high or very high susceptibility.
 5. Click **"Mapa de riesgo"** again to exit the mode.
 

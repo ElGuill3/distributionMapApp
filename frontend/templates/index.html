@@ -234,24 +234,24 @@
           <label><input type="radio" name="flood-view" value="municipal"> Por municipio</label>
         </fieldset>
 
-        <div class="municipios-grid">
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="balancan"> Balancán</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="cardenas"> Cárdenas</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="centla"> Centla</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="centro"> Centro</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="comalcalco"> Comalcalco</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="cunduacan"> Cunduacán</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="emiliano_zapata"> Emiliano Zapata</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="huimanguillo"> Huimanguillo</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="jalapa"> Jalapa</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="jalpa_de_mendez"> Jalpa de Méndez</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="jonuta"> Jonuta</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="macuspana"> Macuspana</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="nacajuca"> Nacajuca</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="paraiso"> Paraíso</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="tacotalpa"> Tacotalpa</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="teapa"> Teapa</label>
-          <label><input type="checkbox" class="chk-flood-muni" data-muni="tenosique"> Tenosique</label>
+        <div class="municipios-grid" role="group" aria-label="Municipios">
+          <button type="button" class="flood-muni-btn" data-muni="balancan" aria-pressed="false">Balancán</button>
+          <button type="button" class="flood-muni-btn" data-muni="cardenas" aria-pressed="false">Cárdenas</button>
+          <button type="button" class="flood-muni-btn" data-muni="centla" aria-pressed="false">Centla</button>
+          <button type="button" class="flood-muni-btn" data-muni="centro" aria-pressed="false">Centro</button>
+          <button type="button" class="flood-muni-btn" data-muni="comalcalco" aria-pressed="false">Comalcalco</button>
+          <button type="button" class="flood-muni-btn" data-muni="cunduacan" aria-pressed="false">Cunduacán</button>
+          <button type="button" class="flood-muni-btn" data-muni="emiliano_zapata" aria-pressed="false">Emiliano Zapata</button>
+          <button type="button" class="flood-muni-btn" data-muni="huimanguillo" aria-pressed="false">Huimanguillo</button>
+          <button type="button" class="flood-muni-btn" data-muni="jalapa" aria-pressed="false">Jalapa</button>
+          <button type="button" class="flood-muni-btn" data-muni="jalpa_de_mendez" aria-pressed="false">Jalpa de Méndez</button>
+          <button type="button" class="flood-muni-btn" data-muni="jonuta" aria-pressed="false">Jonuta</button>
+          <button type="button" class="flood-muni-btn" data-muni="macuspana" aria-pressed="false">Macuspana</button>
+          <button type="button" class="flood-muni-btn" data-muni="nacajuca" aria-pressed="false">Nacajuca</button>
+          <button type="button" class="flood-muni-btn" data-muni="paraiso" aria-pressed="false">Paraíso</button>
+          <button type="button" class="flood-muni-btn" data-muni="tacotalpa" aria-pressed="false">Tacotalpa</button>
+          <button type="button" class="flood-muni-btn" data-muni="teapa" aria-pressed="false">Teapa</button>
+          <button type="button" class="flood-muni-btn" data-muni="tenosique" aria-pressed="false">Tenosique</button>
         </div>
 
         <p class="hint compare-mode-hint hidden">
@@ -262,7 +262,8 @@
         <p class="hint flood-risk-mode-hint hidden">
           En modo riesgo los controles de animación están bloqueados. El mapa
           muestra la susceptibilidad de todo el estado; pasa el cursor para ver
-          la clase y marca un municipio para ver su resumen.
+          la clase y haz clic en un municipio, en el mapa o en la lista, para
+          ver su resumen.
         </p>
 
         <!-- Panel de Inundaciones -->

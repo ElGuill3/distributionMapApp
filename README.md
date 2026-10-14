@@ -291,7 +291,7 @@ Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
 **Modo mapa de riesgo**:
 - Muestra la susceptibilidad de todo el estado, con leyenda y lectura de la clase bajo el cursor.
 - Los controles de animación quedan bloqueados para evitar superposiciones.
-- Se pueden marcar varios municipios a la vez para ver su contorno y su ficha; la vista **Por municipio** muestra la coropleta.
+- Un municipio a la vez: se resalta al pasar el cursor y se selecciona con un clic en el mapa o en la lista lateral, que abre su ficha; la vista **Por municipio** muestra la coropleta.
 
 **Modo detección de inundaciones**:
 - Detecta agua superficial en el área dibujada (máx. 4°×4°) para un rango de fechas libre.
@@ -739,7 +739,7 @@ Accede desde el navegador a: **http://127.0.0.1:5000**
 
 1. Pulsa **"Mapa de riesgo"** en el panel lateral. Los controles de animación quedan bloqueados y aparece la susceptibilidad de todo el estado con su leyenda.
 2. Pasa el cursor sobre el mapa: abajo a la izquierda se lee la clase y el municipio de ese punto.
-3. Marca un municipio para enfocarlo y ver su ficha (reparto por clase, % en susceptibilidad alta o muy alta y lugar en el estado).
+3. Haz clic en un municipio, en el mapa o en la lista lateral, para ver su ficha (reparto por clase, % en susceptibilidad alta o muy alta y puesto entre los 17 municipios). Desde la lista, además, el mapa se acerca al municipio. Cerrar la ficha, o hacer clic de nuevo en el mismo municipio de la lista, lo deselecciona.
 4. En **Vista** elige **Por municipio** para ver la coropleta del % de superficie en susceptibilidad alta o muy alta.
 5. Para salir del modo, vuelve a pulsar **"Mapa de riesgo"**.
 

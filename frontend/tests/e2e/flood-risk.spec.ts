@@ -28,12 +28,12 @@ test('flood risk mode shows the statewide layer, legend, readout and municipalit
   expect(tileStatuses.filter(s => s !== 200)).toEqual([]);
 
   // Seventeen municipalities, including Teapa (missing before).
-  await expect(page.locator('input.chk-flood-muni')).toHaveCount(17);
+  await expect(page.locator('button.flood-muni-btn')).toHaveCount(17);
 
-  await page.locator('input.chk-flood-muni[data-muni="centro"]').check({ force: true });
+  await page.locator('button.flood-muni-btn[data-muni="centro"]').click();
   const popup = page.locator('.flood-muni-card');
   await expect(popup).toContainText('Centro');
-  await expect(popup).toContainText(/Lugar \d+ de 17/);
+  await expect(popup).toContainText(/Puesto \d+ de 17 municipios por susceptibilidad/);
   await expect(popup.locator('.flood-muni-row')).toHaveCount(5);
 
   // Hover the middle of the map (Centro after fitBounds) and read the class.
@@ -85,7 +85,9 @@ test('municipality view colours each municipality by its high-susceptibility sha
   ).toHaveCount(0);
 
   await page.locator('path.flood-choropleth-5').first().click({ force: true });
-  await expect(page.locator('.flood-muni-card')).toContainText(/Lugar \d+ de 17/);
+  await expect(page.locator('.flood-muni-card')).toContainText(
+    /Puesto \d+ de 17 municipios por susceptibilidad/
+  );
 
   await page.locator('input[name="flood-view"][value="detail"]').check({ force: true });
   await expect(page.locator('path.flood-choropleth')).toHaveCount(0);
@@ -102,7 +104,7 @@ test('a tile that fails to load is reported, not shown as no data', async ({
   );
   await page.goto('/templates/index.html');
   await page.locator('#toggleFloodRiskMode').click();
-  await page.locator('input.chk-flood-muni[data-muni="centro"]').check({ force: true });
+  await page.locator('button.flood-muni-btn[data-muni="centro"]').click();
   await page.locator('.leaflet-popup-close-button').click();
   const box = await page.locator('#map').boundingBox();
   if (!box) throw new Error('map not rendered');
@@ -173,4 +175,86 @@ test('the stations toggle still hides markers and flood mode keeps that choice',
   await toggle.evaluate(el => (el as HTMLElement).click());
   await expect(markers).toHaveCount(1);
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('one municipality is selected at a time, from the list or the map', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1400, height: 860 });
+  await page.goto('/templates/index.html');
+  await page.locator('#toggleFloodRiskMode').click();
+  await expect(page.locator('.flood-risk-colorbar')).toBeVisible();
+
+  const centro = page.locator('button.flood-muni-btn[data-muni="centro"]');
+  const nacajuca = page.locator('button.flood-muni-btn[data-muni="nacajuca"]');
+  const selected = page.locator('path.flood-muni-hit.is-selected');
+  // A closed card fades out for a moment: the newest one is the open card.
+  const card = page.locator('.flood-muni-card').last();
+
+  // From the list: zooms to the municipality and opens its card.
+  await centro.click();
+  await expect(centro).toHaveAttribute('aria-pressed', 'true');
+  await expect(card).toContainText('Centro');
+  await expect(selected).toHaveCount(1);
+
+  // Picking another one replaces the selection instead of adding to it.
+  await nacajuca.click();
+  await expect(nacajuca).toHaveAttribute('aria-pressed', 'true');
+  await expect(centro).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.flood-muni-card')).toHaveCount(1);
+  await expect(card).toContainText('Nacajuca');
+  await expect(selected).toHaveCount(1);
+
+  // Closing the card clears the selection.
+  await page.locator('.leaflet-popup-close-button').click();
+  await expect(nacajuca).toHaveAttribute('aria-pressed', 'false');
+  await expect(selected).toHaveCount(0);
+  await expect(page.locator('.leaflet-popup')).toHaveCount(0); // fade-out done
+
+  // Hovering a municipality on the map highlights it; leaving clears it.
+  const box = await page.locator('#map').boundingBox();
+  if (!box) throw new Error('map not rendered');
+  const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(centre.x, centre.y);
+  await expect(page.locator('path.flood-muni-hit.is-hover')).toHaveCount(1);
+  // The readout names the municipality under the cursor ("... · <name>").
+  const readout = page.locator('.flood-readout');
+  await expect(readout).toContainText(' · ');
+  const hovered = ((await readout.textContent()) ?? '').split(' · ').pop()!.trim();
+  const hoveredBtn = page.locator('button.flood-muni-btn', { hasText: hovered });
+  await expect(hoveredBtn).toHaveCount(1);
+
+  // Clicking it on the map selects that municipality and syncs the list.
+  await page.mouse.click(centre.x, centre.y);
+  await expect(card).toContainText(hovered);
+  await expect(hoveredBtn).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('button.flood-muni-btn[aria-pressed="true"]')).toHaveCount(
+    1
+  );
+  await expect(selected).toHaveCount(1);
+
+  // The same works in the municipality view.
+  await page.locator('.leaflet-popup-close-button').click();
+  await expect(page.locator('.leaflet-popup')).toHaveCount(0);
+  await page
+    .locator('input[name="flood-view"][value="municipal"]')
+    .check({ force: true });
+  await expect(page.locator('path.flood-choropleth')).toHaveCount(17);
+  await page.mouse.click(centre.x, centre.y);
+  await expect(card).toContainText(hovered);
+  await expect(hoveredBtn).toHaveAttribute('aria-pressed', 'true');
+  await expect(selected).toHaveCount(1);
+
+  // Clicking the selected municipality in the list again clears it.
+  await hoveredBtn.click();
+  await expect(hoveredBtn).toHaveAttribute('aria-pressed', 'false');
+  await expect(selected).toHaveCount(0);
+  await expect(page.locator('.leaflet-popup')).toHaveCount(0);
+
+  // Leaving the mode clears everything.
+  await page.locator('#toggleFloodRiskMode').click();
+  await expect(page.locator('path.flood-muni-hit')).toHaveCount(0);
+  await expect(page.locator('button.flood-muni-btn[aria-pressed="true"]')).toHaveCount(
+    0
+  );
 });

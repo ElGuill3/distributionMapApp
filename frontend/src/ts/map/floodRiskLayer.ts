@@ -156,7 +156,7 @@ export function municipalityCardHtml(
     .join('');
   return `<div class="flood-muni-card">
     <strong>${escapeHtml(props.name)}</strong>
-    <div class="flood-muni-meta">Lugar ${props.rank} de ${total} ·
+    <div class="flood-muni-meta">Puesto ${props.rank} de ${total} municipios por susceptibilidad ·
       ${pct(props.high_share)} en susceptibilidad alta o muy alta ·
       ${Math.round(props.area_km2).toLocaleString('es-MX')} km²</div>
     ${bars}
@@ -207,13 +207,6 @@ export function readoutHtml({ status, cls, muni }: ReadoutState): string {
   return muni
     ? `${escapeHtml(muni)} · sin dato (agua permanente o fuera del modelo)`
     : 'Fuera del área del modelo';
-}
-
-/** Municipality features keyed by their sidebar key (data-muni). */
-export function municipalityIndex(
-  features: MunicipalityFeature[]
-): Map<string, MunicipalityFeature> {
-  return new Map(features.map(f => [muniKey(f.properties.name), f]));
 }
 
 /**
