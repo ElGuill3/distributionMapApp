@@ -16,9 +16,7 @@ lines = lines[lines.index("## Resumen"):]
 # Front and back matter sections carry no number, as in a journal article.
 UNNUMBERED = {
     "Resumen",
-    "Contribuciones de los autores",
-    "Disponibilidad de datos y código",
-    "Conflictos de interés",
+    "Reproducibilidad",
     "Referencias",
 }
 out = []
