@@ -180,6 +180,30 @@ describe('published forecast v2', () => {
     await vi.advanceTimersByTimeAsync(60000);
     expect(fetcher).toHaveBeenCalledTimes(count);
   });
+  it('reloads when the tab returns after being hidden during the first request', async () => {
+    setup();
+    const fetcher = vi
+      .fn()
+      .mockImplementationOnce(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_, reject) =>
+            init.signal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError'))
+            )
+          )
+      )
+      .mockResolvedValue(response(envelope()));
+    vi.stubGlobal('fetch', fetcher);
+    const opening = openBdctbForecastDialog();
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await opening;
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.waitFor(() => expect(document.querySelector('svg')).not.toBeNull());
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps the page mounted on 503 and ignores a response after close', async () => {
     setup();
     document.body.innerHTML = '<div id="map">map</div>';

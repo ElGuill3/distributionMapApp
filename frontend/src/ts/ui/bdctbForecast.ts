@@ -399,6 +399,8 @@ document.addEventListener('visibilitychange', () => {
   if (!activeDialog?.open) return;
   stop();
   const owner = ++generation;
-  if (!document.hidden && waiting && Date.now() < deadline)
+  // Hiding the tab aborts any request, so reload on return if nothing is shown yet.
+  const empty = activeDialog.querySelector<HTMLElement>('.forecast-content')!.hidden;
+  if (!document.hidden && (empty || (waiting && Date.now() < deadline)))
     void refresh(activeDialog, owner);
 });
