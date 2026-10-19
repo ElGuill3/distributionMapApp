@@ -2,8 +2,6 @@
 
 Tabasco se inunda cada año y las inundaciones extremas, como las de 2007 y 2020, afectan a cientos de miles de personas. Este trabajo construye un mapa de susceptibilidad a inundación de todo el estado, a 30 m, solo con datos públicos y con un procedimiento reproducible, y lo valida contra inundaciones que los modelos no vieron durante el entrenamiento. Las variables de terreno se derivan del modelo digital de elevación LiDAR de 5 m de INEGI, acondicionado hidrológicamente a 15 m, e incluyen la altura sobre el drenaje más cercano (HAND). El mapa es un ensamble por promedio de rangos, con pesos iguales fijados a priori, de tres componentes: un modelo LightGBM entrenado con inundaciones extremas cartografiadas por CENAPRED (2011 y 2020), un modelo LightGBM entrenado con inundación estacional detectada con Sentinel-1 (2015--2025) y la profundidad de inundación de JRC/GloFAS para un periodo de retorno de 100 años. Sobre la inundación extrema de 2011, que ningún componente vio, el ensamble obtiene un ROC AUC de 0.778, frente a 0.766 de JRC. Sobre las temporadas 2023--2025, posteriores al mapa oficial IPCET-PNUD 2022, obtiene entre 0.715 y 0.723, frente a 0.608--0.624 del mapa oficial. Las clases Alta y Muy alta, que cubren el 40 \% del estado, concentran el 84 \% de la superficie inundada en 2011 y el 67 \% en 2023--2025, frente al 40 \% que concentraría un mapa aleatorio. El trabajo muestra también que la validación cruzada espacial (ROC 0.885) sobreestima la capacidad de anticipar inundaciones nuevas.
 
-\textbf{Palabras clave:} susceptibilidad a inundación; LiDAR; HAND; Sentinel-1; LightGBM; ensamble; validación con eventos retenidos; Tabasco.
-
 \section{Introducción}
 
 Tabasco concentra cerca del 40 \% del agua dulce de México y recibe una precipitación media tres veces mayor que la nacional, con lluvias de mayo a noviembre {[}1{]}. El estado se inunda cada año; en 2020, los frentes fríos y los huracanes Gamma, Eta e Iota afectaron a unas 800 000 personas {[}1{]}. Para planear la prevención hace falta saber \textbf{dónde} es más probable que el agua llegue, antes de que ocurra el evento: un mapa de susceptibilidad.
@@ -608,17 +606,9 @@ El hallazgo más importante es metodológico. La validación cruzada espacial so
 
 Como trabajo futuro, la mejora con mayor impacto esperado es reemplazar el detector por umbrales de Sentinel-1 por una segmentación con U-Net {[}1{]}, para obtener etiquetas estacionales menos ruidosas, incluida la vegetación inundada. También se proponen: incorporar más eventos extremos independientes (activaciones de Copernicus EMS y UNOSAT); incorporar el inventario de bordos y obras de protección de CONAGUA para corregir la sobreestimación en zonas protegidas; usar umbrales del detector por cobertura de suelo; validar por cuenca o con bloques de al menos 50 km; y calibrar el índice con regresión isotónica sobre eventos retenidos, para pasar de un orden relativo a una probabilidad interpretable.
 
-\section*{Contribuciones de los autores}\addcontentsline{toc}{section}{Contribuciones de los autores}
-
-Conceptualización, G.A.J.C. y F.P.-M.; metodología, software, análisis formal, visualización y redacción del borrador original, G.A.J.C.; supervisión y redacción (revisión y edición), F.P.-M.
-
-\section*{Disponibilidad de datos y código}\addcontentsline{toc}{section}{Disponibilidad de datos y código}
+\section*{Reproducibilidad}\addcontentsline{toc}{section}{Reproducibilidad}
 
 Todas las fuentes de la sección 3.2 son públicas. El procedimiento completo, desde la descarga del LiDAR hasta el mapa final, está automatizado y versionado junto con la aplicación, y regenera cada resultado desde las fuentes. Se verificó la reproducibilidad de las etiquetas de Sentinel-1: regenerarlas desde Earth Engine con el procedimiento final dio las 11 temporadas (2015--2025) idénticas byte a byte a las usadas para calibrar los umbrales.
-
-\section*{Conflictos de interés}\addcontentsline{toc}{section}{Conflictos de interés}
-
-Los autores declaran no tener conflictos de interés.
 
 \section*{Referencias}\addcontentsline{toc}{section}{Referencias}
 
