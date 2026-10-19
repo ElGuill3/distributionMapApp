@@ -119,6 +119,20 @@ def validate_forecast(p):
     return p
 
 
+def _is_safe_file_name(name):
+    """True for a plain file name that cannot leave the upload folder.
+
+    Names come from the remote page, so only letters, digits and a few
+    separators are allowed and the first character must be alphanumeric:
+    this rejects ``.``, ``..``, hidden names, slashes and control characters.
+    """
+    return (
+        0 < len(name) <= 120
+        and name[0].isalnum()
+        and all(ch.isalnum() or ch in " ._-+()" for ch in name)
+    )
+
+
 class _ArticleImages(HTMLParser):
     def __init__(self):
         super().__init__()
@@ -328,11 +342,9 @@ class ForecastFeed:
                     continue
                 name = unquote(parsed.path.rsplit("/", 1)[-1])
                 if (
-                    not name
+                    not _is_safe_file_name(name)
                     or name in {"page.html", "meta.json"}
                     or name in names
-                    or "/" in name
-                    or "\\" in name
                 ):
                     raise ValueError("Ambiguous image name")
                 names.add(name)

@@ -286,6 +286,39 @@ def test_failed_delivery_never_writes_meta_or_marks_success(tmp_path, failure, c
     assert all("other.test" not in c.args[0] for c in http.get.call_args_list)
 
 
+@pytest.mark.parametrize(
+    "src",
+    [
+        "/sites/default/files/%2E%2E",
+        "/sites/default/files/%2e",
+        "/sites/default/files/a%0Ab.jpg",
+        "/sites/default/files/a%00.jpg",
+        "/sites/default/files/%2E%2Ehidden.jpg",
+    ],
+)
+def test_unsafe_image_names_upload_nothing(tmp_path, src):
+    http = Mock()
+    page = f'<article><img src="{src}"></article>'.encode()
+
+    def get(url, **kwargs):
+        if url.endswith("latest.json"):
+            return Reply(payload())
+        if "api.github.com" in url:
+            return Reply(status=404)
+        if "/noticias/" in url:
+            return Reply(body=page)
+        return Reply(
+            body=b"image", headers={"Last-Modified": "Mon, 19 Oct 2026 16:00:00 GMT"}
+        )
+
+    http.get.side_effect = get
+    service = feed(tmp_path, http, "fake-token")
+    service.get()
+    service.worker.join(3)
+    assert not service.worker.is_alive()
+    http.put.assert_not_called()
+
+
 def test_paces_ipcet_and_uses_mexico_city_page_date(tmp_path):
     http = Mock()
     http.get.side_effect = lambda url, **_: (
