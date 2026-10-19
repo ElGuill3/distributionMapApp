@@ -16,7 +16,6 @@ import sys
 from threading import Lock
 
 import ee
-import requests
 from flask import (
     Flask,
     Response,
@@ -29,7 +28,6 @@ from flask import (
 from backend import config
 from backend.config import (
     BASE_DIR,
-    BDCTB_FORECAST_API_BASE_URL,
     CACHE_POLICIES,
     DEBUG,
     GEE_PROJECT,
@@ -39,6 +37,7 @@ from backend.config import (
     prepare_runtime_directories,
 )
 from backend.extensions import limiter
+from backend.forecast_feed import UNAVAILABLE, ForecastFeed
 from backend.routes.export_routes import export_bp
 from backend.routes.flood_routes import flood_bp
 from backend.routes.gif_routes import gif_bp
@@ -167,35 +166,21 @@ def index():
     )
 
 
+forecast_feed = ForecastFeed(
+    config.BDCTB_FORECAST_URL,
+    config.FORECAST_CACHE_PATH,
+    token=config.FORECAST_MESSENGER_TOKEN,
+)
+
+
 @app.get("/api/v1/forecasts/bdctb")
 @limiter.limit(RATE_LIMITS["forecast"])
 def bdctb_forecast():
-    """Proxy the local forecast service without exposing it to browsers."""
-    upstream_url = f"{BDCTB_FORECAST_API_BASE_URL.rstrip('/')}/api/v1/forecasts/bdctb"
-    try:
-        with requests.get(
-            upstream_url,
-            headers={"Accept": "application/json"},
-            timeout=(2, 5),
-            allow_redirects=False,
-            stream=True,
-        ) as upstream:
-            if upstream.status_code not in (200, 503):
-                return jsonify({"error": "Forecast service returned an error."}), 502
-
-            body = bytearray()
-            for chunk in upstream.iter_content(chunk_size=8192):
-                body.extend(chunk)
-                if len(body) > 64 * 1024:
-                    return jsonify({"error": "Forecast response is too large."}), 502
-    except requests.Timeout:
-        return jsonify({"error": "Forecast service timed out."}), 504
-    except requests.RequestException:
-        return jsonify({"error": "Forecast service is unavailable."}), 502
-
-    return Response(
-        bytes(body), status=upstream.status_code, mimetype="application/json"
-    )
+    """Read the published forecast; the optional courier never blocks this route."""
+    result = forecast_feed.get()
+    if result is None:
+        return jsonify({"error": UNAVAILABLE}), 503
+    return jsonify(result)
 
 
 @app.route("/static/<path:filename>")

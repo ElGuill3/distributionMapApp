@@ -83,40 +83,27 @@ class TestOpenApiSpec:
         )
 
     def test_bdctb_forecast_proxy_contract_is_closed(self):
+        from backend.forecast_feed import DISCLAIMER, UNAVAILABLE
+
         with open(OPENAPI_YAML) as f:
             spec = yaml.safe_load(f)
 
         operation = spec["paths"]["/api/v1/forecasts/bdctb"]["get"]
-        assert set(operation["responses"]) == {"200", "429", "502", "503", "504"}
+        assert set(operation["responses"]) == {"200", "429", "503"}
         schemas = spec["components"]["schemas"]
-        for name in (
-            "BdctbForecastResponse",
-            "BdctbForecastUnavailableResponse",
-            "BdctbForecastProxyErrorResponse",
-        ):
-            assert schemas[name]["additionalProperties"] is False
-        assert set(
-            schemas["BdctbForecastProxyErrorResponse"]["properties"]["error"]["enum"]
-        ) == {
-            "Forecast service returned an error.",
-            "Forecast response is too large.",
-            "Forecast service is unavailable.",
-            "Forecast service timed out.",
-        }
-        assert schemas["BdctbForecastResponse"]["required"] == [
-            "schema_version",
-            "station",
-            "model_version",
-            "issue_time",
-            "generated_at",
-            "status",
-            "forecasts",
-            "unit",
-            "data_kind",
-            "warning",
-            "provenance",
-            "scientific_use",
-        ]
+        envelope = schemas["BdctbForecastResponse"]
+        assert envelope["additionalProperties"] is False
+        assert envelope["required"] == ["forecast", "source", "fetched_at", "updating"]
+        assert envelope["properties"]["source"]["enum"] == ["network", "cache"]
+        forecast = schemas["BdctbForecast"]
+        assert forecast["additionalProperties"] is False
+        assert forecast["properties"]["schema"]["const"] == "bdctb-forecast/v2"
+        assert forecast["properties"]["disclaimer"]["const"] == DISCLAIMER
+        assert forecast["properties"]["forecasts"]["required"] == ["h1", "h3", "h7"]
+        assert schemas["BdctbForecastPoint"]["properties"]["namo_m"]["const"] == 19.21
+        unavailable = schemas["BdctbForecastUnavailableResponse"]
+        assert unavailable["additionalProperties"] is False
+        assert unavailable["properties"]["error"]["const"] == UNAVAILABLE
 
     def test_openapi_yaml_has_components_schemas(self):
         """The spec has component schemas including ErrorResponse."""
@@ -128,7 +115,7 @@ class TestOpenApiSpec:
 
 
 class TestSchemaDrift:
-    """Tests to ensure schemas generated from Pydantic stay in sync with openapi.yaml."""
+    """Ensure generated Pydantic schemas stay in sync with openapi.yaml."""
 
     def test_generate_schemas_matches_committed(self):
         """
@@ -172,7 +159,8 @@ class TestSchemaDrift:
             assert key in committed, f"{key} missing from committed schemas"
             assert key in generated, f"{key} missing from generated schemas"
             assert committed[key] == generated[key], (
-                f"{key} schema drifted — run backend/scripts/generate_schemas.py --merge and commit"
+                f"{key} schema drifted — run "
+                "backend/scripts/generate_schemas.py --merge and commit"
             )
 
 

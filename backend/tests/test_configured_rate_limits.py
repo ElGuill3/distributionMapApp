@@ -96,7 +96,7 @@ def test_http_quotas_and_existing_default_disable_contract(
     snapshot, category, path, cap, mode
 ):
     observed = http_probe(snapshot, category, path, cap, mode)
-    assert observed["statuses"][0] in (200, 400, 502)
+    assert observed["statuses"][0] in (200, 400, 503)
     if mode == "disabled":
         assert observed["statuses"] == [observed["statuses"][0]] * 2
         assert observed["bodies"] == [observed["bodies"][0]] * 2
