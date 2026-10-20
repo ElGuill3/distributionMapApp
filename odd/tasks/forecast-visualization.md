@@ -59,3 +59,16 @@ Station icons take their colour from the official IPCET semáforo, and the river
   - The test server compiles current TypeScript in memory with repository compiler options and reuses `readStyleBundle`, leaving stale generated application assets untouched. Its CSP blocks external data access and basemap tiles by default. The first per-request-transpilation approach passed the new spec but caused five existing flood-mode listener timing failures (29/34 passed); compiling once before serving corrected them. No application bug was found. The screenshot helper's first invocation hit a Node Module filename assertion before starting any server; setting its explicit filename corrected it.
   - Six 1280×800 screenshots are in gitignored `.cache/fv-shots/`: `map-light.png`, `map-dark.png`, `bdctb-popup.png`, `bdctb-chart-light.png`, `bdctb-chart-dark.png`, `spttb-chart.png`. The throwaway `capture.cjs` reuses the spec's fixtures/routes; screenshots alone allow the existing basemap hosts `a.tile.openstreetmap.org`, `b.tile.openstreetmap.org`, `c.tile.openstreetmap.org`. All other external data requests, including raw.githubusercontent.com, are blocked. The screenshot server was stopped by its child PID (1122603); Playwright owns its own test-server lifecycle.
   - README updates distinguish official colors from the neutral model ring, explain chart actions, endpoints and IPCET URL variables, and record Gaviotas' unconfirmed-level/history limitation (L8). No application source, environment files, staging, commits or pushes were changed. Parent still owns visual approval and delivery; the normal frontend build remains necessary before running the production app with current generated assets.
+- **L12** Parent visual check of the T6 screenshots (`.cache/fv-shots/`, mocked data):
+  - The light and dark maps show BDCTB yellow (PREVENCION) and SPTTB green.
+  - The dashed ring appears only after the live forecast loads.
+  - The light and dark charts show the observed line with gaps, the dashed median, the 10–90 % band and the dotted NAMO line.
+  - The popup line reads "PREVENCIÓN (IPCET, 19/10/2026) · Fuente: IPCET".
+  - One defect: the chart action touched the button above it. Fixed in `d943f14` (`.station-chart-link` margin) and re-shot.
+  - Vitest 308 pass. E2E: 34/34 (12 new).
+  - Native review `review-74d31c7150786db1` (risk and reliability, f78e753..94133e9) was approved and acknowledged. Its advisories are later work:
+    - R3-compile-timeout (`server.py:41-44`);
+    - R3-forbidden-vacuous-under-csp (`ipcet-status.spec.ts:34`);
+    - R3-reduced-motion-outline-unasserted;
+    - R3-silent-stale-fallback (`server.py:35-52`).
+
