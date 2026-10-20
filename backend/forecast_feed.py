@@ -157,8 +157,17 @@ class _ArticleImages(HTMLParser):
 
 class ForecastFeed:
     def __init__(
-        self, url, cache_path, *, token="", http=requests, now=None, sleep=time.sleep
+        self,
+        url,
+        cache_path,
+        *,
+        token="",
+        http=requests,
+        now=None,
+        sleep=time.sleep,
+        fetch_deadline=3.5,
     ):
+        self.fetch_deadline = fetch_deadline
         self.url = url
         self.cache_path = Path(cache_path)
         self.token = token
@@ -195,9 +204,7 @@ class ForecastFeed:
                     raise ValueError("Response too large")
             return 200, bytes(body), response.headers
 
-    def get(self):
-        """Fetch only valid publications; never wait for courier completion."""
-        result = None
+    def _fetch_publication(self):
         try:
             status, body, _ = self._read(self.url, 65536)
             if status != 200:
@@ -214,7 +221,7 @@ class ForecastFeed:
                     temporary.replace(self.cache_path)
             except OSError:
                 pass  # An unwritable disk must not hide a valid online publication.
-            source = "network"
+            return result
         except (
             requests.RequestException,
             ValueError,
@@ -223,6 +230,24 @@ class ForecastFeed:
             AttributeError,
             OverflowError,
         ):
+            raise
+
+    def get(self):
+        """Fetch within a total deadline; never wait for courier completion."""
+        outcome = {}
+
+        def fetch():
+            try:
+                outcome["result"] = self._fetch_publication()
+            except BaseException as error:
+                outcome["error"] = error
+
+        worker = threading.Thread(target=fetch, daemon=True)
+        worker.start()
+        worker.join(self.fetch_deadline)
+        result = None if worker.is_alive() else outcome.get("result")
+        source = "network"
+        if result is None:
             try:
                 with self.cache_lock:
                     if self.cache_path.stat().st_size > 65536:

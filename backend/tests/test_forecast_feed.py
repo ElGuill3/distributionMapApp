@@ -4,6 +4,8 @@ import base64
 import copy
 import hashlib
 import json
+import threading
+import time
 from datetime import datetime
 from threading import Event
 from unittest.mock import Mock, patch
@@ -69,6 +71,33 @@ def feed(tmp_path, http=None, token=""):
         now=lambda: datetime.fromisoformat("2026-10-19T18:00:00+00:00"),
         sleep=lambda _: None,
     )
+
+
+def test_deadline_serves_cache_and_late_fetch_refreshes_it(tmp_path):
+    http, release, workers = Mock(), Event(), []
+    service = feed(tmp_path, http)
+    http.get.return_value = Reply(payload())
+    cached = service.get()
+    fresh = {**payload(), "model_version": "fresh"}
+
+    def blocked(*_, **__):
+        workers.append(threading.current_thread())
+        release.wait()
+        return Reply(fresh)
+
+    http.get.side_effect = blocked
+    try:
+        service = ForecastFeed(
+            service.url, service.cache_path, http=http, fetch_deadline=0.2
+        )
+        start = time.monotonic()
+        assert service.get() == {**cached, "source": "cache"}
+        assert time.monotonic() - start < 1
+    finally:
+        release.set()
+        for worker in workers:
+            worker.join(2)
+    assert json.loads(service.cache_path.read_text())["forecast"] == fresh
 
 
 def test_network_then_disk_cache_on_failure_and_restart(tmp_path):
