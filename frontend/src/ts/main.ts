@@ -41,8 +41,11 @@ import {
 import { openStationChart } from './ui/stationChart.js';
 import { initLucideIcons, setLucideIcon } from './ui/icons.js';
 import { seasonToDates } from './utils/seasonDates.js';
-import { openBdctbForecastDialog } from './ui/bdctbForecast.js';
-import { buildStationPopup } from './ui/stationPopup.js';
+import {
+  buildStationPopup,
+  openStationPopup,
+  closeStationPopup,
+} from './ui/stationPopup.js';
 import { bindStationStatus, ipcetStatus, STATUS_LEGEND } from './ui/ipcetStatus.js';
 
 import {
@@ -65,7 +68,9 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 }).addTo(map);
 
+map.on('popupclose', e => closeStationPopup(e.popup));
 map.on('popupopen', e => {
+  openStationPopup(e.popup);
   const container = e.popup.getElement();
   if (container) {
     initLucideIcons(container);
@@ -411,8 +416,10 @@ const chartBDiv = document.getElementById('chart-b') as HTMLDivElement | null;
 const chartResizeObserver = new ResizeObserver(entries => {
   for (const entry of entries) {
     const target = entry.target;
-    const chartDiv = target.querySelector(
-      '#ndvi-chart, #chart-b'
+    const chartDiv = (
+      target.matches('#ndvi-chart, #chart-b')
+        ? target
+        : target.querySelector('#ndvi-chart, #chart-b')
     ) as HTMLElement | null;
     if (chartDiv && (chartDiv as unknown as { layout?: unknown }).layout) {
       const width = chartDiv.clientWidth;
@@ -434,6 +441,10 @@ if (ndviChartContainer) {
 if (chartBContainer) {
   chartResizeObserver.observe(chartBContainer);
 }
+// Showing the export toolbar changes the chart's inner height without changing
+// its container. Observe the plot area too so axes never fall below the panel.
+if (ndviChartDiv) chartResizeObserver.observe(ndviChartDiv);
+if (chartBDiv) chartResizeObserver.observe(chartBDiv);
 
 function showChartBContainer(): void {
   chartBContainer?.classList.remove('hidden');
@@ -1362,14 +1373,6 @@ document.addEventListener('click', e => {
     syncExportButton();
     return;
   }
-  const forecastLink = (e.target as HTMLElement).closest<HTMLElement>(
-    '.station-forecast-link'
-  );
-  if (forecastLink) {
-    e.preventDefault();
-    void openBdctbForecastDialog();
-    return;
-  }
   const link = (e.target as HTMLElement).closest<HTMLElement>(
     '.station-full-data-link'
   );
@@ -1512,7 +1515,7 @@ function syncExportButton(): void {
 
   // Toggle export toolbar visibility
   if (exportToolbar) {
-    if (hasData) {
+    if (hasData || (ndviChartDiv && isStationChart(ndviChartDiv))) {
       exportToolbar.classList.add('can-export');
     } else {
       exportToolbar.classList.remove('can-export');
@@ -1524,7 +1527,12 @@ function syncExportButton(): void {
   const bboxSuffix = hasBbox ? '' : ' — Selecciona un área primero';
 
   if (btnExportAnalysis) {
-    btnExportAnalysis.title = hasData ? '' : baseTitle + bboxSuffix;
+    btnExportAnalysis.title =
+      ndviChartDiv && isStationChart(ndviChartDiv)
+        ? 'La exportación de análisis no admite las series IPCET y de pronóstico.'
+        : hasData
+          ? ''
+          : baseTitle + bboxSuffix;
   }
 }
 

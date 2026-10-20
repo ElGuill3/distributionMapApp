@@ -1,5 +1,6 @@
 import type { LocalStationInfo } from '../types.js';
-import { bdctbForecastAction } from './bdctbForecast.js';
+import { formatForecastSummary, type ForecastResponse } from './bdctbForecast.js';
+import { forecastLoaderFor } from './stationChart.js';
 import { escapeHtml } from '../utils/html.js';
 import { ipcetStatus, safeSource, stateLabel, tableDate } from './ipcetStatus.js';
 
@@ -25,8 +26,7 @@ export function buildStationPopup(
       <span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metric}</span>
     </div>
     <a href="#" class="station-popup-btn station-full-data-link" data-station-id="${escapeHtml(id)}">Ver datos 2000–2024</a>
-    ${isHidro ? `<button type="button" class="station-popup-btn station-chart-link" data-station-id="${escapeHtml(id)}">Ver niveles en la gráfica</button>` : ''}
-    ${bdctbForecastAction(id, isHidro)}
+    ${isHidro ? `<button type="button" class="station-chart-link" data-station-id="${escapeHtml(id)}">Ver detalle</button>` : ''}
   `;
   const status = isHidro ? ipcetStatus.stateFor(id) : null;
   if (status) {
@@ -45,5 +45,127 @@ export function buildStationPopup(
     }
     div.querySelector('.station-popup-meta')?.after(line);
   }
+  if (isHidro && forecastLoaderFor(id)) {
+    const block = document.createElement('div');
+    block.className = 'station-forecast-summary';
+    block.dataset['stationId'] = id;
+    block.setAttribute('role', 'status');
+    block.setAttribute('aria-live', 'polite');
+    div.querySelector('.station-chart-link')?.before(block);
+  }
   return div;
+}
+
+type Popup = Pick<L.Popup, 'getElement'> & {
+  update(): unknown;
+  getContent?: L.Popup['getContent'];
+  setContent?: (content: Parameters<L.Popup['setContent']>[0]) => unknown;
+};
+let active: { popup: Popup; stop: () => void } | undefined;
+
+/** Shared by both maps. Construction never loads a forecast: only popupopen does. */
+export function openStationPopup(popup: Popup): void {
+  closeStationPopup();
+  const block = popup
+    .getElement()
+    ?.querySelector<HTMLElement>('.station-forecast-summary');
+  const load = forecastLoaderFor(block?.dataset['stationId'] || '');
+  if (!block || !load) return;
+  // Leaflet reevaluates function-valued content on update(). Keep this open
+  // instance stable, then restore the factory so the next open gets fresh status.
+  const factory = popup.getContent?.();
+  if (typeof factory === 'function')
+    popup.setContent?.(block.closest<HTMLElement>('.station-popup-content')!);
+  let disposed = false;
+  let request: AbortController | undefined;
+  let timer: number | undefined;
+  let result: ForecastResponse | undefined;
+  const deadline = Date.now() + 30 * 60000;
+  const current = () => !disposed && block.isConnected;
+  const cancel = () => {
+    window.clearTimeout(timer);
+    request?.abort();
+    request = undefined;
+  };
+  const render = (lines: string[]) => {
+    if (!current()) return;
+    block.replaceChildren(
+      ...lines.map(text => {
+        const line = document.createElement('span');
+        line.textContent = text;
+        line.title = text;
+        return line;
+      })
+    );
+    popup.update();
+    const medians = block.children[1] as HTMLElement | undefined;
+    // NAMO proximity is optional: omit it rather than show a clipped phrase.
+    // Keep the complete summary in the tooltip without widening the popup.
+    if (
+      medians &&
+      medians.clientWidth > 0 &&
+      medians.scrollWidth > medians.clientWidth
+    ) {
+      medians.textContent =
+        medians.textContent?.replace(
+          / · (?:mín\. .* bajo el NAMO|alcanza el NAMO)$/,
+          ''
+        ) ?? '';
+      popup.update();
+    }
+  };
+  const refresh = async () => {
+    if (!current() || document.hidden) return;
+    const controller = new AbortController();
+    request = controller;
+    try {
+      const next = await load(controller.signal);
+      if (!current() || controller.signal.aborted) return;
+      result = next;
+      render(formatForecastSummary(next));
+    } catch {
+      if (!current() || controller.signal.aborted) return;
+      // Preserve the last validated summary on a transient poll failure.
+      if (!result) render(['Pronóstico no disponible']);
+    } finally {
+      if (request === controller) request = undefined;
+      if (
+        current() &&
+        !controller.signal.aborted &&
+        !document.hidden &&
+        result?.updating &&
+        Date.now() < deadline
+      )
+        timer = window.setTimeout(
+          () => void refresh(),
+          Math.min(60000, deadline - Date.now())
+        );
+    }
+  };
+  const visibility = () => {
+    cancel();
+    if (
+      !document.hidden &&
+      current() &&
+      (!result || (result.updating && Date.now() < deadline))
+    )
+      void refresh();
+  };
+  active = {
+    popup,
+    stop: () => {
+      disposed = true;
+      cancel();
+      document.removeEventListener('visibilitychange', visibility);
+      if (typeof factory === 'function') popup.setContent?.(factory);
+    },
+  };
+  document.addEventListener('visibilitychange', visibility);
+  render(['Consultando pronóstico…']);
+  void refresh();
+}
+export function closeStationPopup(popup?: Popup): void {
+  if (popup && active?.popup !== popup) return;
+  active?.stop();
+  active = undefined;
 }

@@ -89,165 +89,40 @@
 }
 
 .station-chart-link {
+  display: inline-flex;
   margin-top: 0.4rem;
-}
-
-.station-forecast-link {
-  margin-top: 0.4rem;
-  background: #0e7490;
-}
-
-.forecast-dialog {
-  width: min(760px, calc(100vw - 2rem));
-  max-height: calc(100vh - 2rem);
-  padding: 0;
+  padding: 0.2rem 0.45rem;
   border: 1px solid var(--sidebar-border);
-  border-radius: var(--radius-lg);
-  color: var(--surface-fg);
-  background: var(--surface-bg);
-  box-shadow: var(--shadow-lg);
-}
-
-.forecast-dialog::backdrop {
-  background: var(--modal-backdrop);
-  backdrop-filter: blur(3px);
-}
-
-.forecast-dialog-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.1rem 1.25rem 0.8rem;
-  border-bottom: 1px solid var(--sidebar-border);
-}
-
-.forecast-dialog-header h2,
-.forecast-eyebrow {
-  margin: 0;
-}
-
-.forecast-eyebrow {
-  color: #0e7490;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.forecast-close {
-  border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: inherit;
+  color: var(--surface-fg);
+  font: inherit;
+  font-size: 0.7rem;
   cursor: pointer;
-  font-size: 1.8rem;
-  line-height: 1;
 }
 
-.forecast-state,
-.forecast-content {
-  padding: 1rem 1.25rem 1.25rem;
+.station-chart-link:hover {
+  background: var(--gray-200);
 }
 
-.forecast-state:empty {
-  display: none;
-}
-
-.forecast-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 1rem;
-  color: var(--gray-400);
-  font-size: 0.78rem;
-}
-
-.forecast-content svg {
-  display: block;
-  width: 100%;
-  max-height: 280px;
-  margin: 0.5rem 0;
-  overflow: visible;
-}
-
-.forecast-content svg text {
-  fill: var(--surface-fg);
-  font: 12px sans-serif;
-}
-
-.forecast-band {
-  fill: rgba(14, 116, 144, 0.2);
-}
-
-.forecast-median {
-  fill: none;
-  stroke: #0e7490;
-  stroke-width: 3;
-}
-
-.forecast-dot {
-  fill: #0e7490;
-}
-
-.forecast-namo {
-  stroke: var(--surface-fg);
-  stroke-width: 1.5;
-  stroke-dasharray: 6 4;
-}
-
-.forecast-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.forecast-table caption {
-  text-align: left;
-  font-weight: 600;
-  padding: 0.5rem 0;
-}
-
-.forecast-table td {
-  padding: 0.55rem 0.3rem;
-  border-top: 1px solid var(--sidebar-border);
-  vertical-align: top;
-}
-
-.forecast-table td:last-child {
-  white-space: nowrap;
-  color: var(--gray-400);
-}
-
-.forecast-content > p {
+/* Three compact logical lines within Leaflet's existing maximum width. They
+   wrap rather than truncate so the NAMO phrase is never hidden. */
+.station-forecast-summary {
+  margin-top: 0.45rem;
+  max-width: 276px;
+  color: var(--surface-fg);
+  font-size: 0.68rem;
   line-height: 1.5;
-  font-size: 0.85rem;
 }
 
-.forecast-warning {
-  margin: 0.75rem 0 0;
-  padding: 0.7rem 0.8rem;
-  border-left: 3px solid #0e7490;
-  background: rgba(14, 116, 144, 0.08);
-  font-size: 0.8rem;
-  line-height: 1.45;
+.station-forecast-summary > span {
+  display: block;
+  overflow-wrap: anywhere;
 }
 
-@media (max-width: 540px) {
-  .forecast-dialog {
-    width: 100vw;
-    max-width: none;
-    max-height: 92dvh;
-    margin: auto 0 0;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  }
-  .forecast-dialog-header,
-  .forecast-state,
-  .forecast-content {
-    padding-left: 0.8rem;
-    padding-right: 0.8rem;
-  }
-  .forecast-table td:last-child {
-    white-space: normal;
-  }
+.station-forecast-summary > span:last-child {
+  color: var(--gray-400);
+  font-size: 0.65rem;
 }
 
 /* Popup de Leaflet: reemplaza el contenedor nativo para soportar el modo oscuro */

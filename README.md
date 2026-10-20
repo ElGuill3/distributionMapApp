@@ -1,6 +1,6 @@
 # Visor Hidrometeorológico — distributionMapApp
 
-*Read this in [English](README.en.md).*
+_Read this in [English](README.en.md)._
 
 Aplicación web interactiva para visualizar animaciones y series temporales de variables hidrometeorológicas sobre el estado de Tabasco, México, usando Google Earth Engine como principal fuente de datos satelitales.
 
@@ -82,12 +82,13 @@ tres archivos de hasta 1 MiB cada uno).
 
 ## Pronóstico de Boca del Cerro (Usumacinta)
 
-En el marcador hidrométrico **BDCTB**, pulsa **Ver pronóstico del río**. La app
-muestra el JSON público `bdctb-forecast/v2` de
+Al abrir el marcador hidrométrico **BDCTB**, el popup consulta y muestra un
+resumen compacto: emisión, medianas q50 para mañana, 3 y 7 días y la nota
+**Modelado, no es aviso oficial**. Indica si falta nivel en vivo, si es una copia
+guardada o si se está actualizando. No hay diálogo de pronóstico. La app lee el
+JSON público `bdctb-forecast/v2` de
 [tabasco-river-forecast](https://github.com/ElGuill3/tabasco-river-forecast), sin
-instalar ni ejecutar el modelo en la laptop. El gráfico SVG presenta la mediana
-(q50), la banda q10–q90 (80% nominal, no una garantía) y el **NAMO oficial 19.21 m**.
-La tabla muestra h1/h3/h7 y la distancia al NAMO. Los colores de los marcadores
+instalar ni ejecutar el modelo en la laptop. Los colores de los marcadores
 vienen del **semáforo oficial de IPCET, nunca del modelo**: NORMAL verde,
 A LA BAJA gris, BAJO café, PREVENCIÓN amarillo, ALERTA rojo y EMERGENCIA morado.
 Solo PREVENCIÓN, ALERTA y EMERGENCIA parpadean; con `prefers-reduced-motion`
@@ -97,16 +98,18 @@ el estado y la fecha; el popup incluye el enlace **Fuente: IPCET**.
 El **anillo punteado neutro** es independiente del color oficial: indica que
 la mediana de un pronóstico `live` alcanza o supera su NAMO en algún horizonte,
 no un aviso oficial. Solo aparece después de cargar el pronóstico en esta
-sesión (diálogo o gráfica); no aparece en modo `glofas_only`. Una nueva carga
+sesión (popup o gráfica); no aparece en modo `glofas_only`. Una nueva carga
 que no cumpla la regla lo retira. El arranque nunca consulta el pronóstico.
 
-En cualquier marcador hidrométrico, pulsa **Ver niveles en la gráfica** para
-abrir el panel existente con niveles recientes observados de IPCET (línea
-continua) y el NAMO oficial. BDCTB añade la mediana (línea discontinua) y la
-banda q10–q90; SPTTB, por ahora, muestra solo observado y NAMO. La acción
-reemplaza la gráfica anterior y conserva el diálogo de pronóstico. El ZIP de
-análisis queda deshabilitado para estas series; sigue disponible la imagen de
-Plotly.
+En cualquier marcador hidrométrico, pulsa el botón pequeño **Ver detalle** para
+abrir el panel con los últimos **30 días calendario** de niveles observados de
+IPCET (línea continua, con huecos cuando faltan datos) y el NAMO oficial. BDCTB
+añade la mediana discontinua y la banda q10–q90 hasta h7 (80% nominal, no una
+garantía); SPTTB muestra solo observado y NAMO. Se comparte el estilo de los
+gráficos de variables: ejes, leyenda, tema, relleno sutil y controles de Plotly.
+La acción reemplaza la gráfica anterior. La barra **Exportar análisis** permanece
+visible pero deshabilitada, con una explicación: el ZIP no admite estas series.
+Sigue disponible la imagen de Plotly. **Ver datos 2000–2024** se conserva.
 
 - `/api/v1/ipcet/levels` lee `IPCET_LEVELS_URL`, la publicación
   `ipcet/latest.json`; se consulta al arrancar y cada 30 minutos.
@@ -120,8 +123,11 @@ Plotly.
   errores de lectura del NAMO/capacidad en el archivo OCR. El estado oficial
   sigue disponible, pero el nivel aparece como sin confirmar.
 
-- Siempre se muestran la fecha de emisión y la procedencia: nivel IPCET de las
-  06:00 con su fecha, o GloFAS sin nivel reciente (menos preciso).
+- El resumen muestra la emisión en hora de Ciudad de México y avisa si falta
+  nivel en vivo (puede sobrestimar). La copia guardada indica la fecha de emisión.
+  La consulta tiene un límite de 5 s; si falla, muestra **Pronóstico no disponible**
+  sin bloquear los enlaces del popup. Al cerrarlo o abrir otro, se cancela la
+  consulta y se ignoran respuestas tardías.
 - `/api/v1/forecasts/bdctb` consulta `BDCTB_FORECAST_URL`, valida el contrato v2
   (64 KiB, timeouts de conexión/lectura de 2/5 s, sin redirecciones) y guarda la
   última copia válida en `.cache/forecasts/bdctb/latest.json`, fuera de Git.
@@ -140,12 +146,13 @@ Plotly.
   `fetched_at` e `images` (`url`, `last_modified` HTTP literal, `sha256`, `bytes`).
   No hace OCR. Solo hay un intento activo por proceso y una entrega exitosa por
   fecha de página; un fallo parcial se puede reintentar en otra consulta.
-- Mientras se sube o se espera la publicación, el diálogo conserva el pronóstico
-  disponible y muestra **Actualizando con el nivel de IPCET de hoy…**. Consulta
-  cada 60 s durante un máximo de 30 min; se detiene al cerrar, se pausa oculto y
-  sustituye el contenido cuando llega la publicación. La espera del servidor
-  caduca a los 30 min de la entrega o termina al recibir el nivel de hoy. Si la
-  espera caduca, reabre el diálogo para consultar de nuevo.
+- Mientras se sube o se espera la publicación, el popup conserva el pronóstico
+  disponible y muestra **Actualizando con el nivel de hoy…**. Solo mientras está
+  abierto consulta cada 60 s durante un máximo de 30 min; se detiene al cerrar,
+  se pausa con la pestaña oculta y se reanuda al volver si la actualización sigue
+  pendiente. Si falla un sondeo, conserva el último resumen válido. La espera
+  del servidor caduca a los 30 min de la entrega o termina al recibir el nivel
+  de hoy. Si la espera caduca, reabre el popup para consultar de nuevo.
 
 El token permanece solo en el backend: usa un **fine-grained personal access token**
 limitado a **Contents: read/write de `ElGuill3/tabasco-river-forecast`**, sin acceso a
@@ -288,13 +295,14 @@ El estado de Tabasco presenta una alta variabilidad hidrológica y climática, l
 ### Variables satelitales (Google Earth Engine)
 
 | Variable | Fuente GEE | Resolución temporal | Período disponible |
-|---|---|---|---|
+| -------------------------- | ----------------- | ------------------- | ------------------ |
 | NDVI (vegetación) | MODIS MOD13Q1 | Cada 16 días | 2000–2024 |
 | Temperatura del aire a 2 m | ERA5-Land (ECMWF) | Diario | 2000–2024 |
 | Humedad del suelo (0–7 cm) | ERA5-Land (ECMWF) | Diario | 2000–2024 |
 | Precipitación diaria | CHIRPS (UCSB) | Diario | 2000–2024 |
 
 Cada variable genera:
+
 - Un **GIF animado** superpuesto al mapa, con la fecha de cada imagen.
 - Una **gráfica temporal** (media espacial en la región seleccionada) con Plotly.
 
@@ -357,28 +365,33 @@ Los nombres de estaciones, municipios, identificadores y valores de la leyenda d
 ### Exportación de Datos
 
 Para facilitar el análisis fuera de la plataforma, el sistema ofrece:
+
 - **ZIP de Análisis**: Exporta un paquete ZIP con los datos de las series temporales activas en formato CSV, junto a los GIFs de animación y metadatos del análisis.
   Las rutas deben permanecer dentro de `frontend/static/gifs/` y terminar en `.gif`; se aceptan `gifs/nombre.gif` y `/static/gifs/nombre.gif`. Rutas con traversal, absolutas, otros archivos y enlaces simbólicos que escapen del directorio devuelven HTTP 400; un GIF permitido ausente devuelve HTTP 404.
 
 ### Modos de operación
 
 **Modo normal** (un solo mapa):
+
 - Selección de variable, año y temporada en el panel lateral.
 - Generación de animación con barra de progreso en tiempo real.
 - Gráfica temporal debajo del mapa, combinable con datos de estaciones.
 
 **Modo comparativa** (dos mapas sincronizados):
+
 - Panel A y Panel B con selección independiente de variable, año y temporada.
 - Reproducción sincronizada de ambos GIFs: pausa, avance por frame, control de velocidad.
 - Gráficas Plotly independientes por panel.
 - Carga de datos de estaciones locales por panel mediante checkboxes.
 
 **Modo mapa de riesgo**:
+
 - Muestra la susceptibilidad de todo el estado, con leyenda y lectura de la clase bajo el cursor.
 - Los controles de animación quedan bloqueados para evitar superposiciones.
 - Un municipio a la vez: se resalta al pasar el cursor y se selecciona con un clic en el mapa o en la lista lateral, que abre su ficha; la vista **Por municipio** muestra la coropleta.
 
 **Modo detección de inundaciones**:
+
 - Detecta agua superficial en el área dibujada (máx. 4°×4°) para un rango de fechas libre.
 - Satélite a elegir: Sentinel-1 (radar, 10 m, 2015–2024) o Landsat (óptico, 30 m, 2000–2024).
 - Umbral automático (percentil dinámico) o manual (por defecto −18,0).
@@ -486,7 +499,7 @@ consultar en Earth Engine.
 El progreso de generación usa **Server-Sent Events (SSE)** en `/api/gif-progress/<task_id>`. El registro es **local al proceso**: usar un proceso de aplicación con hilos concurrentes permite que la generación y SSE accedan al mismo registro.
 
 | Configuración | Por defecto | Comportamiento |
-| --- | --- | --- |
+| --------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
 | `SSE_TASK_QUEUE_TIMEOUT_S` | 60 segundos | Espera entre comentarios keep-alive. |
 | `SSE_PROGRESS_RETENTION_S` | 3600 segundos, mínimo 1 | El progreso terminado/fallido caduca desde el fin del productor; las tareas activas no caducan. |
 | `SSE_MAX_PROGRESS_TASKS` | 1024, mínimo 1 | Desaloja primero registros terminados y luego el más antiguo si todos están activos. |
@@ -539,7 +552,7 @@ flowchart LR
 ```
 
 | Módulo | Responsabilidad |
-|---|---|
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | `main.ts` | Inicializa Leaflet, conecta los modos y los controles; no tiene lógica de negocio. |
 | `apiClient.ts`, `config.ts`, `types.ts`, `errorMap.ts` | Peticiones tipadas al backend, endpoints, tipos de la API y traducción de errores. |
 | `state/mapState.ts` | Estado de la sesión: bbox, modo activo, variable, series y players de animación. |
@@ -560,23 +573,25 @@ flowchart LR
 ## Requisitos previos
 
 | Componente | Versión mínima recomendada |
-|---|---|
+| ---------- | ------------------------------------------------------ |
 | Python | 3.11 |
 | Node.js | 18 |
 | npm | 9 |
 | uv | Última versión — gestor de paquetes Python recomendado |
 
 **Cuenta de Google Earth Engine:**
+
 - Necesitás una cuenta GEE aprobada y un proyecto de Google Cloud con la API de Earth Engine habilitada.
 - Más información: [earthengine.google.com](https://earthengine.google.com/)
 
 **Dependencias Python** (ver `pyproject.toml`):
+
 - Administradas y sincronizadas automáticamente mediante `uv`.
 
 **Dependencias Node** (ver `package.json`):
 
 | Tipo | Paquetes |
-|---|---|
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ejecución | `leaflet`, `gifuct-js`, `lucide` |
 | Desarrollo | `typescript`, `@types/leaflet`, `@types/node`, `vitest`, `@vitest/browser`, `jsdom`, `jszip`, `@playwright/test`, `playwright`, `eslint`, `@eslint/js`, `typescript-eslint`, `prettier` |
 
@@ -619,10 +634,10 @@ source .venv/bin/activate
 ```
 
 O podés ejecutar directamente cualquier comando usando `uv run`:
+
 ```bash
 uv run python -m backend.app
 ```
-
 
 ---
 
@@ -636,12 +651,13 @@ cp .env.example .env
 
 > [!IMPORTANT]
 > Debés configurar `GEE_PROJECT` con el ID real de tu proyecto de Google Cloud. Para ver la lista de tus proyectos y obtener el ID correcto, podés ejecutar:
+>
 > ```bash
 > gcloud projects list
 > ```
 
 | Variable de Entorno | Valor por Defecto | Descripción |
-|---|---|---|
+| --------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `GEE_PROJECT` | `inundaciones-proyecto` | ID del proyecto de Google Cloud con la API de Earth Engine habilitada. |
 | `FLASK_DEBUG` | `false` | Activa el modo debug de Flask si se establece en `true`. |
 | `CONAGUA_HIDROS_STATIONS` | `BDCTB,SPTTB` | Claves de las estaciones hidrométricas a descargar (separadas por comas). |
@@ -676,8 +692,8 @@ cp .env.example .env
 | `BDCTB_FORECAST_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/bdctb/latest.json` | JSON público v2; no es la API local antigua. |
 | `IPCET_LEVELS_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/latest.json` | Publicación del semáforo oficial y niveles IPCET. |
 | `IPCET_RECENT_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/recent.json` | Publicación de niveles observados recientes por estación. |
-| `FORECAST_MESSENGER_TOKEN` | *(vacío)* | Opcional, solo backend. Token fine-grained, limitado a Contents read/write de `ElGuill3/tabasco-river-forecast`. |
-| `BASE_DIR_OVERRIDE` | *(sin definir)* | Raíz alternativa del proyecto para datos y archivos estáticos (usada por los tests). |
+| `FORECAST_MESSENGER_TOKEN`  | _(vacío)_                                                                                       | Opcional, solo backend. Token fine-grained, limitado a Contents read/write de `ElGuill3/tabasco-river-forecast`. |
+| `BASE_DIR_OVERRIDE`         | _(sin definir)_                                                                                 | Raíz alternativa del proyecto para datos y archivos estáticos (usada por los tests).                             |
 
 Los límites `MAX_SPAN_DEG`, `MAX_YEARS_RANGE` y `MAX_SPAN_DEG_S2` deben ser números finitos positivos (se permiten fracciones). Valores vacíos, malformados, cero, negativos, NaN o infinitos impiden el arranque con `<ENV_KEY> must be a finite number greater than zero.`, sin mostrar el valor. Los valores predeterminados siguen siendo 8°, 10 años y 4°, respectivamente.
 
@@ -701,7 +717,7 @@ python -c "import ee; ee.Initialize(); print('GEE OK')"
 
 Editá `.env` y configurá el ID de tu proyecto de Google Cloud (`GEE_PROJECT`).
 
-> **¿No tenés proyecto GEE?** Ve a [console.cloud.google.com](https://console.cloud.google.com), creá un proyecto, habilitá la API *Earth Engine* y anotá el ID del proyecto.
+> **¿No tenés proyecto GEE?** Ve a [console.cloud.google.com](https://console.cloud.google.com), creá un proyecto, habilitá la API _Earth Engine_ y anotá el ID del proyecto.
 
 ---
 
@@ -802,7 +818,7 @@ Accede desde el navegador a: **http://127.0.0.1:5000**
 ### Modo normal — animación de una variable
 
 1. **Dibuja un rectángulo** en el mapa para definir la región de interés (máx. ~8°×8°).
-2. Despliega la sección de la variable deseada en el panel lateral (p. ej. *NDVI*).
+2. Despliega la sección de la variable deseada en el panel lateral (p. ej. _NDVI_).
 3. Selecciona el **año** y la **temporada**.
 4. Pulsa **"Generar animación"**.
 5. Una barra de progreso aparecerá mientras se procesa el GIF en GEE (puede tardar 15–60 segundos dependiendo del tamaño de la región y del período).
@@ -847,6 +863,7 @@ Accede desde el navegador a: **http://127.0.0.1:5000**
 ### Estaciones locales (modo normal)
 
 En la sección **"Estaciones locales (nivel)"** del panel lateral:
+
 1. Elige el **año** y la **temporada**.
 2. Pulsa **"Cargar serie de nivel"**.
 3. La serie se agrega a la gráfica debajo del mapa, junto a cualquier variable GEE ya cargada.
@@ -948,7 +965,7 @@ distributionMapApp/
 ## Endpoints de la API
 
 | Endpoint | Método | Parámetros principales | Respuesta |
-|---|---|---|---|
+| -------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `/api/ndvi-gif-bbox` | `GET` | `start`, `end` o `year` + `season`, `bbox`, `ratio`, `task_id` | `{ gifUrl, bbox, dates, ndvi[] }` |
 | `/api/era5-temp-gif-bbox` | `GET` | ídem | `{ gifUrl, bbox, dates, temp[] }` |
 | `/api/era5-soil-gif-bbox` | `GET` | ídem | `{ gifUrl, bbox, dates, soil_pct[] }` |
@@ -970,6 +987,7 @@ distributionMapApp/
 | `/api/docs/openapi.yaml` | `GET` | — | Especificación OpenAPI 3.1.0 en YAML |
 
 **Parámetros comunes:**
+
 - `start` / `end`: fechas en formato `YYYY-MM-DD`. Todas las rutas GIF y de series temporales, incluyendo NDVI, también aceptan `year` + `season`; el par explícito completo tiene prioridad, de lo contrario el modo estacional reemplaza el par.
 - `bbox`: arreglo JSON `[minLon, minLat, maxLon, maxLat]` en grados decimales (WGS-84). Se exige `minLon < maxLon`, `minLat < maxLat`, lon dentro de `[-180, 180]`, lat dentro de `[-90, 90]` y valores finitos; lo contrario se rechaza con 400.
 - `ratio`: relación ancho/alto del GIF; debe ser un número positivo y finito.
@@ -1001,12 +1019,14 @@ La aplicación cuenta con un stack de testing bipartito:
 
 **Vitest** — tests unitarios y de integración en TypeScript:
 Los tests importan directamente el TypeScript fuente y funcionan sin JavaScript generado en `frontend/static/`. La aplicación sigue necesitando la compilación para servirse.
+
 ```bash
 npm test              # todos los tests
 npm run test:watch   # modo watch (reacciona a cambios)
 ```
 
 **Playwright** — tests E2E en navegador real:
+
 ```bash
 npm run build:ts
 npm run test:e2e
@@ -1034,6 +1054,7 @@ uv run backend/scripts/quality/format.sh    # Ejecuta ruff format --check
 ```
 
 Notas:
+
 - Estos comandos están pensados como **guardrails** iniciales: reportan baseline, no corrigen el repo automáticamente.
 - La primera pasada excluye `frontend/static/`, `backend/scripts/` y tests Python para evitar ruido de revisión.
 - Si usás `uv run`, `uv` se asegura de que el entorno esté levantado correctamente antes de correr el script.
@@ -1047,6 +1068,7 @@ npm run quality:ts   # Corre lint + format check
 ```
 
 Notas:
+
 - La configuración excluye `frontend/static/` y otros artefactos generados para no mezclar código fuente con build output.
 - Esta etapa no hace auto-fix ni reformateo masivo; primero expone la baseline del proyecto.
 
@@ -1080,7 +1102,7 @@ cliente.
 
 La reorganización del código frontend siguió un ciclo de **Spec-Driven Development (SDD)**. El archivo `main.ts`, que originalmente contenía toda la lógica de aplicación, se dividió en módulos con responsabilidades claras:
 
-- **`main.ts`** actúa como *composition root*: solo inicializa los módulos, mantiene referencias DOM de infraestructura y delega todo comportamiento de negocio a los módulos de modo.
+- **`main.ts`** actúa como _composition root_: solo inicializa los módulos, mantiene referencias DOM de infraestructura y delega todo comportamiento de negocio a los módulos de modo.
 
 - **`apiClient.ts`** centraliza el acceso HTTP al backend Flask, tipando todas las respuestas y absorbiendo el manejo de errores y SSE.
 
@@ -1104,7 +1126,7 @@ El refactor no cambió el comportamiento visible de la aplicación ni los contra
 ## Créditos y fuentes de datos
 
 | Fuente | Descripción |
-|---|---|
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | [MODIS MOD13Q1](https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD13Q1) | NDVI, resolución 250 m, cada 16 días |
 | [ERA5-Land Daily](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_DAILY_AGGR) | Temperatura del aire y humedad del suelo, ~9 km |
 | [CHIRPS Daily](https://developers.google.com/earth-engine/datasets/catalog/UCSB-CHG_CHIRPS_DAILY) | Precipitación diaria, ~5.5 km |
