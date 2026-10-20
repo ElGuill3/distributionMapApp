@@ -9,7 +9,8 @@ Variables de entorno (todas con valores por defecto):
   BASE_DIR_OVERRIDE      - Ruta base alternativa para despliegues (opcional)
   GIF_MAX_AGE_MINUTES    - Edad máxima de GIFs antes de limpieza (default: 60)
   GIF_CLEANUP_INTERVAL_S - Intervalo del daemon de limpieza en segundos (default: 600)
-  BDCTB_FORECAST_API_BASE_URL - URL base de la API local de pronóstico
+  BDCTB_FORECAST_URL     - JSON publicado de Boca del Cerro
+  FORECAST_MESSENGER_TOKEN - Token opcional de Contents (solo backend)
 """
 
 import os
@@ -69,9 +70,11 @@ DEBUG = _env_bool("FLASK_DEBUG", "false")
 GEE_PROJECT = os.getenv("GEE_PROJECT", "inundaciones-proyecto")
 CONAGUA_HIDROS_STATIONS = _env_list("CONAGUA_HIDROS_STATIONS", "BDCTB,SPTTB")
 CONAGUA_CLIMAS_STATIONS = _env_list("CONAGUA_CLIMAS_STATIONS", "BDCTB,SPTTB")
-BDCTB_FORECAST_API_BASE_URL = os.getenv(
-    "BDCTB_FORECAST_API_BASE_URL", "http://127.0.0.1:8765"
+BDCTB_FORECAST_URL = os.getenv(
+    "BDCTB_FORECAST_URL",
+    "https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/bdctb/latest.json",
 )
+FORECAST_MESSENGER_TOKEN = os.getenv("FORECAST_MESSENGER_TOKEN", "").strip()
 
 # ---------------------------------------------------------------------------
 # Rutas del proyecto
@@ -80,6 +83,7 @@ _base_override = os.getenv("BASE_DIR_OVERRIDE")
 BASE_DIR = (
     Path(_base_override) if _base_override else Path(__file__).resolve().parent.parent
 )
+FORECAST_CACHE_PATH = BASE_DIR / ".cache" / "forecasts" / "bdctb" / "latest.json"
 STATIC_DIR = BASE_DIR / "frontend" / "static"
 TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
 GIFS_DIR = STATIC_DIR / "gifs"

@@ -1,120 +1,62 @@
-"""Focused tests for the bounded BDCTB forecast service proxy."""
+"""Public BDCTB route: valid v2 envelopes, cache fallback and quota protection."""
 
-import json
-from unittest.mock import patch
+from unittest.mock import Mock
 
 import pytest
 import requests
 
-
-class FakeUpstream:
-    def __init__(self, status_code: int, body: bytes):
-        self.status_code = status_code
-        self.body = body
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_args):
-        return None
-
-    def iter_content(self, chunk_size: int):
-        for index in range(0, len(self.body), chunk_size):
-            yield self.body[index : index + chunk_size]
+from backend.forecast_feed import UNAVAILABLE, ForecastFeed
+from backend.tests.test_forecast_feed import Reply, payload
 
 
 @pytest.fixture
-def client():
-    from backend.app import app
+def setup_feed(tmp_path, monkeypatch):
+    import backend.app as module
 
-    app.config["TESTING"] = True
-    return app.test_client()
-
-
-def test_proxies_success_with_bounded_request_options(client):
-    payload = {"schema_version": "bdctb-forecast/v1"}
-    with patch(
-        "backend.app.requests.get",
-        return_value=FakeUpstream(200, json.dumps(payload).encode()),
-    ) as get:
-        response = client.get("/api/v1/forecasts/bdctb")
-
-    assert response.status_code == 200
-    assert response.json == payload
-    assert response.headers["Cache-Control"] == "no-store"
-    get.assert_called_once_with(
-        "http://127.0.0.1:8765/api/v1/forecasts/bdctb",
-        headers={"Accept": "application/json"},
-        timeout=(2, 5),
-        allow_redirects=False,
-        stream=True,
+    http = Mock()
+    monkeypatch.setattr("requests.get", http.get)
+    service = ForecastFeed(
+        "https://example.test/latest.json", tmp_path / "latest.json", http=http
     )
+    monkeypatch.setattr(module, "forecast_feed", service, raising=False)
+    return module.app.test_client(), http
 
 
-def test_preserves_forecast_unavailable_response(client):
-    payload = {"error": {"code": "forecast_unavailable"}}
-    with patch(
-        "backend.app.requests.get",
-        return_value=FakeUpstream(503, json.dumps(payload).encode()),
-    ):
-        response = client.get("/api/v1/forecasts/bdctb")
+def test_public_network_and_cache_shape(setup_feed):
+    client, http = setup_feed
+    http.get.return_value = Reply(payload())
+    response = client.get("/api/v1/forecasts/bdctb")
+    assert response.status_code == 200
+    assert response.json["forecast"] == payload()
+    assert response.json["source"] == "network"
+    assert response.json["updating"] is False
+    assert response.headers["Cache-Control"] == "no-store"
+    http.get.side_effect = requests.Timeout("private detail")
+    cached = client.get("/api/v1/forecasts/bdctb")
+    assert cached.status_code == 200
+    assert cached.json == {**response.json, "source": "cache"}
 
+
+def test_no_valid_copy_returns_safe_spanish_503(setup_feed):
+    client, http = setup_feed
+    http.get.side_effect = requests.ConnectionError("private detail")
+    response = client.get("/api/v1/forecasts/bdctb")
     assert response.status_code == 503
-    assert response.json == payload
+    assert response.json == {"error": UNAVAILABLE}
+    assert response.headers["Cache-Control"] == "no-store"
 
 
-def test_rejects_oversized_response(client):
-    with patch(
-        "backend.app.requests.get", return_value=FakeUpstream(200, b"x" * (64 * 1024 + 1))
-    ):
-        response = client.get("/api/v1/forecasts/bdctb")
-
-    assert response.status_code == 502
-    assert response.json == {"error": "Forecast response is too large."}
-
-
-def test_maps_timeout_without_exposing_upstream_details(client):
-    with patch("backend.app.requests.get", side_effect=requests.Timeout("private detail")):
-        response = client.get("/api/v1/forecasts/bdctb")
-
-    assert response.status_code == 504
-    assert response.json == {"error": "Forecast service timed out."}
-
-
-def test_maps_connection_failure_without_exposing_upstream_details(client):
-    with patch(
-        "backend.app.requests.get", side_effect=requests.ConnectionError("private detail")
-    ):
-        response = client.get("/api/v1/forecasts/bdctb")
-
-    assert response.status_code == 502
-    assert response.json == {"error": "Forecast service is unavailable."}
-
-
-def test_maps_unexpected_upstream_status_without_exposing_body(client):
-    with patch(
-        "backend.app.requests.get", return_value=FakeUpstream(500, b"private upstream body")
-    ):
-        response = client.get("/api/v1/forecasts/bdctb")
-
-    assert response.status_code == 502
-    assert response.json == {"error": "Forecast service returned an error."}
-
-
-def test_rejects_request_61_before_contacting_upstream(client, monkeypatch):
+def test_rejects_request_61_before_contacting_upstream(setup_feed, monkeypatch):
     from backend.extensions import limiter
 
+    client, http = setup_feed
+    http.get.return_value = Reply(payload())
     monkeypatch.setattr(limiter, "enabled", True)
     limiter.reset()
     try:
-        with patch(
-            "backend.app.requests.get",
-            return_value=FakeUpstream(200, b'{"schema_version":"bdctb-forecast/v1"}'),
-        ) as get:
-            responses = [client.get("/api/v1/forecasts/bdctb") for _ in range(61)]
-
-        assert [response.status_code for response in responses[:60]] == [200] * 60
+        responses = [client.get("/api/v1/forecasts/bdctb") for _ in range(61)]
+        assert [r.status_code for r in responses[:60]] == [200] * 60
         assert responses[60].status_code == 429
-        assert get.call_count == 60
+        assert http.get.call_count == 60
     finally:
         limiter.reset()

@@ -79,15 +79,70 @@ backend; diagnostic logs remain under `.cache/bdctb-local-app/logs/` with the
 same private scheme as the general supervisor (`0600` per file, `0700` for the
 directory, three files of at most 1 MiB each).
 
-Without the model stack there is no valid forecast cache: the application keeps
-working, but its forecast routes must not be presented as operational
-prediction.
+## Boca del Cerro forecast (Usumacinta)
 
-## Deferred path: local stack with automatic forecasting (compatibility)
+Open the **BDCTB hydrometric marker** and select **Ver pronóstico del río**. The
+app reads the public `bdctb-forecast/v2` JSON from
+[tabasco-river-forecast](https://github.com/ElGuill3/tabasco-river-forecast);
+the laptop needs neither the model nor a local forecasting service. An inline
+SVG shows the q50 median, the q10–q90 band (nominal 80%, not a guarantee) and the
+**official NAMO 19.21 m**. A table lists h1/h3/h7 and distance to NAMO. There are
+no app-generated warning categories or traffic-light colors; consult the linked
+official IPCET semáforo.
+
+- The issue date and input provenance are always visible: dated IPCET 06:00 level,
+  or the less precise GloFAS-only fallback without a recent level.
+- `/api/v1/forecasts/bdctb` fetches `BDCTB_FORECAST_URL`, validates v2 (64 KiB cap,
+  2/5 s connect/read timeouts, no redirects), and saves the last valid publication
+  to Git-ignored `.cache/forecasts/bdctb/latest.json`. Its response is
+  `{forecast, source: "network"|"cache", fetched_at, updating}`. Network errors or
+  invalid JSON fall back to disk, preserving the retrieval timestamp; no valid
+  copy means HTTP 503 with a Spanish message. A saved forecast may be old, so the
+  issue date remains visible.
+- The messenger is **optional**: no `FORECAST_MESSENGER_TOKEN` means no uploads.
+  When configured, a forecast request —never startup— starts a background thread
+  only if today's live input is missing (America/Mexico_City), today's IPCET page
+  exists, and `inputs/ipcet/YYYY-MM-DD/meta.json` is absent on `forecasts`.
+  Both `hidrometeorologico`/`hidrometereologico` spellings are supported;
+  tabasco.gob.mx requests are paced at one per second.
+- It uploads `page.html`, every article image under `/sites/default/files/` using
+  original filenames, and **last** `meta.json` with `page_url`, `fetched_at` and
+  `images` (`url`, verbatim HTTP `last_modified`, `sha256`, `bytes`). No OCR runs
+  here. There is one attempt in flight per process and one successful delivery
+  per page date; later requests can retry partial failures.
+- While uploading or awaiting publication, the available forecast stays visible
+  with **Actualizando con el nivel de IPCET de hoy…**. The dialog polls every
+  60 s for at most 30 min, pauses while hidden, stops on close, and replaces its
+  content when the new publication arrives. Server waiting expires 30 min after
+  delivery, or when today's live input arrives. Reopen to fetch again after the
+  dialog polling window expires.
+
+Keep the token exclusively in the backend. Use a **fine-grained personal access
+token** restricted to **Contents: read/write on `ElGuill3/tabasco-river-forecast`**,
+with no other repository access; never put it in HTML, JavaScript or logs. Use
+one Flask process with request threads for messenger exclusion. Multiple laptops
+or processes may race; GitHub rejects conflicts, but there is no distributed
+lock. Removing the token disables uploads, not publication reads or caching.
+
+**Publication workflow requirements (T21):** GitHub Actions must publish
+`bdctb/latest.json` and `bdctb/history/YYYY-MM-DD.json` daily on `forecasts`, with
+actual run-time `generated_at`. The final `inputs/ipcet/<date>/meta.json` commit
+must trigger ingestion and a new run (a token push alone does not create that
+workflow). T21 must validate images causally, preserve date/Last-Modified rules
+and the effective availability of corrections, supply fresh GloFAS inputs and
+use the artifact's scikit-learn version. The messenger alone cannot guarantee
+an updated forecast. See the model repository's
+[`docs/forecast-schema.md`](https://github.com/ElGuill3/tabasco-river-forecast/blob/main/docs/forecast-schema.md).
+
+## Old local supervisor (historical reference)
+
+> The following is the previous v1 model workflow, preserved unchanged. It **no
+> longer configures this app's forecast**: the current route reads v2 as described
+> above and ignores `BDCTB_FORECAST_API_BASE_URL`. Do not use it to obtain the new
+> forecast. Retirement is a separate task.
 
 The full stack with model, Forecast API, and worker remains preserved in
-`backend/scripts/run_local_forecast_stack.py` for deferred use; it is no longer the
-target of the public command:
+`backend/scripts/run_local_forecast_stack.py`; it is not the public command target:
 
 ```bash
 .venv/bin/python backend/scripts/run_local_forecast_stack.py
@@ -582,7 +637,8 @@ cp .env.example .env
 | `SSE_PROGRESS_RETENTION_S` | `3600` | Retention of finished progress (see the SSE table in Technical Architecture). |
 | `SSE_MAX_PROGRESS_TASKS` | `1024` | Maximum registered progress tasks. |
 | `SSE_MAX_PROGRESS_MESSAGES` | `128` | Maximum messages per task. |
-| `BDCTB_FORECAST_API_BASE_URL` | `http://127.0.0.1:8765` | Local forecast API used by the `/api/v1/forecasts/bdctb` proxy. |
+| `BDCTB_FORECAST_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/bdctb/latest.json` | Public v2 JSON, not the old local API. |
+| `FORECAST_MESSENGER_TOKEN` | *(empty)* | Optional, backend only. Fine-grained token restricted to Contents read/write on `ElGuill3/tabasco-river-forecast`. |
 | `BASE_DIR_OVERRIDE` | *(unset)* | Alternative project root for data and static files (used by tests). |
 
 Processing guards `MAX_SPAN_DEG`, `MAX_YEARS_RANGE` and `MAX_SPAN_DEG_S2` must be finite positive numbers (fractional values are supported). Empty, malformed, zero, negative, NaN or infinite values abort startup with `<ENV_KEY> must be a finite number greater than zero.` without echoing the value. Defaults remain 8°, 10 years and 4° respectively.
@@ -868,7 +924,7 @@ distributionMapApp/
 | `/api/flood-stats` | `GET` | same as `/api/flood-detection` | `{ total_ha }` |
 | `/api/local-stations` | `GET` | — | Catalog `{ <id>: { name, type, coords, station_name, municipio } }` |
 | `/api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, type, dates, value[], unit, level_m[], precip_mm[] }` |
-| `/api/v1/forecasts/bdctb` | `GET` | — | Proxy to the local forecast API (`503` until a valid cache exists) |
+| `/api/v1/forecasts/bdctb` | `GET` | — | `{forecast, source, fetched_at, updating}`; validated v2 publication or disk cache, `503` when neither is valid |
 | `/api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | ZIP archive (CSV + GIFs + metadata) |
 | `/api/docs` | `GET` | — | Interactive documentation (Scalar UI) |
 | `/api/docs/openapi.yaml` | `GET` | — | OpenAPI 3.1.0 specification in YAML |

@@ -1250,10 +1250,16 @@ paths:
   /api/v1/forecasts/bdctb:
     get:
       operationId: getBdctbForecast
-      summary: Latest cached BDCTB modeled forecast
-      description: Returns the latest valid read-only BDCTB forecast cache through
-        the bounded same-origin proxy. This endpoint never starts acquisition,
-        inference, or provider submission.
+      summary: Latest published BDCTB modeled forecast with offline cache
+      description: >-
+        Fetches and validates bdctb-forecast/v2 (64 KiB cap, connect/read timeouts
+        2/5 seconds, no redirects). On failure returns the last valid disk copy;
+        returns 503 only when neither source is valid. With a server-side messenger
+        token, a request can start a nonblocking IPCET image upload to the forecasts
+        branch. No model or OCR runs in this app. Updating remains true during
+        upload and for at most 30 minutes afterwards until today's live input
+        arrives. Clients may poll every 60 seconds for up to 30 minutes.
+        All responses use Cache-Control no-store.
       tags:
       - Forecast
       responses:
@@ -1269,24 +1275,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '502':
-          description: The upstream response was unavailable, unexpected, or too large.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BdctbForecastProxyErrorResponse'
         '503':
           description: No valid cached forecast is currently available.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BdctbForecastUnavailableResponse'
-        '504':
-          description: The bounded upstream request timed out.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BdctbForecastProxyErrorResponse'
       x-rate-limit: 60/minute
       x-cache-policy:
         max_age: 0
@@ -1450,106 +1444,104 @@ components:
     BdctbForecastResponse:
       type: object
       additionalProperties: false
+      required: [forecast, source, fetched_at, updating]
       properties:
-        schema_version:
+        forecast:
+          $ref: '#/components/schemas/BdctbForecast'
+        source:
           type: string
-          const: bdctb-forecast/v1
+          enum: [network, cache]
+        fetched_at:
+          type: string
+          format: date-time
+          description: Time the valid publication was retrieved (preserved on cache fallback).
+        updating:
+          type: boolean
+          description: IPCET messenger is uploading or waiting for publication (30 minute cap).
+    BdctbForecast:
+      type: object
+      additionalProperties: false
+      required: [schema, station, issue_time, generated_at, model_version, mode, live_input, forecasts, disclaimer]
+      description: >-
+        Modeled stage in metres on the SIH/IPCET datum, never an observation or
+        official warning. Live mode requires a live_input aged 0-7 days inclusive;
+        glofas_only requires null. Target dates equal the Mexico City issue date
+        plus the horizon. Quantiles are finite and ordered q10 <= q50 <= q90.
+      properties:
+        schema:
+          type: string
+          const: bdctb-forecast/v2
         station:
           type: object
           additionalProperties: false
+          required: [code, name]
           properties:
             code:
               type: string
               const: BDCTB
             name:
               type: string
-              minLength: 1
-          required:
-          - code
-          - name
-        model_version:
-          type: string
-          const: BDCTB Exogenous Quantile Gradient Boosting v1
+              const: Boca del Cerro
         issue_time:
           type: string
           format: date-time
+          description: 11:00 America/Mexico_City, with timezone offset.
         generated_at:
           type: string
           format: date-time
-        status:
+          description: Actual publication run time, with timezone offset.
+        model_version:
+          type: string
+          minLength: 1
+        mode:
+          type: string
+          enum: [live, glofas_only]
+        live_input:
+          oneOf:
+          - type: 'null'
+          - type: object
+            additionalProperties: false
+            required: [date, stage_m, age_days]
+            properties:
+              date:
+                type: string
+                format: date
+              stage_m:
+                type: number
+              age_days:
+                type: integer
+                minimum: 0
+                maximum: 7
+        forecasts:
           type: object
           additionalProperties: false
+          required: [h1, h3, h7]
           properties:
-            availability:
-              type: string
-              const: available
-            freshness:
-              type: string
-              enum:
-              - fresh
-              - stale
-            age_seconds:
-              type: integer
-              minimum: 0
-            stale_after_seconds:
-              type: integer
-              minimum: 1
-            evaluated_at:
-              type: string
-              format: date-time
-          required:
-          - availability
-          - freshness
-          - age_seconds
-          - stale_after_seconds
-          - evaluated_at
-        forecasts:
-          type: array
-          minItems: 3
-          maxItems: 3
-          prefixItems:
-          - $ref: '#/components/schemas/BdctbForecastH1Point'
-          - $ref: '#/components/schemas/BdctbForecastH3Point'
-          - $ref: '#/components/schemas/BdctbForecastH7Point'
-          items: false
-        unit:
+            h1:
+              $ref: '#/components/schemas/BdctbForecastPoint'
+            h3:
+              $ref: '#/components/schemas/BdctbForecastPoint'
+            h7:
+              $ref: '#/components/schemas/BdctbForecastPoint'
+        disclaimer:
           type: string
-          const: m
-        data_kind:
-          type: string
-          const: modeled_not_observed
-        warning:
-          type: string
-          const: Modeled river-stage forecast, not an observation or an official warning.
-        provenance:
-          type: string
-          enum:
-          - synthetic_demo
-          - model_run
-        scientific_use:
-          type: string
-          enum:
-          - prohibited
-          - model_output
-      required:
-      - schema_version
-      - station
-      - model_version
-      - issue_time
-      - generated_at
-      - status
-      - forecasts
-      - unit
-      - data_kind
-      - warning
-      - provenance
-      - scientific_use
+          const: Pronóstico modelado, no es una observación ni un aviso oficial. Consulte el semáforo oficial de IPCET.
+      oneOf:
+      - properties:
+          mode:
+            const: live
+          live_input:
+            type: object
+      - properties:
+          mode:
+            const: glofas_only
+          live_input:
+            type: 'null'
     BdctbForecastPoint:
       type: object
       additionalProperties: false
+      required: [target_date, q10, q50, q90, distance_to_namo_m, namo_m, data_kind]
       properties:
-        horizon_days:
-          type: integer
         target_date:
           type: string
           format: date
@@ -1559,69 +1551,23 @@ components:
           type: number
         q90:
           type: number
-      required:
-      - horizon_days
-      - target_date
-      - q10
-      - q50
-      - q90
-    BdctbForecastH1Point:
-      allOf:
-      - $ref: '#/components/schemas/BdctbForecastPoint'
-      - type: object
-        properties:
-          horizon_days:
-            const: 1
-    BdctbForecastH3Point:
-      allOf:
-      - $ref: '#/components/schemas/BdctbForecastPoint'
-      - type: object
-        properties:
-          horizon_days:
-            const: 3
-    BdctbForecastH7Point:
-      allOf:
-      - $ref: '#/components/schemas/BdctbForecastPoint'
-      - type: object
-        properties:
-          horizon_days:
-            const: 7
+        distance_to_namo_m:
+          type: number
+          description: q50 minus 19.21, positive above NAMO.
+        namo_m:
+          type: number
+          const: 19.21
+        data_kind:
+          type: string
+          const: modeled_not_observed
     BdctbForecastUnavailableResponse:
       type: object
       additionalProperties: false
-      properties:
-        schema_version:
-          type: string
-          const: bdctb-forecast-error/v1
-        error:
-          type: object
-          additionalProperties: false
-          properties:
-            code:
-              type: string
-              const: forecast_unavailable
-            message:
-              type: string
-              const: No valid cached BDCTB forecast is available.
-          required:
-          - code
-          - message
-      required:
-      - schema_version
-      - error
-    BdctbForecastProxyErrorResponse:
-      type: object
-      additionalProperties: false
+      required: [error]
       properties:
         error:
           type: string
-          enum:
-          - Forecast service returned an error.
-          - Forecast response is too large.
-          - Forecast service is unavailable.
-          - Forecast service timed out.
-      required:
-      - error
+          const: No hay un pronóstico válido guardado. Intente de nuevo cuando haya conexión.
     ErrorResponse:
       type: object
       description: Standard error response format.

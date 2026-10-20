@@ -80,15 +80,70 @@ registros permanecen en `.cache/bdctb-local-app/logs/`, con el mismo esquema
 privado del supervisor general (`0600` por archivo, `0700` para el directorio,
 tres archivos de hasta 1 MiB cada uno).
 
-Sin la pila del modelo no existe caché de pronóstico válida: la aplicación
-sigue funcionando, pero sus rutas de pronóstico no deben presentarse como
-predicción operativa.
+## Pronóstico de Boca del Cerro (Usumacinta)
 
-## Ruta diferida: pila local con pronóstico automático (compatibilidad)
+En el marcador hidrométrico **BDCTB**, pulsa **Ver pronóstico del río**. La app
+muestra el JSON público `bdctb-forecast/v2` de
+[tabasco-river-forecast](https://github.com/ElGuill3/tabasco-river-forecast), sin
+instalar ni ejecutar el modelo en la laptop. El gráfico SVG presenta la mediana
+(q50), la banda q10–q90 (80% nominal, no una garantía) y el **NAMO oficial 19.21 m**.
+La tabla muestra h1/h3/h7 y la distancia al NAMO. No se asignan colores de alerta
+ni un semáforo propio: se enlaza el semáforo oficial de IPCET.
+
+- Siempre se muestran la fecha de emisión y la procedencia: nivel IPCET de las
+  06:00 con su fecha, o GloFAS sin nivel reciente (menos preciso).
+- `/api/v1/forecasts/bdctb` consulta `BDCTB_FORECAST_URL`, valida el contrato v2
+  (64 KiB, timeouts de conexión/lectura de 2/5 s, sin redirecciones) y guarda la
+  última copia válida en `.cache/forecasts/bdctb/latest.json`, fuera de Git.
+  Devuelve `{forecast, source: "network"|"cache", fetched_at, updating}`. Ante un
+  error de red o un JSON inválido conserva la copia guardada y su fecha de
+  descarga; sin ninguna copia válida devuelve HTTP 503 con un mensaje en español.
+  Un pronóstico guardado puede ser antiguo: la fecha de emisión sigue visible.
+- El mensajero es **opcional**: sin `FORECAST_MESSENGER_TOKEN` no se sube nada.
+  Con token, una consulta al pronóstico —nunca el arranque— inicia un hilo que
+  comprueba si falta el nivel IPCET de hoy (America/Mexico_City), si existe la
+  página de hoy y si falta `inputs/ipcet/YYYY-MM-DD/meta.json` en `forecasts`.
+  Admite las dos grafías `hidrometeorologico`/`hidrometereologico` y limita las
+  consultas a tabasco.gob.mx a una por segundo.
+- Sube `page.html`, todas las imágenes del artículo bajo `/sites/default/files/`
+  con sus nombres originales y, **al final**, `meta.json` con `page_url`,
+  `fetched_at` e `images` (`url`, `last_modified` HTTP literal, `sha256`, `bytes`).
+  No hace OCR. Solo hay un intento activo por proceso y una entrega exitosa por
+  fecha de página; un fallo parcial se puede reintentar en otra consulta.
+- Mientras se sube o se espera la publicación, el diálogo conserva el pronóstico
+  disponible y muestra **Actualizando con el nivel de IPCET de hoy…**. Consulta
+  cada 60 s durante un máximo de 30 min; se detiene al cerrar, se pausa oculto y
+  sustituye el contenido cuando llega la publicación. La espera del servidor
+  caduca a los 30 min de la entrega o termina al recibir el nivel de hoy. Si la
+  espera caduca, reabre el diálogo para consultar de nuevo.
+
+El token permanece solo en el backend: usa un **fine-grained personal access token**
+limitado a **Contents: read/write de `ElGuill3/tabasco-river-forecast`**, sin acceso a
+otros repositorios. No lo incluyas en HTML, JavaScript ni registros. Usa un solo
+proceso Flask con hilos para mantener la exclusión del mensajero; múltiples
+laptops/procesos pueden competir y GitHub rechaza conflictos, no hay bloqueo
+distribuido. Retirar el token desactiva el mensajero, no la lectura ni la caché.
+
+**Contrato de publicación (T21):** GitHub Actions debe publicar diariamente
+`bdctb/latest.json` y `bdctb/history/YYYY-MM-DD.json` en `forecasts`, con
+`generated_at` real. El commit final de `inputs/ipcet/<fecha>/meta.json` debe
+activar la ingestión y una nueva corrida (un push con token no implica que exista
+ese workflow). T21 debe validar las imágenes causalmente, respetar las reglas de
+fecha y Last-Modified y la disponibilidad efectiva de correcciones, proveer
+GloFAS fresco y usar la versión de scikit-learn del artefacto. El mensajero por sí
+solo no garantiza un pronóstico actualizado. El esquema vive en
+[`docs/forecast-schema.md`](https://github.com/ElGuill3/tabasco-river-forecast/blob/main/docs/forecast-schema.md)
+del repositorio del modelo.
+
+## Supervisor local antiguo (referencia histórica)
+
+> El flujo siguiente pertenece al modelo v1 anterior. Se conserva sin cambios,
+> pero **ya no configura el pronóstico de esta aplicación**: la ruta actual lee
+> la publicación v2 anterior e ignora `BDCTB_FORECAST_API_BASE_URL`. No lo uses
+> para obtener el pronóstico nuevo. Su retirada se hará por separado.
 
 La pila completa con modelo, API de pronóstico y worker se conserva en
-`backend/scripts/run_local_forecast_stack.py` para uso diferido; ya no es el destino
-del comando público:
+`backend/scripts/run_local_forecast_stack.py`; no es el destino del comando público:
 
 ```bash
 .venv/bin/python backend/scripts/run_local_forecast_stack.py
@@ -588,7 +643,8 @@ cp .env.example .env
 | `SSE_PROGRESS_RETENTION_S` | `3600` | Retención del progreso terminado (ver la tabla de SSE en Arquitectura técnica). |
 | `SSE_MAX_PROGRESS_TASKS` | `1024` | Máximo de tareas de progreso registradas. |
 | `SSE_MAX_PROGRESS_MESSAGES` | `128` | Máximo de mensajes por tarea. |
-| `BDCTB_FORECAST_API_BASE_URL` | `http://127.0.0.1:8765` | API local de pronóstico usada por el proxy `/api/v1/forecasts/bdctb`. |
+| `BDCTB_FORECAST_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/bdctb/latest.json` | JSON público v2; no es la API local antigua. |
+| `FORECAST_MESSENGER_TOKEN` | *(vacío)* | Opcional, solo backend. Token fine-grained, limitado a Contents read/write de `ElGuill3/tabasco-river-forecast`. |
 | `BASE_DIR_OVERRIDE` | *(sin definir)* | Raíz alternativa del proyecto para datos y archivos estáticos (usada por los tests). |
 
 Los límites `MAX_SPAN_DEG`, `MAX_YEARS_RANGE` y `MAX_SPAN_DEG_S2` deben ser números finitos positivos (se permiten fracciones). Valores vacíos, malformados, cero, negativos, NaN o infinitos impiden el arranque con `<ENV_KEY> must be a finite number greater than zero.`, sin mostrar el valor. Los valores predeterminados siguen siendo 8°, 10 años y 4°, respectivamente.
@@ -874,7 +930,7 @@ distributionMapApp/
 | `/api/flood-stats` | `GET` | mismos que `/api/flood-detection` | `{ total_ha }` |
 | `/api/local-stations` | `GET` | — | Catálogo `{ <id>: { name, type, coords, station_name, municipio } }` |
 | `/api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, type, dates, value[], unit, level_m[], precip_mm[] }` |
-| `/api/v1/forecasts/bdctb` | `GET` | — | Proxy a la API local de pronóstico (`503` hasta que exista una caché válida) |
+| `/api/v1/forecasts/bdctb` | `GET` | — | `{forecast, source, fetched_at, updating}`; publicación v2 o caché validada, `503` si ninguna es válida |
 | `/api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | Archivo ZIP (CSV + GIFs + metadatos) |
 | `/api/docs` | `GET` | — | Documentación interactiva (Scalar UI) |
 | `/api/docs/openapi.yaml` | `GET` | — | Especificación OpenAPI 3.1.0 en YAML |

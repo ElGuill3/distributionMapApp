@@ -47,7 +47,9 @@ describe('station popup rendering', () => {
       popup.querySelector<HTMLAnchorElement>('.station-full-data-link')?.dataset
         .stationId
     ).toBe('BDCTB_hidro');
-    expect(popup.querySelector('.station-forecast-link')).not.toBeNull();
+    expect(popup.querySelector('.station-forecast-link')?.textContent).toBe(
+      'Ver pronóstico del río'
+    );
   });
 
   it('keeps climate fallback labels without a forecast action', () => {
