@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ipcetStatus } from './ipcetStatus.js';
 import {
-  bdctbForecastAction,
   fetchBdctbForecast,
-  openBdctbForecastDialog,
+  formatForecastSummary,
   parseBdctbForecast,
 } from './bdctbForecast.js';
 
@@ -13,7 +12,7 @@ function forecast() {
     station: { code: 'BDCTB', name: 'Boca del Cerro' },
     issue_time: '2026-10-19T11:00:00-06:00',
     generated_at: '2026-10-19T18:00:00Z',
-    model_version: 'bdctb-L1-postaudit-v1',
+    model_version: 'test',
     mode: 'live',
     live_input: { date: '2026-10-19', stage_m: 18, age_days: 0 },
     forecasts: Object.fromEntries(
@@ -21,11 +20,11 @@ function forecast() {
         `h${h}`,
         {
           target_date: `2026-10-${19 + h}`,
-          q10: 17.9,
-          q50: h === 7 ? 19.5 : 18.4,
+          q10: 17,
+          q50: h === 3 ? 18.8 : 17.8,
           q90: 20,
           namo_m: 19.21,
-          distance_to_namo_m: (h === 7 ? 19.5 : 18.4) - 19.21,
+          distance_to_namo_m: (h === 3 ? 18.8 : 17.8) - 19.21,
           data_kind: 'modeled_not_observed',
         },
       ])
@@ -34,31 +33,35 @@ function forecast() {
       'Pronóstico modelado, no es una observación ni un aviso oficial. Consulte el semáforo oficial de IPCET.',
   };
 }
-function envelope(updating = false, source = 'network') {
-  return { forecast: forecast(), source, fetched_at: '2026-10-19T18:00:00Z', updating };
-}
-function response(value: unknown) {
-  return new Response(JSON.stringify(value));
-}
-function setup() {
-  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
-    configurable: true,
-    value() {
-      this.setAttribute('open', '');
-    },
-  });
-  Object.defineProperty(document, 'hidden', { configurable: true, value: false });
-}
+const envelope = () => ({
+  forecast: forecast(),
+  source: 'network' as const,
+  fetched_at: '2026-10-19T18:00:00Z',
+  updating: false,
+});
+const json = (value: unknown) => new Response(JSON.stringify(value));
 afterEach(() => {
-  document.querySelector('dialog')?.dispatchEvent(new Event('close'));
-  document.body.innerHTML = '';
-  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-
 describe('published forecast v2', () => {
-  it('sets a mark only after a successful live load reaching NAMO, clearing it on later nonqualifying loads', async () => {
+  it('preserves validation of quantiles, dates, NAMO distances and schema', () => {
+    expect(parseBdctbForecast(forecast()).forecasts.h1.q50).toBe(17.8);
+    for (const change of [
+      { q10: 25 },
+      { q50: NaN },
+      { target_date: '2026-02-30' },
+      { distance_to_namo_m: 10 },
+    ]) {
+      const bad = forecast();
+      Object.assign(bad.forecasts['h1']!, change);
+      expect(() => parseBdctbForecast(bad)).toThrow();
+    }
+    expect(() =>
+      parseBdctbForecast({ ...forecast(), schema: 'bdctb-forecast/v1' })
+    ).toThrow();
+  });
+  it('preserves the live-only S4 mark including exact NAMO and clearing on later loads', async () => {
     for (const [mode, median, marked] of [
       ['live', 19.21, true],
       ['glofas_only', 20, false],
@@ -74,34 +77,13 @@ describe('published forecast v2', () => {
         q50: median,
         distance_to_namo_m: median - 19.21,
       });
-      await fetchBdctbForecast(vi.fn().mockResolvedValue(response(value)));
+      await fetchBdctbForecast(vi.fn().mockResolvedValue(json(value)));
       expect(ipcetStatus.modelMarkFor('BDCTB')).toBe(marked);
     }
   });
-  it('preserves the BDCTB-only hydrometric action', () => {
-    expect(bdctbForecastAction('BDCTB_hidro', true)).toContain('station-forecast-link');
-    expect(bdctbForecastAction('BDCTB_clima', false)).toBe('');
-    expect(bdctbForecastAction('SPTTB_hidro', true)).toBe('');
-  });
-  it('accepts v2 and rejects crossed quantiles, invalid dates and NAMO distances', () => {
-    expect(parseBdctbForecast(forecast()).forecasts.h1.q50).toBe(18.4);
-    for (const change of [
-      { q10: 25 },
-      { q50: NaN },
-      { target_date: '2026-02-30' },
-      { distance_to_namo_m: 10 },
-    ]) {
-      const bad = forecast();
-      Object.assign(bad.forecasts['h1']!, change);
-      expect(() => parseBdctbForecast(bad)).toThrow();
-    }
-    expect(() =>
-      parseBdctbForecast({ ...forecast(), schema: 'bdctb-forecast/v1' })
-    ).toThrow();
-  });
-  it('fetches an envelope and keeps bounded timeout and unavailable errors', async () => {
+  it('preserves envelope, bounded timeout and unavailable/malformed errors', async () => {
     expect(
-      await fetchBdctbForecast(vi.fn().mockResolvedValue(response(envelope())))
+      await fetchBdctbForecast(vi.fn().mockResolvedValue(json(envelope())))
     ).toEqual(envelope());
     await expect(
       fetchBdctbForecast(vi.fn().mockResolvedValue(new Response('{}', { status: 503 })))
@@ -111,144 +93,43 @@ describe('published forecast v2', () => {
     ).rejects.toMatchObject({ code: 'malformed' });
     const slow = vi.fn(
       (_url: RequestInfo | URL, init?: RequestInit) =>
-        new Promise<Response>((_resolve, reject) => {
+        new Promise<Response>((_, reject) =>
           init?.signal?.addEventListener('abort', () =>
             reject(new DOMException('aborted', 'AbortError'))
-          );
-        })
+          )
+        )
     );
     await expect(fetchBdctbForecast(slow, 1)).rejects.toMatchObject({
       code: 'timeout',
     });
   });
-  it('renders SVG band, median, NAMO, table, live provenance, issue and official link', async () => {
-    setup();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(envelope())));
-    await openBdctbForecastDialog();
-    const dialog = document.querySelector('dialog')!;
-    expect(dialog.querySelector('svg polygon')).not.toBeNull();
-    expect(dialog.querySelector('svg polyline')).not.toBeNull();
-    expect(dialog.textContent).toContain('NAMO 19.21 m');
-    expect(dialog.textContent).toContain(
-      'Mañana: 18.4 m (17.9–20.0) · a 0.8 m del NAMO'
-    );
-    expect(dialog.textContent).toContain(
-      'En 7 días: 19.5 m (17.9–20.0) · 0.3 m sobre el NAMO'
-    );
-    expect(dialog.textContent).toContain('Con nivel IPCET del 2026-10-19 (06:00)');
-    expect(dialog.textContent).toContain('Emitido el 2026-10-19');
-    expect(dialog.textContent).toContain(forecast().disclaimer);
-    expect(dialog.querySelector('a')?.href).toContain('https://tabasco.gob.mx/');
-    expect(dialog.querySelector('.forecast-content')?.hasAttribute('hidden')).toBe(
-      false
-    );
+  it('formats three compact summary lines with q50 values, issue and closest NAMO approach', () => {
+    const value = { ...envelope(), forecast: parseBdctbForecast(forecast()) };
+    expect(formatForecastSummary(value)).toEqual([
+      'Pronóstico del modelo · emitido 19/10 11:00',
+      'Mañana 17.8 m · 3 días 18.8 m · 7 días 17.8 m · mín. 0.4 m bajo el NAMO',
+      'Modelado, no es aviso oficial',
+    ]);
+    value.forecast.forecasts.h7.q50 = 19.21;
+    expect(formatForecastSummary(value)[1]).toContain('alcanza el NAMO');
+    value.forecast.forecasts.h7.q50 = 20;
+    expect(formatForecastSummary(value)[1]).toContain('alcanza el NAMO');
   });
-  it('renders fallback and cached issue notice safely', async () => {
-    setup();
-    const cached = envelope(false, 'cache');
-    Object.assign(cached.forecast, { mode: 'glofas_only', live_input: null });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(cached)));
-    await openBdctbForecastDialog();
-    expect(document.body.textContent).toContain(
-      'Sin nivel IPCET reciente: pronóstico solo con GloFAS, menos preciso'
-    );
-    expect(document.body.textContent).toContain(
-      'Pronóstico guardado, emitido el 2026-10-19 (sin conexión)'
-    );
-  });
-  it('keeps forecast visible while updating and swaps to live after 60 seconds', async () => {
-    setup();
-    vi.useFakeTimers();
-    const old = envelope(true);
-    Object.assign(old.forecast, { mode: 'glofas_only', live_input: null });
-    const fetcher = vi
-      .fn()
-      .mockResolvedValueOnce(response(old))
-      .mockResolvedValueOnce(response(envelope()));
-    vi.stubGlobal('fetch', fetcher);
-    await openBdctbForecastDialog();
-    expect(document.body.textContent).toContain(
-      'Actualizando con el nivel de IPCET de hoy…'
-    );
-    expect(document.querySelector('svg')).not.toBeNull();
-    await vi.advanceTimersByTimeAsync(60000);
-    expect(fetcher).toHaveBeenCalledTimes(2);
-    expect(document.body.textContent).toContain('Con nivel IPCET del 2026-10-19');
-    expect(document.body.textContent).not.toContain('Actualizando con');
-    await vi.advanceTimersByTimeAsync(60000);
-    expect(fetcher).toHaveBeenCalledTimes(2);
-  });
-  it('caps polling at 30 minutes, retains valid content on failure and cancels on close', async () => {
-    setup();
-    vi.useFakeTimers();
-    const fetcher = vi
-      .fn()
-      .mockImplementation(() => Promise.resolve(response(envelope(true))));
-    vi.stubGlobal('fetch', fetcher);
-    await openBdctbForecastDialog();
-    fetcher.mockRejectedValueOnce(new TypeError('offline'));
-    await vi.advanceTimersByTimeAsync(60000);
-    expect(document.querySelector('svg')).not.toBeNull();
-    expect(document.body.textContent).toContain(
-      'Se conserva el último pronóstico válido'
-    );
-    await vi.advanceTimersByTimeAsync(30 * 60000);
-    const count = fetcher.mock.calls.length;
-    expect(count).toBeLessThanOrEqual(31);
-    await vi.advanceTimersByTimeAsync(60000);
-    expect(fetcher).toHaveBeenCalledTimes(count);
-    document.querySelector('dialog')!.dispatchEvent(new Event('close'));
-    await vi.advanceTimersByTimeAsync(60000);
-    expect(fetcher).toHaveBeenCalledTimes(count);
-  });
-  it('reloads when the tab returns after being hidden during the first request', async () => {
-    setup();
-    const fetcher = vi
-      .fn()
-      .mockImplementationOnce(
-        (_url: string, init: RequestInit) =>
-          new Promise<Response>((_, reject) =>
-            init.signal?.addEventListener('abort', () =>
-              reject(new DOMException('Aborted', 'AbortError'))
-            )
-          )
-      )
-      .mockResolvedValue(response(envelope()));
-    vi.stubGlobal('fetch', fetcher);
-    const opening = openBdctbForecastDialog();
-    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
-    document.dispatchEvent(new Event('visibilitychange'));
-    await opening;
-    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
-    document.dispatchEvent(new Event('visibilitychange'));
-    await vi.waitFor(() => expect(document.querySelector('svg')).not.toBeNull());
-    expect(fetcher).toHaveBeenCalledTimes(2);
-  });
-
-  it('keeps the page mounted on 503 and ignores a response after close', async () => {
-    setup();
-    document.body.innerHTML = '<div id="map">map</div>';
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(new Response('{}', { status: 503 }))
-    );
-    await openBdctbForecastDialog();
-    expect(document.body.textContent).toContain('No hay un pronóstico válido');
-    expect(document.getElementById('map')?.textContent).toBe('map');
-    let resolve!: (value: Response) => void;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation(
-        () =>
-          new Promise<Response>(r => {
-            resolve = r;
-          })
-      )
-    );
-    const pending = openBdctbForecastDialog();
-    document.querySelector('dialog')!.dispatchEvent(new Event('close'));
-    resolve(response(envelope()));
-    await pending;
-    expect(document.querySelector('svg')).toBeNull();
+  it.each([
+    ['glofas_only', 'network', false, 'Sin nivel en vivo: puede sobrestimar'],
+    ['live', 'cache', false, 'Copia guardada del 19/10'],
+    ['live', 'network', true, 'Actualizando con el nivel de hoy…'],
+    ['glofas_only', 'cache', true, 'Actualizando con el nivel de hoy…'],
+  ] as const)('formats %s/%s/updating=%s note', (mode, source, updating, note) => {
+    const f = parseBdctbForecast(forecast());
+    f.mode = mode;
+    const lines = formatForecastSummary({
+      ...envelope(),
+      forecast: f,
+      source,
+      updating,
+    });
+    expect(lines).toHaveLength(3);
+    expect(lines[2]).toBe(`Modelado, no es aviso oficial · ${note}`);
   });
 });

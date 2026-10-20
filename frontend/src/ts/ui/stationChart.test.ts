@@ -107,9 +107,81 @@ it('plots live observed gaps, median from issue, probability band and payload NA
     y: [18, 19.5, 19.5, 19.5],
     line: { dash: 'dash' },
   });
-  expect(layout.title.text).toBe('Boca del Cerro · Usumacinta');
+  expect(layout.title).toBeUndefined();
+  expect(layout.yaxis.title.text).toBe('Nivel (m)');
   expect(placeholder.classList.contains('chart-placeholder--hidden')).toBe(true);
   expect(ipcetStatus.modelMarkFor('BDCTB')).toBe(true);
+});
+it('uses the same layout, font, legend, axes, fill and modebar config as variable charts', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(recent('SPTTB'))));
+  for (const theme of ['light', 'dark']) {
+    document.documentElement.setAttribute('data-theme', theme);
+    await openStationChart(div, placeholder, { ...station, code: 'SPTTB' }, () => {});
+    const [, stationTraces, stationLayout, stationConfig] =
+      plot.mock.calls[plot.mock.calls.length - 1]!;
+    plotAllSelectedSeries(
+      div,
+      { soil: { dates: ['2026-10-19'], values: [12] } },
+      () => {},
+      () => {}
+    );
+    const [, variableTraces, variableLayout, variableConfig] =
+      plot.mock.calls[plot.mock.calls.length - 1]!;
+    for (const key of ['legend', 'font', 'margin'])
+      expect(stationLayout[key]).toEqual(variableLayout[key]);
+    const { range: _range, ...stationXAxis } = stationLayout.xaxis;
+    expect(stationXAxis).toEqual(variableLayout.xaxis);
+    for (const key of [
+      'tickfont',
+      'gridcolor',
+      'zeroline',
+      'zerolinecolor',
+      'showline',
+    ])
+      expect(stationLayout.yaxis[key]).toEqual(variableLayout.yaxis[key]);
+    expect(stationLayout.yaxis.title.font).toEqual(variableLayout.yaxis.title.font);
+    expect(stationConfig).toEqual(variableConfig);
+    expect(stationTraces[0].fill).toBe(variableTraces[0].fill);
+    expect(stationTraces[0].line.width).toBe(variableTraces[0].line.width);
+    expect(stationTraces[0].fillcolor).toContain('0.08');
+  }
+  document.documentElement.removeAttribute('data-theme');
+});
+it('filters by 30 calendar days, not row count, retaining boundary, gaps and h7', async () => {
+  const data = recent('BDCTB');
+  data.stations.BDCTB = [
+    { date: '2026-09-19', hoy: 15, semaforo: 'NORMAL' },
+    { date: '2026-09-20', hoy: 16, semaforo: 'NORMAL' },
+    { date: '2026-10-18', hoy: null as unknown as number, semaforo: 'NORMAL' },
+    { date: '2026-10-19', hoy: 18, semaforo: 'NORMAL' },
+  ];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) =>
+      Promise.resolve(json(url.includes('recent') ? data : forecast()))
+    )
+  );
+  await openStationChart(div, placeholder, station, () => {});
+  const [, traces, layout] = plot.mock.calls[plot.mock.calls.length - 1]!;
+  expect(traces[0].x).toEqual(['2026-09-20', '2026-10-18', '2026-10-19']);
+  expect(traces[0].y).toEqual([16, null, 18]);
+  expect(layout.yaxis.range[0]).toBeGreaterThan(14);
+  expect(layout.yaxis.range[1]).toBeGreaterThan(20);
+  expect(traces[3].x[3]).toBe('2026-10-26');
+  expect(layout.xaxis.range).toEqual(['2026-09-20', '2026-10-26']);
+});
+it('anchors the calendar window to the latest actual observation, not a later missing report', async () => {
+  const data = recent('SPTTB');
+  data.stations.SPTTB = [
+    { date: '2026-09-19', hoy: 17, semaforo: 'NORMAL' },
+    { date: '2026-10-18', hoy: 18, semaforo: 'NORMAL' },
+    { date: '2026-10-19', hoy: null as unknown as number, semaforo: 'NORMAL' },
+  ];
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(data)));
+  await openStationChart(div, placeholder, { ...station, code: 'SPTTB' }, () => {});
+  const [, traces, layout] = plot.mock.calls[plot.mock.calls.length - 1]!;
+  expect(traces[0].x).toEqual(['2026-09-19', '2026-10-18']);
+  expect(layout.xaxis.range).toEqual(['2026-09-19', '2026-10-18']);
 });
 it('uses latest official NAMO for any station without a forecast', async () => {
   vi.spyOn(ipcetStatus, 'stateFor').mockReturnValue({

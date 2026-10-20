@@ -3,9 +3,6 @@ import { ipcetStatus } from './ipcetStatus.js';
 const HORIZONS = [1, 3, 7] as const;
 const DISCLAIMER =
   'Pronóstico modelado, no es una observación ni un aviso oficial. Consulte el semáforo oficial de IPCET.';
-const MAX_POLL_MS = 30 * 60 * 1000;
-const OFFICIAL_URL =
-  'https://tabasco.gob.mx/ceipc/acciones/semaforo-hidrometeorologico';
 
 export interface ForecastPoint {
   target_date: string;
@@ -222,195 +219,38 @@ export async function fetchBdctbForecast(
   }
 }
 
-let generation = 0;
-let timer: number | undefined;
-let request: AbortController | undefined;
-let activeDialog: HTMLDialogElement | undefined;
-let deadline = 0;
-let waiting = false;
-function stop(): void {
-  window.clearTimeout(timer);
-  timer = undefined;
-  request?.abort();
-  request = undefined;
-}
-export function bdctbForecastAction(stationId: string, isHydrometric: boolean): string {
-  return stationId.replace(/_(hidro|clima)$/, '') === 'BDCTB' && isHydrometric
-    ? '<button type="button" class="station-popup-btn station-forecast-link">Ver pronóstico del río</button>'
-    : '';
-}
-function ensureDialog(): HTMLDialogElement {
-  const existing = document.getElementById(
-    'bdctb-forecast-dialog'
-  ) as HTMLDialogElement | null;
-  if (existing) return existing;
-  const dialog = document.createElement('dialog');
-  dialog.id = 'bdctb-forecast-dialog';
-  dialog.className = 'forecast-dialog';
-  dialog.setAttribute('aria-labelledby', 'bdctb-forecast-title');
-  dialog.innerHTML = `
-    <div class="forecast-dialog-header"><div><p class="forecast-eyebrow">Usumacinta · BDCTB</p><h2 id="bdctb-forecast-title">Pronóstico de Boca del Cerro</h2></div><button type="button" class="forecast-close" aria-label="Cerrar pronóstico">&times;</button></div>
-    <div class="forecast-state" role="status" aria-live="polite"></div>
-    <div class="forecast-content" hidden></div>`;
-  dialog
-    .querySelector('.forecast-close')
-    ?.addEventListener('click', () => dialog.close());
-  dialog.addEventListener('click', event => {
-    if (event.target === dialog) dialog.close();
-  });
-  dialog.addEventListener('close', () => {
-    generation++;
-    stop();
-    waiting = false;
-    activeDialog = undefined;
-  });
-  document.body.append(dialog);
-  return dialog;
-}
-function chart(forecast: BdctbForecast): SVGSVGElement {
-  const points = HORIZONS.map(h => forecast.forecasts[`h${h}`]);
-  const min = Math.min(19.21, ...points.map(p => p.q10)) - 0.4;
-  const max = Math.max(19.21, ...points.map(p => p.q90)) + 0.6;
-  const y = (value: number) => 210 - ((value - min) / (max - min)) * 170;
-  const x = (i: number) => 55 + ((HORIZONS[i]! - 1) / 6) * 400;
-  const coordinates = (key: 'q10' | 'q50' | 'q90') =>
-    points.map((p, i) => `${x(i)},${y(p[key])}`);
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 510 250');
-  svg.setAttribute('role', 'img');
-  svg.setAttribute(
-    'aria-label',
-    'Nivel modelado: mediana q50 e intervalo q10–q90 frente al NAMO 19.21 m'
-  );
-  // Only validated finite numeric coordinates enter SVG markup; remote text uses textContent.
-  svg.innerHTML = `<title>Nivel modelado e intervalo nominal del 80%</title>
-    <polygon class="forecast-band" points="${[...coordinates('q10'), ...coordinates('q90').reverse()].join(' ')}" />
-    <polyline class="forecast-median" points="${coordinates('q50').join(' ')}" />
-    <line class="forecast-namo" x1="40" x2="480" y1="${y(19.21)}" y2="${y(19.21)}" />
-    <text x="45" y="${y(19.21) - 8}">NAMO 19.21 m</text>
-    <text x="5" y="${y(min) - 5}">${min.toFixed(1)} m</text>
-    ${HORIZONS.map((h, i) => `<circle class="forecast-dot" cx="${x(i)}" cy="${y(points[i]!.q50)}" r="4" /><text text-anchor="middle" x="${x(i)}" y="237">h${h}</text>`).join('')}`;
-  return svg;
-}
-function render(dialog: HTMLDialogElement, response: ForecastResponse): void {
+/** Three compact logical lines; dates use the publication's Mexico City timezone. */
+export function formatForecastSummary(
+  response: ForecastResponse
+): [string, string, string] {
   const f = response.forecast;
-  const content = dialog.querySelector<HTMLElement>('.forecast-content')!;
-  const fragment = document.createDocumentFragment();
-  const paragraph = (text: string, className = '') => {
-    const node = document.createElement('p');
-    node.className = className;
-    node.textContent = text;
-    fragment.append(node);
-  };
-  const issueDate = new Intl.DateTimeFormat('sv-SE', {
+  const parts = new Intl.DateTimeFormat('es-MX', {
     timeZone: 'America/Mexico_City',
-    year: 'numeric',
-    month: '2-digit',
     day: '2-digit',
-  }).format(new Date(f.issue_time));
-  paragraph(
-    response.source === 'cache'
-      ? `Pronóstico guardado, emitido el ${issueDate} (sin conexión)`
-      : `Emitido el ${issueDate} (11:00, Ciudad de México)`,
-    'forecast-meta'
-  );
-  paragraph(
-    f.mode === 'live' && f.live_input
-      ? `Con nivel IPCET del ${f.live_input.date} (06:00)`
-      : 'Sin nivel IPCET reciente: pronóstico solo con GloFAS, menos preciso'
-  );
-  fragment.append(chart(f));
-  paragraph(
-    'Línea: mediana (q50) · Banda: intervalo q10–q90 (80% nominal, no es garantía).'
-  );
-  const table = document.createElement('table');
-  table.className = 'forecast-table';
-  const caption = table.createCaption();
-  caption.textContent = 'Nivel modelado y distancia al NAMO';
-  const body = table.createTBody();
-  HORIZONS.forEach((h, index) => {
-    const p = f.forecasts[`h${h}`];
-    const distance = p.distance_to_namo_m;
-    const row = body.insertRow();
-    row.insertCell().textContent = `${['Mañana', 'En 3 días', 'En 7 días'][index]}: ${p.q50.toFixed(1)} m (${p.q10.toFixed(1)}–${p.q90.toFixed(1)}) · ${distance > 0 ? `${distance.toFixed(1)} m sobre el NAMO` : `a ${Math.abs(distance).toFixed(1)} m del NAMO`}`;
-    row.insertCell().textContent = p.target_date;
-  });
-  fragment.append(table);
-  paragraph(f.disclaimer, 'forecast-warning');
-  const link = document.createElement('a');
-  link.href = OFFICIAL_URL;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.textContent = 'Consultar el semáforo oficial de IPCET';
-  fragment.append(link);
-  content.replaceChildren(fragment);
-  content.hidden = false;
-  dialog.querySelector('.forecast-state')!.textContent = response.updating
-    ? 'Actualizando con el nivel de IPCET de hoy…'
-    : '';
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(f.issue_time));
+  const part = (name: Intl.DateTimeFormatPartTypes) =>
+    parts.find(p => p.type === name)?.value;
+  const date = `${part('day')}/${part('month')}`;
+  const points = HORIZONS.map(h => f.forecasts[`h${h}`]);
+  const closest = Math.min(...points.map(p => p.namo_m - p.q50));
+  const namo =
+    closest <= 0 ? 'alcanza el NAMO' : `mín. ${closest.toFixed(1)} m bajo el NAMO`;
+  const note = response.updating
+    ? 'Actualizando con el nivel de hoy…'
+    : f.mode === 'glofas_only'
+      ? 'Sin nivel en vivo: puede sobrestimar'
+      : response.source === 'cache'
+        ? `Copia guardada del ${date}`
+        : '';
+  return [
+    `Pronóstico del modelo · emitido ${date} ${part('hour')}:${part('minute')}`,
+    points
+      .map((p, i) => `${['Mañana', '3 días', '7 días'][i]} ${p.q50.toFixed(1)} m`)
+      .join(' · ') + ` · ${namo}`,
+    `Modelado, no es aviso oficial${note ? ` · ${note}` : ''}`,
+  ];
 }
-function schedule(dialog: HTMLDialogElement, owner: number): void {
-  if (
-    !waiting ||
-    owner !== generation ||
-    !dialog.open ||
-    document.hidden ||
-    Date.now() >= deadline
-  )
-    return;
-  timer = window.setTimeout(
-    () => {
-      void refresh(dialog, owner);
-    },
-    Math.min(60000, deadline - Date.now())
-  );
-}
-async function refresh(dialog: HTMLDialogElement, owner: number): Promise<void> {
-  if (owner !== generation || !dialog.open || document.hidden) return;
-  request = new AbortController();
-  const controller = request;
-  try {
-    const result = await fetchBdctbForecast(
-      fetch,
-      5000,
-      '/api/v1/forecasts/bdctb',
-      controller.signal
-    );
-    if (owner !== generation || !dialog.open) return;
-    render(dialog, result);
-    waiting = result.updating;
-  } catch (error) {
-    if (owner !== generation || !dialog.open) return;
-    dialog.querySelector('.forecast-state')!.textContent = dialog.querySelector('svg')
-      ? 'Se conserva el último pronóstico válido; no se pudo actualizar.'
-      : error instanceof ForecastRequestError
-        ? error.message
-        : 'No se pudo mostrar el pronóstico.';
-  } finally {
-    if (request === controller) request = undefined;
-    schedule(dialog, owner);
-  }
-}
-export async function openBdctbForecastDialog(): Promise<void> {
-  stop();
-  const dialog = ensureDialog();
-  activeDialog = dialog;
-  const owner = ++generation;
-  deadline = Date.now() + MAX_POLL_MS;
-  waiting = false;
-  dialog.querySelector('.forecast-state')!.textContent = 'Consultando el pronóstico…';
-  const content = dialog.querySelector<HTMLElement>('.forecast-content')!;
-  content.replaceChildren();
-  content.hidden = true;
-  if (!dialog.open) dialog.showModal();
-  await refresh(dialog, owner);
-}
-document.addEventListener('visibilitychange', () => {
-  if (!activeDialog?.open) return;
-  stop();
-  const owner = ++generation;
-  // Hiding the tab aborts any request, so reload on return if nothing is shown yet.
-  const empty = activeDialog.querySelector<HTMLElement>('.forecast-content')!.hidden;
-  if (!document.hidden && (empty || (waiting && Date.now() < deadline)))
-    void refresh(activeDialog, owner);
-});

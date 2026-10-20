@@ -1,11 +1,18 @@
-import { claimChart, isDarkModeActive } from './chart.js';
+import {
+  claimChart,
+  isDarkModeActive,
+  buildChartLayout,
+  buildChartYAxis,
+  buildChartConfig,
+  hexToRgba,
+  buildTrace,
+} from './chart.js';
 import {
   fetchBdctbForecast,
   type BdctbForecast,
   type ForecastResponse,
 } from './bdctbForecast.js';
 import { ipcetStatus } from './ipcetStatus.js';
-import { escapeHtml } from '../utils/html.js';
 
 // Adding another published model only requires registering its loader here.
 const forecastLoaders: Record<
@@ -14,6 +21,9 @@ const forecastLoaders: Record<
 > = {
   BDCTB: signal => fetchBdctbForecast(fetch, 5000, '/api/v1/forecasts/bdctb', signal),
 };
+export function forecastLoaderFor(id: string) {
+  return forecastLoaders[id.replace(/_(hidro|clima)$/, '')];
+}
 interface RecentPoint {
   date: string;
   hoy: number | null;
@@ -32,11 +42,7 @@ function parseRecent(value: unknown, code: string): RecentPoint[] {
     stations?: Record<string, unknown>;
   } | null;
   const points = payload?.stations?.[code];
-  if (
-    payload?.schema !== 'ipcet-recent/v1' ||
-    !Array.isArray(points) ||
-    points.length > 30
-  )
+  if (payload?.schema !== 'ipcet-recent/v1' || !Array.isArray(points))
     throw new Error(UNAVAILABLE);
   let previous = '';
   for (const point of points) {
@@ -94,7 +100,7 @@ export async function openStationChart(
   }, 5000);
   try {
     const code = station.code.replace(/_(hidro|clima)$/, '');
-    const loadForecast = forecastLoaders[code];
+    const loadForecast = forecastLoaderFor(code);
     const [points, result] = await Promise.all([
       (async () => {
         const response = await fetch(
@@ -146,7 +152,24 @@ function drawStation(
   const observed = dark ? '#7dd3fc' : '#0369a1';
   const modeled = dark ? '#c4b5fd' : '#6d28d9';
   const fg = dark ? '#e5e7eb' : '#374151';
-  const grid = dark ? '#374151' : '#e5e7eb';
+  // Missing reports do not move the 30-day observation window forward. A
+  // validated live model input is also a dated IPCET observation.
+  const observationDates = points.filter(p => p.hoy !== null).map(p => p.date);
+  if (forecast?.mode === 'live' && forecast.live_input)
+    observationDates.push(forecast.live_input.date);
+  const latest = observationDates.sort().pop() ?? points[points.length - 1]?.date;
+  const start = latest
+    ? new Date(Date.parse(`${latest}T00:00:00Z`) - 29 * 86400000)
+        .toISOString()
+        .slice(0, 10)
+    : undefined;
+  points = start
+    ? points.filter(p => p.date >= start && (!latest || p.date <= latest))
+    : points;
+  chartDiv.setAttribute(
+    'aria-label',
+    `${station.name} · ${station.river}: niveles y pronóstico`
+  );
   const traces: Record<string, unknown>[] = [
     {
       type: 'scatter',
@@ -155,7 +178,9 @@ function drawStation(
       x: points.map(p => p.date),
       y: points.map(p => p.hoy),
       connectgaps: false,
-      line: { color: observed, width: 3, dash: 'solid' },
+      line: { color: observed, width: 3, dash: 'solid', shape: 'spline' },
+      fill: 'tozeroy',
+      fillcolor: hexToRgba(observed, 0.08),
     },
   ];
   const dates = points.map(p => p.date);
@@ -221,20 +246,26 @@ function drawStation(
       y: [namo, namo],
       line: { color: dark ? '#d1d5db' : '#4b5563', width: 2, dash: 'dot' },
     });
+  const values = [
+    ...points.flatMap(p => (p.hoy === null ? [] : [p.hoy])),
+    ...(forecast
+      ? Object.values(forecast.forecasts).flatMap(p => [p.q10, p.q50, p.q90])
+      : []),
+    ...(namo == null ? [] : [namo]),
+  ];
+  const shared = buildChartLayout(chartDiv);
   const layout = {
-    title: {
-      text: escapeHtml(`${station.name} · ${station.river}`),
-      font: { size: 14, color: fg },
+    ...shared,
+    xaxis: {
+      ...shared.xaxis,
+      ...(start ? { range: [start, dates[dates.length - 1]] } : {}),
     },
-    width: chartDiv.clientWidth || 600,
-    height: chartDiv.clientHeight || 280,
-    margin: { l: 55, r: 20, t: forecast?.mode === 'glofas_only' ? 105 : 80, b: 45 },
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { color: fg },
-    xaxis: { type: 'date', title: { text: 'Fecha' }, gridcolor: grid },
-    yaxis: { title: { text: 'Nivel (m)' }, gridcolor: grid, zeroline: false },
-    legend: { orientation: 'h', y: 1.02, x: 0, font: { size: 10 } },
+    yaxis: {
+      ...buildChartYAxis('Nivel (m)'),
+      ...(values.length
+        ? { range: buildTrace('ipcet_hidro', dates, values).yRange }
+        : {}),
+    },
     annotations:
       forecast?.mode === 'glofas_only'
         ? [
@@ -243,14 +274,15 @@ function drawStation(
               xref: 'paper',
               yref: 'paper',
               x: 0,
-              y: 1.3,
+              y: 0.98,
+              yanchor: 'top',
               showarrow: false,
               font: { color: fg, size: 11 },
             },
           ]
         : [],
   };
-  const config = { responsive: true, displaylogo: false };
+  const config = buildChartConfig();
   if ((chartDiv as HTMLDivElement & { _fullLayout?: unknown })._fullLayout)
     Plotly.react(chartDiv, traces, layout, config);
   else Plotly.newPlot(chartDiv, traces, layout, config);

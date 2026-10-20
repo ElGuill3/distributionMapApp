@@ -45,7 +45,11 @@ import { GifPlayer, SyncPlayer, SoloPlayer } from '../ui/gifPlayer.js';
 import { setLucideIcon } from '../ui/icons.js';
 import * as normalMode from './normalMode.js';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
-import { buildStationPopup } from '../ui/stationPopup.js';
+import {
+  buildStationPopup,
+  openStationPopup,
+  closeStationPopup,
+} from '../ui/stationPopup.js';
 import { bindStationStatus, STATUS_LEGEND } from '../ui/ipcetStatus.js';
 import { seasonToDates } from '../utils/seasonDates.js';
 
@@ -270,7 +274,9 @@ export function initMapB(): void {
 
   newMapB.attributionControl.addAttribution(STATUS_LEGEND);
 
+  newMapB.on('popupclose', e => closeStationPopup(e.popup));
   newMapB.on('popupopen', e => {
+    openStationPopup(e.popup);
     const container = e.popup.getElement();
     if (container) {
       initLucideIcons(container);

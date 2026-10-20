@@ -109,7 +109,7 @@ function getThemeColor(varName: string, fallback: string): string {
   return val || fallback;
 }
 
-function hexToRgba(hex: string, opacity: number): string {
+export function hexToRgba(hex: string, opacity: number): string {
   const cleanHex = hex.replace('#', '');
   const r = parseInt(cleanHex.substring(0, 2), 16);
   const g = parseInt(cleanHex.substring(2, 4), 16);
@@ -217,6 +217,77 @@ if (typeof window !== 'undefined') {
   window.addEventListener('theme-change', redraw);
 }
 
+/** Shared visual contract for variable and station charts. */
+export function buildChartLayout(chartDiv: HTMLDivElement) {
+  const fgColor = getThemeColor('--surface-fg', '#374151');
+  const gridColor = getThemeColor('--gray-200', '#dce1e7');
+  const zeroLineColor = getThemeColor('--gray-300', '#b0b8c4');
+  const textColor = getThemeColor('--gray-400', '#6b7280');
+  return {
+    margin: { l: 60, r: 60, t: 30, b: 50 },
+    width: chartDiv.clientWidth || 600,
+    height: chartDiv.clientHeight || 280,
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    xaxis: {
+      title: {
+        text: 'Fecha',
+        font: { family: 'system-ui, sans-serif', size: 12, color: textColor },
+      },
+      type: 'date',
+      tickfont: { family: 'system-ui, sans-serif', size: 10, color: textColor },
+      showgrid: false,
+      zeroline: false,
+      showline: true,
+      linecolor: gridColor,
+      showspikes: true,
+      spikemode: 'across',
+      spikedash: 'dash',
+      spikethickness: 1,
+      spikecolor: zeroLineColor,
+    },
+    showlegend: true,
+    legend: {
+      font: { family: 'system-ui, sans-serif', size: 10, color: fgColor },
+      orientation: 'h',
+      yanchor: 'bottom',
+      y: 1.02,
+      xanchor: 'right',
+      x: 1,
+      bgcolor: 'rgba(0,0,0,0)',
+    },
+  };
+}
+export function buildChartYAxis(label: string) {
+  return {
+    title: {
+      text: label,
+      font: {
+        family: 'system-ui, sans-serif',
+        size: 11,
+        color: getThemeColor('--surface-fg', '#374151'),
+      },
+    },
+    side: 'left',
+    gridcolor: getThemeColor('--gray-200', '#dce1e7'),
+    zeroline: true,
+    zerolinecolor: getThemeColor('--gray-300', '#b0b8c4'),
+    tickfont: {
+      family: 'system-ui, sans-serif',
+      size: 10,
+      color: getThemeColor('--gray-400', '#6b7280'),
+    },
+    showline: false,
+  };
+}
+export function buildChartConfig() {
+  return {
+    responsive: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines'],
+  };
+}
+
 /**
  * Renderiza todas las series activas en la gráfica Plotly.
  */
@@ -297,17 +368,8 @@ export function plotAllSelectedSeries(
     const hasLevel =
       yaxis1.variable.includes('_hidro') || yaxis1.variable.startsWith('local_');
     yAxesConfig['yaxis'] = {
-      title: {
-        text: hasLevel ? 'Nivel (m)' : yaxis1.label,
-        font: { family: 'system-ui, sans-serif', size: 11, color: fgColor },
-      },
+      ...buildChartYAxis(hasLevel ? 'Nivel (m)' : yaxis1.label),
       range: yaxis1.yRange,
-      side: 'left',
-      gridcolor: gridColor,
-      zeroline: true,
-      zerolinecolor: zeroLineColor,
-      tickfont: { family: 'system-ui, sans-serif', size: 10, color: textColor },
-      showline: false,
     };
   }
 
@@ -356,56 +418,8 @@ export function plotAllSelectedSeries(
 
   requestAnimationFrame(() => {
     if (!current()) return;
-    const width = chartDiv.clientWidth || 600;
-    const height = chartDiv.clientHeight || 280;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const layout: any = {
-      margin: { l: 60, r: 60, t: 30, b: 50 },
-      width,
-      height,
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
-      xaxis: {
-        title: {
-          text: 'Fecha',
-          font: { family: 'system-ui, sans-serif', size: 12, color: textColor },
-        },
-        type: 'date',
-        tickfont: { family: 'system-ui, sans-serif', size: 10, color: textColor },
-        showgrid: false,
-        zeroline: false,
-        showline: true,
-        linecolor: gridColor,
-        showspikes: true,
-        spikemode: 'across',
-        spikedash: 'dash',
-        spikethickness: 1,
-        spikecolor: zeroLineColor,
-      },
-      showlegend: true,
-      legend: {
-        font: { family: 'system-ui, sans-serif', size: 10, color: fgColor },
-        orientation: 'h',
-        yanchor: 'bottom',
-        y: 1.02,
-        xanchor: 'right',
-        x: 1,
-        bgcolor: 'rgba(0,0,0,0)',
-      },
-      ...yAxesConfig,
-    };
-
-    const config = {
-      responsive: true,
-      displaylogo: false,
-      modeBarButtonsToRemove: [
-        'select2d',
-        'lasso2d',
-        'autoScale2d',
-        'toggleSpikelines',
-      ],
-    };
+    const layout = { ...buildChartLayout(chartDiv), ...yAxesConfig };
+    const config = buildChartConfig();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((chartDiv as any)._fullLayout) {

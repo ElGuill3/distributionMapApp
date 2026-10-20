@@ -10,7 +10,7 @@ function publication(live = false, source = 'network', updating = false) {
       station: { code: 'BDCTB', name: 'Boca del Cerro' },
       issue_time: '2026-10-19T11:00:00-06:00',
       generated_at: '2026-10-19T18:00:00Z',
-      model_version: 'bdctb-L1-postaudit-v1',
+      model_version: 'test',
       mode: live ? 'live' : 'glofas_only',
       live_input: live ? { date: '2026-10-19', stage_m: 18.1, age_days: 0 } : null,
       forecasts: Object.fromEntries(
@@ -32,21 +32,19 @@ function publication(live = false, source = 'network', updating = false) {
     },
   };
 }
-
 async function ready(page: Page) {
   const forbidden: string[] = [];
   await page.route('**/*', route => {
-    const host = new URL(route.request().url()).hostname;
-    if (
-      host === 'tabasco.gob.mx' ||
-      host === 'raw.githubusercontent.com' ||
-      host === 'github.com' ||
-      host === 'api.github.com'
-    ) {
-      forbidden.push(route.request().url());
-      return route.abort();
+    const url = new URL(route.request().url());
+    if (['localhost', '127.0.0.1'].includes(url.hostname)) {
+      if (url.pathname.startsWith('/api/'))
+        return route.fulfill({ status: 503, json: { error: 'API no simulada' } });
+      return route.continue();
     }
-    return route.continue();
+    if (['unpkg.com', 'cdn.plot.ly', 'cdn.jsdelivr.net'].includes(url.hostname))
+      return route.continue();
+    if (!url.hostname.endsWith('.tile.openstreetmap.org')) forbidden.push(url.href);
+    return route.abort();
   });
   await page.route('**/api/local-stations', route =>
     route.fulfill({
@@ -65,52 +63,43 @@ async function ready(page: Page) {
 }
 async function openFromMarker(page: Page) {
   await page.goto('/templates/index.html', { waitUntil: 'domcontentloaded' });
-  await page.locator('#map .leaflet-marker-pane > *').first().click();
-  await page.getByRole('button', { name: 'Ver pronóstico del río' }).click();
-  return page.getByRole('dialog', { name: 'Pronóstico de Boca del Cerro' });
+  await expect(page.locator('#map .station-icon-hidro')).toHaveCount(1);
+  await page.locator('#map .station-icon-hidro').click();
+  return page.locator('.station-popup-content');
 }
-
-test('BDCTB popup opens a compact NAMO chart and cached fallback without remote forecast access', async ({
+test('popup shows compact q50 summary, cached provenance, no dialog, and one small detail button', async ({
   page,
 }) => {
   const forbidden = await ready(page);
   let requests = 0;
   await page.route('**/api/v1/forecasts/bdctb', route => {
     requests++;
-    return route.fulfill({ json: publication(false, 'cache') });
+    return route.fulfill({ json: publication(true, 'cache') });
   });
-  const dialog = await openFromMarker(page);
+  const popup = await openFromMarker(page);
+  await expect(popup).toContainText('Pronóstico del modelo · emitido 19/10 11:00');
+  await expect(popup).toContainText('Mañana 18.4 m · 3 días 18.4 m · 7 días 18.4 m');
+  await expect(popup).toContainText('Copia guardada del 19/10');
+  await expect(popup.locator('.station-forecast-summary > span')).toHaveCount(3);
+  expect(
+    await popup
+      .locator('.station-forecast-summary > span')
+      .nth(1)
+      .evaluate(el => el.scrollWidth <= el.clientWidth)
+  ).toBe(true);
+  await expect(popup.getByRole('button', { name: 'Ver detalle' })).toBeVisible();
+  await expect(popup.locator('button')).toHaveCount(1);
+  await expect(page.locator('dialog')).toHaveCount(0);
+  expect(
+    await popup.getByRole('button').evaluate(el => el.getBoundingClientRect().width)
+  ).toBeLessThan(110);
+  expect(
+    await popup.evaluate(el => el.getBoundingClientRect().width)
+  ).toBeLessThanOrEqual(300);
   expect(requests).toBe(1);
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText(
-    'Pronóstico guardado, emitido el 2026-10-19 (sin conexión)'
-  );
-  await expect(dialog).toContainText(
-    'Sin nivel IPCET reciente: pronóstico solo con GloFAS, menos preciso'
-  );
-  await expect(dialog).toContainText('Mañana: 18.4 m (17.9–18.9) · a 0.8 m del NAMO');
-  await expect(dialog.locator('svg')).toContainText('NAMO 19.21 m');
-  await expect(dialog.locator('.forecast-band')).toHaveCSS(
-    'fill',
-    'rgba(14, 116, 144, 0.2)'
-  );
-  await expect(dialog.locator('.forecast-median')).toHaveCSS('fill', 'none');
-  await expect(dialog.locator('.forecast-namo')).toHaveCSS(
-    'stroke-dasharray',
-    '6px, 4px'
-  );
-  await expect(
-    dialog.getByRole('link', { name: 'Consultar el semáforo oficial de IPCET' })
-  ).toHaveAttribute('href', /^https:\/\/tabasco\.gob\.mx\//);
-  await page.keyboard.press('Escape');
-  await expect(dialog).not.toBeVisible();
-  await expect(page.locator('#map')).toHaveClass(/leaflet-container/);
   expect(forbidden).toEqual([]);
 });
-
-test('keeps the forecast visible while updating and replaces it on the 60-second poll', async ({
-  page,
-}) => {
+test('updating polls while open and stops when popup closes', async ({ page }) => {
   const forbidden = await ready(page);
   let requests = 0;
   await page.route('**/api/v1/forecasts/bdctb', route => {
@@ -120,31 +109,33 @@ test('keeps the forecast visible while updating and replaces it on the 60-second
     });
   });
   await page.clock.install();
-  const dialog = await openFromMarker(page);
-  await expect(dialog).toContainText('Actualizando con el nivel de IPCET de hoy…');
-  await expect(dialog.locator('svg')).toBeVisible();
+  const popup = await openFromMarker(page);
+  await expect(popup).toContainText('Actualizando con el nivel de hoy…');
   await page.clock.fastForward(60000);
-  await expect(dialog).toContainText('Con nivel IPCET del 2026-10-19 (06:00)');
-  await expect(dialog).not.toContainText('Actualizando con');
+  await expect(popup).not.toContainText('Actualizando con');
   expect(requests).toBe(2);
-  await dialog.getByRole('button', { name: 'Cerrar pronóstico' }).click();
+  await page.locator('.leaflet-popup-close-button').click();
   await page.clock.fastForward(60000);
   expect(requests).toBe(2);
   expect(forbidden).toEqual([]);
 });
-
-test('503 is a Spanish notice without disturbing the map', async ({ page }) => {
+test('GloFAS-only note is inline, and a 503 keeps the map and actions usable', async ({
+  page,
+}) => {
   const forbidden = await ready(page);
   await page.route('**/api/v1/forecasts/bdctb', route =>
-    route.fulfill({
-      status: 503,
-      json: { error: 'No hay un pronóstico válido guardado.' },
-    })
+    route.fulfill({ json: publication() })
   );
-  const dialog = await openFromMarker(page);
-  await expect(dialog).toContainText('No hay un pronóstico válido guardado.');
-  await expect(dialog.locator('svg')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Cerrar pronóstico' }).click();
+  const popup = await openFromMarker(page);
+  await expect(popup).toContainText('Sin nivel en vivo: puede sobrestimar');
+  await page.locator('.leaflet-popup-close-button').click();
+  await page.route('**/api/v1/forecasts/bdctb', route =>
+    route.fulfill({ status: 503, json: { error: 'unavailable' } })
+  );
+  await page.locator('#map .station-icon-hidro').click();
+  await expect(popup).toContainText('Pronóstico no disponible');
+  await expect(popup.getByRole('button', { name: 'Ver detalle' })).toBeVisible();
   await expect(page.locator('#map')).toHaveClass(/leaflet-container/);
+  await expect(page.locator('dialog')).toHaveCount(0);
   expect(forbidden).toEqual([]);
 });
