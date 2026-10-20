@@ -86,9 +86,38 @@ app reads the public `bdctb-forecast/v2` JSON from
 [tabasco-river-forecast](https://github.com/ElGuill3/tabasco-river-forecast);
 the laptop needs neither the model nor a local forecasting service. An inline
 SVG shows the q50 median, the q10–q90 band (nominal 80%, not a guarantee) and the
-**official NAMO 19.21 m**. A table lists h1/h3/h7 and distance to NAMO. There are
-no app-generated warning categories or traffic-light colors; consult the linked
-official IPCET semáforo.
+**official NAMO 19.21 m**. A table lists h1/h3/h7 and distance to NAMO. Marker
+colors come from the **official IPCET semáforo, never from the model**: NORMAL
+green, A LA BAJA grey, BAJO brown, PREVENCIÓN yellow, ALERTA red and EMERGENCIA
+purple. Only PREVENCIÓN, ALERTA and EMERGENCIA blink; with
+`prefers-reduced-motion`, blinking becomes a steady outline. Each marker
+identifies the station, state and date; its popup includes a **Fuente: IPCET**
+source link.
+
+The **neutral dashed ring** is independent of the official color: it indicates
+that a `live` forecast median reaches or exceeds its NAMO at any lead, not an
+official warning. It appears only after loading a forecast during the session
+(dialog or chart), never for `glofas_only`. A later nonqualifying load removes
+it. Startup never requests a forecast.
+
+On any hydrometric marker, select **Ver niveles en la gráfica** to open the
+existing chart panel with recent IPCET observations (solid line) and official
+NAMO. BDCTB adds the median (dashed line) and q10–q90 band; SPTTB currently shows
+only observations and NAMO. This replaces the previous chart; the forecast
+dialog remains available. Analysis ZIP export is disabled for these series;
+Plotly's image control remains available.
+
+- `/api/v1/ipcet/levels` reads `IPCET_LEVELS_URL`, the `ipcet/latest.json`
+  publication; it is requested at startup and every 30 minutes.
+- `/api/v1/ipcet/levels/<code>/recent` reads `IPCET_RECENT_URL`, the
+  `ipcet/recent.json` publication, returning only the requested station. Both
+  endpoints are read-only, validate publications and retain valid disk copies
+  in `.cache/ipcet` on failure; without a valid copy they return HTTP 503. They
+  never trigger the messenger. Missing official states leave the marker's
+  default appearance unchanged.
+- **Gaviotas (GABTB) limitation:** it has no valid seeded history because OCR
+  cannot reliably read NAMO/capacity in the archive row. Its official state
+  remains available, but the level is shown as unconfirmed.
 
 - The issue date and input provenance are always visible: dated IPCET 06:00 level,
   or the less precise GloFAS-only fallback without a recent level.
@@ -638,6 +667,8 @@ cp .env.example .env
 | `SSE_MAX_PROGRESS_TASKS` | `1024` | Maximum registered progress tasks. |
 | `SSE_MAX_PROGRESS_MESSAGES` | `128` | Maximum messages per task. |
 | `BDCTB_FORECAST_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/bdctb/latest.json` | Public v2 JSON, not the old local API. |
+| `IPCET_LEVELS_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/latest.json` | Official IPCET semáforo and levels publication. |
+| `IPCET_RECENT_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/recent.json` | Recent observed levels by station. |
 | `FORECAST_MESSENGER_TOKEN` | *(empty)* | Optional, backend only. Fine-grained token restricted to Contents read/write on `ElGuill3/tabasco-river-forecast`. |
 | `BASE_DIR_OVERRIDE` | *(unset)* | Alternative project root for data and static files (used by tests). |
 
@@ -924,6 +955,8 @@ distributionMapApp/
 | `/api/flood-stats` | `GET` | same as `/api/flood-detection` | `{ total_ha }` |
 | `/api/local-stations` | `GET` | — | Catalog `{ <id>: { name, type, coords, station_name, municipio } }` |
 | `/api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, type, dates, value[], unit, level_m[], precip_mm[] }` |
+| `/api/v1/ipcet/levels` | `GET` | — | `ipcet-levels/v1` publication with provenance and date; `503` without a valid copy |
+| `/api/v1/ipcet/levels/<code>/recent` | `GET` | Station code | `ipcet-recent/v1` publication filtered by station; `503` without a valid copy |
 | `/api/v1/forecasts/bdctb` | `GET` | — | `{forecast, source, fetched_at, updating}`; validated v2 publication or disk cache, `503` when neither is valid |
 | `/api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | ZIP archive (CSV + GIFs + metadata) |
 | `/api/docs` | `GET` | — | Interactive documentation (Scalar UI) |
