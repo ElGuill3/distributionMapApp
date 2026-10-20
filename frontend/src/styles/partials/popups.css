@@ -88,6 +88,10 @@
   transform: scale(0.98);
 }
 
+.station-chart-link {
+  margin-top: 0.4rem;
+}
+
 .station-forecast-link {
   margin-top: 0.4rem;
   background: #0e7490;
