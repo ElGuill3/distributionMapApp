@@ -32,7 +32,13 @@ import {
 } from './ui/progress.js';
 import { showFieldError } from './ui/fieldErrors.js';
 import { translateBackendError } from './errorMap.js';
-import { plotAllSelectedSeries, isDarkModeActive } from './ui/chart.js';
+import {
+  plotAllSelectedSeries,
+  isDarkModeActive,
+  isStationChart,
+  releaseChart,
+} from './ui/chart.js';
+import { openStationChart } from './ui/stationChart.js';
 import { initLucideIcons, setLucideIcon } from './ui/icons.js';
 import { seasonToDates } from './utils/seasonDates.js';
 import { openBdctbForecastDialog } from './ui/bdctbForecast.js';
@@ -371,6 +377,7 @@ function hideChartContainer(): void {
 }
 
 function showChartPlaceholderA(): void {
+  if (ndviChartDiv) releaseChart(ndviChartDiv);
   chartPlaceholderA?.classList.remove('chart-placeholder--hidden');
 }
 
@@ -1110,6 +1117,7 @@ async function requestGifAndSeries(
   end: string,
   bbox: BBox
 ): Promise<void> {
+  replaceStationChart();
   await requestNormalGeneration(variable, start, end, bbox);
 }
 
@@ -1148,6 +1156,7 @@ async function requestLocalStationLevel(
   start: string,
   end: string
 ): Promise<void> {
+  replaceStationChart();
   try {
     const data = await fetchLocalStationLevel({ stationId, start, end });
     const values =
@@ -1328,6 +1337,31 @@ export function toggleModeBanner(
 // ---------------------------------------------------------------------------
 
 document.addEventListener('click', e => {
+  const chartLink = (e.target as HTMLElement).closest<HTMLElement>(
+    '.station-chart-link'
+  );
+  if (chartLink) {
+    e.preventDefault();
+    const id = chartLink.dataset['stationId'];
+    if (!id || !ndviChartDiv || !chartPlaceholderA) return;
+    const code = id.replace(/_(hidro|clima)$/, '');
+    const official = ipcetStatus.stateFor(code);
+    const info = mapState.getLocalStations()?.[id];
+    // Do not merge station levels with previously selected analysis series.
+    mapState.clearSeriesDataA();
+    void openStationChart(
+      ndviChartDiv,
+      chartPlaceholderA,
+      {
+        code,
+        name: official?.station || info?.station_name || info?.name || code,
+        river: official?.river || 'Río sin confirmar',
+      },
+      showChartContainer
+    );
+    syncExportButton();
+    return;
+  }
   const forecastLink = (e.target as HTMLElement).closest<HTMLElement>(
     '.station-forecast-link'
   );
@@ -1443,6 +1477,7 @@ const btnExportAnalysis = document.getElementById(
  * Determina si hay datos de serie cargados para exportar.
  */
 function canExport(): boolean {
+  if (ndviChartDiv && isStationChart(ndviChartDiv)) return false;
   const seriesA = mapState.getSeriesDataA();
   const hasSeriesA = Object.keys(seriesA).some(
     k => (seriesA[k as VariableKey]?.values?.length ?? 0) > 0
@@ -1493,8 +1528,26 @@ function syncExportButton(): void {
   }
 }
 
-// Sincronizar cuando cambia la serie de datos
-// (llamada desde los handlers de modo normal y comparativa)
+// Both chart owners notify replacements, including those rendered by other modes.
+ndviChartDiv?.addEventListener('chart-content-change', syncExportButton);
+
+function replaceStationChart(): void {
+  if (!ndviChartDiv || !isStationChart(ndviChartDiv)) return;
+  releaseChart(ndviChartDiv);
+  Plotly.purge(ndviChartDiv);
+  showChartPlaceholderA();
+}
+
+for (const event of [
+  'compareModeActivated',
+  'compareModeDeactivated',
+  'floodRiskModeActivated',
+  'inundacionesModeActivated',
+]) {
+  document.addEventListener(event, replaceStationChart);
+}
+tflowClearBtn?.addEventListener('click', replaceStationChart);
+btnGenerateA?.addEventListener('click', replaceStationChart);
 
 btnExportAnalysis?.addEventListener('click', async () => {
   const bbox = mapState.getBbox();

@@ -25,6 +25,7 @@ export function buildStationPopup(
       <span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metric}</span>
     </div>
     <a href="#" class="station-popup-btn station-full-data-link" data-station-id="${escapeHtml(id)}">Ver datos 2000–2024</a>
+    ${isHidro ? `<button type="button" class="station-popup-btn station-chart-link" data-station-id="${escapeHtml(id)}">Ver niveles en la gráfica</button>` : ''}
     ${bdctbForecastAction(id, isHidro)}
   `;
   const status = isHidro ? ipcetStatus.stateFor(id) : null;

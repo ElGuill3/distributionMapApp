@@ -19,6 +19,7 @@ interface Station {
   code: string | null;
   river: string;
   station: string;
+  namo: number | null;
   semaforo: OfficialState | null;
   problems: string[];
 }
