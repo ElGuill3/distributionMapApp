@@ -287,12 +287,12 @@ The state of Tabasco presents high hydrological and climatic variability, which 
 
 ### Satellite Variables (Google Earth Engine)
 
-| Variable               | GEE Source        | Temporal Resolution | Available Period |
+| Variable | GEE Source | Temporal Resolution | Available Period |
 | ---------------------- | ----------------- | ------------------- | ---------------- |
-| NDVI (vegetation)      | MODIS MOD13Q1     | Every 16 days       | 2000–2024        |
-| 2 m Air Temperature    | ERA5-Land (ECMWF) | Daily               | 2000–2024        |
-| Soil Moisture (0–7 cm) | ERA5-Land (ECMWF) | Daily               | 2000–2024        |
-| Daily Precipitation    | CHIRPS (UCSB)     | Daily               | 2000–2024        |
+| NDVI (vegetation) | MODIS MOD13Q1 | Every 16 days | 2000–2024 |
+| 2 m Air Temperature | ERA5-Land (ECMWF) | Daily | 2000–2024 |
+| Soil Moisture (0–7 cm) | ERA5-Land (ECMWF) | Daily | 2000–2024 |
+| Daily Precipitation | CHIRPS (UCSB) | Daily | 2000–2024 |
 
 Each variable generates:
 
@@ -492,12 +492,12 @@ from Earth Engine again.
 
 Generation progress uses **Server-Sent Events (SSE)** at `/api/gif-progress/<task_id>`. The registry is **process-local**: use one application process with concurrent request threads so generation and SSE reach the same registry.
 
-| Setting                     | Default                 | Behavior                                                                                       |
+| Setting | Default | Behavior |
 | --------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
-| `SSE_TASK_QUEUE_TIMEOUT_S`  | 60 seconds              | Wait between keep-alive comments.                                                              |
-| `SSE_PROGRESS_RETENTION_S`  | 3600 seconds, minimum 1 | Completed/error progress expires from producer completion; running tasks do not expire.        |
-| `SSE_MAX_PROGRESS_TASKS`    | 1024, minimum 1         | Evict completed registrations first, then the oldest if all are running.                       |
-| `SSE_MAX_PROGRESS_MESSAGES` | 128, minimum 2          | Discard oldest buffered progress without blocking generation; retain the latest terminal pair. |
+| `SSE_TASK_QUEUE_TIMEOUT_S` | 60 seconds | Wait between keep-alive comments. |
+| `SSE_PROGRESS_RETENTION_S` | 3600 seconds, minimum 1 | Completed/error progress expires from producer completion; running tasks do not expire. |
+| `SSE_MAX_PROGRESS_TASKS` | 1024, minimum 1 | Evict completed registrations first, then the oldest if all are running. |
+| `SSE_MAX_PROGRESS_MESSAGES` | 128, minimum 2 | Discard oldest buffered progress without blocking generation; retain the latest terminal pair. |
 
 - Closing a stream cleans its queue on completion, error, or client disconnect. An old producer or stream never removes a newer registration with the same ID.
 - Expiry is checked on registry access and on cleanup daemon ticks (`GIF_CLEANUP_INTERVAL_S`). An evicted/expired ID emits the existing missing-task SSE event; already attached streams retain their own queue.
@@ -545,16 +545,16 @@ flowchart LR
     style ui fill:transparent,stroke-dasharray:6 4
 ```
 
-| Module                                                 | Responsibility                                                             |
+| Module | Responsibility |
 | ------------------------------------------------------ | -------------------------------------------------------------------------- |
-| `main.ts`                                              | Initializes Leaflet and wires modes and controls; holds no business logic. |
-| `apiClient.ts`, `config.ts`, `types.ts`, `errorMap.ts` | Typed backend requests, endpoints, API types and error translation.        |
-| `state/mapState.ts`                                    | Session state: bbox, active mode, variable, series and animation players.  |
-| `modes/`                                               | Behavior of each mode: normal, comparison, risk and floods.                |
-| `sidebar/`                                             | Sidebar step flow, variable selector, configuration and mode selection.    |
-| `ui/`                                                  | GIF player, Plotly charts, progress, station popups and BDCTB forecast.    |
-| `map/overlays.ts`                                      | Leaflet overlay layers.                                                    |
-| `utils/`                                               | Season dates (UTC), processing limits and text escaping.                   |
+| `main.ts` | Initializes Leaflet and wires modes and controls; holds no business logic. |
+| `apiClient.ts`, `config.ts`, `types.ts`, `errorMap.ts` | Typed backend requests, endpoints, API types and error translation. |
+| `state/mapState.ts` | Session state: bbox, active mode, variable, series and animation players. |
+| `modes/` | Behavior of each mode: normal, comparison, risk and floods. |
+| `sidebar/` | Sidebar step flow, variable selector, configuration and mode selection. |
+| `ui/` | GIF player, Plotly charts, progress, station popups and BDCTB forecast. |
+| `map/overlays.ts` | Leaflet overlay layers. |
+| `utils/` | Season dates (UTC), processing limits and text escaping. |
 
 **Generation and animation lifecycle:**
 
@@ -566,12 +566,12 @@ flowchart LR
 
 ## Prerequisites
 
-| Component | Minimum Version Recommended                 |
+| Component | Minimum Version Recommended |
 | --------- | ------------------------------------------- |
-| Python    | 3.11                                        |
-| Node.js   | 18                                          |
-| npm       | 9                                           |
-| uv        | Latest — recommended Python package manager |
+| Python | 3.11 |
+| Node.js | 18 |
+| npm | 9 |
+| uv | Latest — recommended Python package manager |
 
 **Google Earth Engine Account:**
 
@@ -584,9 +584,9 @@ flowchart LR
 
 **Node Dependencies** (see `package.json`):
 
-| Type        | Packages                                                                                                                                                                                |
+| Type | Packages |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime     | `leaflet`, `gifuct-js`, `lucide`                                                                                                                                                        |
+| Runtime | `leaflet`, `gifuct-js`, `lucide` |
 | Development | `typescript`, `@types/leaflet`, `@types/node`, `vitest`, `@vitest/browser`, `jsdom`, `jszip`, `@playwright/test`, `playwright`, `eslint`, `@eslint/js`, `typescript-eslint`, `prettier` |
 
 In the browser, Leaflet, Leaflet.draw, Plotly, gifuct-js and JSZip load from CDNs
@@ -650,42 +650,42 @@ cp .env.example .env
 > gcloud projects list
 > ```
 
-| Environment Variable        | Default Value                                                                                   | Description                                                                                                        |
+| Environment Variable | Default Value | Description |
 | --------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `GEE_PROJECT`               | `inundaciones-proyecto`                                                                         | Google Cloud project ID with the Earth Engine API enabled.                                                         |
-| `FLASK_DEBUG`               | `false`                                                                                         | Enables Flask debug mode if set to `true`.                                                                         |
-| `CONAGUA_HIDROS_STATIONS`   | `BDCTB,SPTTB`                                                                                   | Keys of hydrometric stations to download (comma-separated).                                                        |
-| `CONAGUA_CLIMAS_STATIONS`   | `BDCTB,SPTTB`                                                                                   | Keys of climatological stations to download (comma-separated).                                                     |
-| `MAX_SPAN_DEG`              | `8.0`                                                                                           | Maximum spatial span allowed in degrees for GEE requests.                                                          |
-| `MAX_YEARS_RANGE`           | `10.0`                                                                                          | Maximum date range allowed in years for GEE requests.                                                              |
-| `MAX_SPAN_DEG_S2`           | `4.0`                                                                                           | Maximum span in degrees for flood detection (Sentinel-1 and Landsat).                                              |
-| `MAX_TOTAL_PIXELS`          | `26000000`                                                                                      | Maximum pixel limit for GEE processing.                                                                            |
-| `BASE_PIXELS_PER_FRAME`     | `589824`                                                                                        | Base pixel size per animation frame (768x768).                                                                     |
-| `BASE_PIXELS_S2`            | `262144`                                                                                        | Base pixel size per frame for Sentinel-2 (512x512).                                                                |
-| `MIN_GIF_DIM`               | `256`                                                                                           | Minimum allowed dimensions in pixels for the generated GIF.                                                        |
-| `GIF_MAX_AGE_MINUTES`       | `60`                                                                                            | Maximum age in minutes of cached GIFs before cleanup.                                                              |
-| `GIF_CLEANUP_INTERVAL_S`    | `600`                                                                                           | GIF cleanup thread interval in seconds (10 minutes).                                                               |
-| `GEE_MODIS_NDVI`            | `MODIS/061/MOD13Q1`                                                                             | GEE NDVI dataset ID.                                                                                               |
-| `GEE_ERA5_LAND_DAILY`       | `ECMWF/ERA5_LAND/DAILY_AGGR`                                                                    | GEE ERA5-Land temperature and soil moisture dataset ID.                                                            |
-| `GEE_CHIRPS_DAILY`          | `UCSB-CHG/CHIRPS/DAILY`                                                                         | GEE CHIRPS precipitation dataset ID.                                                                               |
-| `GEE_S2_SR`                 | `COPERNICUS/S2_SR_HARMONIZED`                                                                   | GEE Sentinel-2 SR Harmonized dataset ID.                                                                           |
-| `RATE_LIMIT_ENABLED`        | `true`                                                                                          | Enables or disables rate limiting.                                                                                 |
-| `RATE_LIMIT_GIF`            | `30/minute`                                                                                     | Each GIF endpoint, per IP.                                                                                         |
-| `RATE_LIMIT_TIMESERIES`     | `60/minute`                                                                                     | Each timeseries endpoint, per IP.                                                                                  |
-| `RATE_LIMIT_EXPORT`         | `10/minute`                                                                                     | Export bundles, per IP.                                                                                            |
-| `RATE_LIMIT_FLOOD`          | `60/minute`                                                                                     | Flood maps/detection, independently per endpoint and IP.                                                           |
-| `RATE_LIMIT_FLOOD_STATS`    | `30/minute`                                                                                     | Flood statistics, per IP.                                                                                          |
-| `RATE_LIMIT_STATION`        | `60/minute`                                                                                     | Each station endpoint, per IP.                                                                                     |
-| `RATE_LIMIT_FORECAST`       | `60/minute`                                                                                     | Forecast proxy, per IP.                                                                                            |
-| `GIF_DOWNLOAD_TIMEOUT_S`    | `120`                                                                                           | Timeout in seconds to download the GIF from Earth Engine.                                                          |
-| `SSE_TASK_QUEUE_TIMEOUT_S`  | `60`                                                                                            | Seconds between SSE keep-alive comments.                                                                           |
-| `SSE_WAIT_ATTEMPTS`         | `100`                                                                                           | Attempts (every 0.1 s) to find a task queue before answering "Tarea no encontrada".                                |
-| `SSE_PROGRESS_RETENTION_S`  | `3600`                                                                                          | Retention of finished progress (see the SSE table in Technical Architecture).                                      |
-| `SSE_MAX_PROGRESS_TASKS`    | `1024`                                                                                          | Maximum registered progress tasks.                                                                                 |
-| `SSE_MAX_PROGRESS_MESSAGES` | `128`                                                                                           | Maximum messages per task.                                                                                         |
-| `BDCTB_FORECAST_URL`        | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/bdctb/latest.json` | Public v2 JSON, not the old local API.                                                                             |
-| `IPCET_LEVELS_URL`          | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/latest.json` | Official IPCET semáforo and levels publication.                                                                    |
-| `IPCET_RECENT_URL`          | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/recent.json` | Recent observed levels by station.                                                                                 |
+| `GEE_PROJECT` | `inundaciones-proyecto` | Google Cloud project ID with the Earth Engine API enabled. |
+| `FLASK_DEBUG` | `false` | Enables Flask debug mode if set to `true`. |
+| `CONAGUA_HIDROS_STATIONS` | `BDCTB,SPTTB` | Keys of hydrometric stations to download (comma-separated). |
+| `CONAGUA_CLIMAS_STATIONS` | `BDCTB,SPTTB` | Keys of climatological stations to download (comma-separated). |
+| `MAX_SPAN_DEG` | `8.0` | Maximum spatial span allowed in degrees for GEE requests. |
+| `MAX_YEARS_RANGE` | `10.0` | Maximum date range allowed in years for GEE requests. |
+| `MAX_SPAN_DEG_S2` | `4.0` | Maximum span in degrees for flood detection (Sentinel-1 and Landsat). |
+| `MAX_TOTAL_PIXELS` | `26000000` | Maximum pixel limit for GEE processing. |
+| `BASE_PIXELS_PER_FRAME` | `589824` | Base pixel size per animation frame (768x768). |
+| `BASE_PIXELS_S2` | `262144` | Base pixel size per frame for Sentinel-2 (512x512). |
+| `MIN_GIF_DIM` | `256` | Minimum allowed dimensions in pixels for the generated GIF. |
+| `GIF_MAX_AGE_MINUTES` | `60` | Maximum age in minutes of cached GIFs before cleanup. |
+| `GIF_CLEANUP_INTERVAL_S` | `600` | GIF cleanup thread interval in seconds (10 minutes). |
+| `GEE_MODIS_NDVI` | `MODIS/061/MOD13Q1` | GEE NDVI dataset ID. |
+| `GEE_ERA5_LAND_DAILY` | `ECMWF/ERA5_LAND/DAILY_AGGR` | GEE ERA5-Land temperature and soil moisture dataset ID. |
+| `GEE_CHIRPS_DAILY` | `UCSB-CHG/CHIRPS/DAILY` | GEE CHIRPS precipitation dataset ID. |
+| `GEE_S2_SR` | `COPERNICUS/S2_SR_HARMONIZED` | GEE Sentinel-2 SR Harmonized dataset ID. |
+| `RATE_LIMIT_ENABLED` | `true` | Enables or disables rate limiting. |
+| `RATE_LIMIT_GIF` | `30/minute` | Each GIF endpoint, per IP. |
+| `RATE_LIMIT_TIMESERIES` | `60/minute` | Each timeseries endpoint, per IP. |
+| `RATE_LIMIT_EXPORT` | `10/minute` | Export bundles, per IP. |
+| `RATE_LIMIT_FLOOD` | `60/minute` | Flood maps/detection, independently per endpoint and IP. |
+| `RATE_LIMIT_FLOOD_STATS` | `30/minute` | Flood statistics, per IP. |
+| `RATE_LIMIT_STATION` | `60/minute` | Each station endpoint, per IP. |
+| `RATE_LIMIT_FORECAST` | `60/minute` | Forecast proxy, per IP. |
+| `GIF_DOWNLOAD_TIMEOUT_S` | `120` | Timeout in seconds to download the GIF from Earth Engine. |
+| `SSE_TASK_QUEUE_TIMEOUT_S` | `60` | Seconds between SSE keep-alive comments. |
+| `SSE_WAIT_ATTEMPTS` | `100` | Attempts (every 0.1 s) to find a task queue before answering "Tarea no encontrada". |
+| `SSE_PROGRESS_RETENTION_S` | `3600` | Retention of finished progress (see the SSE table in Technical Architecture). |
+| `SSE_MAX_PROGRESS_TASKS` | `1024` | Maximum registered progress tasks. |
+| `SSE_MAX_PROGRESS_MESSAGES` | `128` | Maximum messages per task. |
+| `BDCTB_FORECAST_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/bdctb/latest.json` | Public v2 JSON, not the old local API. |
+| `IPCET_LEVELS_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/latest.json` | Official IPCET semáforo and levels publication. |
+| `IPCET_RECENT_URL` | `https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/recent.json` | Recent observed levels by station. |
 | `FORECAST_MESSENGER_TOKEN`  | _(empty)_                                                                                       | Optional, backend only. Fine-grained token restricted to Contents read/write on `ElGuill3/tabasco-river-forecast`. |
 | `BASE_DIR_OVERRIDE`         | _(unset)_                                                                                       | Alternative project root for data and static files (used by tests).                                                |
 
@@ -958,27 +958,27 @@ distributionMapApp/
 
 ## API Endpoints
 
-| Endpoint                                                       | Method | Key Parameters                                                                   | Response                                                                                                        |
+| Endpoint | Method | Key Parameters | Response |
 | -------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `/api/ndvi-gif-bbox`                                           | `GET`  | `start`, `end` or `year` + `season`, `bbox`, `ratio`, `task_id`                  | `{ gifUrl, bbox, dates, ndvi[] }`                                                                               |
-| `/api/era5-temp-gif-bbox`                                      | `GET`  | same                                                                             | `{ gifUrl, bbox, dates, temp[] }`                                                                               |
-| `/api/era5-soil-gif-bbox`                                      | `GET`  | same                                                                             | `{ gifUrl, bbox, dates, soil_pct[] }`                                                                           |
-| `/api/imerg-precip-gif-bbox`                                   | `GET`  | same                                                                             | `{ gifUrl, bbox, dates, precip_mm[] }`                                                                          |
-| `/api/{ndvi,era5-temp,era5-soil,imerg-precip}-timeseries-bbox` | `GET`  | `start`, `end` or `year` + `season`, `bbox`                                      | `{ dates, bbox, <values>[] }`                                                                                   |
-| `/api/gif-progress/<task_id>`                                  | `GET`  | —                                                                                | SSE: `{ progress: 0–100 or -1, message }`                                                                       |
-| `/api/flood-risk/metadata`                                     | `GET`  | —                                                                                | `{ classes, tiles, bounds, sources, validation }`                                                               |
-| `/api/flood-risk/municipalities`                               | `GET`  | —                                                                                | GeoJSON with `class_share`, `high_share`, `mean_score`, `rank`                                                  |
-| `/api/flood-risk/tiles/{z}/{x}/{y}.png`                        | `GET`  | —                                                                                | PNG tile (z 7–12)                                                                                               |
-| `/api/flood-detection`                                         | `GET`  | `start`, `end`, `bbox`, `satellite` (`sentinel1`/`landsat`), `auto`, `threshold` | `{ satellite, computed_threshold, background_layer, water_layer, … }`                                           |
-| `/api/flood-stats`                                             | `GET`  | same as `/api/flood-detection`                                                   | `{ total_ha }`                                                                                                  |
-| `/api/local-stations`                                          | `GET`  | —                                                                                | Catalog `{ <id>: { name, type, coords, station_name, municipio } }`                                             |
-| `/api/local-station-level-range`                               | `GET`  | `station`, `start`, `end`                                                        | `{ station, type, dates, value[], unit, level_m[], precip_mm[] }`                                               |
-| `/api/v1/ipcet/levels`                                         | `GET`  | —                                                                                | `ipcet-levels/v1` publication with provenance and date; `503` without a valid copy                              |
-| `/api/v1/ipcet/levels/<code>/recent`                           | `GET`  | Station code                                                                     | `ipcet-recent/v1` publication filtered by station; `503` without a valid copy                                   |
-| `/api/v1/forecasts/bdctb`                                      | `GET`  | —                                                                                | `{forecast, source, fetched_at, updating}`; validated v2 publication or disk cache, `503` when neither is valid |
-| `/api/export/bundle`                                           | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata`                                     | ZIP archive (CSV + GIFs + metadata)                                                                             |
-| `/api/docs`                                                    | `GET`  | —                                                                                | Interactive documentation (Scalar UI)                                                                           |
-| `/api/docs/openapi.yaml`                                       | `GET`  | —                                                                                | OpenAPI 3.1.0 specification in YAML                                                                             |
+| `/api/ndvi-gif-bbox` | `GET` | `start`, `end` or `year` + `season`, `bbox`, `ratio`, `task_id` | `{ gifUrl, bbox, dates, ndvi[] }` |
+| `/api/era5-temp-gif-bbox` | `GET` | same | `{ gifUrl, bbox, dates, temp[] }` |
+| `/api/era5-soil-gif-bbox` | `GET` | same | `{ gifUrl, bbox, dates, soil_pct[] }` |
+| `/api/imerg-precip-gif-bbox` | `GET` | same | `{ gifUrl, bbox, dates, precip_mm[] }` |
+| `/api/{ndvi,era5-temp,era5-soil,imerg-precip}-timeseries-bbox` | `GET` | `start`, `end` or `year` + `season`, `bbox` | `{ dates, bbox, <values>[] }` |
+| `/api/gif-progress/<task_id>` | `GET` | — | SSE: `{ progress: 0–100 or -1, message }` |
+| `/api/flood-risk/metadata` | `GET` | — | `{ classes, tiles, bounds, sources, validation }` |
+| `/api/flood-risk/municipalities` | `GET` | — | GeoJSON with `class_share`, `high_share`, `mean_score`, `rank` |
+| `/api/flood-risk/tiles/{z}/{x}/{y}.png` | `GET` | — | PNG tile (z 7–12) |
+| `/api/flood-detection` | `GET` | `start`, `end`, `bbox`, `satellite` (`sentinel1`/`landsat`), `auto`, `threshold` | `{ satellite, computed_threshold, background_layer, water_layer, … }` |
+| `/api/flood-stats` | `GET` | same as `/api/flood-detection` | `{ total_ha }` |
+| `/api/local-stations` | `GET` | — | Catalog `{ <id>: { name, type, coords, station_name, municipio } }` |
+| `/api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, type, dates, value[], unit, level_m[], precip_mm[] }` |
+| `/api/v1/ipcet/levels` | `GET` | — | `ipcet-levels/v1` publication with provenance and date; `503` without a valid copy |
+| `/api/v1/ipcet/levels/<code>/recent` | `GET` | Station code | `ipcet-recent/v1` publication filtered by station; `503` without a valid copy |
+| `/api/v1/forecasts/bdctb` | `GET` | — | `{forecast, source, fetched_at, updating}`; validated v2 publication or disk cache, `503` when neither is valid |
+| `/api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | ZIP archive (CSV + GIFs + metadata) |
+| `/api/docs` | `GET` | — | Interactive documentation (Scalar UI) |
+| `/api/docs/openapi.yaml` | `GET` | — | OpenAPI 3.1.0 specification in YAML |
 
 **Common parameters:**
 
@@ -1098,22 +1098,22 @@ The frontend architecture was structured following a **Spec-Driven Development (
 
 ## Credits and Sources
 
-| Source                                                                                                                            | Description                                                                                |
+| Source | Description |
 | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| [MODIS MOD13Q1](https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD13Q1)                                    | NDVI, 250 m, every 16 days                                                                 |
-| [ERA5-Land Daily](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_DAILY_AGGR)                         | Temp & soil moisture, ~9 km                                                                |
-| [CHIRPS Daily](https://developers.google.com/earth-engine/datasets/catalog/UCSB-CHG_CHIRPS_DAILY)                                 | Daily precipitation, ~5.5 km                                                               |
-| [Sentinel-1 GRD](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD)                                   | Radar flood detection (VH), 10 m; 2015–2025 seasonal flooding for the susceptibility map   |
-| [INEGI, 5 m LiDAR DEM](https://www.inegi.org.mx/temas/relieve/continental/)                                                       | Susceptibility map terrain (2007 flight, 2012 edition)                                     |
-| [INEGI, Continuo de Elevaciones Mexicano 3.0](https://www.inegi.org.mx/app/geo2/elevacionesmex/)                                  | 15 m fill for LiDAR gaps                                                                   |
-| [CENAPRED, Atlas Nacional de Riesgos](http://www.atlasnacionalderiesgos.gob.mx/)                                                  | Observed 2011 and 2020 floods; PNUD 2018 and IPCET-PNUD 2022 maps used for comparison only |
-| [JRC/CEMS GloFAS Flood Hazard v2.1](https://developers.google.com/earth-engine/datasets/catalog/JRC_CEMS_GLOFAS_FloodHazard_v2_1) | Flood depth by return period                                                               |
-| [MERIT Hydro](https://developers.google.com/earth-engine/datasets/catalog/MERIT_Hydro_v1_0_1)                                     | Upstream area and LiDAR gap filling                                                        |
-| [JRC Global Surface Water](https://developers.google.com/earth-engine/datasets/catalog/JRC_GSW1_4_GlobalSurfaceWater)             | Permanent water                                                                            |
-| [ESA WorldCover](https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v200)                                 | Land cover                                                                                 |
-| [FAO GAUL 2025](https://developers.google.com/earth-engine/datasets/catalog/FAO_GAUL_2025_level2)                                 | Municipal boundaries                                                                       |
-| [Landsat 5/7/8/9 Collection 2 L2](https://developers.google.com/earth-engine/datasets/catalog/landsat)                            | Optical flood detection (MNDWI), 30 m                                                      |
-| [CONAGUA / IMTA](https://www.gob.mx/conagua)                                                                                      | Local hydrometric and meteorological station data                                          |
-| [Google Earth Engine](https://earthengine.google.com/)                                                                            | Cloud geospatial processing engine                                                         |
+| [MODIS MOD13Q1](https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD13Q1) | NDVI, 250 m, every 16 days |
+| [ERA5-Land Daily](https://developers.google.com/earth-engine/datasets/catalog/ECMWF_ERA5_LAND_DAILY_AGGR) | Temp & soil moisture, ~9 km |
+| [CHIRPS Daily](https://developers.google.com/earth-engine/datasets/catalog/UCSB-CHG_CHIRPS_DAILY) | Daily precipitation, ~5.5 km |
+| [Sentinel-1 GRD](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD) | Radar flood detection (VH), 10 m; 2015–2025 seasonal flooding for the susceptibility map |
+| [INEGI, 5 m LiDAR DEM](https://www.inegi.org.mx/temas/relieve/continental/) | Susceptibility map terrain (2007 flight, 2012 edition) |
+| [INEGI, Continuo de Elevaciones Mexicano 3.0](https://www.inegi.org.mx/app/geo2/elevacionesmex/) | 15 m fill for LiDAR gaps |
+| [CENAPRED, Atlas Nacional de Riesgos](http://www.atlasnacionalderiesgos.gob.mx/) | Observed 2011 and 2020 floods; PNUD 2018 and IPCET-PNUD 2022 maps used for comparison only |
+| [JRC/CEMS GloFAS Flood Hazard v2.1](https://developers.google.com/earth-engine/datasets/catalog/JRC_CEMS_GLOFAS_FloodHazard_v2_1) | Flood depth by return period |
+| [MERIT Hydro](https://developers.google.com/earth-engine/datasets/catalog/MERIT_Hydro_v1_0_1) | Upstream area and LiDAR gap filling |
+| [JRC Global Surface Water](https://developers.google.com/earth-engine/datasets/catalog/JRC_GSW1_4_GlobalSurfaceWater) | Permanent water |
+| [ESA WorldCover](https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v200) | Land cover |
+| [FAO GAUL 2025](https://developers.google.com/earth-engine/datasets/catalog/FAO_GAUL_2025_level2) | Municipal boundaries |
+| [Landsat 5/7/8/9 Collection 2 L2](https://developers.google.com/earth-engine/datasets/catalog/landsat) | Optical flood detection (MNDWI), 30 m |
+| [CONAGUA / IMTA](https://www.gob.mx/conagua) | Local hydrometric and meteorological station data |
+| [Google Earth Engine](https://earthengine.google.com/) | Cloud geospatial processing engine |
 
 The verified audit scope, hypothesis dispositions and operational boundaries are recorded in [the evidence report](odd/reports/audit-hardening-evidence.md).
