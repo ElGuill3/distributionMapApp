@@ -12,6 +12,19 @@ const info: LocalStationInfo = {
 };
 
 describe('station popup rendering', () => {
+  it.each(['BDCTB_hidro', 'SPTTB_hidro', 'ABCDE'])(
+    'offers the chart for hydrometric code %s',
+    id => {
+      const popup = buildStationPopup(id, info, true);
+      const action = popup.querySelector<HTMLElement>('.station-chart-link');
+      expect(action?.textContent).toBe('Ver niveles en la gráfica');
+      expect(action?.dataset.stationId).toBe(id);
+      expect(popup.querySelector('.station-full-data-link')).not.toBeNull();
+      expect(
+        buildStationPopup(id, info, false).querySelector('.station-chart-link')
+      ).toBeNull();
+    }
+  );
   it('adds official state, date, safe source link and unconfirmed note without removing actions', async () => {
     const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
