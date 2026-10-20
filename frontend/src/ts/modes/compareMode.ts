@@ -46,6 +46,7 @@ import { setLucideIcon } from '../ui/icons.js';
 import * as normalMode from './normalMode.js';
 import { VARIABLE_YEARS, SEASONS } from '../config.js';
 import { buildStationPopup } from '../ui/stationPopup.js';
+import { bindStationStatus, STATUS_LEGEND } from '../ui/ipcetStatus.js';
 import { seasonToDates } from '../utils/seasonDates.js';
 
 // L is the global Leaflet instance loaded via <script> tag (not an ES module import)
@@ -267,6 +268,8 @@ export function initMapB(): void {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(newMapB);
 
+  newMapB.attributionControl.addAttribution(STATUS_LEGEND);
+
   newMapB.on('popupopen', e => {
     const container = e.popup.getElement();
     if (container) {
@@ -332,9 +335,11 @@ export function initMapB(): void {
       const [lat, lon] = info.coords;
       const isHidro = info.type === 'hidrometrica' || id.endsWith('_hidro');
       const icon = isHidro ? waveIconB : dropIconB;
-      const marker = L.marker(L.latLng(lat, lon), { icon })
-        .bindPopup(buildStationPopup(id, info, isHidro))
-        .addTo(newMapB);
+      const marker = L.marker(L.latLng(lat, lon), { icon }).bindPopup(() =>
+        buildStationPopup(id, info, isHidro)
+      );
+      if (isHidro) bindStationStatus(marker, id, info.station_name || info.name);
+      marker.addTo(newMapB);
       _stationMarkersMapB.push(marker);
     }
   }

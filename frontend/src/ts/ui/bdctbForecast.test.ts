@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ipcetStatus } from './ipcetStatus.js';
 import {
   bdctbForecastAction,
   fetchBdctbForecast,
@@ -57,6 +58,26 @@ afterEach(() => {
 });
 
 describe('published forecast v2', () => {
+  it('sets a mark only after a successful live load reaching NAMO, clearing it on later nonqualifying loads', async () => {
+    for (const [mode, median, marked] of [
+      ['live', 19.21, true],
+      ['glofas_only', 20, false],
+      ['live', 20, true],
+      ['live', 19.2, false],
+    ] as const) {
+      const value = envelope();
+      Object.assign(value.forecast, {
+        mode,
+        live_input: mode === 'live' ? value.forecast.live_input : null,
+      });
+      Object.assign(value.forecast.forecasts['h7']!, {
+        q50: median,
+        distance_to_namo_m: median - 19.21,
+      });
+      await fetchBdctbForecast(vi.fn().mockResolvedValue(response(value)));
+      expect(ipcetStatus.modelMarkFor('BDCTB')).toBe(marked);
+    }
+  });
   it('preserves the BDCTB-only hydrometric action', () => {
     expect(bdctbForecastAction('BDCTB_hidro', true)).toContain('station-forecast-link');
     expect(bdctbForecastAction('BDCTB_clima', false)).toBe('');

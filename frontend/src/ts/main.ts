@@ -37,6 +37,7 @@ import { initLucideIcons, setLucideIcon } from './ui/icons.js';
 import { seasonToDates } from './utils/seasonDates.js';
 import { openBdctbForecastDialog } from './ui/bdctbForecast.js';
 import { buildStationPopup } from './ui/stationPopup.js';
+import { bindStationStatus, ipcetStatus, STATUS_LEGEND } from './ui/ipcetStatus.js';
 
 import {
   fetchLocalStationLevel,
@@ -66,6 +67,8 @@ map.on('popupopen', e => {
 });
 
 buildColorbars();
+map.attributionControl.addAttribution(STATUS_LEGEND);
+ipcetStatus.start();
 
 // ---------------------------------------------------------------------------
 // Marcadores de estaciones locales
@@ -162,9 +165,10 @@ async function initializeLocalStations(): Promise<void> {
       if (info.coords && info.coords.length === 2) {
         const [lat, lon] = info.coords;
         const icon = isHidro ? waveIcon : dropIcon;
-        const marker = L.marker(L.latLng(lat, lon), { icon }).bindPopup(
+        const marker = L.marker(L.latLng(lat, lon), { icon }).bindPopup(() =>
           buildStationPopup(id, info, isHidro)
         );
+        if (isHidro) bindStationStatus(marker, id, info.station_name || info.name);
         marker.addTo(map);
         stationMarkersMap.push(marker);
       }

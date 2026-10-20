@@ -10,19 +10,19 @@ Station icons take their colour from the official IPCET semáforo, and the river
   - the recent observed IPCET levels as a solid line;
   - the forecast median as a dashed line, with the q10–q90 band shaded;
   - the official NAMO as a horizontal line.
-  The existing forecast dialog stays.
+    The existing forecast dialog stays.
 - **S4** Model mark (L2): when the published forecast is in live mode and its median reaches the NAMO at any lead, the icon gets a separate, discreet mark (for example a dashed ring) labelled as a modelled forecast. It is never coloured as an alert. In GloFAS-only mode no mark is shown, because that mode has a 0.53 false-alarm rate at one day.
 
 ## Tasks
 
-| ID | Specs | Route | Repo | Commit |
-| --- | --- | --- | --- | --- |
-| T1 | S2 | worker | tabasco-river-forecast: levels reader returns each station's semáforo state (colour and text) with fixture tests | river 29fb055 |
-| T2 | S1 S2 S3 | worker | tabasco-river-forecast: operate publishes `ipcet/latest.json` (all stations: code, river, station, ayer, hoy, namo, semáforo, table date, last_modified) and recent observed levels per station; the v2 forecast schema stays unchanged | |
-| T3 | S1 S2 S3 | worker | app backend: cached proxy for the semáforo and observed-level publications, using the forecast_feed pattern (deadline, disk cache) | |
-| T4 | S2 S4 | worker | app frontend: marker colour and blink from the semáforo, model mark, legend note, accessibility | |
-| T5 | S3 | worker | app frontend: forecast series in the chart panel, opened from the station popup | |
-| T6 | S1–S4 | parent | docs, e2e, end-to-end check with real data, PRs | |
+| ID  | Specs    | Route  | Repo                                                                                                                                                                                                                                    | Commit        |
+| --- | -------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| T1  | S2       | worker | tabasco-river-forecast: levels reader returns each station's semáforo state (colour and text) with fixture tests                                                                                                                        | river 29fb055 |
+| T2  | S1 S2 S3 | worker | tabasco-river-forecast: operate publishes `ipcet/latest.json` (all stations: code, river, station, ayer, hoy, namo, semáforo, table date, last_modified) and recent observed levels per station; the v2 forecast schema stays unchanged |               |
+| T3  | S1 S2 S3 | worker | app backend: cached proxy for the semáforo and observed-level publications, using the forecast_feed pattern (deadline, disk cache)                                                                                                      |               |
+| T4  | S2 S4    | worker | app frontend: marker colour and blink from the semáforo, model mark, legend note, accessibility                                                                                                                                         |               |
+| T5  | S3       | worker | app frontend: forecast series in the chart panel, opened from the station popup                                                                                                                                                         |               |
+| T6  | S1–S4    | parent | docs, e2e, end-to-end check with real data, PRs                                                                                                                                                                                         |               |
 
 ## Log
 
@@ -39,3 +39,11 @@ Station icons take their colour from the official IPCET semáforo, and the river
     - 2026-10-19: San Joaquín ALERTA, other 13 NORMAL.
     - 2026-10-14: Samaria A LA BAJA, Boca del Cerro PREVENCION, the rest NORMAL.
   - The CLI CSV is unchanged. 315 tests pass. Assess medium, review not due.
+- **L5** T3 backend implementation for S1–S3: added read-only `/api/v1/ipcet/levels` and `/api/v1/ipcet/levels/<code>/recent`, strict publication validation, separate disk copies under `.cache/ipcet`, a 3.5 s total daemon-thread fetch deadline and network/cache provenance. Recent responses preserve the publication shape with only the selected station. No messenger or forecast-feed behavior changes. Fixture-only RED: 22 missing-module errors, 43 existing tests passed. GREEN: focused IPCET/forecast/API-doc tests 65 passed. Full backend suite: 798 passed, one failure in `test_backend_routes_package.py::test_public_url_inventory_is_unchanged`, whose fixed inventory lacks the two new routes; that file is outside the authorized edit surfaces and remains untouched pending parent approval. Configured-rate-limit cases for both endpoints passed in the full suite. Final `uv run ruff check backend` and `uv run ruff format --check backend` passed (41 files formatted). Upstream publications are not live, so no live check was attempted. Parent must add `IPCET_LEVELS_URL=https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/latest.json` and `IPCET_RECENT_URL=https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/recent.json` to `.env.example`.
+- **L6** Parent decisions for T4.
+  - **Startup:** the frontend may fetch `/api/v1/ipcet/levels` at startup and every 30 minutes. This is a read-only proxy and triggers no messenger.
+  - **S4 model mark:** it needs `/api/v1/forecasts/bdctb`, which can trigger the IPCET messenger, and the messenger must never run at app start (river ODD L44/L47). So the mark is applied only after the forecast has been loaded in the session (dialog or chart) and kept until the next load. It is never fetched at startup.
+  - **Blinking:** only states above normal blink (PREVENCION, ALERTA, EMERGENCIA). NORMAL, A LA BAJA and BAJO are coloured without blinking. Unknown or missing states keep the current icon.
+  - **Colours:** they follow `docs/semaforo-states.md` in the river repo (NORMAL green, A LA BAJA grey, BAJO brown, PREVENCION yellow, ALERTA red, EMERGENCIA purple).
+  - **Copy:** UI text stays in Spanish, following the existing app convention.
+- **L7** T4 implements S1, S2 and S4 in the frontend. A station-generic IPCET store fetches levels at startup and every 30 minutes with a 5 s abort deadline, retaining the last valid publication on failure. Both map panels share official-state classes, above-normal-only 1.2 s blinking, a steady thicker outline for reduced motion, Spanish titles/ARIA labels, dated popup state/source and the unconfirmed-level note. Popup actions remain; current status is read when opening. The attribution explains official colour versus the neutral dashed model ring. Only a successfully loaded live forecast with any median at or above its payload NAMO sets the ring; later nonqualifying loads clear it. Importing the forecast module never fetches it. RED: three focused suites failed resolving the not-yet-created status module. GREEN: 25 focused tests passed, followed by the full suite; the initial CSS-inventory failures were fixed with an explicit state/class map, and TypeScript's initial two test-index errors were corrected. Final verification: `timeout 120s npx vitest run` passes all 296 tests in 35 files; `timeout 120s npx tsc --noEmit` passes; Prettier was applied to all ten changed files. No network, backend edits, commits or Playwright runs. App-generated bundles are not tracked (the tracked static files are vendored Lucide); no rebuild was run because its cleanup writes/deletes outside the authorized source surfaces. Parent owns visual/e2e verification in T6; S3 remains T5.

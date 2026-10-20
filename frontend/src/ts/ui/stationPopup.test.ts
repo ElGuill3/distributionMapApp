@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { ipcetStatus } from './ipcetStatus.js';
 import { buildStationPopup } from './stationPopup.js';
 import { escapeHtml } from '../utils/html.js';
 import type { LocalStationInfo } from '../types.js';
@@ -11,6 +12,53 @@ const info: LocalStationInfo = {
 };
 
 describe('station popup rendering', () => {
+  it('adds official state, date, safe source link and unconfirmed note without removing actions', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          schema: 'ipcet-levels/v1',
+          table_date: '2026-10-14',
+          issued_at: '2026-10-14T12:00:00Z',
+          last_modified: '',
+          source_url: 'https://example.org/ipcet',
+          source: 'network',
+          stations: [
+            {
+              code: 'BDCTB',
+              station: 'Boca del Cerro',
+              river: 'Usumacinta',
+              namo: 19.21,
+              namino: null,
+              ayer: 18,
+              hoy: null,
+              diff: null,
+              capacity: null,
+              semaforo: 'PREVENCION',
+              problems: ['missing'],
+            },
+          ],
+        })
+      )
+    );
+    try {
+      await ipcetStatus.refresh();
+      const popup = buildStationPopup('BDCTB_hidro', info, true);
+      expect(popup.textContent).toContain('PREVENCIÓN (IPCET, 14/10/2026)');
+      expect(popup.textContent).toContain('nivel sin confirmar');
+      const link = popup.querySelector<HTMLAnchorElement>('.ipcet-source')!;
+      expect(link.textContent).toBe('Fuente: IPCET');
+      expect(link.href).toBe('https://example.org/ipcet');
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener');
+      expect(popup.querySelector('.station-full-data-link')).not.toBeNull();
+      expect(popup.querySelector('.station-forecast-link')).not.toBeNull();
+      expect(
+        buildStationPopup('BDCTB_clima', info, false).querySelector('.ipcet-source')
+      ).toBeNull();
+    } finally {
+      fetcher.mockRestore();
+    }
+  });
   it('treats server names, municipalities and IDs as data, not HTML', () => {
     const attack = '<img src=x onerror="window.pwned=1">';
     const id = '" onclick="window.pwned=1';

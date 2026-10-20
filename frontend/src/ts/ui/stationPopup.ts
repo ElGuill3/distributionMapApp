@@ -1,6 +1,7 @@
 import type { LocalStationInfo } from '../types.js';
 import { bdctbForecastAction } from './bdctbForecast.js';
 import { escapeHtml } from '../utils/html.js';
+import { ipcetStatus, safeSource, stateLabel, tableDate } from './ipcetStatus.js';
 
 /** Shared station popup renderer for both map panels. */
 export function buildStationPopup(
@@ -26,5 +27,22 @@ export function buildStationPopup(
     <a href="#" class="station-popup-btn station-full-data-link" data-station-id="${escapeHtml(id)}">Ver datos 2000–2024</a>
     ${bdctbForecastAction(id, isHidro)}
   `;
+  const status = isHidro ? ipcetStatus.stateFor(id) : null;
+  if (status) {
+    const line = document.createElement('p');
+    line.className = 'station-popup-ipcet';
+    line.textContent = `${status.semaforo ? stateLabel(status.semaforo) : 'Sin estado confirmado'} (IPCET, ${tableDate(status.table_date)})${status.problems.length ? ' · nivel sin confirmar' : ''}`;
+    const source = safeSource(status.source_url);
+    if (source) {
+      const link = document.createElement('a');
+      link.className = 'ipcet-source';
+      link.href = source;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = 'Fuente: IPCET';
+      line.append(' · ', link);
+    }
+    div.querySelector('.station-popup-meta')?.after(line);
+  }
   return div;
 }

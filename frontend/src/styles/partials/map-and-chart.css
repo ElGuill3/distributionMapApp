@@ -36,6 +36,58 @@
   display: block;
 }
 
+/* Official IPCET colours are independent of the neutral model ring. */
+.station-icon.ipcet-state-normal {
+  background-color: #15803d;
+}
+.station-icon.ipcet-state-a-la-baja {
+  background-color: #6b7280;
+}
+.station-icon.ipcet-state-bajo {
+  background-color: #92400e;
+}
+.station-icon.ipcet-state-prevencion {
+  background-color: #facc15;
+  color: #1f2937;
+}
+.station-icon.ipcet-state-alerta {
+  background-color: #dc2626;
+}
+.station-icon.ipcet-state-emergencia {
+  background-color: #7e22ce;
+}
+.station-icon.ipcet-blink {
+  animation: ipcet-blink 1.2s ease-in-out infinite;
+}
+@keyframes ipcet-blink {
+  0%,
+  100% {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+  }
+  50% {
+    outline: 5px solid currentColor;
+    outline-offset: 2px;
+  }
+}
+.station-icon.ipcet-model-mark {
+  position: relative;
+}
+.ipcet-model-ring {
+  position: absolute;
+  inset: -8px;
+  border: 2px dashed #475569;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px white;
+}
+@media (prefers-reduced-motion: reduce) {
+  .station-icon.ipcet-blink {
+    animation: none;
+    outline: 4px solid currentColor;
+    outline-offset: 2px;
+  }
+}
+
 /* PR3: Hide old #player-controls when new topbar is active */
 body.animation-loaded #player-controls {
   display: none !important;
