@@ -169,6 +169,7 @@ class ForecastFeed:
         self.cache_lock = threading.Lock()
         self.worker = None
         self.inflight = False
+        self.uploading = False
         self.success_dates = set()
         self.pending_since = None
         self.last_ipcet = None
@@ -254,7 +255,7 @@ class ForecastFeed:
                 )
                 self.worker.start()
             updating = not current and (
-                self.inflight
+                self.uploading
                 or (
                     self.pending_since is not None
                     and (self.now() - self.pending_since).total_seconds() < 1800
@@ -304,6 +305,7 @@ class ForecastFeed:
 
     def _courier(self, today):
         success = False
+        uploaded = False
         try:
             prefix = f"inputs/ipcet/{today}/"
             status, _, _ = self._github_read(prefix + "meta.json")
@@ -375,6 +377,8 @@ class ForecastFeed:
                     }
                 )
                 bodies.append(body)
+            with self.lock:
+                self.uploading = True
             self._upload(prefix + "page.html", page)
             for url, body in zip(urls, bodies, strict=True):
                 self._upload(
@@ -391,7 +395,7 @@ class ForecastFeed:
                     ensure_ascii=False,
                 ).encode("utf-8"),
             )
-            success = True
+            success = uploaded = True
         except (
             requests.RequestException,
             OSError,
@@ -406,5 +410,7 @@ class ForecastFeed:
             with self.lock:
                 if success:
                     self.success_dates.add(today)
+                if uploaded:
                     self.pending_since = self.now()
+                self.uploading = False
                 self.inflight = False

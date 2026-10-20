@@ -155,10 +155,10 @@ def test_messenger_nonblocking_single_inflight_meta_last_and_today_ack(tmp_path)
     http.get.side_effect = get
     http.put.return_value = Reply(status=201)
     service = feed(tmp_path, http, token="fake-token")
-    assert service.get()["updating"] is True
+    assert service.get()["updating"] is False
     assert entered.wait(1)
     for _ in range(3):
-        assert service.get()["updating"] is True
+        assert service.get()["updating"] is False
     release.set()
     service.worker.join(3)
     assert not service.worker.is_alive()
@@ -337,15 +337,93 @@ def test_paces_ipcet_and_uses_mexico_city_page_date(tmp_path):
     http.put.assert_not_called()
 
 
-def test_updating_expires_after_thirty_minutes(tmp_path):
+@pytest.mark.parametrize("outcome", ["existing_meta", "missing_page", "missing_table"])
+def test_noop_courier_never_reports_updating(tmp_path, outcome):
     http = Mock()
-    http.get.side_effect = lambda url, **_: (
-        Reply(payload()) if url.endswith("latest.json") else Reply(status=200)
-    )
+    entered, release = Event(), Event()
+
+    def get(url, **_):
+        if url.endswith("latest.json"):
+            return Reply(payload())
+        entered.set()
+        assert release.wait(3)
+        if "api.github.com" in url:
+            return Reply(status=200 if outcome == "existing_meta" else 404)
+        return Reply(
+            body=b"<article></article>",
+            status=404 if outcome == "missing_page" else 200,
+        )
+
+    http.get.side_effect = get
     service = feed(tmp_path, http, "fake")
-    service.get()
-    service.worker.join(3)
-    assert service.get()["updating"] is True
-    service.now = lambda: datetime.fromisoformat("2026-10-19T18:30:00+00:00")
+    try:
+        assert service.get()["updating"] is False
+        assert entered.wait(1)
+        assert service.get()["updating"] is False
+    finally:
+        release.set()
+        service.worker.join(3)
+    assert not service.worker.is_alive()
     assert service.get()["updating"] is False
+    service.worker.join(3)
     http.put.assert_not_called()
+
+
+@pytest.mark.parametrize("upload_status", [201, 500])
+def test_upload_in_progress_and_success_window(tmp_path, upload_status):
+    http = Mock()
+    entered, release = Event(), Event()
+
+    def get(url, **_):
+        if url.endswith("latest.json"):
+            return Reply(payload())
+        if "api.github.com" in url:
+            return Reply(status=404)
+        if "/noticias/" in url:
+            return Reply(
+                body=b'<article><img src="/sites/default/files/table.jpg"></article>'
+            )
+        return Reply(
+            body=b"image", headers={"Last-Modified": "Mon, 19 Oct 2026 16:00:00 GMT"}
+        )
+
+    def put(*_, **kwargs):
+        entered.set()
+        assert release.wait(3)
+        return Reply(status=upload_status)
+
+    http.get.side_effect = get
+    http.put.side_effect = put
+    service = feed(tmp_path, http, "fake")
+    try:
+        service.get()
+        assert entered.wait(1)
+        assert service.get()["updating"] is True
+    finally:
+        release.set()
+        service.worker.join(3)
+    assert not service.worker.is_alive()
+    # Hold a potential retry in its pre-check, so a failed upload stays false.
+    check_entered, check_release = Event(), Event()
+
+    def retry_get(url, **kwargs):
+        if not url.endswith("latest.json"):
+            check_entered.set()
+            assert check_release.wait(3)
+        return get(url, **kwargs)
+
+    http.get.side_effect = retry_get
+    try:
+        assert service.get()["updating"] is (upload_status == 201)
+        if upload_status == 500:
+            assert check_entered.wait(1)
+            assert service.get()["updating"] is False
+        else:
+            service.now = lambda: datetime.fromisoformat("2026-10-19T18:29:59+00:00")
+            assert service.get()["updating"] is True
+            service.now = lambda: datetime.fromisoformat("2026-10-19T18:30:00+00:00")
+            assert service.get()["updating"] is False
+            assert http.put.call_count == 3
+    finally:
+        check_release.set()
+        service.worker.join(3)
