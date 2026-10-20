@@ -257,8 +257,117 @@ describe('popup forecast lifecycle', () => {
       expect(wrapper.textContent).toContain('Pronóstico del modelo')
     );
     expect(typeof content).not.toBe('function');
+    vi.useFakeTimers();
+    popup.setContent.mockClear();
     closeStationPopup(popup);
+    expect(popup.setContent).not.toHaveBeenCalled();
+    expect(typeof content).not.toBe('function');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(popup.setContent).toHaveBeenCalledExactlyOnceWith(factory);
     expect(content).toBe(factory);
+    popup.update();
+    expect(wrapper.textContent).not.toContain('Pronóstico del modelo');
+    openStationPopup(popup);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(wrapper.textContent).toContain('Pronóstico del modelo');
+    // Reopening before the deferred restoration must not lose the factory.
+    closeStationPopup(popup);
+    openStationPopup(popup);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(typeof content).not.toBe('function');
+    expect(wrapper.textContent).toContain('Pronóstico del modelo');
+    closeStationPopup(popup);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(content).toBe(factory);
+  });
+  it('preserves same-popup replacement by aborting only its previous request', async () => {
+    vi.useFakeTimers();
+    const signals: AbortSignal[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url, init) => {
+        signals.push(init.signal);
+        return new Promise<Response>(() => {});
+      })
+    );
+    const main = mounted();
+    const compare = mounted();
+    openStationPopup(main);
+    openStationPopup(compare);
+    openStationPopup(main);
+    expect(signals).toHaveLength(3);
+    expect(signals.map(signal => signal.aborted)).toEqual([true, false, false]);
+    closeStationPopup(main);
+    expect(signals.map(signal => signal.aborted)).toEqual([true, false, true]);
+    closeStationPopup();
+    expect(signals.every(signal => signal.aborted)).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  it('keeps both maps polling independently and closes only the selected popup', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify(publication('live', 'network', true)))
+      )
+    );
+    vi.stubGlobal('fetch', fetcher);
+    const main = mounted();
+    const compare = mounted();
+    openStationPopup(main);
+    await vi.advanceTimersByTimeAsync(0);
+    const summary = main.getElement().textContent;
+    openStationPopup(compare);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(main.getElement().textContent).toBe(summary);
+    expect(compare.getElement().textContent).toBe(summary);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(fetcher).toHaveBeenCalledTimes(4);
+    closeStationPopup(compare);
+    const compareUpdates = compare.update.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(fetcher).toHaveBeenCalledTimes(5);
+    expect(compare.update).toHaveBeenCalledTimes(compareUpdates);
+    expect(main.getElement().textContent).toBe(summary);
+    closeStationPopup();
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(fetcher).toHaveBeenCalledTimes(5);
+  });
+  it('omits the near-NAMO phrase on overflow but keeps the complete tooltip', async () => {
+    const value = publication();
+    for (const point of Object.values(value.forecast.forecasts)) {
+      point.q50 = 19.17;
+      point.distance_to_namo_m = point.q50 - point.namo_m;
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(JSON.stringify(value)))
+    );
+    const popup = mounted();
+    popup.update.mockImplementation(() => {
+      const medians = popup.getElement().querySelector('.station-forecast-summary')
+        ?.children[1];
+      if (medians) {
+        Object.defineProperty(medians, 'clientWidth', {
+          configurable: true,
+          value: 100,
+        });
+        Object.defineProperty(medians, 'scrollWidth', {
+          configurable: true,
+          value: 200,
+        });
+      }
+    });
+    openStationPopup(popup);
+    await vi.waitFor(() =>
+      expect(popup.getElement().textContent).toContain('Pronóstico del modelo')
+    );
+    const medians = popup.getElement().querySelector('.station-forecast-summary')!
+      .children[1] as HTMLElement;
+    expect(medians.textContent).toBe('Mañana 19.2 m · 3 días 19.2 m · 7 días 19.2 m');
+    expect(medians.title).toBe(
+      'Mañana 19.2 m · 3 días 19.2 m · 7 días 19.2 m · prácticamente en el NAMO'
+    );
   });
   it('preserves a valid summary after a transient poll failure', async () => {
     vi.useFakeTimers();
