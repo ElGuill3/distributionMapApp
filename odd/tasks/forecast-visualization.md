@@ -13,6 +13,10 @@ Station icons take their colour from the official IPCET semáforo, and the river
     The existing forecast dialog stays.
 - **S4** Model mark (L2): when the published forecast is in live mode and its median reaches the NAMO at any lead, the icon gets a separate, discreet mark (for example a dashed ring) labelled as a modelled forecast. It is never coloured as an alert. In GloFAS-only mode no mark is shown, because that mode has a 0.53 false-alarm rate at one day.
 
+- **S5** Forecast in the popup, no dialog: "lo que veo es que sigue apareciendo esta ventana, ... es la que no queria que apareciera ya, mejor vamos a dejar la informacion relevante de la prediccion en el propio popup, y mejor un boton de ver detalle o algo asi, pequeno, que no ocupe tanto tampoco para no saturar". The forecast dialog is removed. The popup shows a compact forecast summary, and a single small "Ver detalle" button replaces the two buttons "Ver niveles en la gráfica" and "Ver pronóstico del río".
+- **S6** Detail in the chart: "y la informacion detallada mostrarla en el grafico con una ventana de tiempo hacia atras de x tiempo mas el pronostico, asi como esta ahora". Decision (L13): the last 30 calendar days of observed level plus the forecast through h7.
+- **S7** Same look as the other charts: "igual recuerda tener en cuenta como se muestran las otras graficos para este, ya que se ve diferente a como se ve el de los otros graficos". The station chart uses the same layout as the variable charts in `plotAllSelectedSeries`: legend, fonts, margins, grid, axes, modebar and fill style.
+
 ## Tasks
 
 | ID  | Specs    | Route  | Repo                                                                                                                                                                                                                                    | Commit        |
@@ -23,6 +27,7 @@ Station icons take their colour from the official IPCET semáforo, and the river
 | T4  | S2 S4    | worker | app frontend: marker colour and blink from the semáforo, model mark, legend note, accessibility                                                                                                                                         |               |
 | T5  | S3       | worker | app frontend: forecast series in the chart panel, opened from the station popup                                                                                                                                                         |               |
 | T6  | S1–S4    | parent | docs, e2e, end-to-end check with real data, PRs                                                                                                                                                                                         |               |
+| T7 | S5 S6 S7 | worker | app frontend: forecast summary in the popup, small "Ver detalle", dialog removed, chart window of 30 days plus forecast, chart layout matching the other charts; unit and e2e tests and README updated | |
 
 ## Log
 
@@ -71,4 +76,13 @@ Station icons take their colour from the official IPCET semáforo, and the river
     - R3-forbidden-vacuous-under-csp (`ipcet-status.spec.ts:34`);
     - R3-reduced-motion-outline-unasserted;
     - R3-silent-stale-fallback (`server.py:35-52`).
+- **L13** User feedback after running main `b293932` (2026-10-20), verbatim: "lo que veo es que sigue apareciendo esta ventana, /tmp/gpd24utg/pi-clipboard-3e0ecbbe-6511-4408-bbe0-b881f89c91a1.png, es la que no queria que apareciera ya, mejor vamos a dejar la informacion relevante de la prediccion en el propio popup, y mejor un boton de ver detalle o algo asi, pequeno, que no ocupe tanto tampoco para no saturar, y la informacion detallada mostrarla en el grafico con una ventana de tiempo hacia atras de x tiempo mas el pronostico, asi como esta ahora, igual recuerda tener en cuenta como se muestran las otras graficos para este, ya que se ve diferente a como se ve el de los otros graficos".
+  - The screenshots show:
+    - the `bdctbForecast` dialog (h1/h3/h7 mini chart, table and disclaimer);
+    - the station chart with a centred title, a horizontal legend over the plot, larger fonts and a visible Plotly modebar;
+    - the variable chart (Temp) with an "Exportar análisis" bar, the legend at the top right, small fonts, a filled area under the line, no title and no visible modebar.
+  - Parent decisions:
+    - **Window:** the last 30 calendar days of observations plus the forecast through h7.
+    - **Popup action:** it requests the forecast when a hydrometric popup with a registered forecast opens. That is user-triggered and never at startup, so L6 still holds and the S4 mark may update then.
+    - **"Ver datos 2000–2024"** stays.
 
