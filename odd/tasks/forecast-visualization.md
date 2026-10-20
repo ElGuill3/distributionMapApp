@@ -16,6 +16,10 @@ Station icons take their colour from the official IPCET semáforo, and the river
 - **S5** Forecast in the popup, no dialog: "lo que veo es que sigue apareciendo esta ventana, ... es la que no queria que apareciera ya, mejor vamos a dejar la informacion relevante de la prediccion en el propio popup, y mejor un boton de ver detalle o algo asi, pequeno, que no ocupe tanto tampoco para no saturar". The forecast dialog is removed. The popup shows a compact forecast summary, and a single small "Ver detalle" button replaces the two buttons "Ver niveles en la gráfica" and "Ver pronóstico del río".
 - **S6** Detail in the chart: "y la informacion detallada mostrarla en el grafico con una ventana de tiempo hacia atras de x tiempo mas el pronostico, asi como esta ahora". Decision (L13): the last 30 calendar days of observed level plus the forecast through h7.
 - **S7** Same look as the other charts: "igual recuerda tener en cuenta como se muestran las otras graficos para este, ya que se ve diferente a como se ve el de los otros graficos". The station chart uses the same layout as the variable charts in `plotAllSelectedSeries`: legend, fonts, margins, grid, axes, modebar and fill style.
+- **S8** Review advisories (L16): "continua con eso hasta lo de los modelos de las otras estaciones, cuando tengamos rodo listo haremos el informe". Fix the non-blocking findings of review `review-f162e8281b75c11b`:
+  - R3-cross-map-popup-singleton / R4-single-active-popup-across-maps (`stationPopup.ts:154-166`): opening a station popup on one map must never stop, freeze or reset the forecast summary of a popup open on the other map.
+  - R3-setcontent-during-popupclose (`stationPopup.ts:160`): closing a popup must not call `setContent` while Leaflet is still removing it; the function-valued content is restored afterwards, and the next open still shows fresh content.
+  - R3-namo-rounding-zero (`bdctbForecast.ts:239-241`): when the closest median is below the NAMO by less than 0.05 m, the summary says "prácticamente en el NAMO" instead of "mín. 0.0 m bajo el NAMO". At or above the NAMO it stays "alcanza el NAMO".
 
 ## Tasks
 
@@ -27,7 +31,8 @@ Station icons take their colour from the official IPCET semáforo, and the river
 | T4  | S2 S4    | worker | app frontend: marker colour and blink from the semáforo, model mark, legend note, accessibility                                                                                                                                         |               |
 | T5  | S3       | worker | app frontend: forecast series in the chart panel, opened from the station popup                                                                                                                                                         |               |
 | T6  | S1–S4    | parent | docs, e2e, end-to-end check with real data, PRs                                                                                                                                                                                         |               |
-| T7  | S5 S6 S7 | worker | app frontend: forecast summary in the popup, small "Ver detalle", dialog removed, chart window of 30 days plus forecast, chart layout matching the other charts; unit and e2e tests and README updated                                  |               |
+| T7  | S5 S6 S7 | worker | app frontend: forecast summary in the popup, small "Ver detalle", dialog removed, chart window of 30 days plus forecast, chart layout matching the other charts; unit and e2e tests and README updated                                  | 957a448 (PR #30, merged 5278361) |
+| T8  | S8 | worker | app frontend: popup review advisories (per-popup forecast controllers for both maps, no `setContent` during `popupclose`, NAMO phrase never "0.0 m"); unit tests | |
 
 ## Log
 
@@ -96,4 +101,5 @@ Station icons take their colour from the official IPCET semáforo, and the river
   - Added the e2e assertion that no summary line is clipped. With the old CSS it still passed, because the final popup already widened for the mock text; a RED was not observable.
   - Vitest 319, tsc clean, Prettier clean, e2e 35/35. Assess: medium, review not due.
   - The diff count is inflated by Prettier normalising the READMEs.
+- **L16** (user, 2026-10-20) "continua con eso hasta lo de los modelos de las otras estaciones, cuando tengamos rodo listo haremos el informe". The parent added S8/T8 for the three popup advisories of review `review-f162e8281b75c11b`; the "prácticamente en el NAMO" wording was announced to the user in the review summary.
 

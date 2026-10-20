@@ -116,6 +116,23 @@ describe('published forecast v2', () => {
     expect(formatForecastSummary(value)[1]).toContain('alcanza el NAMO');
   });
   it.each([
+    [19.17, 'prácticamente en el NAMO'],
+    [19.16, 'mín. 0.1 m bajo el NAMO'],
+    [19.21, 'alcanza el NAMO'],
+    [19.22, 'alcanza el NAMO'],
+  ] as const)('formats the NAMO boundary for q50=%s', (median, phrase) => {
+    const value = { ...envelope(), forecast: parseBdctbForecast(forecast()) };
+    value.forecast.forecasts.h7.q50 = median;
+    if (median === 19.16) {
+      const gap = value.forecast.forecasts.h7.namo_m - median;
+      expect(gap).toBeCloseTo(0.05);
+      expect(gap.toFixed(1)).toBe('0.1');
+    }
+    expect(formatForecastSummary(value)[1]).toBe(
+      `Mañana 17.8 m · 3 días 18.8 m · 7 días ${median.toFixed(1)} m · ${phrase}`
+    );
+  });
+  it.each([
     ['glofas_only', 'network', false, 'Sin nivel en vivo: puede sobrestimar'],
     ['live', 'cache', false, 'Copia guardada del 19/10'],
     ['live', 'network', true, 'Actualizando con el nivel de hoy…'],

@@ -61,11 +61,14 @@ type Popup = Pick<L.Popup, 'getElement'> & {
   getContent?: L.Popup['getContent'];
   setContent?: (content: Parameters<L.Popup['setContent']>[0]) => unknown;
 };
-let active: { popup: Popup; stop: () => void } | undefined;
+const active = new Map<Popup, { stop: () => void }>();
+const pendingRestores = new WeakMap<Popup, () => void>();
 
 /** Shared by both maps. Construction never loads a forecast: only popupopen does. */
 export function openStationPopup(popup: Popup): void {
-  closeStationPopup();
+  closeStationPopup(popup);
+  // A rapid reopen must recover the factory before freezing fresh content.
+  pendingRestores.get(popup)?.();
   const block = popup
     .getElement()
     ?.querySelector<HTMLElement>('.station-forecast-summary');
@@ -108,7 +111,7 @@ export function openStationPopup(popup: Popup): void {
     ) {
       medians.textContent =
         medians.textContent?.replace(
-          / · (?:mín\. .* bajo el NAMO|alcanza el NAMO)$/,
+          / · (?:mín\. .* bajo el NAMO|alcanza el NAMO|prácticamente en el NAMO)$/,
           ''
         ) ?? '';
       popup.update();
@@ -151,21 +154,33 @@ export function openStationPopup(popup: Popup): void {
     )
       void refresh();
   };
-  active = {
-    popup,
+  active.set(popup, {
     stop: () => {
       disposed = true;
       cancel();
       document.removeEventListener('visibilitychange', visibility);
-      if (typeof factory === 'function') popup.setContent?.(factory);
+      if (typeof factory === 'function') {
+        // Leaflet is still removing the popup during popupclose.
+        const restore = () => {
+          window.clearTimeout(restoreTimer);
+          pendingRestores.delete(popup);
+          popup.setContent?.(factory);
+        };
+        const restoreTimer = window.setTimeout(restore, 0);
+        pendingRestores.set(popup, restore);
+      }
     },
-  };
+  });
   document.addEventListener('visibilitychange', visibility);
   render(['Consultando pronóstico…']);
   void refresh();
 }
 export function closeStationPopup(popup?: Popup): void {
-  if (popup && active?.popup !== popup) return;
-  active?.stop();
-  active = undefined;
+  if (popup) {
+    active.get(popup)?.stop();
+    active.delete(popup);
+  } else {
+    for (const controller of active.values()) controller.stop();
+    active.clear();
+  }
 }

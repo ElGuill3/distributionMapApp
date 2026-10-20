@@ -238,7 +238,11 @@ export function formatForecastSummary(
   const points = HORIZONS.map(h => f.forecasts[`h${h}`]);
   const closest = Math.min(...points.map(p => p.namo_m - p.q50));
   const namo =
-    closest <= 0 ? 'alcanza el NAMO' : `mín. ${closest.toFixed(1)} m bajo el NAMO`;
+    closest <= 0
+      ? 'alcanza el NAMO'
+      : closest < 0.05
+        ? 'prácticamente en el NAMO'
+        : `mín. ${closest.toFixed(1)} m bajo el NAMO`;
   const note = response.updating
     ? 'Actualizando con el nivel de hoy…'
     : f.mode === 'glofas_only'
