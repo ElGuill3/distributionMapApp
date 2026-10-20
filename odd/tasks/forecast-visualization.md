@@ -17,7 +17,7 @@ Station icons take their colour from the official IPCET semáforo, and the river
 
 | ID | Specs | Route | Repo | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S2 | worker | tabasco-river-forecast: levels reader returns each station's semáforo state (colour and text) with fixture tests | |
+| T1 | S2 | worker | tabasco-river-forecast: levels reader returns each station's semáforo state (colour and text) with fixture tests | river 29fb055 |
 | T2 | S1 S2 S3 | worker | tabasco-river-forecast: operate publishes `ipcet/latest.json` (all stations: code, river, station, ayer, hoy, namo, semáforo, table date, last_modified) and recent observed levels per station; the v2 forecast schema stays unchanged | |
 | T3 | S1 S2 S3 | worker | app backend: cached proxy for the semáforo and observed-level publications, using the forecast_feed pattern (deadline, disk cache) | |
 | T4 | S2 S4 | worker | app frontend: marker colour and blink from the semáforo, model mark, legend note, accessibility | |
@@ -32,3 +32,10 @@ Station icons take their colour from the official IPCET semáforo, and the river
   - `levels.py` `_semaforo_column` already locates the semáforo column and its station bands, but `StationRow` carries no state.
   - The app map has two stations, BDCTB and SPTTB (`CONAGUA_HIDROS_STATIONS`), and both appear in the IPCET table (Usumacinta/Boca del Cerro, San Pedro/San Pedro).
   - The chart panel is Plotly with a date axis (`frontend/src/ts/ui/chart.ts`).
+- **L4** T1 done (river repo `29fb055`, river ODD L56).
+  - A survey of 638 images (8,568 station cells) found the official states NORMAL (green), A LA BAJA (grey), BAJO (brown), PREVENCION (yellow), ALERTA (red) and EMERGENCIA (purple). No orange cell was observed.
+  - `StationRow.semaforo` takes the text when legible and falls back to the colour; it is None for S/D, empty or unknown cells.
+  - Fixtures, checked by eye by the parent:
+    - 2026-10-19: San Joaquín ALERTA, other 13 NORMAL.
+    - 2026-10-14: Samaria A LA BAJA, Boca del Cerro PREVENCION, the rest NORMAL.
+  - The CLI CSV is unchanged. 315 tests pass. Assess medium, review not due.
