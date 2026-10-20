@@ -30,6 +30,8 @@ CASES = [
     ("station", "/api/local-stations", 60),
     ("station", "/api/local-station-level-range", 60),
     ("forecast", "/api/v1/forecasts/bdctb", 60),
+    ("forecast", "/api/v1/ipcet/levels", 60),
+    ("forecast", "/api/v1/ipcet/levels/SPTTB/recent", 60),
 ]
 CATEGORIES = sorted({case[0] for case in CASES})
 PROBE = r"""

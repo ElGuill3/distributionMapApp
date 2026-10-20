@@ -10,6 +10,8 @@ Variables de entorno (todas con valores por defecto):
   GIF_MAX_AGE_MINUTES    - Edad máxima de GIFs antes de limpieza (default: 60)
   GIF_CLEANUP_INTERVAL_S - Intervalo del daemon de limpieza en segundos (default: 600)
   BDCTB_FORECAST_URL     - JSON publicado de Boca del Cerro
+  IPCET_LEVELS_URL       - JSON publicado de niveles y semáforo oficial IPCET
+  IPCET_RECENT_URL       - JSON publicado de observaciones recientes IPCET
   FORECAST_MESSENGER_TOKEN - Token opcional de Contents (solo backend)
 """
 
@@ -74,6 +76,14 @@ BDCTB_FORECAST_URL = os.getenv(
     "BDCTB_FORECAST_URL",
     "https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/bdctb/latest.json",
 )
+IPCET_LEVELS_URL = os.getenv(
+    "IPCET_LEVELS_URL",
+    "https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/latest.json",
+)
+IPCET_RECENT_URL = os.getenv(
+    "IPCET_RECENT_URL",
+    "https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/forecasts/ipcet/recent.json",
+)
 FORECAST_MESSENGER_TOKEN = os.getenv("FORECAST_MESSENGER_TOKEN", "").strip()
 
 # ---------------------------------------------------------------------------
@@ -84,6 +94,8 @@ BASE_DIR = (
     Path(_base_override) if _base_override else Path(__file__).resolve().parent.parent
 )
 FORECAST_CACHE_PATH = BASE_DIR / ".cache" / "forecasts" / "bdctb" / "latest.json"
+IPCET_LEVELS_CACHE_PATH = BASE_DIR / ".cache" / "ipcet" / "latest.json"
+IPCET_RECENT_CACHE_PATH = BASE_DIR / ".cache" / "ipcet" / "recent.json"
 STATIC_DIR = BASE_DIR / "frontend" / "static"
 TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
 GIFS_DIR = STATIC_DIR / "gifs"
@@ -278,6 +290,7 @@ CACHE_POLICIES = {
     "/api/water-timeseries": (300, True),
     "/api/flood-risk": (86400, False),  # Mapa riesgo — 24h, sin ETag
     "/api/local-station": (600, True),  # Estaciones — 10 min
+    "/api/v1/ipcet/levels": (0, False),  # IPCET — no cachear en cliente
     "/api/v1/forecasts/bdctb": (0, False),  # Pronóstico — no cachear
     "/api/export": (0, False),  # Export ZIP — no cachear
 }
