@@ -1,3 +1,5 @@
+import { ipcetStatus } from './ipcetStatus.js';
+
 const HORIZONS = [1, 3, 7] as const;
 const DISCLAIMER =
   'Pronóstico modelado, no es una observación ni un aviso oficial. Consulte el semáforo oficial de IPCET.';
@@ -192,8 +194,16 @@ export async function fetchBdctbForecast(
       typeof value['updating'] !== 'boolean'
     )
       malformed();
+    const forecast = parseBdctbForecast(value['forecast']);
+    if (!controller.signal.aborted) {
+      ipcetStatus.setModelMark(
+        forecast.station.code,
+        forecast.mode === 'live' &&
+          Object.values(forecast.forecasts).some(p => p.q50 >= p.namo_m)
+      );
+    }
     return {
-      forecast: parseBdctbForecast(value['forecast']),
+      forecast,
       source: value['source'] as 'network' | 'cache',
       fetched_at: value['fetched_at'] as string,
       updating: value['updating'] as boolean,

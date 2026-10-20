@@ -1285,8 +1285,143 @@ paths:
       x-cache-policy:
         max_age: 0
         etag: false
+  /api/v1/ipcet/levels:
+    get:
+      operationId: getIpcetLevels
+      summary: Latest official IPCET table and semáforo
+      description: >-
+        Read-only ipcet-levels/v1 proxy, not a modeled forecast. Validates all
+        fields and finite numbers before saving. Fetch has a 3.5 second total
+        deadline, a 1 MiB cap and no redirects. Falls back to the last valid disk
+        copy, without starting an upload. All responses use Cache-Control no-store.
+      tags: [Station]
+      responses:
+        '200':
+          description: Official publication plus source (network or cache).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpcetLevelsResponse'
+        '429':
+          description: Rate limit exceeded (RATE_LIMIT_FORECAST).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Neither network nor disk has a valid publication.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy: {max_age: 0, etag: false}
+  /api/v1/ipcet/levels/{code}/recent:
+    get:
+      operationId: getIpcetRecent
+      summary: Recent official observations for any published station code
+      description: >-
+        Read-only ipcet-recent/v1 proxy with the same deadline, validation and
+        disk fallback as the latest table. Preserves publication shape but filters
+        stations to the requested code. Dates are ascending, at most 30 per station.
+        Null hoy denotes an unconfirmed level; null semaforo is allowed for seeded
+        history. A malformed code is rejected before fetching. No messenger upload.
+        All responses use Cache-Control no-store.
+      tags: [Station]
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema: {type: string, pattern: '^[A-Z]{5}$'}
+      responses:
+        '200':
+          description: Publication containing only the requested station, plus source.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpcetRecentResponse'
+        '404':
+          description: Unknown or malformed station code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded (RATE_LIMIT_FORECAST).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Neither network nor disk has a valid publication.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy: {max_age: 0, etag: false}
 components:
   schemas:
+    IpcetState:
+      enum: [NORMAL, A LA BAJA, BAJO, PREVENCION, ALERTA, EMERGENCIA, null]
+    IpcetLevel:
+      type: [number, 'null']
+      description: Finite metres as printed, or null; never repaired.
+    IpcetLevelsResponse:
+      type: object
+      additionalProperties: false
+      required: [schema, table_date, issued_at, last_modified, source_url, stations, source]
+      properties:
+        schema: {const: ipcet-levels/v1}
+        table_date: {type: string, format: date}
+        issued_at: {type: string, format: date-time}
+        last_modified: {type: string}
+        source_url: {type: [string, 'null']}
+        source: {enum: [network, cache]}
+        stations:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, river, station, namo, namino, ayer, hoy, diff, capacity, semaforo, problems]
+            properties:
+              code: {type: [string, 'null'], pattern: '^[A-Z]{5}$'}
+              river: {type: string}
+              station: {type: string}
+              namo: {$ref: '#/components/schemas/IpcetLevel'}
+              namino: {$ref: '#/components/schemas/IpcetLevel'}
+              ayer: {$ref: '#/components/schemas/IpcetLevel'}
+              hoy: {$ref: '#/components/schemas/IpcetLevel'}
+              diff: {$ref: '#/components/schemas/IpcetLevel'}
+              capacity: {$ref: '#/components/schemas/IpcetLevel'}
+              semaforo: {$ref: '#/components/schemas/IpcetState'}
+              problems:
+                type: array
+                description: Official state remains usable; levels with problems are unconfirmed.
+                items: {type: string}
+    IpcetRecentResponse:
+      type: object
+      additionalProperties: false
+      required: [schema, stations, source]
+      properties:
+        schema: {const: ipcet-recent/v1}
+        source: {enum: [network, cache]}
+        stations:
+          type: object
+          minProperties: 1
+          maxProperties: 1
+          propertyNames: {pattern: '^[A-Z]{5}$'}
+          additionalProperties:
+            type: array
+            maxItems: 30
+            items:
+              type: object
+              additionalProperties: false
+              required: [date, hoy, semaforo]
+              properties:
+                date: {type: string, format: date}
+                hoy: {$ref: '#/components/schemas/IpcetLevel'}
+                semaforo: {$ref: '#/components/schemas/IpcetState'}
     BBoxSchema:
       description: Schema para validar bounding boxes geográficos.
       properties:

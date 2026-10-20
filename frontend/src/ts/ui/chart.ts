@@ -171,15 +171,28 @@ export async function plotChartAsPng(chartDiv: HTMLDivElement): Promise<Blob> {
 }
 
 // Registro de gráficas activas para el repintado ante cambio de tema
-interface LastPlotState {
-  allSeries: Record<string, SeriesData | undefined>;
-  onShow: () => void;
-  onHide: () => void;
-  onShowPlaceholder?: () => void;
-  onHidePlaceholder?: () => void;
+interface ChartOwner {
+  redraw: () => void;
+  release?: () => void;
+  kind: 'analysis' | 'station';
 }
+const activeCharts = new Map<HTMLDivElement, ChartOwner>();
 
-const activeCharts = new Map<HTMLDivElement, LastPlotState>();
+/** One owner per panel: replacing content also cancels pending station requests. */
+export function claimChart(chartDiv: HTMLDivElement, owner: ChartOwner): () => boolean {
+  activeCharts.get(chartDiv)?.release?.();
+  activeCharts.set(chartDiv, owner);
+  chartDiv.dispatchEvent(new Event('chart-content-change', { bubbles: true }));
+  return () => activeCharts.get(chartDiv) === owner;
+}
+export function isStationChart(chartDiv: HTMLDivElement): boolean {
+  return activeCharts.get(chartDiv)?.kind === 'station';
+}
+export function releaseChart(chartDiv: HTMLDivElement): void {
+  activeCharts.get(chartDiv)?.release?.();
+  activeCharts.delete(chartDiv);
+  chartDiv.dispatchEvent(new Event('chart-content-change', { bubbles: true }));
+}
 
 export function isDarkModeActive(): boolean {
   if (typeof window === 'undefined') return false;
@@ -194,16 +207,7 @@ export function isDarkModeActive(): boolean {
 
 if (typeof window !== 'undefined') {
   const redraw = () => {
-    for (const [chartDiv, state] of activeCharts.entries()) {
-      plotAllSelectedSeries(
-        chartDiv,
-        state.allSeries,
-        state.onShow,
-        state.onHide,
-        state.onShowPlaceholder,
-        state.onHidePlaceholder
-      );
-    }
+    for (const state of [...activeCharts.values()]) state.redraw();
   };
   if (typeof window.matchMedia === 'function') {
     window
@@ -233,7 +237,7 @@ export function plotAllSelectedSeries(
 
   if (seriesReady.length === 0) {
     Plotly.purge(chartDiv);
-    activeCharts.delete(chartDiv);
+    releaseChart(chartDiv);
     onHide();
     if (onShowPlaceholder) onShowPlaceholder();
     return;
@@ -242,15 +246,18 @@ export function plotAllSelectedSeries(
   onShow();
   if (onHidePlaceholder) onHidePlaceholder();
 
-  // Guardar estado de la gráfica activa
-  const state: LastPlotState = {
-    allSeries,
-    onShow,
-    onHide,
-  };
-  if (onShowPlaceholder !== undefined) state.onShowPlaceholder = onShowPlaceholder;
-  if (onHidePlaceholder !== undefined) state.onHidePlaceholder = onHidePlaceholder;
-  activeCharts.set(chartDiv, state);
+  const current = claimChart(chartDiv, {
+    kind: 'analysis',
+    redraw: () =>
+      plotAllSelectedSeries(
+        chartDiv,
+        allSeries,
+        onShow,
+        onHide,
+        onShowPlaceholder,
+        onHidePlaceholder
+      ),
+  });
 
   const isDark = isDarkModeActive();
   const fgColor = getThemeColor('--surface-fg', '#374151');
@@ -348,6 +355,7 @@ export function plotAllSelectedSeries(
   });
 
   requestAnimationFrame(() => {
+    if (!current()) return;
     const width = chartDiv.clientWidth || 600;
     const height = chartDiv.clientHeight || 280;
 

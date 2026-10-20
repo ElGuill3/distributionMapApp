@@ -38,6 +38,9 @@ from backend.config import (
 )
 from backend.extensions import limiter
 from backend.forecast_feed import UNAVAILABLE, ForecastFeed
+from backend.ipcet_feed import UNAVAILABLE as IPCET_UNAVAILABLE
+from backend.ipcet_feed import UNKNOWN as IPCET_UNKNOWN
+from backend.ipcet_feed import IpcetFeed, valid_code
 from backend.routes.export_routes import export_bp
 from backend.routes.flood_routes import flood_bp
 from backend.routes.gif_routes import gif_bp
@@ -181,6 +184,38 @@ def bdctb_forecast():
     if result is None:
         return jsonify({"error": UNAVAILABLE}), 503
     return jsonify(result)
+
+
+ipcet_levels_feed = IpcetFeed(
+    config.IPCET_LEVELS_URL, config.IPCET_LEVELS_CACHE_PATH, kind="levels"
+)
+ipcet_recent_feed = IpcetFeed(
+    config.IPCET_RECENT_URL, config.IPCET_RECENT_CACHE_PATH, kind="recent"
+)
+
+
+@app.get("/api/v1/ipcet/levels")
+@limiter.limit(RATE_LIMITS["forecast"])
+def ipcet_levels():
+    """Return the official table, never a model-derived alert."""
+    result = ipcet_levels_feed.get()
+    if result is None:
+        return jsonify({"error": IPCET_UNAVAILABLE}), 503
+    return jsonify(result)
+
+
+@app.get("/api/v1/ipcet/levels/<code>/recent")
+@limiter.limit(RATE_LIMITS["forecast"])
+def ipcet_recent(code):
+    """Select any published station code without a hard-coded station list."""
+    if not valid_code(code):
+        return jsonify({"error": IPCET_UNKNOWN}), 404
+    result = ipcet_recent_feed.get()
+    if result is None:
+        return jsonify({"error": IPCET_UNAVAILABLE}), 503
+    if code not in result["stations"]:
+        return jsonify({"error": IPCET_UNKNOWN}), 404
+    return jsonify({**result, "stations": {code: result["stations"][code]}})
 
 
 @app.route("/static/<path:filename>")
