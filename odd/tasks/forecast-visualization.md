@@ -20,6 +20,10 @@ Station icons take their colour from the official IPCET semáforo, and the river
   - R3-cross-map-popup-singleton / R4-single-active-popup-across-maps (`stationPopup.ts:154-166`): opening a station popup on one map must never stop, freeze or reset the forecast summary of a popup open on the other map.
   - R3-setcontent-during-popupclose (`stationPopup.ts:160`): closing a popup must not call `setContent` while Leaflet is still removing it; the function-valued content is restored afterwards, and the next open still shows fresh content.
   - R3-namo-rounding-zero (`bdctbForecast.ts:239-241`): when the closest median is below the NAMO by less than 0.05 m, the summary says "prácticamente en el NAMO" instead of "mín. 0.0 m bajo el NAMO". At or above the NAMO it stays "alcanza el NAMO".
+- **S9** Forecast joined to today's observation (L17): "seria correcto hacerlo?" / "si, hazlo".
+  - The median and band start at the issue-day observed level **only** when the forecast is live and its input is from the issue day (`live_input.date` equals the issue date). In GloFAS-only mode, or with an older input, the gap stays, because it tells the reader the model did not know today's level.
+  - At the anchor the band has zero width.
+  - The modelled points (h1, h3, h7) carry markers. The anchor carries none, and the line between markers is only a visual link.
 
 ## Tasks
 
@@ -32,7 +36,8 @@ Station icons take their colour from the official IPCET semáforo, and the river
 | T5  | S3       | worker | app frontend: forecast series in the chart panel, opened from the station popup                                                                                                                                                         |               |
 | T6  | S1–S4    | parent | docs, e2e, end-to-end check with real data, PRs                                                                                                                                                                                         |               |
 | T7  | S5 S6 S7 | worker | app frontend: forecast summary in the popup, small "Ver detalle", dialog removed, chart window of 30 days plus forecast, chart layout matching the other charts; unit and e2e tests and README updated                                  | 957a448 (PR #30, merged 5278361) |
-| T8  | S8 | worker | app frontend: popup review advisories (per-popup forecast controllers for both maps, no `setContent` during `popupclose`, NAMO phrase never "0.0 m"); unit tests | |
+| T8  | S8 | worker | app frontend: popup review advisories (per-popup forecast controllers for both maps, no `setContent` during `popupclose`, NAMO phrase never "0.0 m"); unit tests | fbd84bb (PR #31, merged 453a182) |
+| T9  | S9 | parent | app frontend: markers on the modelled forecast points; tests for the anchor rules | |
 
 ## Log
 
@@ -102,4 +107,5 @@ Station icons take their colour from the official IPCET semáforo, and the river
   - Vitest 319, tsc clean, Prettier clean, e2e 35/35. Assess: medium, review not due.
   - The diff count is inflated by Prettier normalising the READMEs.
 - **L16** (user, 2026-10-20) "continua con eso hasta lo de los modelos de las otras estaciones, cuando tengamos rodo listo haremos el informe". The parent added S8/T8 for the three popup advisories of review `review-f162e8281b75c11b`; the "prácticamente en el NAMO" wording was announced to the user in the review summary.
+- **L17** (user, 2026-10-21) The user saw a one-day gap between the observed line and the forecast. Cause: the 09:19 publication used the 20/10 stage (`age_days` 1). Today's table arrived at 15:48, one minute after the app had loaded the older data. The parent proposed joining the forecast to today's observation under three conditions. Rules 1 and 2 already existed in `stationChart.ts` (T5) but had no test for an older live input or for the zero-width band; rule 3 (markers) was new. User: "si, hazlo".
 

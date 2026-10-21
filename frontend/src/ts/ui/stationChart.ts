@@ -226,12 +226,14 @@ function drawStation(
       },
       {
         type: 'scatter',
-        mode: 'lines',
+        // Markers sit only on modelled leads; the line between them is a visual link.
+        mode: 'lines+markers',
         name: 'Pronóstico (mediana)',
         x,
         y: [anchor, ...predictions.map(p => p.q50)],
         connectgaps: false,
         line: { color: modeled, width: 3, dash: 'dash' },
+        marker: { color: modeled, size: [0, ...predictions.map(() => 7)] },
       }
     );
     dates.push(...x);

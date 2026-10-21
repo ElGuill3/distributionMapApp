@@ -207,6 +207,36 @@ it('uses latest official NAMO for any station without a forecast', async () => {
     plot.mock.calls[plot.mock.calls.length - 1]![1].map((t: { name: string }) => t.name)
   ).toEqual(['Nivel observado (IPCET)', 'NAMO 8 m (oficial)']);
 });
+it('starts the band at zero width on a same-day live level and marks only modelled points', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) =>
+      Promise.resolve(json(url.includes('recent') ? recent('BDCTB') : forecast()))
+    )
+  );
+  await openStationChart(div, placeholder, station, () => {});
+  const [, traces] = plot.mock.calls[plot.mock.calls.length - 1]!;
+  expect(traces[1].y).toEqual([18, 17, 17, 17]);
+  expect(traces[2].y).toEqual([18, 20, 20, 20]);
+  expect(traces[3]).toMatchObject({
+    mode: 'lines+markers',
+    marker: { size: [0, 7, 7, 7] },
+  });
+});
+it('keeps the gap when the live level is older than the issue day', async () => {
+  const stale = forecast();
+  stale.forecast.live_input = { date: '2026-10-18', stage_m: 17.5, age_days: 1 };
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) =>
+      Promise.resolve(json(url.includes('recent') ? recent('BDCTB') : stale))
+    )
+  );
+  await openStationChart(div, placeholder, station, () => {});
+  const [, traces] = plot.mock.calls[plot.mock.calls.length - 1]!;
+  for (const trace of traces.slice(1, 4)) expect(trace.y[0]).toBeNull();
+  expect(traces[3].x[0]).toBe('2026-10-19');
+});
 it('shows the GloFAS-only note without inventing an issue-day level', async () => {
   vi.stubGlobal(
     'fetch',
