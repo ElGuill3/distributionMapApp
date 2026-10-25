@@ -149,7 +149,8 @@ El gráfico y el anillo usan el `namo_m` de su propio pronóstico, nunca el de B
   distancias respecto a su NAMO. Cualquier otro código devuelve HTTP 404 sin
   contactar GitHub. La ruta y configuración `BDCTB_FORECAST_URL` se conservan.
 - El mensajero es **opcional**: sin `FORECAST_MESSENGER_TOKEN` no se sube nada.
-  Con token, una consulta al pronóstico —nunca el arranque— inicia un hilo que
+  Con token, una consulta al pronóstico de Boca del Cerro —nunca el arranque ni
+  las otras estaciones, porque una sola tabla IPCET sirve a todas— inicia un hilo que
   comprueba si falta el nivel IPCET de hoy (America/Mexico_City), si existe la
   página de hoy y si falta `inputs/ipcet/YYYY-MM-DD/meta.json` en `forecasts`.
   Admite las dos grafías `hidrometeorologico`/`hidrometereologico` y limita las

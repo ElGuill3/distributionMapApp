@@ -136,3 +136,13 @@ def test_catalogue_adds_forecast_only_stations_without_changing_csv_entries(tmp_
     ):
         assert response.json[f'{code}_hidro'] == {'name': name, 'station_name': name, 'type': 'hidrometrica', 'coords': coords, 'municipio': None}
         assert f'{code}_hidro' not in discovered
+
+
+def test_only_the_bdctb_feed_carries_the_messenger_token():
+    """One IPCET table serves every station, so only BDCTB uploads it (review R3)."""
+    from backend import app as module
+
+    assert module.forecast_feeds
+    # Compare a boolean so a failure never prints the token itself.
+    holders = sorted(code for code, feed in module.forecast_feeds.items() if bool(feed.token))
+    assert holders == []

@@ -176,13 +176,14 @@ forecast_feed = ForecastFeed(
 )
 
 # Reuse the bounded reader and keep independent validated copies per station.
+# Only the BDCTB feed carries the messenger token: one IPCET table serves every
+# station, so the other feeds never upload it a second time.
 forecast_feeds = {
     code: ForecastFeed(
         "https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/"
         f"forecasts/{code.lower()}/latest.json",
         config.FORECAST_CACHE_PATH.parent.parent / code.lower() / "latest.json",
         station_code=code,
-        token=config.FORECAST_MESSENGER_TOKEN,
     )
     for code in PUBLISHED_STATIONS
     if code != "BDCTB"
