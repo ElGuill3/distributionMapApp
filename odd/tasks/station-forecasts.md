@@ -22,7 +22,7 @@ Mirror: Engram `odd/station-forecasts/tasks`.
 
 ## Tasks
 
-- [ ] **T1** (S1–S4) Backend: forecast route for the published codes, reusing `forecast_feed` validation, with `/api/v1/forecasts/bdctb` unchanged. Frontend: generalise the BDCTB forecast popup, chart and ring to the published codes. Tests: backend, vitest and e2e. Route: gentle-ai-worker. Commit: TBD.
+- [x] **T1** (S1–S4) Backend: forecast route for the published codes, reusing `forecast_feed` validation, with `/api/v1/forecasts/bdctb` unchanged. Frontend: generalise the BDCTB forecast popup, chart and ring to the published codes. Tests: backend, vitest and e2e. Route: gentle-ai-worker. Commit: e877ff7 (backend), 3425dd7 (frontend); see L4.
 
 ## Log
 
@@ -34,3 +34,7 @@ Mirror: Engram `odd/station-forecasts/tasks`.
   - their popup offers only the IPCET status and the forecast; the chart's observed series comes from IPCET `recent`;
   - CSV-backed historical actions are not offered for them;
   - BDCTB and SPTTB are unchanged.
+- **L4** T1 done by the worker (tasks mvo8xt9c-5-6ue9, mvo99oqi-6-a0px, mvo9b8la-7-2t4j).
+  - Results: backend 813 passed, 1 failed (the earlier Google FutureWarning preflight failure, also present before the change); vitest 336; tsc clean; e2e 36 (new: the MACTB popup).
+  - **Slice boundary:** the branch holds about 1150 authored lines in two work-unit commits (backend e877ff7, frontend 3425dd7). It is reviewed and delivered as one PR because both commits form a single behaviour.
+
