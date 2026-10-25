@@ -1285,6 +1285,59 @@ paths:
       x-cache-policy:
         max_age: 0
         etag: false
+  /api/v1/forecasts/{code}:
+    get:
+      operationId: getStationForecast
+      summary: Latest published station forecast with station-specific NAMO and offline
+        cache
+      description: Accepts only lowercase bdctb, mactb, saacp, pnvtb and taptb. Other
+        codes return 404 without upstream access. Reads forecasts/<code>/latest.json
+        with the same bounded validation and cache fallback as BDCTB; validates station
+        identity and distances against the publication NAMO. Never fetched at startup.
+        All responses use Cache-Control no-store.
+      tags:
+      - Forecast
+      responses:
+        '200':
+          description: Strict modeled forecast with ordered h1/h3/h7 quantiles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationForecastResponse'
+        '429':
+          description: Rate limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: No valid cached forecast is currently available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BdctbForecastUnavailableResponse'
+        '404':
+          description: No published forecast for this station; no upstream request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit: 60/minute
+      x-cache-policy:
+        max_age: 0
+        etag: false
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+          - bdctb
+          - mactb
+          - saacp
+          - pnvtb
+          - taptb
   /api/v1/ipcet/levels:
     get:
       operationId: getIpcetLevels
@@ -1576,6 +1629,198 @@ components:
       - variableKeys
       title: ExportMetadataSchema
       type: object
+    StationForecastResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - forecast
+      - source
+      - fetched_at
+      - updating
+      properties:
+        forecast:
+          $ref: '#/components/schemas/StationForecast'
+        source:
+          type: string
+          enum:
+          - network
+          - cache
+        fetched_at:
+          type: string
+          format: date-time
+          description: Time the valid publication was retrieved (preserved on cache fallback).
+        updating:
+          type: boolean
+          description: IPCET messenger is uploading or waiting for publication (30 minute
+            cap).
+    StationForecast:
+      type: object
+      additionalProperties: false
+      required:
+      - schema
+      - station
+      - issue_time
+      - generated_at
+      - model_version
+      - mode
+      - live_input
+      - forecasts
+      - disclaimer
+      description: Modeled stage in metres on the SIH/IPCET datum, never an observation
+        or official warning. Live mode requires a live_input aged 0-7 days inclusive;
+        glofas_only requires null. Target dates equal the Mexico City issue date plus
+        the horizon. Quantiles are finite and ordered q10 <= q50 <= q90.
+      properties:
+        schema:
+          type: string
+          const: bdctb-forecast/v2
+        station:
+          oneOf:
+          - type: object
+            additionalProperties: false
+            required:
+            - code
+            - name
+            properties:
+              code:
+                const: BDCTB
+              name:
+                const: Boca del Cerro
+          - type: object
+            additionalProperties: false
+            required:
+            - code
+            - name
+            properties:
+              code:
+                const: MACTB
+              name:
+                const: Macuspana
+          - type: object
+            additionalProperties: false
+            required:
+            - code
+            - name
+            properties:
+              code:
+                const: SAACP
+              name:
+                const: Salto de Agua
+          - type: object
+            additionalProperties: false
+            required:
+            - code
+            - name
+            properties:
+              code:
+                const: PNVTB
+              name:
+                const: Pueblo Nuevo
+          - type: object
+            additionalProperties: false
+            required:
+            - code
+            - name
+            properties:
+              code:
+                const: TAPTB
+              name:
+                const: Tapijulapa
+        issue_time:
+          type: string
+          format: date-time
+          description: 11:00 America/Mexico_City, with timezone offset.
+        generated_at:
+          type: string
+          format: date-time
+          description: Actual publication run time, with timezone offset.
+        model_version:
+          type: string
+          minLength: 1
+        mode:
+          type: string
+          enum:
+          - live
+          - glofas_only
+        live_input:
+          oneOf:
+          - type: 'null'
+          - type: object
+            additionalProperties: false
+            required:
+            - date
+            - stage_m
+            - age_days
+            properties:
+              date:
+                type: string
+                format: date
+              stage_m:
+                type: number
+              age_days:
+                type: integer
+                minimum: 0
+                maximum: 7
+        forecasts:
+          type: object
+          additionalProperties: false
+          required:
+          - h1
+          - h3
+          - h7
+          properties:
+            h1:
+              $ref: '#/components/schemas/StationForecastPoint'
+            h3:
+              $ref: '#/components/schemas/StationForecastPoint'
+            h7:
+              $ref: '#/components/schemas/StationForecastPoint'
+        disclaimer:
+          type: string
+          const: Pronóstico modelado, no es una observación ni un aviso oficial. Consulte
+            el semáforo oficial de IPCET.
+      oneOf:
+      - properties:
+          mode:
+            const: live
+          live_input:
+            type: object
+      - properties:
+          mode:
+            const: glofas_only
+          live_input:
+            type: 'null'
+    StationForecastPoint:
+      type: object
+      additionalProperties: false
+      required:
+      - target_date
+      - q10
+      - q50
+      - q90
+      - distance_to_namo_m
+      - namo_m
+      - data_kind
+      properties:
+        target_date:
+          type: string
+          format: date
+        q10:
+          type: number
+        q50:
+          type: number
+        q90:
+          type: number
+        distance_to_namo_m:
+          type: number
+          description: q50 minus this point namo_m; positive above NAMO.
+        namo_m:
+          type: number
+          description: Finite station NAMO from the publication, consistent across horizons;
+            BDCTB remains 19.21 m.
+        data_kind:
+          type: string
+          const: modeled_not_observed
     BdctbForecastResponse:
       type: object
       additionalProperties: false

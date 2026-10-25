@@ -73,13 +73,13 @@ class TestOpenApiSpec:
         assert "title" in spec["info"]
         assert "version" in spec["info"]
 
-    def test_openapi_yaml_has_20_paths(self):
-        """The spec documents exactly 20 endpoints."""
+    def test_openapi_yaml_has_21_paths(self):
+        """The spec documents exactly 21 endpoints."""
         with open(OPENAPI_YAML) as f:
             spec = yaml.safe_load(f)
         paths = spec.get("paths", {})
-        assert len(paths) == 20, (
-            f"Expected 20 paths, got {len(paths)}: {list(paths.keys())}"
+        assert len(paths) == 21, (
+            f"Expected 21 paths, got {len(paths)}: {list(paths.keys())}"
         )
 
     def test_bdctb_forecast_proxy_contract_is_closed(self):
