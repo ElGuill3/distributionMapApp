@@ -1,3 +1,4 @@
+import { mactbPublication } from './stationForecast.fixture.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ipcetStatus } from './ipcetStatus.js';
 import {
@@ -473,3 +474,53 @@ describe('HTML text escaping', () => {
     expect(div.querySelector('img,[onerror]')).toBeNull();
   });
 });
+
+it('opens each published popup lazily, using MACTB values and its own NAMO wording', async () => {
+  const fetcher = vi.fn((_url: RequestInfo | URL, _init?: RequestInit) =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          forecast: mactbPublication,
+          source: 'network',
+          fetched_at: mactbPublication.generated_at,
+          updating: false,
+        })
+      )
+    )
+  );
+  vi.stubGlobal('fetch', fetcher);
+  for (const code of ['BDCTB', 'MACTB', 'SAACP', 'PNVTB', 'TAPTB']) {
+    expect(forecastLoaderFor(`${code}_hidro`)).toBeTypeOf('function');
+    expect(
+      buildStationPopup(`${code}_hidro`, info, true).querySelector(
+        '.station-forecast-summary'
+      )
+    ).not.toBeNull();
+  }
+  expect(forecastLoaderFor('constructor')).toBeUndefined();
+  const popup = mounted('MACTB_hidro');
+  expect(fetcher).not.toHaveBeenCalled();
+  openStationPopup(popup);
+  await vi.waitFor(() =>
+    expect(popup.getElement().textContent).toContain(
+      'Pronóstico del modelo · emitido 25/10 11:00'
+    )
+  );
+  const block = popup.getElement().querySelector('.station-forecast-summary')!;
+  expect(block.children).toHaveLength(3);
+  expect(block.children[1]?.textContent).toBe(
+    'Mañana 6.3 m · 3 días 4.4 m · 7 días 3.0 m · mín. 3.6 m bajo el NAMO'
+  );
+  expect(fetcher.mock.calls[0]?.[0]).toBe('/api/v1/forecasts/mactb');
+  expect(ipcetStatus.modelMarkFor('MACTB')).toBe(false);
+});
+
+it.each(['MACTB', 'SAACP', 'PNVTB', 'TAPTB'])(
+  'omits CSV-backed actions for forecast-only %s',
+  code => {
+    const popup = buildStationPopup(`${code}_hidro`, info, true);
+    expect(popup.querySelector('.station-full-data-link')).toBeNull();
+    expect(popup.querySelector('.station-chart-link')?.textContent).toBe('Ver detalle');
+    expect(popup.querySelector('.station-forecast-summary')).not.toBeNull();
+  }
+);

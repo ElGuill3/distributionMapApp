@@ -33,6 +33,7 @@ EXPECTED_URL_RULES = frozenset(
         "/api/ndvi-gif-bbox",
         "/api/ndvi-timeseries-bbox",
         "/api/v1/forecasts/bdctb",
+        "/api/v1/forecasts/<code>",
         "/api/v1/ipcet/levels",
         "/api/v1/ipcet/levels/<code>/recent",
         "/static/<path:filename>",

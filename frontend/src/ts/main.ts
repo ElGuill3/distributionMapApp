@@ -1,3 +1,4 @@
+import { hasStationHistory } from './ui/stationHistory.js';
 /**
  * Punto de entrada del frontend — distributionMapApp.
  *
@@ -163,14 +164,16 @@ async function initializeLocalStations(): Promise<void> {
       opt.textContent = info.name;
 
       const isHidro = info.type === 'hidrometrica' || id.endsWith('_hidro');
-      if (isHidro) {
-        tflowHidro?.appendChild(opt.cloneNode(true));
-        selHidroA?.appendChild(opt.cloneNode(true));
-        selHidroB?.appendChild(opt.cloneNode(true));
-      } else {
-        tflowClima?.appendChild(opt.cloneNode(true));
-        selClimaA?.appendChild(opt.cloneNode(true));
-        selClimaB?.appendChild(opt.cloneNode(true));
+      if (hasStationHistory(id)) {
+        if (isHidro) {
+          tflowHidro?.appendChild(opt.cloneNode(true));
+          selHidroA?.appendChild(opt.cloneNode(true));
+          selHidroB?.appendChild(opt.cloneNode(true));
+        } else {
+          tflowClima?.appendChild(opt.cloneNode(true));
+          selClimaA?.appendChild(opt.cloneNode(true));
+          selClimaB?.appendChild(opt.cloneNode(true));
+        }
       }
 
       if (info.coords && info.coords.length === 2) {

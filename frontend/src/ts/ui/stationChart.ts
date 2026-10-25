@@ -8,21 +8,26 @@ import {
   buildTrace,
 } from './chart.js';
 import {
-  fetchBdctbForecast,
-  type BdctbForecast,
+  fetchStationForecast,
+  PUBLISHED_STATIONS,
+  type ForecastStationCode,
+  type StationForecast,
   type ForecastResponse,
 } from './bdctbForecast.js';
 import { ipcetStatus } from './ipcetStatus.js';
 
-// Adding another published model only requires registering its loader here.
-const forecastLoaders: Record<
-  string,
-  (signal: AbortSignal) => Promise<ForecastResponse>
-> = {
-  BDCTB: signal => fetchBdctbForecast(fetch, 5000, '/api/v1/forecasts/bdctb', signal),
-};
+/** Registry lookup is inert: only an opened popup or chart invokes a loader. */
 export function forecastLoaderFor(id: string) {
-  return forecastLoaders[id.replace(/_(hidro|clima)$/, '')];
+  const code = id.replace(/_(hidro|clima)$/, '');
+  if (!Object.prototype.hasOwnProperty.call(PUBLISHED_STATIONS, code)) return undefined;
+  return (signal: AbortSignal): Promise<ForecastResponse> =>
+    fetchStationForecast(
+      fetch,
+      5000,
+      `/api/v1/forecasts/${code.toLowerCase()}`,
+      signal,
+      code as ForecastStationCode
+    );
 }
 interface RecentPoint {
   date: string;
@@ -145,7 +150,7 @@ function drawStation(
   chartDiv: HTMLDivElement,
   station: ChartStation,
   points: RecentPoint[],
-  forecast: BdctbForecast | undefined,
+  forecast: StationForecast | undefined,
   namo: number | null | undefined
 ): void {
   const dark = isDarkModeActive();

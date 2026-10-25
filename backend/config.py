@@ -262,7 +262,22 @@ def _load_local_stations() -> dict[str, dict]:
     return stations
 
 
-LOCAL_STATIONS = _load_local_stations()
+# Forecast-only markers do not require historical CSVs or bootstrap downloads.
+FORECAST_STATIONS = {
+    f"{code}_hidro": {
+        "name": name,
+        "station_name": name,
+        "type": "hidrometrica",
+        "coords": coords,
+    }
+    for code, name, coords in (
+        ("MACTB", "Macuspana", [17.766667, -92.6]),
+        ("SAACP", "Salto de Agua", [17.566667, -92.35]),
+        ("PNVTB", "Pueblo Nuevo", [17.854167, -92.879167]),
+        ("TAPTB", "Tapijulapa", [17.456944, -92.778611]),
+    )
+}
+LOCAL_STATIONS = {**_load_local_stations(), **FORECAST_STATIONS}
 
 # ---------------------------------------------------------------------------
 # Limpieza automática de GIFs
@@ -291,7 +306,7 @@ CACHE_POLICIES = {
     "/api/flood-risk": (86400, False),  # Mapa riesgo — 24h, sin ETag
     "/api/local-station": (600, True),  # Estaciones — 10 min
     "/api/v1/ipcet/levels": (0, False),  # IPCET — no cachear en cliente
-    "/api/v1/forecasts/bdctb": (0, False),  # Pronóstico — no cachear
+    "/api/v1/forecasts/": (0, False),  # Pronóstico — no cachear
     "/api/export": (0, False),  # Export ZIP — no cachear
 }
 

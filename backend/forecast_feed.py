@@ -23,6 +23,14 @@ DISCLAIMER = (
     "Pronóstico modelado, no es una observación ni un aviso oficial. "
     "Consulte el semáforo oficial de IPCET."
 )
+PUBLISHED_STATIONS = {
+    "BDCTB": "Boca del Cerro",
+    "MACTB": "Macuspana",
+    "SAACP": "Salto de Agua",
+    "PNVTB": "Pueblo Nuevo",
+    "TAPTB": "Tapijulapa",
+}
+UNKNOWN = "No hay un pronóstico publicado para esta estación."
 CONTENTS = "https://api.github.com/repos/ElGuill3/tabasco-river-forecast/contents/"
 MEXICO = ZoneInfo("America/Mexico_City")
 UNAVAILABLE = (
@@ -47,7 +55,7 @@ def _number(value):
     return value
 
 
-def validate_forecast(p):
+def validate_forecast(p, station_code="BDCTB"):
     """Validate v2 publications and disk copies before serving them."""
     if not isinstance(p, dict) or set(p) != {
         "schema",
@@ -63,7 +71,8 @@ def validate_forecast(p):
         raise ValueError("Invalid forecast shape")
     if (
         p["schema"] != "bdctb-forecast/v2"
-        or p["station"] != {"code": "BDCTB", "name": "Boca del Cerro"}
+        or station_code not in PUBLISHED_STATIONS
+        or p["station"] != {"code": station_code, "name": PUBLISHED_STATIONS[station_code]}
         or not isinstance(p["model_version"], str)
         or not p["model_version"].strip()
         or p["disclaimer"] != DISCLAIMER
@@ -93,6 +102,7 @@ def validate_forecast(p):
         "h7",
     }:
         raise ValueError("Missing horizons")
+    namo = None
     for h in (1, 3, 7):
         point = p["forecasts"][f"h{h}"]
         if not isinstance(point, dict) or set(point) != {
@@ -105,14 +115,18 @@ def validate_forecast(p):
             "data_kind",
         }:
             raise ValueError("Invalid horizon")
+        point_namo = _number(point["namo_m"])
+        if namo is None:
+            namo = point_namo
         q10, q50, q90 = (_number(point[q]) for q in ("q10", "q50", "q90"))
         if (
             not q10 <= q50 <= q90
-            or point["namo_m"] != 19.21
+            or point_namo != namo
+            or (station_code == "BDCTB" and point_namo != 19.21)
             or point["data_kind"] != "modeled_not_observed"
             or point["target_date"] != (issue.date() + timedelta(days=h)).isoformat()
             or not math.isclose(
-                _number(point["distance_to_namo_m"]), q50 - 19.21, abs_tol=1e-6
+                _number(point["distance_to_namo_m"]), q50 - point_namo, abs_tol=1e-6
             )
         ):
             raise ValueError("Inconsistent horizon")
@@ -161,12 +175,16 @@ class ForecastFeed:
         url,
         cache_path,
         *,
+        station_code="BDCTB",
         token="",
         http=requests,
         now=None,
         sleep=time.sleep,
         fetch_deadline=3.5,
     ):
+        if station_code not in PUBLISHED_STATIONS:
+            raise ValueError("Unknown forecast station")
+        self.station_code = station_code
         self.fetch_deadline = fetch_deadline
         self.url = url
         self.cache_path = Path(cache_path)
@@ -209,7 +227,7 @@ class ForecastFeed:
             status, body, _ = self._read(self.url, 65536)
             if status != 200:
                 raise ValueError("Unavailable publication")
-            forecast = validate_forecast(json.loads(body))
+            forecast = validate_forecast(json.loads(body), self.station_code)
             result = {"forecast": forecast, "fetched_at": self.now().isoformat()}
             try:
                 with self.cache_lock:
@@ -253,7 +271,7 @@ class ForecastFeed:
                     if self.cache_path.stat().st_size > 65536:
                         raise ValueError("Cache too large")
                     result = json.loads(self.cache_path.read_text(encoding="utf-8"))
-                validate_forecast(result["forecast"])
+                validate_forecast(result["forecast"], self.station_code)
                 _timestamp(result["fetched_at"])
                 source = "cache"
             except (

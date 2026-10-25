@@ -37,7 +37,7 @@ from backend.config import (
     prepare_runtime_directories,
 )
 from backend.extensions import limiter
-from backend.forecast_feed import UNAVAILABLE, ForecastFeed
+from backend.forecast_feed import PUBLISHED_STATIONS, UNAVAILABLE, UNKNOWN, ForecastFeed
 from backend.ipcet_feed import UNAVAILABLE as IPCET_UNAVAILABLE
 from backend.ipcet_feed import UNKNOWN as IPCET_UNKNOWN
 from backend.ipcet_feed import IpcetFeed, valid_code
@@ -174,6 +174,36 @@ forecast_feed = ForecastFeed(
     config.FORECAST_CACHE_PATH,
     token=config.FORECAST_MESSENGER_TOKEN,
 )
+
+# Reuse the bounded reader and keep independent validated copies per station.
+# Only the BDCTB feed carries the messenger token: one IPCET table serves every
+# station, so the other feeds never upload it a second time.
+forecast_feeds = {
+    code: ForecastFeed(
+        "https://raw.githubusercontent.com/ElGuill3/tabasco-river-forecast/"
+        f"forecasts/{code.lower()}/latest.json",
+        config.FORECAST_CACHE_PATH.parent.parent / code.lower() / "latest.json",
+        station_code=code,
+    )
+    for code in PUBLISHED_STATIONS
+    if code != "BDCTB"
+}
+
+
+@app.get("/api/v1/forecasts/<code>")
+@limiter.limit(RATE_LIMITS["forecast"])
+def station_forecast(code):
+    """Reject unpublished codes before any upstream access."""
+    if code == "bdctb":
+        feed = forecast_feed
+    else:
+        feed = forecast_feeds.get(code.upper()) if code == code.lower() else None
+    if feed is None:
+        return jsonify({"error": UNKNOWN}), 404
+    result = feed.get()
+    if result is None:
+        return jsonify({"error": UNAVAILABLE}), 503
+    return jsonify(result)
 
 
 @app.get("/api/v1/forecasts/bdctb")
