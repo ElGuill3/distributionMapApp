@@ -1,3 +1,4 @@
+import { hasStationHistory } from './stationHistory.js';
 import type { LocalStationInfo } from '../types.js';
 import { formatForecastSummary, type ForecastResponse } from './bdctbForecast.js';
 import { forecastLoaderFor } from './stationChart.js';
@@ -25,7 +26,7 @@ export function buildStationPopup(
       <span class="station-popup-meta-item"><span data-lucide="map-pin" style="width: 12px; height: 12px;"></span> ${escapeHtml(info.municipio || 'Sin Municipio')}</span>
       <span class="station-popup-meta-item"><span data-lucide="line-chart" style="width: 12px; height: 12px;"></span> ${metric}</span>
     </div>
-    <a href="#" class="station-popup-btn station-full-data-link" data-station-id="${escapeHtml(id)}">Ver datos 2000–2024</a>
+    ${hasStationHistory(id) ? `<a href="#" class="station-popup-btn station-full-data-link" data-station-id="${escapeHtml(id)}">Ver datos 2000–2024</a>` : ''}
     ${isHidro ? `<button type="button" class="station-chart-link" data-station-id="${escapeHtml(id)}">Ver detalle</button>` : ''}
   `;
   const status = isHidro ? ipcetStatus.stateFor(id) : null;

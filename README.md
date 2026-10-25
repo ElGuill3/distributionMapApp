@@ -80,9 +80,9 @@ registros permanecen en `.cache/bdctb-local-app/logs/`, con el mismo esquema
 privado del supervisor general (`0600` por archivo, `0700` para el directorio,
 tres archivos de hasta 1 MiB cada uno).
 
-## Pronóstico de Boca del Cerro (Usumacinta)
+## Pronósticos de estaciones
 
-Al abrir el marcador hidrométrico **BDCTB**, el popup consulta y muestra un
+Al abrir un marcador hidrométrico **BDCTB, MACTB, SAACP, PNVTB o TAPTB**, el popup consulta y muestra un
 resumen compacto: emisión, medianas q50 para mañana, 3 y 7 días y la nota
 **Modelado, no es aviso oficial**. Indica si falta nivel en vivo, si es una copia
 guardada o si se está actualizando. No hay diálogo de pronóstico. La app lee el
@@ -103,13 +103,20 @@ que no cumpla la regla lo retira. El arranque nunca consulta el pronóstico.
 
 En cualquier marcador hidrométrico, pulsa el botón pequeño **Ver detalle** para
 abrir el panel con los últimos **30 días calendario** de niveles observados de
-IPCET (línea continua, con huecos cuando faltan datos) y el NAMO oficial. BDCTB
+IPCET (línea continua, con huecos cuando faltan datos) y el NAMO oficial. Cada estación con pronóstico
 añade la mediana discontinua y la banda q10–q90 hasta h7 (80% nominal, no una
 garantía); SPTTB muestra solo observado y NAMO. Se comparte el estilo de los
 gráficos de variables: ejes, leyenda, tema, relleno sutil y controles de Plotly.
 La acción reemplaza la gráfica anterior. La barra **Exportar análisis** permanece
 visible pero deshabilitada, con una explicación: el ZIP no admite estas series.
-Sigue disponible la imagen de Plotly. **Ver datos 2000–2024** se conserva.
+Sigue disponible la imagen de Plotly. **Ver datos 2000–2024** se conserva para
+BDCTB y SPTTB, que tienen CSV locales. MACTB (Macuspana), SAACP (Salto de Agua),
+PNVTB (Pueblo Nuevo) y TAPTB (Tapijulapa) tienen entradas estáticas con coordenadas
+CONAGUA: aparecen sin CSV, descargas ni cambios en el bootstrap. Sus popups ofrecen
+el estado IPCET, el resumen y **Ver detalle**, pero no la acción histórica ni las
+opciones de selección de series CSV. El color se obtiene por código de
+`/api/v1/ipcet/levels` y las observaciones de `/api/v1/ipcet/levels/<CODE>/recent`.
+El gráfico y el anillo usan el `namo_m` de su propio pronóstico, nunca el de BDCTB.
 
 - `/api/v1/ipcet/levels` lee `IPCET_LEVELS_URL`, la publicación
   `ipcet/latest.json`; se consulta al arrancar y cada 30 minutos.
@@ -135,6 +142,12 @@ Sigue disponible la imagen de Plotly. **Ver datos 2000–2024** se conserva.
   error de red o un JSON inválido conserva la copia guardada y su fecha de
   descarga; sin ninguna copia válida devuelve HTTP 503 con un mensaje en español.
   Un pronóstico guardado puede ser antiguo: la fecha de emisión sigue visible.
+- `/api/v1/forecasts/<code>` acepta únicamente `bdctb`, `mactb`, `saacp`, `pnvtb`
+  y `taptb` en minúsculas. Lee `<code>/latest.json` de la rama `forecasts`, con el
+  mismo esquema `bdctb-forecast/v2` y una copia independiente en
+  `.cache/forecasts/<code>/latest.json`. Valida la identidad de la estación y las
+  distancias respecto a su NAMO. Cualquier otro código devuelve HTTP 404 sin
+  contactar GitHub. La ruta y configuración `BDCTB_FORECAST_URL` se conservan.
 - El mensajero es **opcional**: sin `FORECAST_MESSENGER_TOKEN` no se sube nada.
   Con token, una consulta al pronóstico —nunca el arranque— inicia un hilo que
   comprueba si falta el nivel IPCET de hoy (America/Mexico_City), si existe la
@@ -320,6 +333,9 @@ La detección de agua superficial no es una variable animada: se hace en el
 
 - **San Pedro — SPTTB** (lat 17.79°, lon −91.16°): estación del río San Pedro, Balancán.
 - **Boca del Cerro — BDCTB** (lat 17.43°, lon −91.48°): estación del río Usumacinta, Tenosique.
+- Marcadores de pronóstico sin CSV histórico: **Macuspana — MACTB** (17.766667, −92.6),
+  **Salto de Agua — SAACP** (17.566667, −92.35), **Pueblo Nuevo — PNVTB** (17.854167, −92.879167)
+  y **Tapijulapa — TAPTB** (17.456944, −92.778611). Solo ofrecen los datos IPCET recientes y el pronóstico.
 - Los datos se descargan de CONAGUA al iniciar la aplicación y se leen desde los CSV locales en `backend/data/stations/`. Se aplica interpolación temporal para huecos de hasta 7 días.
 - Sus marcadores aparecen en el mapa cuando no hay animación activa; al pulsar sobre ellos se puede cargar su serie completa (2000–2024).
 
@@ -981,7 +997,7 @@ distributionMapApp/
 | `/api/local-station-level-range` | `GET` | `station`, `start`, `end` | `{ station, type, dates, value[], unit, level_m[], precip_mm[] }` |
 | `/api/v1/ipcet/levels` | `GET` | — | Publicación `ipcet-levels/v1` con procedencia y fecha; `503` sin copia válida |
 | `/api/v1/ipcet/levels/<code>/recent` | `GET` | Código de estación | Publicación `ipcet-recent/v1`, filtrada por estación; `503` sin copia válida |
-| `/api/v1/forecasts/bdctb` | `GET` | — | `{forecast, source, fetched_at, updating}`; publicación v2 o caché validada, `503` si ninguna es válida |
+| `/api/v1/forecasts/<code>` | `GET` | `bdctb`, `mactb`, `saacp`, `pnvtb`, `taptb`; otros: `404` sin red | `{forecast, source, fetched_at, updating}`; publicación v2 o caché validada, `503` si ninguna es válida |
 | `/api/export/bundle` | `POST` | `gifPaths`, `seriesData`, `bbox`, `metadata` | Archivo ZIP (CSV + GIFs + metadatos) |
 | `/api/docs` | `GET` | — | Documentación interactiva (Scalar UI) |
 | `/api/docs/openapi.yaml` | `GET` | — | Especificación OpenAPI 3.1.0 en YAML |

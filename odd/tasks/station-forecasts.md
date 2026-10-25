@@ -28,3 +28,9 @@ Mirror: Engram `odd/station-forecasts/tasks`.
 
 - **L1** (user, 2026-10-25) "vamos al menos con las mejores, igual bien justificado y todo eso para el documento de informe"
 - **L2** The model repo's production run 40228024752 (2026-10-25) published `mactb/`, `saacp/`, `pnvtb/` and `taptb/` live, next to `bdctb/`, in the same schema. Each `station` field carries `code` and `name`.
+- **L3** The worker found that the app's station markers come from local CONAGUA CSVs in `backend/data/stations`, which exist only for BDCTB and SPTTB and are downloaded at bootstrap. Adding those downloads would add startup work, so decision B was taken instead:
+  - MACTB, SAACP, PNVTB and TAPTB get a small static catalogue entry (code, name, CONAGUA coordinates);
+  - their colour comes from the IPCET semáforo;
+  - their popup offers only the IPCET status and the forecast; the chart's observed series comes from IPCET `recent`;
+  - CSV-backed historical actions are not offered for them;
+  - BDCTB and SPTTB are unchanged.

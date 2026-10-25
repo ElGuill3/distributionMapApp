@@ -1,3 +1,4 @@
+import { mactbPublication } from '../../src/ts/ui/stationForecast.fixture.js';
 import { test, expect, type Page } from '@playwright/test';
 
 // Publication shapes inspected once from forecasts/ipcet/{latest,recent}.json.
@@ -422,5 +423,100 @@ test('IPCET 503 leaves default icons and the station chart action usable', async
   await page.getByRole('button', { name: 'Ver detalle' }).click();
   await expect(page.locator('#ndvi-chart .main-svg').first()).toBeVisible();
   await expect(page.locator('#map')).toHaveClass(/leaflet-container/);
+  expect(forbidden).toEqual([]);
+});
+
+test('MACTB opens a lazy forecast popup and IPCET detail without CSV-backed actions', async ({
+  page,
+}) => {
+  const { forbidden } = await ready(page);
+  const extra = [
+    ['MACTB', 'Macuspana', [17.766667, -92.6]],
+    ['SAACP', 'Salto de Agua', [17.566667, -92.35]],
+    ['PNVTB', 'Pueblo Nuevo', [17.854167, -92.879167]],
+    ['TAPTB', 'Tapijulapa', [17.456944, -92.778611]],
+  ] as const;
+  await page.route('**/api/local-stations', route =>
+    route.fulfill({
+      json: {
+        ...Object.fromEntries(
+          stations.map((s, i) => [
+            `${s.code}_hidro`,
+            {
+              name: s.station,
+              station_name: s.station,
+              type: 'hidrometrica',
+              coords: i ? [17.79, -91.16] : [17.43, -91.48],
+            },
+          ])
+        ),
+        ...Object.fromEntries(
+          extra.map(([code, name, coords]) => [
+            `${code}_hidro`,
+            { name, station_name: name, type: 'hidrometrica', coords },
+          ])
+        ),
+      },
+    })
+  );
+  await page.route('**/api/v1/ipcet/levels', route =>
+    route.fulfill({
+      json: {
+        ...latest,
+        stations: [
+          ...stations,
+          ...extra.map(([code, station]) => ({
+            ...stations[1],
+            code,
+            station,
+            namo: 9.85,
+            semaforo: 'NORMAL',
+          })),
+        ],
+      },
+    })
+  );
+  const requests: string[] = [];
+  page.on('request', request => {
+    if (request.url().includes('/api/v1/forecasts/')) requests.push(request.url());
+  });
+  await page.route('**/api/v1/forecasts/mactb', route =>
+    route.fulfill({
+      json: {
+        forecast: mactbPublication,
+        source: 'network',
+        fetched_at: latest.fetched_at,
+        updating: false,
+      },
+    })
+  );
+  await page.goto('/templates/index.html', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#map .station-icon-hidro')).toHaveCount(6);
+  const marker = page.locator(
+    '#map .station-icon-hidro[aria-label="Macuspana: NORMAL (IPCET, 19/10/2026)"]'
+  );
+  await expect(marker).toHaveCSS('background-color', 'rgb(21, 128, 61)');
+  expect(requests).toEqual([]);
+  await marker.click();
+  const popup = page.locator('.station-popup-content');
+  await expect(popup).toContainText('NORMAL (IPCET, 19/10/2026)');
+  await expect(popup).toContainText('Pronóstico del modelo · emitido 25/10 11:00');
+  await expect(popup).toContainText('Mañana 6.3 m · 3 días 4.4 m · 7 días 3.0 m');
+  await expect(popup.locator('.station-forecast-summary > span')).toHaveCount(3);
+  await expect(popup.getByRole('link', { name: 'Ver datos 2000–2024' })).toHaveCount(0);
+  for (const [code] of extra) {
+    await expect(page.locator(`select option[value="${code}_hidro"]`)).toHaveCount(0);
+  }
+  expect(requests).toHaveLength(1);
+  await popup.getByRole('button', { name: 'Ver detalle' }).click();
+  await expect(page.locator('#ndvi-chart .main-svg').first()).toBeVisible();
+  const traces = await page.locator('#ndvi-chart').evaluate((el: any) => el.data);
+  expect(traces.map((t: any) => t.name)).toContain('NAMO 9.85 m (oficial)');
+  expect(traces[3].y).toEqual([
+    null,
+    ...Object.values(mactbPublication.forecasts).map(p => p.q50),
+  ]);
+  await expect(marker.locator('.ipcet-model-ring')).toHaveCount(0);
+  expect(requests).toHaveLength(2);
   expect(forbidden).toEqual([]);
 });

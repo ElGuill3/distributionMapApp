@@ -1,3 +1,4 @@
+import { mactbPublication } from './stationForecast.fixture.js';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { openStationChart } from './stationChart.js';
 import { plotAllSelectedSeries } from './chart.js';
@@ -345,4 +346,55 @@ it('cancels a pending station load when an analysis replaces it, restoring the o
   expect(plot.mock.calls[plot.mock.calls.length - 1]![1][0].name).toBe(
     'Humedad suelo (%)'
   );
+});
+
+it('plots MACTB h1/h3/h7, its band, markers and own NAMO with 30 days of observations', async () => {
+  const fetcher = vi.fn((url: string) =>
+    Promise.resolve(
+      json(
+        url.includes('recent')
+          ? {
+              schema: 'ipcet-recent/v1',
+              stations: {
+                MACTB: [
+                  { date: '2026-09-23', hoy: 7 },
+                  { date: '2026-09-24', hoy: 7.1 },
+                  { date: '2026-10-22', hoy: null },
+                  { date: '2026-10-23', hoy: 6.99 },
+                ],
+              },
+            }
+          : { ...forecast(), forecast: mactbPublication }
+      )
+    )
+  );
+  vi.stubGlobal('fetch', fetcher);
+  await openStationChart(
+    div,
+    placeholder,
+    { code: 'MACTB_hidro', name: 'Macuspana', river: 'Puxcatán' },
+    () => {}
+  );
+  expect(fetcher.mock.calls.map(c => c[0])).toEqual([
+    '/api/v1/ipcet/levels/MACTB/recent',
+    '/api/v1/forecasts/mactb',
+  ]);
+  expect(plot).toHaveBeenCalledTimes(1);
+  const [, traces, layout] = plot.mock.calls[0]!;
+  expect(traces[0].x).toEqual(['2026-09-24', '2026-10-22', '2026-10-23']);
+  expect(traces[0].y).toEqual([7.1, null, 6.99]);
+  const points = Object.values(mactbPublication.forecasts);
+  expect(traces[1].y).toEqual([null, ...points.map(p => p.q10)]);
+  expect(traces[2]).toMatchObject({
+    fill: 'tonexty',
+    y: [null, ...points.map(p => p.q90)],
+  });
+  expect(traces[3]).toMatchObject({
+    x: ['2026-10-25', '2026-10-26', '2026-10-28', '2026-11-01'],
+    y: [null, ...points.map(p => p.q50)],
+    mode: 'lines+markers',
+    marker: { size: [0, 7, 7, 7] },
+  });
+  expect(traces[4]).toMatchObject({ name: 'NAMO 9.85 m (oficial)', y: [9.85, 9.85] });
+  expect(layout.xaxis.range).toEqual(['2026-09-24', '2026-11-01']);
 });

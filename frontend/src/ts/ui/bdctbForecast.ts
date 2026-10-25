@@ -1,5 +1,14 @@
 import { ipcetStatus } from './ipcetStatus.js';
 
+export const PUBLISHED_STATIONS = {
+  BDCTB: 'Boca del Cerro',
+  MACTB: 'Macuspana',
+  SAACP: 'Salto de Agua',
+  PNVTB: 'Pueblo Nuevo',
+  TAPTB: 'Tapijulapa',
+} as const;
+export type ForecastStationCode = keyof typeof PUBLISHED_STATIONS;
+
 const HORIZONS = [1, 3, 7] as const;
 const DISCLAIMER =
   'Pronóstico modelado, no es una observación ni un aviso oficial. Consulte el semáforo oficial de IPCET.';
@@ -13,9 +22,9 @@ export interface ForecastPoint {
   namo_m: number;
   data_kind: 'modeled_not_observed';
 }
-export interface BdctbForecast {
+export interface StationForecast {
   schema: 'bdctb-forecast/v2';
-  station: { code: 'BDCTB'; name: string };
+  station: { code: ForecastStationCode; name: string };
   model_version: string;
   issue_time: string;
   generated_at: string;
@@ -24,8 +33,10 @@ export interface BdctbForecast {
   forecasts: Record<'h1' | 'h3' | 'h7', ForecastPoint>;
   disclaimer: string;
 }
+// Compatibility for existing BDCTB consumers.
+export type BdctbForecast = StationForecast;
 export interface ForecastResponse {
-  forecast: BdctbForecast;
+  forecast: StationForecast;
   source: 'network' | 'cache';
   fetched_at: string;
   updating: boolean;
@@ -70,7 +81,10 @@ function calendarDate(value: unknown): value is string {
 function malformed(): never {
   throw new ForecastRequestError('malformed', 'El pronóstico recibido no es válido.');
 }
-export function parseBdctbForecast(value: unknown): BdctbForecast {
+export function parseStationForecast(
+  value: unknown,
+  stationCode: ForecastStationCode = 'BDCTB'
+): StationForecast {
   if (
     !keys(value, [
       'schema',
@@ -88,8 +102,8 @@ export function parseBdctbForecast(value: unknown): BdctbForecast {
   if (
     value['schema'] !== 'bdctb-forecast/v2' ||
     !keys(value['station'], ['code', 'name']) ||
-    value['station']['code'] !== 'BDCTB' ||
-    value['station']['name'] !== 'Boca del Cerro' ||
+    value['station']['code'] !== stationCode ||
+    value['station']['name'] !== PUBLISHED_STATIONS[stationCode] ||
     typeof value['model_version'] !== 'string' ||
     !value['model_version'].trim() ||
     !timestamp(value['issue_time']) ||
@@ -126,6 +140,7 @@ export function parseBdctbForecast(value: unknown): BdctbForecast {
       86400000;
     if (age < 0 || age > 7 || live['age_days'] !== age) malformed();
   } else if (value['mode'] !== 'glofas_only' || live !== null) malformed();
+  let namo: number | undefined;
   for (const h of HORIZONS) {
     const point = (value['forecasts'] as Record<string, unknown>)[`h${h}`];
     const target = new Date(`${issueDate}T00:00:00Z`);
@@ -146,20 +161,26 @@ export function parseBdctbForecast(value: unknown): BdctbForecast {
       !number(point['q90']) ||
       point['q10'] > point['q50'] ||
       point['q50'] > point['q90'] ||
-      point['namo_m'] !== 19.21 ||
+      !number(point['namo_m']) ||
+      (stationCode === 'BDCTB' && point['namo_m'] !== 19.21) ||
+      (namo !== undefined && point['namo_m'] !== namo) ||
       point['data_kind'] !== 'modeled_not_observed' ||
       !number(point['distance_to_namo_m']) ||
-      Math.abs(point['distance_to_namo_m'] - (point['q50'] - 19.21)) > 1e-6
+      Math.abs(point['distance_to_namo_m'] - (point['q50'] - point['namo_m'])) > 1e-6
     )
       malformed();
+    namo = point['namo_m'] as number;
   }
-  return value as unknown as BdctbForecast;
+  return value as unknown as StationForecast;
 }
-export async function fetchBdctbForecast(
+export const parseBdctbForecast = parseStationForecast;
+
+export async function fetchStationForecast(
   fetcher: typeof fetch = fetch,
   timeoutMs = 5000,
   endpoint = '/api/v1/forecasts/bdctb',
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  stationCode: ForecastStationCode = 'BDCTB'
 ): Promise<ForecastResponse> {
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -191,7 +212,7 @@ export async function fetchBdctbForecast(
       typeof value['updating'] !== 'boolean'
     )
       malformed();
-    const forecast = parseBdctbForecast(value['forecast']);
+    const forecast = parseStationForecast(value['forecast'], stationCode);
     if (!controller.signal.aborted) {
       ipcetStatus.setModelMark(
         forecast.station.code,
@@ -218,6 +239,8 @@ export async function fetchBdctbForecast(
     signal?.removeEventListener('abort', abort);
   }
 }
+
+export const fetchBdctbForecast = fetchStationForecast;
 
 /** Three compact logical lines; dates use the publication's Mexico City timezone. */
 export function formatForecastSummary(

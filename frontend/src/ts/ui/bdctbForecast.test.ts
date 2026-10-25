@@ -1,3 +1,4 @@
+import { mactbPublication } from './stationForecast.fixture.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ipcetStatus } from './ipcetStatus.js';
 import {
@@ -149,4 +150,38 @@ describe('published forecast v2', () => {
     expect(lines).toHaveLength(3);
     expect(lines[2]).toBe(`Modelado, no es aviso oficial · ${note}`);
   });
+});
+
+it('uses MACTB NAMO for the neutral live-only ring, including equality and clearing', async () => {
+  for (const [mode, median, marked] of [
+    ['live', 9.85, true],
+    ['live', 9.84, false],
+    ['live', 10, true],
+    ['glofas_only', 10, false],
+  ] as const) {
+    const f = structuredClone(mactbPublication);
+    f.mode = mode;
+    if (mode === 'glofas_only') f.live_input = null as unknown as typeof f.live_input;
+    Object.assign(f.forecasts.h7, {
+      q50: median,
+      q90: 11,
+      distance_to_namo_m: median - 9.85,
+    });
+    const value = { ...envelope(), forecast: f };
+    const load = (await import('./stationChart.js')).forecastLoaderFor('MACTB')!;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(value)));
+    await load(new AbortController().signal);
+    expect(ipcetStatus.modelMarkFor('MACTB')).toBe(marked);
+  }
+});
+it('rejects a valid publication for a different requested station without changing marks', async () => {
+  ipcetStatus.setModelMark('MACTB', false);
+  ipcetStatus.setModelMark('BDCTB', false);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(envelope())));
+  const load = (await import('./stationChart.js')).forecastLoaderFor('MACTB')!;
+  await expect(load(new AbortController().signal)).rejects.toMatchObject({
+    code: 'malformed',
+  });
+  expect(ipcetStatus.modelMarkFor('MACTB')).toBe(false);
+  expect(ipcetStatus.modelMarkFor('BDCTB')).toBe(false);
 });
